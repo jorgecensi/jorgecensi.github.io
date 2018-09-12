@@ -1,2 +1,3 @@
 name: Jorge Censi
 markdown: kramdown
+permalink: /blog/:year/:month/:day/:title
