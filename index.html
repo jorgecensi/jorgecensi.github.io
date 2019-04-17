@@ -46,7 +46,7 @@ title: Jorge Censi
     {% for post in site.posts %}
         <article class="postitem">
             <ul class="meta">
-                    <li>{{ post.tags }}</li>
+                    <li class="category">{{ post.tags }}</li>
                 <li class="date"><a href="{{ post.url }}"><time datetime="{{post.date}}">{{post.date}}</time></a></li>
             </ul>
             <h2 class="title"> 
