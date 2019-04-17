@@ -70,3 +70,17 @@ footer.main .social {
     padding: 0;
     list-style: none;
 }
+footer.main .copyright {
+    float: left;
+    padding: 0;
+    border: 0;
+}
+.widget {
+    padding: 35px 0 0;
+}
+footer.main .copyright .main {
+    line-height: normal;
+    margin: 0 0 10px;
+    letter-spacing: -.5px;
+    color: #ced3d8;
+}
