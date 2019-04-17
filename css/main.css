@@ -66,6 +66,11 @@ footer.main .social {
     padding: 0;
     list-style: none;
 }
+footer.main .social li {
+    display: block;
+    float: left;
+    border-left: 1px solid #4b4b4b;
+}
 footer.main .copyright {
     float: left;
     padding: 0;
