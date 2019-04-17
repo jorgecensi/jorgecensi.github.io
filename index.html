@@ -3,17 +3,23 @@ layout: default
 title: Jorge Censi
 ---
 
-            <div class="blurb">
-                <h1>Hi there, I'm Jorge Censi!</h1>
-                <p>I am a software developer with a bachelor degree in Information Systems and over 7 years of experience in the field.</p>
-                <p>My focuses are related to good practices in architecture and software engineering, as for SOLID, DRY, Clean Code, TDD and Design Patterns.</p>
-                <p>I have been gathering significant experience in desktop and web development with Microsoft technologies, as Visual Studio, Team Foundation Server and SQL Server.</p>
-                <p>At the moment, I am engaged in learning mobile development with Xamarin.</p>
-                <h1>Main skills:</h1>
-                <ul>
-                    <li>C#</li>
-                    <li>VB.NET</li>
-                    <li>SQL Server</li>
-                </ul>
-            </div><!-- /.blurb -->
+<div class="blurb">
+    <h1>Hi there, I'm Jorge Censi!</h1>
+    <p>I am a software developer with a bachelor degree in Information Systems and over 7 years of experience in the field.</p>
+    <p>My focuses are related to good practices in architecture and software engineering, as for SOLID, DRY, Clean Code, TDD and Design Patterns.</p>
+    <p>I have been gathering significant experience in desktop and web development with Microsoft technologies, as Visual Studio, Team Foundation Server and SQL Server.</p>
+    <p>At the moment, I am engaged in learning mobile development with Xamarin.</p>
+    <h1>Main skills:</h1>
+    <ul>
+        <li>C#</li>
+        <li>VB.NET</li>
+        <li>SQL Server</li>
+    </ul>
+</div><!-- /.blurb -->
+<ul class="posts">
+
+    {% for post in site.posts %}
+      <li><span>{{ post.date | date_to_string }}</span> » <a href="{{ post.url }}" title="{{ post.title }}">{{ post.title }}</a></li>
+    {% endfor %}
+  </ul>
         
