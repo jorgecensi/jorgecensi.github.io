@@ -74,6 +74,11 @@ footer.main .copyright {
 .widget {
     padding: 35px 0 0;
 }
+footer.main .copyright {
+    float: left;
+    padding: 0;
+    border: 0;
+}
 footer.main .copyright .main {
     line-height: normal;
     margin: 0 0 10px;
@@ -84,4 +89,13 @@ footer.main .copyright .main {
     width: 90%;
     max-width: 700px;
     margin: 0 auto;
+}
+ul, menu, dir {
+    display: block;
+    list-style-type: disc;
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
+    padding-inline-start: 40px;
 }
