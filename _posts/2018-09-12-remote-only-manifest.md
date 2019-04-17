@@ -5,7 +5,7 @@ date: 2018-09-12
 tags: [remote]
 ---
 
-I've been looking for reported experiences with remote work and I've ended up with this website (https://remoteonly.org)that contains some information about that. 
+I've been looking for reported experiences with remote work and I've ended up with this website (https://remoteonly.org) that contains some information about that. 
 
 Remote Only work promotes:
 
