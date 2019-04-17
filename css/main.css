@@ -1,3 +1,6 @@
+body {	
+    width: 80%;	
+}
 nav ul, footer ul {
     font-family:'Helvetica', 'Arial', 'Sans-Serif';
     padding: 0px;
