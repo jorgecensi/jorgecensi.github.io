@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Jorge Censi, Remote only Manifest"
+title: "Remote only Manifest"
 date: 2018-09-12
 tags: [remote]
 ---
