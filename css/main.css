@@ -71,6 +71,9 @@ footer.main .social li {
     float: left;
     border-left: 1px solid #4b4b4b;
 }
+footer.main .social li:first-child {
+    border: 0;
+}
 footer.main .copyright {
     float: left;
     padding: 0;
