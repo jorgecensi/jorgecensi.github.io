@@ -42,9 +42,9 @@ title: Jorge Censi
         </a>
     </div>
 </div>
-<section class="postlist">
+<section class="postlist wrapper">
     {% for post in site.posts %}
-        <article class="postitem wrapper">
+        <article class="postitem ">
             <ul class="meta">
                     <li class="category">{{ post.tags }}</li>
                 <li class="date"><a href="{{ post.url }}"><time datetime="{{post.date}}">{{post.date}}</time></a></li>

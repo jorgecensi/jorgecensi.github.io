@@ -56,6 +56,9 @@ ul.posts li {
     display: none;
     float: left;
 }
+.postitem .meta .category:first-child {
+    display: initial;
+}
 .postitem .meta .date, .postitem .meta .issticky, .postitem .meta .readtime {
     float: right;
     margin-top: 3px;
