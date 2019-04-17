@@ -4,7 +4,9 @@ title: "Remote only Manifest"
 date: 2018-09-12
 tags: [remote]
 ---
-
+<p>
+    <img src="/img/working remote.jpeg">
+</p>
 I've been looking for reported experiences with remote work and I've ended up with this website (https://remoteonly.org) that contains some information about that. 
 
 Remote Only work promotes:
