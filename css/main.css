@@ -164,3 +164,8 @@ img {
     max-width: 100%;
     height: auto;
 }
+
+.read-more {
+    text-transform: uppercase;
+    font-size: 15px;
+}

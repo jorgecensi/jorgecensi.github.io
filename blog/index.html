@@ -16,8 +16,16 @@ title: Jorge Censi's Blog
 			<a href="{{ post.url }}">{{ post.title }}</a>
 		</h2>
 		{{ post.excerpt }}
+		<a href="{{ site.baseurl }}{{ post.url }}" class="read-more">Read More</a>
 	</article>
 
 	{% endfor %}
 
 </section>
+<ul>
+	{% for post in site.posts %}
+	<li>
+		<a href="{{ post.url }}">{{ post.title }}</a>
+	</li>
+	{% endfor %}
+</ul>
