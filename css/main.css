@@ -97,7 +97,7 @@ ul.posts li {
 
 footer.main {
     overflow: hidden;
-    padding: 30px;
+    padding: 20px;
     background: #242526;
 }
 
@@ -153,7 +153,6 @@ menu,
 dir {
     display: block;
     list-style-type: disc;
-    margin-block-start: 1em;
     margin-block-end: 1em;
     margin-inline-start: 0px;
     margin-inline-end: 0px;
@@ -168,4 +167,24 @@ img {
 .read-more {
     text-transform: uppercase;
     font-size: 15px;
+}
+
+.center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%;
+}
+
+.avatar {
+    border-radius: 50%;
+}
+
+footer.main .copyright .alt,
+footer.main .copyright .main,
+nav.pagination .next,
+nav.pagination .previous,
+nav.pagination ul.page-numbers li {
+    font-family: input-sans-condensed, Arial, Sans-Serif;
+    font-size: 13px;
 }
