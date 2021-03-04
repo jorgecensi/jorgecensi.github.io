@@ -3,26 +3,6 @@ layout: default
 title: Jorge Censi's Blog
 ---
 
-
-<section class="postlist wrapper">
-	{% for post in site.posts %}
-	<article class="postitem">
-		<ul class="meta">
-			<li class="category"><a href=""> {{ post.tags }}</a></li>
-			<li class="date"><a href="{{ post.url }}"><time datetime="{{post.date}}">{{
-						post.date | date_to_string }}</time></a></li>
-		</ul>
-		<h2 class="title">
-			<a href="{{ post.url }}">{{ post.title }}</a>
-		</h2>
-		{{ post.excerpt }}
-		<a href="{{ site.baseurl }}{{ post.url }}"
-			class="read-more btn btn-info">Read More</a>
-	</article>
-
-	{% endfor %}
-
-</section>
 <ul>
 	{% for post in site.posts %}
 	<li>
