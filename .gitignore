@@ -1,3 +1,4 @@
 .vscode/launch.json
 _site/
 vendor
+.DS_Store
