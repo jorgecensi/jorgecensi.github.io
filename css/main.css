@@ -4,6 +4,7 @@ body {
   margin-right: auto;
   margin-bottom: auto;
   margin-left: auto;
+  background-color: #323232;
 }
 
 nav ul,
@@ -25,31 +26,52 @@ nav ul li {
     display: inline;
     margin-right: 20px;
     font-size: 3em;
+    color: greenyellow;
   }
 }
-
+.navbar-dark .navbar-brand {
+  color: greenyellow;
+}
+.navbar-dark .navbar-nav .nav-link {
+  color: greenyellow;
+}
 footer ul li {
   display: inline;
 }
 
 a {
   text-decoration: none;
-  color: #999;
+  color: greenyellow;
+}
+.btn-info {
+  color: #000;
+  background-color: greenyellow;
+  border-color: greenyellow;
 }
 
 a:hover {
   text-decoration: underline;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+p,
+li {
+  color: white;
+}
+
 h1 {
   font-size: 3em;
   font-family: "Helvetica", "Arial", "Sans-Serif";
+  color: white;
 }
 
 p {
   font-size: 1.5em;
   line-height: 1.4em;
-  color: #333;
 }
 
 footer {
