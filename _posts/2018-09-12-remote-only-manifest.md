@@ -3,6 +3,7 @@ layout: post
 title: "Remote only Manifest"
 date: 2018-09-12
 tags: [remote]
+excerpt_separator: <!--more-->
 ---
 
 <p>
@@ -10,6 +11,8 @@ tags: [remote]
 </p>
 
 I've been looking for reported experiences with remote work and I've ended up with <a href="https://remoteonly.org">this website</a> that contains some information about that.
+
+<!--more-->
 
 Remote Only work promotes:
 
