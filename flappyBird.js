@@ -26,7 +26,9 @@ var constant;
 var bX = 10;
 var bY = 150;
 
-var gravity = 1.5;
+var gravity = 0.4;
+var velocity = 0;
+var jump = 6;
 
 var score = 0;
 
@@ -44,7 +46,8 @@ document.addEventListener("keydown",moveUp);
 document.addEventListener("touchstart", moveUp, false);
 
 function moveUp(){
-    bY -= 25;
+    velocity =- jump;
+    bY -= jump;
     fly.play();
 }
 
@@ -64,6 +67,10 @@ pipe[0] = {
     x : cvs.width,
     y : 0
 };
+
+function hitGround () {
+    return bY + bird.height >=  cvs.height - fg.height;
+}
 
 // draw images
 
@@ -89,35 +96,49 @@ function draw(){
 
         // detect collision
         
-        if( bX + bird.width >= pipe[i].x && bX <= pipe[i].x + pipeNorth.width && (bY <= pipe[i].y + pipeNorth.height || bY+bird.height >= pipe[i].y+constant) || bY + bird.height >=  cvs.height - fg.height){
-            location.reload(); // reload the page
-        }
         
-        if(pipe[i].x == 5){
-            score++;
-            
-            if(levels.includes(score)){
-                gap--;
+
+    if( bX + bird.width >= pipe[i].x 
+                && 
+                bX <= pipe[i].x + pipeNorth.width 
+                && 
+                (
+                    bY <= pipe[i].y + pipeNorth.height 
+                    || 
+                    bY+bird.height >= pipe[i].y+constant
+                ) 
+                || 
+                hitGround()
+                ){
+                location.reload(); // reload the page
             }
-            scor.play();
+            
+            if(pipe[i].x == 5){
+                score++;
+                
+                // if(levels.includes(score)){
+                //     gap--;
+                // }
+                scor.play();
+            }
+            
+            
         }
+
+        ctx.drawImage(fg,0,cvs.height - fg.height);
         
+        ctx.drawImage(bird,bX,bY);
+        
+        velocity += gravity;
+        bY += velocity;
+        
+        ctx.fillStyle = "#000";
+        ctx.font = "20px Verdana";
+        ctx.fillText("Score : "+score,10,cvs.height-20);
+        
+        requestAnimationFrame(draw);
         
     }
-
-    ctx.drawImage(fg,0,cvs.height - fg.height);
-    
-    ctx.drawImage(bird,bX,bY);
-    
-    bY += gravity;
-    
-    ctx.fillStyle = "#000";
-    ctx.font = "20px Verdana";
-    ctx.fillText("Score : "+score,10,cvs.height-20);
-    
-    requestAnimationFrame(draw);
-    
-}
 
 draw();
 
