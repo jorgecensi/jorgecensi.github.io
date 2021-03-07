@@ -18,6 +18,8 @@ pipeSouth.src = "img/pipeSouth.png";
 
 // some variables
 
+var levels = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144];
+
 var gap = 150;
 var constant;
 
@@ -50,7 +52,9 @@ function isPrime(num) {
     for(var i = 2; i < num; i++)
       if(num % i === 0) return false;
     return num > 1;
-  }
+}
+
+
 
 // pipe coordinates
 
@@ -91,7 +95,8 @@ function draw(){
         
         if(pipe[i].x == 5){
             score++;
-            if(isPrime(score)){
+            
+            if(levels.includes(score)){
                 gap--;
             }
             scor.play();
