@@ -7,7 +7,7 @@ excerpt_separator: <!--more-->
 ---
 
 <p>
-    <img src="/img/working remote.jpeg">
+    <img src="/img/posts/working remote.jpeg">
 </p>
 
 I've been looking for reported experiences with remote work and I've ended up with <a href="https://remoteonly.org">this website</a> that contains some information about that.
