@@ -4,32 +4,44 @@ title: Jorge Censi
 ---
 
 <div class="container">
-    <div class="row py-md-5">
-        <div class="col-md-6 py-md-6">
-            <img class="align-self-start" src="/img/Jorge Censi Mobile Apps.png" alt="Someone using a mobile phone">
+
+    <div id="carouselHomePage" class="carousel slide carousel-fade" data-bs-ride="carousel">
+        <div class="carousel-indicators">
+            <button type="button" data-bs-target="#carouselHomePage" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+            <button type="button" data-bs-target="#carouselHomePage" data-bs-slide-to="1" aria-label="Slide 2"></button>
+            <button type="button" data-bs-target="#carouselHomePage" data-bs-slide-to="2" aria-label="Slide 3"></button>
         </div>
-        <div class="col-md-6 py-md-6">
-            <h5>Mobile Development</h5>
-            <p>Using Microsoft's Xamarin.</p>
+        <div class="carousel-inner">
+            <div class="carousel-item active" data-bs-interval="2000">
+                <img src="/img/Jorge Censi Mobile Apps.png" class="d-block w-100" alt="Someone using a mobile phone">
+                <div class="carousel-caption d-none d-md-block">
+                    <h5>Mobile Development</h5>
+                    <p>Using Microsoft's Xamarin.</p>
+                </div>
+            </div>
+            <div class="carousel-item" data-bs-interval="2000">
+                <img src="/img/Jorge Censi Web Development.png" class="d-block w-100" alt="someone working with a laptop">
+                <div class="carousel-caption d-none d-md-block">
+                    <h5>Web Development</h5>
+                    <p>Using Microsoft technologies such as C#, .NET and Azure.</p>
+                </div>
+            </div>
+            <div class="carousel-item" data-bs-interval="2000">
+                <img src="/img/Jorge Censi Coding.png" class="d-block w-100" alt="someone writing code on a laptop">
+                <div class="carousel-caption d-none d-md-block">
+                    <h5>Check it out!</h5>
+                    <p>A reliable software development starts here.</p>
+                </div>
+            </div>
         </div>
-    </div>
-    <div class="row py-md-5">
-        <div class="col-md-6 py-md-6">
-            <img class="align-self-start" src="/img/Jorge Censi Web Development.png" alt="someone working with a laptop">
-        </div>
-        <div class="col-md-6 py-md-6">
-            <h5 class="mb-0">Web Development</h5>
-            <p>Using Microsoft technologies such as C#, .NET and Azure.</p>
-        </div>
-    </div>
-    <div class="row py-md-5">
-        <div class="col-md-6 py-md-6">
-            <img class="align-self-start" src="/img/Jorge Censi Coding.png" alt="someone writing code on a laptop">
-        </div>
-        <div class="col-md-6 py-md-6">
-            <h5 class="mb-0">Check it out!</h5>
-            <p>A reliable software development starts here.</p>
-        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselHomePage" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselHomePage" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
     </div>
 </div>
 <section class="postlist wrapper">
