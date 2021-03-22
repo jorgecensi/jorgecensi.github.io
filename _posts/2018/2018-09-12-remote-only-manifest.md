@@ -16,7 +16,7 @@ I've been looking for reported experiences with remote work and I've ended up wi
 
 Remote Only work promotes:
 
-- Hiring and working from all over the world instead of from a central location.
+- 🌍 Hiring and working from all over the world instead of from a central location.
 - ⚖️ Flexible working hours over set working hours.
 - 🗒 Writing down and recording knowledge over oral explanations.
 - 📝 Written down processes over on-the-job training.
