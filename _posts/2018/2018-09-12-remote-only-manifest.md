@@ -10,10 +10,11 @@ excerpt_separator: <!--more-->
     <img src="/img/posts/working remote.jpeg">
 </p>
 
-I've been looking for reported experiences with remote work and I've ended up with <a href="https://remoteonly.org">this website</a> that contains some information about that.
+I've been looking for reported experiences with remote work and I've ended up finding a website that contains some information about that.
 
 <!--more-->
 
+<a href="https://remoteonly.org">https://remoteonly.org</a>
 Remote Only work promotes:
 
 - 🌍 Hiring and working from all over the world instead of from a central location.
