@@ -29,6 +29,6 @@ Remote Only work promotes:
 
 While there is sometimes value in the items on the right, the items on the left are valued more.
 
-There is <a href="https://lnkd.in/g-q-dgB">this</a> another article I like that explains it
+There is <a href="https://lnkd.in/g-q-dgB">this</a> another article that I like which explains it.
 
 What do you think about it?
