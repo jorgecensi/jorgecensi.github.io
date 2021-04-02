@@ -279,8 +279,3 @@ nav.pagination ul.page-numbers li {
     color: greenyellow;
   }
 }
-.wrapper {
-  width: 90%;
-  max-width: 700px;
-  margin: 0 auto;
-}
