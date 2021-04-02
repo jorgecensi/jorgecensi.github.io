@@ -230,7 +230,7 @@ nav.pagination ul.page-numbers li {
   animation: 1s blink step-end infinite;
 }
 
-@keyframes "blink" {
+@keyframes blink {
   from,
   to {
     color: transparent;
@@ -250,7 +250,7 @@ nav.pagination ul.page-numbers li {
   }
 }
 
-@-webkit-keyframes "blink" {
+@-webkit-keyframes blink {
   from,
   to {
     color: transparent;
@@ -260,7 +260,7 @@ nav.pagination ul.page-numbers li {
   }
 }
 
-@-ms-keyframes "blink" {
+@-ms-keyframes blink {
   from,
   to {
     color: transparent;
@@ -270,7 +270,7 @@ nav.pagination ul.page-numbers li {
   }
 }
 
-@-o-keyframes "blink" {
+@-o-keyframes blink {
   from,
   to {
     color: transparent;
@@ -278,4 +278,9 @@ nav.pagination ul.page-numbers li {
   50% {
     color: greenyellow;
   }
+}
+.wrapper {
+  width: 90%;
+  max-width: 700px;
+  margin: 0 auto;
 }
