@@ -279,3 +279,12 @@ nav.pagination ul.page-numbers li {
     color: greenyellow;
   }
 }
+.masthead {
+  height: 70vh;
+  min-height: 400px;
+  background-image: url("/img/Jorge\ Censi.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-top: -30px;
+}
