@@ -12,7 +12,7 @@ excerpt_separator: <!--more-->
 How many times do you press backspace to fix a word you mistyped? I do it very often. 😅
 
 Even though today's text editors have automatic spellchecking, you need to have accuracy when you're coding to be productive.
-Having that in mind, I've found some cool websites to practice typing and improve my accuracy and try to stay away of hte backspace. 😃
+Having that in mind, I've found some cool websites to practice typing and improve my accuracy and try to stay away of the backspace. 😃
 
 <!--more-->
 
