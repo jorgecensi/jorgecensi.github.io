@@ -24,7 +24,7 @@ There is a say in the cyber security field that is:
 
 And for that I recommend using a password manager.
 
-A password manager is an app that stores all your hard-to-remember passwords. Most password managers are available for iOS, Android, macOS, Windows, Linux and the most popular web browsers. With it you will only need to remember one password and the app will fill up you other passwords for you.
+A password manager is an app that stores all your hard-to-remember passwords. Most password managers are available for iOS, Android, macOS, Windows, Linux and the most popular web browsers. With it you will only need to remember one password and the app will fill up your other passwords for you.
 
 Another feature that some password managers have is the family plan which you can have shared passwords with you family.
 
