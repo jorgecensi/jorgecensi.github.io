@@ -6,4 +6,4 @@ tags: [tips]
 excerpt_separator: <!--more-->
 ---
 
-`type -wait "logfile.txt"`
+<script src="https://gist.github.com/jorgecensi/bb483078d76c15de9523a5cc5a04d4a5.js"></script>
