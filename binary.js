@@ -3,15 +3,71 @@ document.addEventListener("DOMContentLoaded", function () {
     const grid = document.createElement("table");
     const body = document.querySelector("body");
 
-    function generatePuzzle() {
-        const puzzle = [];
-        for (let i = 0; i < gridSize; i++) {
-            const row = [];
-            for (let j = 0; j < gridSize; j++) {
-                row.push(Math.random() < 0.2 ? (Math.random() < 0.5 ? 0 : 1) : "");
-            }
-            puzzle.push(row);
+    function generateCompletedGrid(size) {
+        const grid = Array(size).fill().map(() => Array(size).fill(null));
+        if (solveGrid(grid, 0, 0, size)) {
+            return grid;
         }
+        return null;
+    }
+
+    function solveGrid(grid, row, col, size) {
+        if (row === size) {
+            return true;
+        }
+        let nextRow = row;
+        let nextCol = col + 1;
+        if (nextCol === size) {
+            nextRow++;
+            nextCol = 0;
+        }
+        for (const value of shuffleArray([0, 1])) {
+            if (isValidPlacement(grid, row, col, value, size)) {
+                grid[row][col] = value;
+                if (solveGrid(grid, nextRow, nextCol, size)) {
+                    return true;
+                }
+                grid[row][col] = null;
+            }
+        }
+        return false;
+    }
+
+    function shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    function isValidPlacement(grid, row, col, value, size) {
+        if (col >= 2 && grid[row][col - 1] === value && grid[row][col - 2] === value) {
+            return false;
+        }
+        if (row >= 2 && grid[row - 1][col] === value && grid[row - 2][col] === value) {
+            return false;
+        }
+        let rowCount = 0, colCount = 0;
+        let rowFilled = true, colFilled = true;
+        for (let i = 0; i < size; i++) {
+            if (grid[row][i] === value) rowCount++;
+            if (grid[row][i] === null) rowFilled = false;
+            if (grid[i][col] === value) colCount++;
+            if (grid[i][col] === null) colFilled = false;
+        }
+        if (rowFilled && rowCount >= size / 2) return false;
+        if (colFilled && colCount >= size / 2) return false;
+        if (colFilled || rowFilled) {
+            // Implementation of uniqueness check here...
+        }
+        return true;
+    }
+
+    function generatePuzzle() {
+        const completedGrid = generateCompletedGrid(gridSize);
+        const puzzle = completedGrid.map(row => row.map(cell => (Math.random() < 0.2 ? cell : "")));
         return puzzle;
     }
 
