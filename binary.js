@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
         for (let i = 0; i < gridSize; i++) {
             const row = [];
             for (let j = 0; j < gridSize; j++) {
-                row.push(Math.random() < 0.5 ? 0 : 1);
+                row.push(Math.random() < 0.2 ? (Math.random() < 0.5 ? 0 : 1) : "");
             }
             puzzle.push(row);
         }
@@ -22,9 +22,11 @@ document.addEventListener("DOMContentLoaded", function () {
             for (let j = 0; j < gridSize; j++) {
                 const cell = document.createElement("td");
                 cell.textContent = puzzle[i][j];
-                cell.contentEditable = true;
+                cell.contentEditable = puzzle[i][j] === "" ? true : false;
                 cell.addEventListener("click", function () {
-                    cell.textContent = cell.textContent === "0" ? "1" : "0";
+                    if (cell.contentEditable === "true") {
+                        cell.textContent = cell.textContent === "0" ? "1" : "0";
+                    }
                 });
                 row.appendChild(cell);
             }
