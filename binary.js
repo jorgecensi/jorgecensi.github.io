@@ -22,10 +22,14 @@ document.addEventListener("DOMContentLoaded", function () {
             for (let j = 0; j < gridSize; j++) {
                 const cell = document.createElement("td");
                 cell.textContent = puzzle[i][j];
-                cell.contentEditable = puzzle[i][j] === "" ? true : false;
+                cell.contentEditable = false;
                 cell.addEventListener("click", function () {
-                    if (cell.contentEditable === "true") {
-                        cell.textContent = cell.textContent === "0" ? "1" : "0";
+                    if (cell.textContent === "") {
+                        cell.textContent = "0";
+                    } else if (cell.textContent === "0") {
+                        cell.textContent = "1";
+                    } else {
+                        cell.textContent = "";
                     }
                 });
                 row.appendChild(cell);
