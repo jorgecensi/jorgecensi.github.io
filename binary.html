@@ -7,21 +7,11 @@
 </head>
 
 <body>
-    <canvas id="canvas" width="288" height="512"></canvas>
-    <style>
-        body {
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        canvas {
-            border: 1px solid #000;
-            display: block;
-            margin: 0 auto;
-        }
-    </style>
+    <div>
+        <button id="generatePuzzle">Generate New Puzzle</button>
+        <button id="validatePuzzle">Validate Puzzle</button>
+    </div>
+    <table id="puzzleGrid"></table>
     <script src="binary.js"></script>
 </body>
 

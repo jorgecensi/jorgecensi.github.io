@@ -22,11 +22,53 @@ document.addEventListener("DOMContentLoaded", function () {
             for (let j = 0; j < gridSize; j++) {
                 const cell = document.createElement("td");
                 cell.textContent = puzzle[i][j];
+                cell.contentEditable = true;
+                cell.addEventListener("click", function () {
+                    cell.textContent = cell.textContent === "0" ? "1" : "0";
+                });
                 row.appendChild(cell);
             }
             grid.appendChild(row);
         }
     }
+
+    function validatePuzzle() {
+        const rows = grid.querySelectorAll("tr");
+        for (let i = 0; i < gridSize; i++) {
+            const row = rows[i];
+            const cells = row.querySelectorAll("td");
+            const rowValues = [];
+            for (let j = 0; j < gridSize; j++) {
+                rowValues.push(cells[j].textContent);
+            }
+            if (!isValidRow(rowValues)) {
+                alert("Invalid row: " + (i + 1));
+                return false;
+            }
+        }
+        alert("Puzzle is valid!");
+        return true;
+    }
+
+    function isValidRow(row) {
+        const counts = { "0": 0, "1": 0 };
+        for (let i = 0; i < row.length; i++) {
+            counts[row[i]]++;
+            if (counts[row[i]] > gridSize / 2) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    document.getElementById("generatePuzzle").addEventListener("click", function () {
+        const puzzle = generatePuzzle();
+        renderPuzzle(puzzle);
+    });
+
+    document.getElementById("validatePuzzle").addEventListener("click", function () {
+        validatePuzzle();
+    });
 
     const puzzle = generatePuzzle();
     renderPuzzle(puzzle);
