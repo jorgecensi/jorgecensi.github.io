@@ -22,6 +22,12 @@ document.addEventListener("DOMContentLoaded", function () {
             for (let j = 0; j < gridSize; j++) {
                 const cell = document.createElement("td");
                 cell.textContent = puzzle[i][j];
+                cell.contentEditable = true;
+                cell.addEventListener("input", function () {
+                    if (cell.textContent !== "0" && cell.textContent !== "1") {
+                        cell.textContent = puzzle[i][j];
+                    }
+                });
                 row.appendChild(cell);
             }
             grid.appendChild(row);
