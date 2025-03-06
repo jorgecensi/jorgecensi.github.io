@@ -304,21 +304,24 @@ nav.pagination ul.page-numbers li {
 }
 
 #puzzleGrid td {
-  width: 50px;
-  height: 50px;
+  width: 70px;
+  height: 70px;
   text-align: center;
   vertical-align: middle;
-  font-size: 1.5em;
+  font-size: 2em;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  color: #000;
 }
 
 #puzzleGrid td:hover {
-  background-color: #f0f0f0;
+  background-color: #e0e0e0;
 }
 
 #puzzleGrid .solution-cell {
-  background-color: #d3ffd3;
+  background-color: #a3ffa3;
 }
 
 .btn-primary {
@@ -397,5 +400,5 @@ nav.pagination ul.page-numbers li {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 20px;
+  margin-top: 40px;
 }
