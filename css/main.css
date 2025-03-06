@@ -404,4 +404,5 @@ nav.pagination ul.page-numbers li {
   align-items: center;
   margin-top: 20px;
   width: 100%; /* P4d0f */
+  background-color: #ffffff; /* P28b2 */
 }
