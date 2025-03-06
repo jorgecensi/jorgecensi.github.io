@@ -3,6 +3,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const grid = document.createElement("table");
     const body = document.querySelector("body");
 
+    let solutionVisible = false;
+    let solutionGrid = null;
+
     function generateCompletedGrid(size) {
         const grid = Array(size).fill().map(() => Array(size).fill(null));
         if (solveGrid(grid, 0, 0, size)) {
@@ -66,8 +69,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function generatePuzzle() {
-        const completedGrid = generateCompletedGrid(gridSize);
-        const puzzle = completedGrid.map(row => row.map(cell => (Math.random() < 0.2 ? cell : "")));
+        solutionGrid = generateCompletedGrid(gridSize);
+        const puzzle = solutionGrid.map(row => row.map(cell => (Math.random() < 0.2 ? cell : "")));
         return puzzle;
     }
 
@@ -91,6 +94,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 row.appendChild(cell);
             }
             grid.appendChild(row);
+        }
+    }
+
+    function toggleSolution() {
+        solutionVisible = !solutionVisible;
+        const rows = grid.querySelectorAll("tr");
+        for (let i = 0; i < gridSize; i++) {
+            const row = rows[i];
+            const cells = row.querySelectorAll("td");
+            for (let j = 0; j < gridSize; j++) {
+                if (cells[j].textContent === "") {
+                    cells[j].textContent = solutionVisible ? solutionGrid[i][j] : "";
+                }
+            }
         }
     }
 
@@ -130,6 +147,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.getElementById("validatePuzzle").addEventListener("click", function () {
         validatePuzzle();
+    });
+
+    document.getElementById("toggleSolution").addEventListener("click", function () {
+        toggleSolution();
     });
 
     const puzzle = generatePuzzle();
