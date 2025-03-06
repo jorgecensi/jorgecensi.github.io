@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let solutionVisible = false;
     let solutionGrid = null;
+    let timerInterval = null;
+    let startTime = null;
 
     function generateCompletedGrid(size) {
         const grid = Array(size).fill().map(() => Array(size).fill(null));
@@ -90,6 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     } else {
                         cell.textContent = "";
                     }
+                    updateProgressIndicator();
                 });
                 row.appendChild(cell);
             }
@@ -146,9 +149,44 @@ document.addEventListener("DOMContentLoaded", function () {
         return true;
     }
 
+    function toggleRules() {
+        const rules = document.getElementById("rules");
+        rules.classList.toggle("visible");
+    }
+
+    function updateProgressIndicator() {
+        const rows = grid.querySelectorAll("tr");
+        let filledCells = 0;
+        for (let i = 0; i < gridSize; i++) {
+            const row = rows[i];
+            const cells = row.querySelectorAll("td");
+            for (let j = 0; j < gridSize; j++) {
+                if (cells[j].textContent !== "") {
+                    filledCells++;
+                }
+            }
+        }
+        const progress = Math.round((filledCells / (gridSize * gridSize)) * 100);
+        document.getElementById("progressIndicator").textContent = `Progress: ${progress}%`;
+    }
+
+    function startTimer() {
+        startTime = new Date();
+        timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function updateTimer() {
+        const currentTime = new Date();
+        const elapsedTime = Math.floor((currentTime - startTime) / 1000);
+        const minutes = Math.floor(elapsedTime / 60);
+        const seconds = elapsedTime % 60;
+        document.getElementById("timer").textContent = `Time: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+    }
+
     document.getElementById("generatePuzzle").addEventListener("click", function () {
         const puzzle = generatePuzzle();
         renderPuzzle(puzzle);
+        startTimer();
     });
 
     document.getElementById("validatePuzzle").addEventListener("click", function () {
@@ -159,7 +197,12 @@ document.addEventListener("DOMContentLoaded", function () {
         toggleSolution();
     });
 
+    document.getElementById("toggleRules").addEventListener("click", function () {
+        toggleRules();
+    });
+
     const puzzle = generatePuzzle();
     renderPuzzle(puzzle);
     body.appendChild(grid);
+    startTimer();
 });

@@ -1,100 +1,44 @@
-<!DOCTYPE html>
-<html>
+---
+layout: wrapper
+title: Binary Puzzle
+---
 
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binary Puzzle</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background-color: #f0f0f0;
-            font-family: Arial, sans-serif;
-        }
-
-        table {
-            border-collapse: collapse;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        td {
-            width: 40px;
-            height: 40px;
-            text-align: center;
-            border: 1px solid #ccc;
-            font-size: 24px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        td:empty {
-            background-color: #fff;
-        }
-
-        td:not(:empty) {
-            background-color: #e0e0e0;
-        }
-
-        td:hover:empty {
-            background-color: #f9f9f9;
-        }
-
-        button {
-            margin: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
-            background-color: #007bff;
-            color: #fff;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        #rules {
-            display: none;
-        }
-    </style>
-</head>
-
-<body>
-    <div>
-        <button id="generatePuzzle">Generate New Puzzle</button>
-        <button id="validatePuzzle">Validate Puzzle</button>
-        <button id="toggleSolution">Show/Hide Solution</button>
-        <button id="toggleRules">Show/Hide Rules</button>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 text-center">
+            <h1>Binary Puzzle</h1>
+            <div>
+                <button id="generatePuzzle" class="btn btn-primary" data-toggle="tooltip" title="Generate a new puzzle">Generate New Puzzle</button>
+                <button id="validatePuzzle" class="btn btn-primary" data-toggle="tooltip" title="Validate the current puzzle">Validate Puzzle</button>
+                <button id="toggleSolution" class="btn btn-primary" data-toggle="tooltip" title="Show or hide the solution">Show/Hide Solution</button>
+                <button id="toggleRules" class="btn btn-primary" data-toggle="tooltip" title="Show or hide the game rules">Show/Hide Rules</button>
+            </div>
+            <div id="progressIndicator" class="mt-3"></div>
+            <div id="timer" class="mt-3"></div>
+            <table id="puzzleGrid" class="table table-bordered mt-3"></table>
+            <div id="rules" class="mt-3">
+                <h2>Game Rules</h2>
+                <p>The goal of the binary puzzle is to fill the grid with 0s and 1s, following these rules:</p>
+                <ul>
+                    <li>Each row and each column should contain an equal number of 0s and 1s.</li>
+                    <li>No more than two of the same number can be adjacent to each other.</li>
+                    <li>Each row and each column should be unique.</li>
+                </ul>
+            </div>
+        </div>
     </div>
-    <table id="puzzleGrid"></table>
-    <div id="rules">
-        <h2>Game Rules</h2>
-        <p>The goal of the binary puzzle is to fill the grid with 0s and 1s, following these rules:</p>
-        <ul>
-            <li>Each row and each column should contain an equal number of 0s and 1s.</li>
-            <li>No more than two of the same number can be adjacent to each other.</li>
-            <li>Each row and each column should be unique.</li>
-        </ul>
-    </div>
-    <script src="binary.js"></script>
-    <script>
-        document.getElementById("toggleRules").addEventListener("click", function () {
-            const rulesDiv = document.getElementById("rules");
-            if (rulesDiv.style.display === "none") {
-                rulesDiv.style.display = "block";
-            } else {
-                rulesDiv.style.display = "none";
-            }
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script src="binary.js"></script>
+<script>
+    $(document).ready(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+
+        $('#toggleRules').click(function () {
+            $('#rules').toggleClass('visible');
         });
-    </script>
-</body>
-
-</html>
+    });
+</script>
