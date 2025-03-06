@@ -314,6 +314,7 @@ nav.pagination ul.page-numbers li {
   border: 1px solid #ccc;
   background-color: #fff;
   color: #000;
+
 }
 
 #puzzleGrid td:hover {
@@ -328,6 +329,7 @@ nav.pagination ul.page-numbers li {
   background-color: #007bff;
   border-color: #007bff;
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  margin: 5px; /* P87af */
 }
 
 .btn-primary:hover {
@@ -400,5 +402,6 @@ nav.pagination ul.page-numbers li {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 40px;
+  margin-top: 20px;
+  width: 100%; /* P4d0f */
 }
