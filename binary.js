@@ -104,8 +104,14 @@ document.addEventListener("DOMContentLoaded", function () {
             const row = rows[i];
             const cells = row.querySelectorAll("td");
             for (let j = 0; j < gridSize; j++) {
-                if (cells[j].textContent === "") {
-                    cells[j].textContent = solutionVisible ? solutionGrid[i][j] : "";
+                if (cells[j].textContent === "" || cells[j].classList.contains("solution-cell")) {
+                    if (solutionVisible) {
+                        cells[j].textContent = solutionGrid[i][j];
+                        cells[j].classList.add("solution-cell");
+                    } else {
+                        cells[j].textContent = "";
+                        cells[j].classList.remove("solution-cell");
+                    }
                 }
             }
         }
