@@ -60,6 +60,10 @@
         button:hover {
             background-color: #0056b3;
         }
+
+        #rules {
+            display: none;
+        }
     </style>
 </head>
 
@@ -68,10 +72,10 @@
         <button id="generatePuzzle">Generate New Puzzle</button>
         <button id="validatePuzzle">Validate Puzzle</button>
         <button id="toggleSolution">Show/Hide Solution</button>
+        <button id="toggleRules">Show/Hide Rules</button>
     </div>
     <table id="puzzleGrid"></table>
-    <script src="binary.js"></script>
-    <div>
+    <div id="rules">
         <h2>Game Rules</h2>
         <p>The goal of the binary puzzle is to fill the grid with 0s and 1s, following these rules:</p>
         <ul>
@@ -80,6 +84,17 @@
             <li>Each row and each column should be unique.</li>
         </ul>
     </div>
+    <script src="binary.js"></script>
+    <script>
+        document.getElementById("toggleRules").addEventListener("click", function () {
+            const rulesDiv = document.getElementById("rules");
+            if (rulesDiv.style.display === "none") {
+                rulesDiv.style.display = "block";
+            } else {
+                rulesDiv.style.display = "none";
+            }
+        });
+    </script>
 </body>
 
 </html>
