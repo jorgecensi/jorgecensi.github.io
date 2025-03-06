@@ -314,7 +314,7 @@ nav.pagination ul.page-numbers li {
   border: 1px solid #ccc;
   background-color: #fff;
   color: #000;
-
+  visibility: visible; /* Pfe83 */
 }
 
 #puzzleGrid td:hover {
@@ -323,6 +323,7 @@ nav.pagination ul.page-numbers li {
 
 #puzzleGrid .solution-cell {
   background-color: #a3ffa3;
+  visibility: visible; /* Pa60a */
 }
 
 .btn-primary {
