@@ -288,3 +288,11 @@ nav.pagination ul.page-numbers li {
   background-repeat: no-repeat;
   margin-top: -30px;
 }
+
+#rules {
+  display: none;
+}
+
+#rules.visible {
+  display: block;
+}
