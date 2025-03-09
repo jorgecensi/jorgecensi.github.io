@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
     const gridSize = 8;
-    const grid = document.createElement("table");
+    const grid = document.getElementById("puzzleGrid");
     const puzzleContainer = document.getElementById("puzzleContainer");
 
     let solutionVisible = false;
@@ -203,6 +203,5 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const puzzle = generatePuzzle();
     renderPuzzle(puzzle);
-    puzzleContainer.appendChild(grid);
     startTimer();
 });
