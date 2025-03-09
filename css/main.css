@@ -364,10 +364,18 @@ nav.pagination ul.page-numbers li {
 
 /* Media queries for responsive design */
 @media only screen and (max-width: 600px) {
+
+  #puzzleContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  width: 100%;
+}
   #puzzleGrid td {
-    width: 30px;
-    height: 30px;
-    font-size: 1em;
+    width: 40px;
+    height: 40px;
+
   }
 
   .btn-primary {
@@ -375,24 +383,14 @@ nav.pagination ul.page-numbers li {
     padding: 10px 20px;
   }
 }
+@media only screen and (mim-width: 601px) {
 
-@media only screen and (max-width: 400px) {
-  #puzzleGrid td {
-    width: 20px;
-    height: 20px;
-    font-size: 0.8em;
+  
+  #puzzleContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    width: 500px; /* P4d0f */
   }
-
-  .btn-primary {
-    font-size: 0.8em;
-    padding: 8px 16px;
-  }
-}
-
-#puzzleContainer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-  width: 100%; /* P4d0f */
 }
