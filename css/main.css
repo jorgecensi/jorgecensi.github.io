@@ -338,16 +338,6 @@ nav.pagination ul.page-numbers li {
   border-color: #0056b3;
 }
 
-#progressIndicator {
-  font-size: 1.2em;
-  color: #ffffff;
-}
-
-#timer {
-  font-size: 1.2em;
-  color: #ffffff;
-}
-
 [data-toggle="tooltip"] {
   position: relative;
 }
