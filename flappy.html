@@ -1,27 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flappy Bird using JS</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#70c5ce">
+    <meta name="description" content="Classic Flappy Bird game as a Progressive Web App">
+    
+    <title>Flappy Bird PWA</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS specific -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Flappy Bird">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon">
 </head>
 
 <body>
-    <canvas id="canvas" width="288" height="512"></canvas>
+    <div class="game-container">
+        <canvas id="canvas" width="288" height="512"></canvas>
+        <div class="instructions">
+            <p>Tap or press Space to fly!</p>
+            <p>Avoid the pipes and get the highest score!</p>
+        </div>
+    </div>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            background: linear-gradient(135deg, #70c5ce 0%, #4fb3d9 100%);
+            font-family: Arial, sans-serif;
+            touch-action: manipulation;
         }
 
         canvas {
-            border: 1px solid #000;
+            border: 2px solid #333;
+            border-radius: 10px;
             display: block;
             margin: 0 auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 100vw;
+            max-height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .instructions {
+            color: white;
+            text-align: center;
+            font-size: 14px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        @media (max-width: 320px) {
+            canvas {
+                width: 280px;
+                height: 498px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .instructions {
+                font-size: 12px;
+            }
         }
     </style>
+    
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(registration) {
+                        console.log('SW registered with scope: ', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('SW registration failed: ', error);
+                    });
+            });
+        }
+    </script>
+    
     <script src="flappyBird.js"></script>
 </body>
 
