@@ -1,0 +1,20 @@
+# Set default behavior for line endings
+* text=auto
+
+# Ensure these files always have LF line endings
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.rb text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.md text eol=lf
+
+# Ensure these stay as-is
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

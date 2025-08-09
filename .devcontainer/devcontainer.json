@@ -1,0 +1,20 @@
+{
+  "name": "Jekyll Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "sissel.shopify-liquid",
+        "ms-vscode.vscode-json",
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  },
+  "forwardPorts": [4000],
+  "postCreateCommand": "bundle install",
+  "postStartCommand": "bundle exec jekyll serve --host 0.0.0.0 --livereload",
+  "workspaceFolder": "/workspace"
+}

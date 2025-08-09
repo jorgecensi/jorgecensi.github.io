@@ -1,6 +1,23 @@
 name: Jorge Censi
+title: Jorge Censi - Software Developer
+description: Software developer passionate about clean code, architecture, and modern web technologies
 markdown: kramdown
 permalink: /blog/:year/:month/:day/:title
 theme: jekyll-theme-architect
+
 plugins:
   - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-feed
+
+# Social links
+social:
+  twitter: jorgecensi
+  github: jorgecensi
+  linkedin: jorgecensi
+
+# Build settings
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
