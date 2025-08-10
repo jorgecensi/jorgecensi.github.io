@@ -10,7 +10,10 @@
         "sissel.shopify-liquid",
         "ms-vscode.vscode-json",
         "bradlc.vscode-tailwindcss"
-      ]
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
     }
   },
   "forwardPorts": [4000],
