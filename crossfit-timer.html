@@ -1,0 +1,723 @@
+---
+layout: default
+title: CrossFit Timer - Modern Workout Timer
+---
+
+<div class="container">
+    <div class="text-center mb-4">
+        <h1 class="display-4 mb-3">CrossFit Timer</h1>
+        <p class="lead">Professional workout timer for all your training needs</p>
+    </div>
+
+    <!-- Timer Selection -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-3">Select Workout Type</h3>
+                    <div class="row g-3">
+                        <div class="col-md-3 col-sm-6">
+                            <button class="btn btn-outline-primary w-100 workout-type-btn" data-type="amrap">
+                                <i class="fas fa-infinity mb-2"></i><br>AMRAP
+                            </button>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <button class="btn btn-outline-primary w-100 workout-type-btn" data-type="emom">
+                                <i class="fas fa-clock mb-2"></i><br>EMOM
+                            </button>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <button class="btn btn-outline-primary w-100 workout-type-btn" data-type="tabata">
+                                <i class="fas fa-bolt mb-2"></i><br>Tabata
+                            </button>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <button class="btn btn-outline-primary w-100 workout-type-btn" data-type="custom">
+                                <i class="fas fa-cog mb-2"></i><br>Custom
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timer Configuration -->
+    <div class="row mb-4" id="timer-config">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-3">Configure Timer</h3>
+                    
+                    <!-- AMRAP Configuration -->
+                    <div class="config-section" id="amrap-config" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="amrap-minutes" class="form-label">Duration (Minutes)</label>
+                                <input type="number" class="form-control" id="amrap-minutes" value="20" min="1" max="60">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="countdown-seconds" class="form-label">Countdown (Seconds)</label>
+                                <input type="number" class="form-control" id="countdown-seconds" value="10" min="3" max="30">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EMOM Configuration -->
+                    <div class="config-section" id="emom-config" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="emom-rounds" class="form-label">Rounds</label>
+                                <input type="number" class="form-control" id="emom-rounds" value="12" min="1" max="50">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="emom-interval" class="form-label">Interval (Minutes)</label>
+                                <input type="number" class="form-control" id="emom-interval" value="1" min="1" max="5">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="emom-countdown" class="form-label">Countdown (Seconds)</label>
+                                <input type="number" class="form-control" id="emom-countdown" value="10" min="3" max="30">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabata Configuration -->
+                    <div class="config-section" id="tabata-config" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="tabata-rounds" class="form-label">Rounds</label>
+                                <input type="number" class="form-control" id="tabata-rounds" value="8" min="1" max="20">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="tabata-work" class="form-label">Work (Seconds)</label>
+                                <input type="number" class="form-control" id="tabata-work" value="20" min="5" max="60">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="tabata-rest" class="form-label">Rest (Seconds)</label>
+                                <input type="number" class="form-control" id="tabata-rest" value="10" min="5" max="60">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="tabata-countdown" class="form-label">Countdown (Seconds)</label>
+                                <input type="number" class="form-control" id="tabata-countdown" value="10" min="3" max="30">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Configuration -->
+                    <div class="config-section" id="custom-config" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="custom-minutes" class="form-label">Minutes</label>
+                                <input type="number" class="form-control" id="custom-minutes" value="15" min="0" max="60">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="custom-seconds" class="form-label">Seconds</label>
+                                <input type="number" class="form-control" id="custom-seconds" value="0" min="0" max="59">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="custom-countdown" class="form-label">Countdown (Seconds)</label>
+                                <input type="number" class="form-control" id="custom-countdown" value="10" min="3" max="30">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="custom-beep" class="form-label">Interval Beep</label>
+                                <select class="form-control" id="custom-beep">
+                                    <option value="0">No Beep</option>
+                                    <option value="30">Every 30s</option>
+                                    <option value="60">Every 1min</option>
+                                    <option value="120">Every 2min</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Timer Display -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <!-- Workout Type Display -->
+                    <div id="workout-info" class="mb-3" style="display: none;">
+                        <h4 id="current-workout-type" class="text-muted mb-0"></h4>
+                        <div id="round-info" class="text-muted" style="display: none;">
+                            <span id="current-round">1</span> / <span id="total-rounds">8</span>
+                        </div>
+                    </div>
+
+                    <!-- Timer Phase -->
+                    <div id="timer-phase" class="mb-2" style="display: none;">
+                        <span class="badge fs-5 px-4 py-2" id="phase-badge">GET READY</span>
+                    </div>
+
+                    <!-- Main Timer -->
+                    <div id="timer-display" class="display-1 fw-bold mb-4" style="font-size: 5rem; color: var(--primary-color);">
+                        00:00
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress mb-4" style="height: 8px; display: none;" id="progress-container">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" id="progress-bar" style="width: 0%"></div>
+                    </div>
+
+                    <!-- Control Buttons -->
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <button class="btn btn-primary btn-lg px-4" id="start-btn">
+                            <i class="fas fa-play me-2"></i>Start
+                        </button>
+                        <button class="btn btn-warning btn-lg px-4" id="pause-btn" style="display: none;">
+                            <i class="fas fa-pause me-2"></i>Pause
+                        </button>
+                        <button class="btn btn-success btn-lg px-4" id="resume-btn" style="display: none;">
+                            <i class="fas fa-play me-2"></i>Resume
+                        </button>
+                        <button class="btn btn-danger btn-lg px-4" id="stop-btn" style="display: none;">
+                            <i class="fas fa-stop me-2"></i>Stop
+                        </button>
+                        <button class="btn btn-secondary btn-lg px-4" id="reset-btn">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound Controls -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Sound Settings</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="sound-enabled" checked>
+                                <label class="form-check-label" for="sound-enabled">
+                                    Enable Sound Alerts
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="volume-control" class="form-label">Volume</label>
+                            <input type="range" class="form-range" min="0" max="100" value="70" id="volume-control">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom CSS -->
+<style>
+.workout-type-btn {
+    height: 100px;
+    font-size: 0.9rem;
+    border: 2px solid var(--border-color);
+    background: rgba(30, 41, 59, 0.5);
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+}
+
+.workout-type-btn:hover {
+    border-color: var(--primary-color);
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary-color);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+}
+
+.workout-type-btn.active {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+}
+
+.workout-type-btn i {
+    font-size: 1.5rem;
+    display: block;
+}
+
+#timer-display {
+    text-shadow: 0 0 30px rgba(37, 99, 235, 0.5);
+    font-family: 'Inter', monospace;
+    letter-spacing: -0.05em;
+}
+
+.timer-countdown {
+    color: var(--accent-color) !important;
+    animation: pulse 1s infinite;
+}
+
+.timer-work {
+    color: var(--success-color) !important;
+}
+
+.timer-rest {
+    color: var(--secondary-color) !important;
+}
+
+.timer-finished {
+    color: var(--primary-color) !important;
+    animation: celebration 2s infinite;
+}
+
+#phase-badge {
+    font-size: 1rem !important;
+    letter-spacing: 0.1em;
+}
+
+.badge.bg-countdown {
+    background: var(--accent-color) !important;
+}
+
+.badge.bg-work {
+    background: var(--success-color) !important;
+}
+
+.badge.bg-rest {
+    background: var(--secondary-color) !important;
+}
+
+.badge.bg-finished {
+    background: var(--primary-color) !important;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes celebration {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.1) rotate(5deg); }
+    75% { transform: scale(1.1) rotate(-5deg); }
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 1s linear;
+}
+
+@media (max-width: 768px) {
+    #timer-display {
+        font-size: 3rem !important;
+    }
+    
+    .workout-type-btn {
+        height: 80px;
+        font-size: 0.8rem;
+    }
+    
+    .workout-type-btn i {
+        font-size: 1.2rem;
+    }
+}
+</style>
+
+<!-- JavaScript -->
+<script>
+class CrossFitTimer {
+    constructor() {
+        this.currentWorkout = null;
+        this.isRunning = false;
+        this.isPaused = false;
+        this.timeRemaining = 0;
+        this.totalTime = 0;
+        this.currentRound = 1;
+        this.totalRounds = 1;
+        this.currentPhase = 'countdown'; // countdown, work, rest, finished
+        this.countdownTime = 10;
+        this.intervalId = null;
+        this.audioContext = null;
+        
+        this.initializeElements();
+        this.bindEvents();
+        this.initializeAudio();
+    }
+    
+    initializeElements() {
+        this.workoutBtns = document.querySelectorAll('.workout-type-btn');
+        this.configSections = document.querySelectorAll('.config-section');
+        this.timerDisplay = document.getElementById('timer-display');
+        this.workoutInfo = document.getElementById('workout-info');
+        this.currentWorkoutType = document.getElementById('current-workout-type');
+        this.roundInfo = document.getElementById('round-info');
+        this.currentRoundSpan = document.getElementById('current-round');
+        this.totalRoundsSpan = document.getElementById('total-rounds');
+        this.timerPhase = document.getElementById('timer-phase');
+        this.phaseBadge = document.getElementById('phase-badge');
+        this.progressContainer = document.getElementById('progress-container');
+        this.progressBar = document.getElementById('progress-bar');
+        
+        this.startBtn = document.getElementById('start-btn');
+        this.pauseBtn = document.getElementById('pause-btn');
+        this.resumeBtn = document.getElementById('resume-btn');
+        this.stopBtn = document.getElementById('stop-btn');
+        this.resetBtn = document.getElementById('reset-btn');
+        
+        this.soundEnabled = document.getElementById('sound-enabled');
+        this.volumeControl = document.getElementById('volume-control');
+    }
+    
+    bindEvents() {
+        this.workoutBtns.forEach(btn => {
+            btn.addEventListener('click', () => this.selectWorkoutType(btn.dataset.type));
+        });
+        
+        this.startBtn.addEventListener('click', () => this.startTimer());
+        this.pauseBtn.addEventListener('click', () => this.pauseTimer());
+        this.resumeBtn.addEventListener('click', () => this.resumeTimer());
+        this.stopBtn.addEventListener('click', () => this.stopTimer());
+        this.resetBtn.addEventListener('click', () => this.resetTimer());
+    }
+    
+    async initializeAudio() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    }
+    
+    playBeep(frequency = 800, duration = 200) {
+        if (!this.soundEnabled.checked || !this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(this.volumeControl.value / 100 * 0.3, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration / 1000);
+        
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + duration / 1000);
+    }
+    
+    selectWorkoutType(type) {
+        this.workoutBtns.forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[data-type="${type}"]`).classList.add('active');
+        
+        this.configSections.forEach(section => section.style.display = 'none');
+        document.getElementById(`${type}-config`).style.display = 'block';
+        
+        this.currentWorkout = type;
+        this.resetTimer();
+    }
+    
+    getWorkoutConfig() {
+        switch(this.currentWorkout) {
+            case 'amrap':
+                return {
+                    type: 'amrap',
+                    duration: parseInt(document.getElementById('amrap-minutes').value) * 60,
+                    countdown: parseInt(document.getElementById('countdown-seconds').value)
+                };
+            case 'emom':
+                return {
+                    type: 'emom',
+                    rounds: parseInt(document.getElementById('emom-rounds').value),
+                    interval: parseInt(document.getElementById('emom-interval').value) * 60,
+                    countdown: parseInt(document.getElementById('emom-countdown').value)
+                };
+            case 'tabata':
+                return {
+                    type: 'tabata',
+                    rounds: parseInt(document.getElementById('tabata-rounds').value),
+                    work: parseInt(document.getElementById('tabata-work').value),
+                    rest: parseInt(document.getElementById('tabata-rest').value),
+                    countdown: parseInt(document.getElementById('tabata-countdown').value)
+                };
+            case 'custom':
+                return {
+                    type: 'custom',
+                    duration: parseInt(document.getElementById('custom-minutes').value) * 60 + 
+                             parseInt(document.getElementById('custom-seconds').value),
+                    countdown: parseInt(document.getElementById('custom-countdown').value),
+                    beepInterval: parseInt(document.getElementById('custom-beep').value)
+                };
+            default:
+                return null;
+        }
+    }
+    
+    startTimer() {
+        if (!this.currentWorkout) {
+            alert('Please select a workout type first!');
+            return;
+        }
+        
+        const config = this.getWorkoutConfig();
+        this.setupWorkout(config);
+        this.isRunning = true;
+        this.isPaused = false;
+        this.updateUI();
+        this.tick();
+    }
+    
+    setupWorkout(config) {
+        this.currentPhase = 'countdown';
+        this.timeRemaining = config.countdown;
+        this.countdownTime = config.countdown;
+        this.currentRound = 1;
+        
+        switch(config.type) {
+            case 'amrap':
+                this.totalRounds = 1;
+                this.workTime = config.duration;
+                this.currentWorkoutType.textContent = `AMRAP ${config.duration / 60} Minutes`;
+                this.roundInfo.style.display = 'none';
+                break;
+            case 'emom':
+                this.totalRounds = config.rounds;
+                this.workTime = config.interval;
+                this.currentWorkoutType.textContent = `EMOM ${config.rounds} Rounds`;
+                this.roundInfo.style.display = 'block';
+                break;
+            case 'tabata':
+                this.totalRounds = config.rounds;
+                this.workTime = config.work;
+                this.restTime = config.rest;
+                this.currentWorkoutType.textContent = `Tabata ${config.rounds} Rounds`;
+                this.roundInfo.style.display = 'block';
+                break;
+            case 'custom':
+                this.totalRounds = 1;
+                this.workTime = config.duration;
+                this.beepInterval = config.beepInterval;
+                this.lastBeep = 0;
+                this.currentWorkoutType.textContent = `Custom Timer`;
+                this.roundInfo.style.display = 'none';
+                break;
+        }
+        
+        this.totalRoundsSpan.textContent = this.totalRounds;
+        this.workoutInfo.style.display = 'block';
+        this.timerPhase.style.display = 'block';
+        this.progressContainer.style.display = 'block';
+        this.config = config;
+    }
+    
+    tick() {
+        if (!this.isRunning || this.isPaused) return;
+        
+        this.updateDisplay();
+        this.updateProgress();
+        
+        if (this.timeRemaining <= 0) {
+            this.handlePhaseComplete();
+        } else {
+            this.timeRemaining--;
+            
+            // Play beeps for countdown and warnings
+            if (this.currentPhase === 'countdown' && this.timeRemaining <= 3 && this.timeRemaining > 0) {
+                this.playBeep(1000, 150);
+            } else if (this.currentPhase === 'work' && this.timeRemaining <= 3 && this.timeRemaining > 0) {
+                this.playBeep(800, 150);
+            } else if (this.config.type === 'custom' && this.beepInterval > 0 && 
+                      this.currentPhase === 'work' && 
+                      (this.workTime - this.timeRemaining) % this.beepInterval === 0 &&
+                      this.timeRemaining !== this.workTime) {
+                this.playBeep(600, 100);
+            }
+        }
+        
+        this.intervalId = setTimeout(() => this.tick(), 1000);
+    }
+    
+    handlePhaseComplete() {
+        switch(this.currentPhase) {
+            case 'countdown':
+                this.playBeep(1200, 300);
+                if (this.config.type === 'tabata') {
+                    this.currentPhase = 'work';
+                    this.timeRemaining = this.workTime;
+                } else {
+                    this.currentPhase = 'work';
+                    this.timeRemaining = this.workTime;
+                }
+                break;
+                
+            case 'work':
+                this.playBeep(600, 500);
+                if (this.config.type === 'tabata' && this.currentRound < this.totalRounds) {
+                    this.currentPhase = 'rest';
+                    this.timeRemaining = this.restTime;
+                } else if (this.config.type === 'emom' && this.currentRound < this.totalRounds) {
+                    this.currentRound++;
+                    this.currentPhase = 'work';
+                    this.timeRemaining = this.workTime;
+                } else if (this.currentRound < this.totalRounds) {
+                    this.currentRound++;
+                    this.currentPhase = 'work';
+                    this.timeRemaining = this.workTime;
+                } else {
+                    this.finishWorkout();
+                    return;
+                }
+                break;
+                
+            case 'rest':
+                this.playBeep(1000, 300);
+                if (this.currentRound < this.totalRounds) {
+                    this.currentRound++;
+                    this.currentPhase = 'work';
+                    this.timeRemaining = this.workTime;
+                } else {
+                    this.finishWorkout();
+                    return;
+                }
+                break;
+        }
+        
+        this.currentRoundSpan.textContent = this.currentRound;
+    }
+    
+    finishWorkout() {
+        this.isRunning = false;
+        this.currentPhase = 'finished';
+        this.timeRemaining = 0;
+        this.playBeep(1500, 1000);
+        
+        setTimeout(() => {
+            this.playBeep(1200, 200);
+            setTimeout(() => this.playBeep(1500, 200), 300);
+            setTimeout(() => this.playBeep(1800, 300), 600);
+        }, 500);
+        
+        this.updateDisplay();
+        this.updateUI();
+    }
+    
+    updateDisplay() {
+        const minutes = Math.floor(Math.abs(this.timeRemaining) / 60);
+        const seconds = Math.abs(this.timeRemaining) % 60;
+        const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        this.timerDisplay.textContent = display;
+        
+        // Update phase badge and colors
+        this.timerDisplay.className = `display-1 fw-bold mb-4 timer-${this.currentPhase}`;
+        
+        switch(this.currentPhase) {
+            case 'countdown':
+                this.phaseBadge.textContent = 'GET READY';
+                this.phaseBadge.className = 'badge fs-5 px-4 py-2 bg-countdown';
+                break;
+            case 'work':
+                this.phaseBadge.textContent = 'WORK';
+                this.phaseBadge.className = 'badge fs-5 px-4 py-2 bg-work';
+                break;
+            case 'rest':
+                this.phaseBadge.textContent = 'REST';
+                this.phaseBadge.className = 'badge fs-5 px-4 py-2 bg-rest';
+                break;
+            case 'finished':
+                this.phaseBadge.textContent = 'FINISHED!';
+                this.phaseBadge.className = 'badge fs-5 px-4 py-2 bg-finished';
+                break;
+        }
+    }
+    
+    updateProgress() {
+        let progress = 0;
+        
+        if (this.currentPhase === 'countdown') {
+            progress = ((this.countdownTime - this.timeRemaining) / this.countdownTime) * 100;
+        } else if (this.currentPhase === 'work') {
+            progress = ((this.workTime - this.timeRemaining) / this.workTime) * 100;
+        } else if (this.currentPhase === 'rest') {
+            progress = ((this.restTime - this.timeRemaining) / this.restTime) * 100;
+        } else if (this.currentPhase === 'finished') {
+            progress = 100;
+        }
+        
+        this.progressBar.style.width = `${progress}%`;
+    }
+    
+    pauseTimer() {
+        this.isPaused = true;
+        this.updateUI();
+        if (this.intervalId) {
+            clearTimeout(this.intervalId);
+            this.intervalId = null;
+        }
+    }
+    
+    resumeTimer() {
+        this.isPaused = false;
+        this.updateUI();
+        this.tick();
+    }
+    
+    stopTimer() {
+        this.isRunning = false;
+        this.isPaused = false;
+        if (this.intervalId) {
+            clearTimeout(this.intervalId);
+            this.intervalId = null;
+        }
+        this.updateUI();
+    }
+    
+    resetTimer() {
+        this.stopTimer();
+        this.timeRemaining = 0;
+        this.currentRound = 1;
+        this.currentPhase = 'countdown';
+        this.timerDisplay.textContent = '00:00';
+        this.timerDisplay.className = 'display-1 fw-bold mb-4';
+        this.workoutInfo.style.display = 'none';
+        this.timerPhase.style.display = 'none';
+        this.progressContainer.style.display = 'none';
+        this.progressBar.style.width = '0%';
+        this.updateUI();
+    }
+    
+    updateUI() {
+        const isActive = this.isRunning && !this.isPaused;
+        const isPaused = this.isRunning && this.isPaused;
+        const isStopped = !this.isRunning;
+        
+        this.startBtn.style.display = isStopped ? 'inline-block' : 'none';
+        this.pauseBtn.style.display = isActive ? 'inline-block' : 'none';
+        this.resumeBtn.style.display = isPaused ? 'inline-block' : 'none';
+        this.stopBtn.style.display = this.isRunning ? 'inline-block' : 'none';
+        
+        // Disable workout selection while timer is running
+        this.workoutBtns.forEach(btn => {
+            btn.disabled = this.isRunning;
+        });
+        
+        // Disable config inputs while timer is running
+        document.querySelectorAll('.config-section input, .config-section select').forEach(input => {
+            input.disabled = this.isRunning;
+        });
+    }
+}
+
+// Initialize timer when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new CrossFitTimer();
+});
+
+// Service Worker Registration for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => console.log('SW registered'))
+            .catch(error => console.log('SW registration failed'));
+    });
+}
+</script>

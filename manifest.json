@@ -1,25 +1,24 @@
 {
-  "name": "Flappy Bird PWA",
-  "short_name": "Flappy Bird",
-  "description": "Classic Flappy Bird game as a Progressive Web App",
-  "start_url": "/flappy.html",
+  "name": "CrossFit Timer PWA",
+  "short_name": "CrossFit Timer",
+  "description": "Professional CrossFit and workout timer supporting AMRAP, EMOM, Tabata, and custom workouts",
+  "start_url": "/crossfit-timer.html",
   "display": "standalone",
-  "background_color": "#70c5ce",
-  "theme_color": "#70c5ce",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "img/bird.png",
-      "sizes": "34x24",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
       "src": "img/favicon.ico",
       "sizes": "16x16 32x32",
-      "type": "image/x-icon"
+      "type": "image/x-icon",
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["games", "entertainment"],
-  "lang": "en-US"
+  "categories": ["health-fitness", "sports", "productivity"],
+  "lang": "en-US",
+  "scope": "/",
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
 }

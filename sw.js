@@ -1,15 +1,13 @@
-const CACHE_NAME = 'flappy-bird-v1';
+const CACHE_NAME = 'crossfit-timer-v1';
 const urlsToCache = [
-  '/flappy.html',
-  '/flappyBird.js',
+  '/crossfit-timer.html',
   '/css/main.css',
-  '/img/bird.png',
-  '/img/bg.png',
-  '/img/fg.png',
-  '/img/pipeNorth.png',
-  '/img/pipeSouth.png',
-  '/sounds/fly.mp3',
-  '/sounds/score.mp3'
+  '/img/favicon.ico',
+  '/manifest.json',
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
 ];
 
 self.addEventListener('install', function(event) {
