@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(export:*)",
-      "Bash(gem list)"
+      "Bash(gem list)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }
