@@ -1,38 +1,44 @@
----
-layout: default
-title: CrossFit Timer - Modern Workout Timer
----
-
-<div class="container">
-    <div class="text-center mb-4">
-        <h1 class="display-4 mb-3">CrossFit Timer</h1>
-        <p class="lead">Professional workout timer for all your training needs</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrossFit Timer - Modern Workout Timer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="cf-container">
+    <div class="cf-header">
+        <h1 class="cf-title">CrossFit Timer</h1>
+        <p class="cf-subtitle">Professional workout timer for all your training needs</p>
     </div>
 
     <!-- Timer Selection -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <h3 class="card-title mb-3">Select Workout Type</h3>
-                    <div class="row g-3">
-                        <div class="col-md-3 col-sm-6">
-                            <button class="btn btn-outline-primary w-100 workout-type-btn" data-type="amrap">
+    <div class="cf-section">
+        <div class="cf-card">
+            <div class="cf-card-body">
+                    <h3 class="cf-card-title">Select Workout Type</h3>
+                    <div class="cf-workout-grid">
+                        <div class="cf-workout-item">
+                            <button class="cf-workout-btn workout-type-btn" data-type="amrap">
                                 <i class="fas fa-infinity mb-2"></i><br>AMRAP
                             </button>
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <button class="btn btn-outline-primary w-100 workout-type-btn" data-type="emom">
+                        <div class="cf-workout-item">
+                            <button class="cf-workout-btn workout-type-btn" data-type="emom">
                                 <i class="fas fa-clock mb-2"></i><br>EMOM
                             </button>
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <button class="btn btn-outline-primary w-100 workout-type-btn" data-type="tabata">
+                        <div class="cf-workout-item">
+                            <button class="cf-workout-btn workout-type-btn" data-type="tabata">
                                 <i class="fas fa-bolt mb-2"></i><br>Tabata
                             </button>
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <button class="btn btn-outline-primary w-100 workout-type-btn" data-type="custom">
+                        <div class="cf-workout-item">
+                            <button class="cf-workout-btn workout-type-btn" data-type="custom">
                                 <i class="fas fa-cog mb-2"></i><br>Custom
                             </button>
                         </div>
@@ -43,84 +49,83 @@ title: CrossFit Timer - Modern Workout Timer
     </div>
 
     <!-- Timer Configuration -->
-    <div class="row mb-4" id="timer-config">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <h3 class="card-title mb-3">Configure Timer</h3>
+    <div class="cf-section" id="timer-config">
+        <div class="cf-card">
+            <div class="cf-card-body">
+                    <h3 class="cf-card-title">Configure Timer</h3>
                     
                     <!-- AMRAP Configuration -->
-                    <div class="config-section" id="amrap-config" style="display: none;">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="amrap-minutes" class="form-label">Duration (Minutes)</label>
-                                <input type="number" class="form-control" id="amrap-minutes" value="20" min="1" max="60">
+                    <div class="cf-config-section" id="amrap-config" style="display: none;">
+                        <div class="cf-form-grid">
+                            <div class="cf-form-item">
+                                <label for="amrap-minutes" class="cf-form-label">Duration (Minutes)</label>
+                                <input type="number" class="cf-form-input" id="amrap-minutes" value="20" min="1" max="60">
                             </div>
-                            <div class="col-md-6">
-                                <label for="countdown-seconds" class="form-label">Countdown (Seconds)</label>
-                                <input type="number" class="form-control" id="countdown-seconds" value="10" min="3" max="30">
+                            <div class="cf-form-item">
+                                <label for="countdown-seconds" class="cf-form-label">Countdown (Seconds)</label>
+                                <input type="number" class="cf-form-input" id="countdown-seconds" value="10" min="3" max="30">
                             </div>
                         </div>
                     </div>
 
                     <!-- EMOM Configuration -->
-                    <div class="config-section" id="emom-config" style="display: none;">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label for="emom-rounds" class="form-label">Rounds</label>
-                                <input type="number" class="form-control" id="emom-rounds" value="12" min="1" max="50">
+                    <div class="cf-config-section" id="emom-config" style="display: none;">
+                        <div class="cf-form-grid">
+                            <div class="cf-form-item">
+                                <label for="emom-rounds" class="cf-form-label">Rounds</label>
+                                <input type="number" class="cf-form-input" id="emom-rounds" value="12" min="1" max="50">
                             </div>
-                            <div class="col-md-4">
-                                <label for="emom-interval" class="form-label">Interval (Minutes)</label>
-                                <input type="number" class="form-control" id="emom-interval" value="1" min="1" max="5">
+                            <div class="cf-form-item">
+                                <label for="emom-interval" class="cf-form-label">Interval (Minutes)</label>
+                                <input type="number" class="cf-form-input" id="emom-interval" value="1" min="1" max="5">
                             </div>
-                            <div class="col-md-4">
-                                <label for="emom-countdown" class="form-label">Countdown (Seconds)</label>
-                                <input type="number" class="form-control" id="emom-countdown" value="10" min="3" max="30">
+                            <div class="cf-form-item">
+                                <label for="emom-countdown" class="cf-form-label">Countdown (Seconds)</label>
+                                <input type="number" class="cf-form-input" id="emom-countdown" value="10" min="3" max="30">
                             </div>
                         </div>
                     </div>
 
                     <!-- Tabata Configuration -->
-                    <div class="config-section" id="tabata-config" style="display: none;">
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label for="tabata-rounds" class="form-label">Rounds</label>
-                                <input type="number" class="form-control" id="tabata-rounds" value="8" min="1" max="20">
+                    <div class="cf-config-section" id="tabata-config" style="display: none;">
+                        <div class="cf-form-grid">
+                            <div class="cf-form-item">
+                                <label for="tabata-rounds" class="cf-form-label">Rounds</label>
+                                <input type="number" class="cf-form-input" id="tabata-rounds" value="8" min="1" max="20">
                             </div>
-                            <div class="col-md-3">
-                                <label for="tabata-work" class="form-label">Work (Seconds)</label>
-                                <input type="number" class="form-control" id="tabata-work" value="20" min="5" max="60">
+                            <div class="cf-form-item">
+                                <label for="tabata-work" class="cf-form-label">Work (Seconds)</label>
+                                <input type="number" class="cf-form-input" id="tabata-work" value="20" min="5" max="60">
                             </div>
-                            <div class="col-md-3">
-                                <label for="tabata-rest" class="form-label">Rest (Seconds)</label>
-                                <input type="number" class="form-control" id="tabata-rest" value="10" min="5" max="60">
+                            <div class="cf-form-item">
+                                <label for="tabata-rest" class="cf-form-label">Rest (Seconds)</label>
+                                <input type="number" class="cf-form-input" id="tabata-rest" value="10" min="5" max="60">
                             </div>
-                            <div class="col-md-3">
-                                <label for="tabata-countdown" class="form-label">Countdown (Seconds)</label>
-                                <input type="number" class="form-control" id="tabata-countdown" value="10" min="3" max="30">
+                            <div class="cf-form-item">
+                                <label for="tabata-countdown" class="cf-form-label">Countdown (Seconds)</label>
+                                <input type="number" class="cf-form-input" id="tabata-countdown" value="10" min="3" max="30">
                             </div>
                         </div>
                     </div>
 
                     <!-- Custom Configuration -->
-                    <div class="config-section" id="custom-config" style="display: none;">
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label for="custom-minutes" class="form-label">Minutes</label>
-                                <input type="number" class="form-control" id="custom-minutes" value="15" min="0" max="60">
+                    <div class="cf-config-section" id="custom-config" style="display: none;">
+                        <div class="cf-form-grid">
+                            <div class="cf-form-item">
+                                <label for="custom-minutes" class="cf-form-label">Minutes</label>
+                                <input type="number" class="cf-form-input" id="custom-minutes" value="15" min="0" max="60">
                             </div>
-                            <div class="col-md-3">
-                                <label for="custom-seconds" class="form-label">Seconds</label>
-                                <input type="number" class="form-control" id="custom-seconds" value="0" min="0" max="59">
+                            <div class="cf-form-item">
+                                <label for="custom-seconds" class="cf-form-label">Seconds</label>
+                                <input type="number" class="cf-form-input" id="custom-seconds" value="0" min="0" max="59">
                             </div>
-                            <div class="col-md-3">
-                                <label for="custom-countdown" class="form-label">Countdown (Seconds)</label>
-                                <input type="number" class="form-control" id="custom-countdown" value="10" min="3" max="30">
+                            <div class="cf-form-item">
+                                <label for="custom-countdown" class="cf-form-label">Countdown (Seconds)</label>
+                                <input type="number" class="cf-form-input" id="custom-countdown" value="10" min="3" max="30">
                             </div>
-                            <div class="col-md-3">
-                                <label for="custom-beep" class="form-label">Interval Beep</label>
-                                <select class="form-control" id="custom-beep">
+                            <div class="cf-form-item">
+                                <label for="custom-beep" class="cf-form-label">Interval Beep</label>
+                                <select class="cf-form-input" id="custom-beep">
                                     <option value="0">No Beep</option>
                                     <option value="30">Every 30s</option>
                                     <option value="60">Every 1min</option>
@@ -135,10 +140,9 @@ title: CrossFit Timer - Modern Workout Timer
     </div>
 
     <!-- Main Timer Display -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body text-center">
+    <div class="cf-section">
+        <div class="cf-card">
+            <div class="cf-card-body cf-timer-body">
                     <!-- Workout Type Display -->
                     <div id="workout-info" class="mb-3" style="display: none;">
                         <h4 id="current-workout-type" class="text-muted mb-0"></h4>
@@ -148,36 +152,35 @@ title: CrossFit Timer - Modern Workout Timer
                     </div>
 
                     <!-- Timer Phase -->
-                    <div id="timer-phase" class="mb-2" style="display: none;">
-                        <span class="badge fs-5 px-4 py-2" id="phase-badge">GET READY</span>
+                    <div id="timer-phase" class="cf-timer-phase" style="display: none;">
+                        <span class="cf-phase-badge" id="phase-badge">GET READY</span>
                     </div>
 
                     <!-- Main Timer -->
-                    <div id="timer-display" class="display-1 fw-bold mb-4" style="font-size: 5rem; color: var(--primary-color);">
+                    <div id="timer-display" class="cf-timer-display">
                         00:00
                     </div>
 
                     <!-- Progress Bar -->
-                    <div class="progress mb-4" style="height: 8px; display: none;" id="progress-container">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" id="progress-bar" style="width: 0%"></div>
+                    <div class="cf-progress-container" style="display: none;" id="progress-container">
+                        <div class="cf-progress-bar" id="progress-bar" style="width: 0%"></div>
                     </div>
 
                     <!-- Control Buttons -->
-                    <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <button class="btn btn-primary btn-lg px-4" id="start-btn">
+                    <div class="cf-controls">
+                        <button class="cf-btn cf-btn-primary" id="start-btn">
                             <i class="fas fa-play me-2"></i>Start
                         </button>
-                        <button class="btn btn-warning btn-lg px-4" id="pause-btn" style="display: none;">
+                        <button class="cf-btn cf-btn-warning" id="pause-btn" style="display: none;">
                             <i class="fas fa-pause me-2"></i>Pause
                         </button>
-                        <button class="btn btn-success btn-lg px-4" id="resume-btn" style="display: none;">
+                        <button class="cf-btn cf-btn-success" id="resume-btn" style="display: none;">
                             <i class="fas fa-play me-2"></i>Resume
                         </button>
-                        <button class="btn btn-danger btn-lg px-4" id="stop-btn" style="display: none;">
+                        <button class="cf-btn cf-btn-danger" id="stop-btn" style="display: none;">
                             <i class="fas fa-stop me-2"></i>Stop
                         </button>
-                        <button class="btn btn-secondary btn-lg px-4" id="reset-btn">
+                        <button class="cf-btn cf-btn-secondary" id="reset-btn">
                             <i class="fas fa-undo me-2"></i>Reset
                         </button>
                     </div>
@@ -187,23 +190,22 @@ title: CrossFit Timer - Modern Workout Timer
     </div>
 
     <!-- Sound Controls -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Sound Settings</h5>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="sound-enabled" checked>
-                                <label class="form-check-label" for="sound-enabled">
+    <div class="cf-section">
+        <div class="cf-card">
+            <div class="cf-card-body">
+                    <h5 class="cf-card-title">Sound Settings</h5>
+                    <div class="cf-form-grid">
+                        <div class="cf-form-item">
+                            <div class="cf-form-switch">
+                                <input class="cf-switch-input" type="checkbox" id="sound-enabled" checked>
+                                <label class="cf-switch-label" for="sound-enabled">
                                     Enable Sound Alerts
                                 </label>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="volume-control" class="form-label">Volume</label>
-                            <input type="range" class="form-range" min="0" max="100" value="70" id="volume-control">
+                        <div class="cf-form-item">
+                            <label for="volume-control" class="cf-form-label">Volume</label>
+                            <input type="range" class="cf-range-input" min="0" max="100" value="70" id="volume-control">
                         </div>
                     </div>
                 </div>
@@ -212,8 +214,118 @@ title: CrossFit Timer - Modern Workout Timer
     </div>
 </div>
 
+</body>
+</html>
+
 <!-- Custom CSS -->
 <style>
+/* Reset and Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+:root {
+    --primary-color: #2563eb;
+    --secondary-color: #64748b;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --accent-color: #f97316;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --border-color: #334155;
+    --card-bg: rgba(30, 41, 59, 0.7);
+    --card-border: rgba(51, 65, 85, 0.5);
+}
+
+/* Container and Layout */
+.cf-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.cf-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.cf-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    text-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.cf-subtitle {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.cf-section {
+    margin-bottom: 2rem;
+}
+
+/* Card Styles */
+.cf-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.cf-card-body {
+    padding: 2rem;
+}
+
+.cf-card-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+}
+
+/* Workout Selection */
+.cf-workout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.cf-workout-item {
+    display: flex;
+}
+
+.cf-workout-btn {
+    width: 100%;
+    height: 100px;
+    font-size: 0.9rem;
+    border: 2px solid var(--border-color);
+    background: rgba(30, 41, 59, 0.5);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+}
+
 .workout-type-btn {
     height: 100px;
     font-size: 0.9rem;
@@ -223,7 +335,7 @@ title: CrossFit Timer - Modern Workout Timer
     transition: all 0.3s ease;
 }
 
-.workout-type-btn:hover {
+.cf-workout-btn:hover {
     border-color: var(--primary-color);
     background: rgba(37, 99, 235, 0.1);
     color: var(--primary-color);
@@ -231,7 +343,7 @@ title: CrossFit Timer - Modern Workout Timer
     box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
 }
 
-.workout-type-btn.active {
+.cf-workout-btn.active {
     border-color: var(--primary-color);
     background: var(--primary-color);
     color: white;
@@ -239,17 +351,67 @@ title: CrossFit Timer - Modern Workout Timer
     box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
 }
 
-.workout-type-btn i {
+.cf-workout-btn i {
     font-size: 1.5rem;
     display: block;
+    margin-bottom: 0.5rem;
 }
 
-#timer-display {
+/* Form Styles */
+.cf-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.cf-form-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.cf-form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.cf-form-input, .cf-switch-input, .cf-range-input {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: rgba(15, 23, 42, 0.5);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.cf-form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.cf-config-section {
+    padding: 1rem 0;
+}
+
+/* Timer Display */
+.cf-timer-body {
+    text-align: center;
+}
+
+.cf-timer-display {
+    font-size: 5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 2rem 0;
     text-shadow: 0 0 30px rgba(37, 99, 235, 0.5);
     font-family: 'Inter', monospace;
     letter-spacing: -0.05em;
 }
 
+/* Timer States */
 .timer-countdown {
     color: var(--accent-color) !important;
     animation: pulse 1s infinite;
@@ -268,27 +430,198 @@ title: CrossFit Timer - Modern Workout Timer
     animation: celebration 2s infinite;
 }
 
-#phase-badge {
-    font-size: 1rem !important;
+/* Timer Phase Badge */
+.cf-timer-phase {
+    margin-bottom: 1rem;
+}
+
+.cf-phase-badge {
+    font-size: 1rem;
+    font-weight: 600;
     letter-spacing: 0.1em;
+    padding: 0.75rem 2rem;
+    border-radius: 50px;
+    display: inline-block;
+    text-transform: uppercase;
 }
 
-.badge.bg-countdown {
-    background: var(--accent-color) !important;
+.cf-phase-badge.bg-countdown {
+    background: var(--accent-color);
+    color: white;
 }
 
-.badge.bg-work {
-    background: var(--success-color) !important;
+.cf-phase-badge.bg-work {
+    background: var(--success-color);
+    color: white;
 }
 
-.badge.bg-rest {
-    background: var(--secondary-color) !important;
+.cf-phase-badge.bg-rest {
+    background: var(--secondary-color);
+    color: white;
 }
 
-.badge.bg-finished {
-    background: var(--primary-color) !important;
+.cf-phase-badge.bg-finished {
+    background: var(--primary-color);
+    color: white;
 }
 
+/* Control Buttons */
+.cf-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.cf-btn {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 140px;
+    justify-content: center;
+}
+
+.cf-btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.cf-btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
+}
+
+.cf-btn-warning {
+    background: var(--warning-color);
+    color: white;
+}
+
+.cf-btn-warning:hover {
+    background: #d97706;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);
+}
+
+.cf-btn-success {
+    background: var(--success-color);
+    color: white;
+}
+
+.cf-btn-success:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+}
+
+.cf-btn-danger {
+    background: var(--danger-color);
+    color: white;
+}
+
+.cf-btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+}
+
+.cf-btn-secondary {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.cf-btn-secondary:hover {
+    background: #475569;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(100, 116, 139, 0.3);
+}
+
+/* Form Controls */
+.cf-form-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.cf-switch-input {
+    width: 50px;
+    height: 25px;
+    position: relative;
+    appearance: none;
+    background: var(--border-color);
+    border-radius: 25px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    padding: 0;
+}
+
+.cf-switch-input:checked {
+    background: var(--primary-color);
+}
+
+.cf-switch-input::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 21px;
+    height: 21px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+
+.cf-switch-input:checked::before {
+    transform: translateX(25px);
+}
+
+.cf-switch-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.cf-range-input {
+    padding: 0;
+    height: 6px;
+    appearance: none;
+    background: var(--border-color);
+    border-radius: 3px;
+    outline: none;
+}
+
+.cf-range-input::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.cf-range-input::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Animations */
 @keyframes pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); }
@@ -300,23 +633,62 @@ title: CrossFit Timer - Modern Workout Timer
     75% { transform: scale(1.1) rotate(-5deg); }
 }
 
-.progress-bar {
-    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-    transition: width 1s linear;
+/* Progress Bar */
+.cf-progress-container {
+    height: 8px;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 4px;
+    margin: 2rem 0;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
 }
 
+.cf-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 1s linear;
+    border-radius: 4px;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
-    #timer-display {
-        font-size: 3rem !important;
+    .cf-container {
+        padding: 0 10px;
     }
     
-    .workout-type-btn {
+    .cf-title {
+        font-size: 2.5rem;
+    }
+    
+    .cf-timer-display {
+        font-size: 3rem;
+    }
+    
+    .cf-workout-btn {
         height: 80px;
         font-size: 0.8rem;
     }
     
-    .workout-type-btn i {
+    .cf-workout-btn i {
         font-size: 1.2rem;
+    }
+    
+    .cf-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .cf-controls {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .cf-btn {
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    .cf-card-body {
+        padding: 1.5rem;
     }
 }
 </style>
@@ -344,7 +716,7 @@ class CrossFitTimer {
     
     initializeElements() {
         this.workoutBtns = document.querySelectorAll('.workout-type-btn');
-        this.configSections = document.querySelectorAll('.config-section');
+        this.configSections = document.querySelectorAll('.cf-config-section');
         this.timerDisplay = document.getElementById('timer-display');
         this.workoutInfo = document.getElementById('workout-info');
         this.currentWorkoutType = document.getElementById('current-workout-type');
@@ -608,24 +980,24 @@ class CrossFitTimer {
         this.timerDisplay.textContent = display;
         
         // Update phase badge and colors
-        this.timerDisplay.className = `display-1 fw-bold mb-4 timer-${this.currentPhase}`;
+        this.timerDisplay.className = `cf-timer-display timer-${this.currentPhase}`;
         
         switch(this.currentPhase) {
             case 'countdown':
                 this.phaseBadge.textContent = 'GET READY';
-                this.phaseBadge.className = 'badge fs-5 px-4 py-2 bg-countdown';
+                this.phaseBadge.className = 'cf-phase-badge bg-countdown';
                 break;
             case 'work':
                 this.phaseBadge.textContent = 'WORK';
-                this.phaseBadge.className = 'badge fs-5 px-4 py-2 bg-work';
+                this.phaseBadge.className = 'cf-phase-badge bg-work';
                 break;
             case 'rest':
                 this.phaseBadge.textContent = 'REST';
-                this.phaseBadge.className = 'badge fs-5 px-4 py-2 bg-rest';
+                this.phaseBadge.className = 'cf-phase-badge bg-rest';
                 break;
             case 'finished':
                 this.phaseBadge.textContent = 'FINISHED!';
-                this.phaseBadge.className = 'badge fs-5 px-4 py-2 bg-finished';
+                this.phaseBadge.className = 'cf-phase-badge bg-finished';
                 break;
         }
     }
@@ -677,7 +1049,7 @@ class CrossFitTimer {
         this.currentRound = 1;
         this.currentPhase = 'countdown';
         this.timerDisplay.textContent = '00:00';
-        this.timerDisplay.className = 'display-1 fw-bold mb-4';
+        this.timerDisplay.className = 'cf-timer-display';
         this.workoutInfo.style.display = 'none';
         this.timerPhase.style.display = 'none';
         this.progressContainer.style.display = 'none';
@@ -701,7 +1073,7 @@ class CrossFitTimer {
         });
         
         // Disable config inputs while timer is running
-        document.querySelectorAll('.config-section input, .config-section select').forEach(input => {
+        document.querySelectorAll('.cf-config-section input, .cf-config-section select').forEach(input => {
             input.disabled = this.isRunning;
         });
     }
