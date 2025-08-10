@@ -10,7 +10,7 @@
     <title>Flappy Bird PWA</title>
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="flappy-manifest.json">
     
     <!-- iOS specific -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -89,12 +89,12 @@
         // Register service worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('sw.js')
+                navigator.serviceWorker.register('flappy-sw.js')
                     .then(function(registration) {
-                        console.log('SW registered with scope: ', registration.scope);
+                        console.log('Flappy Bird SW registered with scope: ', registration.scope);
                     })
                     .catch(function(error) {
-                        console.log('SW registration failed: ', error);
+                        console.log('Flappy Bird SW registration failed: ', error);
                     });
             });
         }
