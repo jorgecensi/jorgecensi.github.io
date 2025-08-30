@@ -14,14 +14,12 @@
     <!-- Page 1: Workout Selection -->
     <div id="page-workout-selection" class="cf-page">
         <div class="cf-header">
-            <h1 class="cf-title">CrossFit Timer</h1>
-            <p class="cf-subtitle">Select your workout type</p>
+            <h1 class="cf-title">CrossFit Timer</h1>            
         </div>
 
         <div class="cf-section">
             <div class="cf-card">
-                <div class="cf-card-body">
-                    <h3 class="cf-card-title">Select Workout Type</h3>
+                <div class="cf-card-body">                    
                     <div class="cf-workout-grid">
                         <div class="cf-workout-item">
                             <button class="cf-workout-btn workout-type-btn" data-type="amrap">
@@ -52,8 +50,7 @@
     <!-- Page 2: Timer Setup -->
     <div id="page-timer-setup" class="cf-page" style="display: none;">
         <div class="cf-header">
-            <h1 class="cf-title">Setup Timer</h1>
-            <p class="cf-subtitle">Configure your workout</p>
+            <h1 class="cf-title">CrossFit Timer</h1>            
             <button class="cf-back-btn" onclick="timer.goToPage('workout-selection')">
                 <i class="fas fa-arrow-left"></i> Back
             </button>
@@ -330,6 +327,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 1000;
 }
 
 .cf-exit-timer-btn:hover {
