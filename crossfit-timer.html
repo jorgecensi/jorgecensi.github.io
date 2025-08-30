@@ -11,15 +11,16 @@
 </head>
 <body>
 <div class="cf-container">
-    <div class="cf-header">
-        <h1 class="cf-title">CrossFit Timer</h1>
-        <p class="cf-subtitle">Professional workout timer for all your training needs</p>
-    </div>
+    <!-- Page 1: Workout Selection -->
+    <div id="page-workout-selection" class="cf-page">
+        <div class="cf-header">
+            <h1 class="cf-title">CrossFit Timer</h1>
+            <p class="cf-subtitle">Select your workout type</p>
+        </div>
 
-    <!-- Timer Selection -->
-    <div class="cf-section">
-        <div class="cf-card">
-            <div class="cf-card-body">
+        <div class="cf-section">
+            <div class="cf-card">
+                <div class="cf-card-body">
                     <h3 class="cf-card-title">Select Workout Type</h3>
                     <div class="cf-workout-grid">
                         <div class="cf-workout-item">
@@ -48,8 +49,18 @@
         </div>
     </div>
 
-    <!-- Timer Configuration -->
-    <div class="cf-section" id="timer-config">
+    <!-- Page 2: Timer Setup -->
+    <div id="page-timer-setup" class="cf-page" style="display: none;">
+        <div class="cf-header">
+            <h1 class="cf-title">Setup Timer</h1>
+            <p class="cf-subtitle">Configure your workout</p>
+            <button class="cf-back-btn" onclick="timer.goToPage('workout-selection')">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+        </div>
+
+        <!-- Timer Configuration -->
+        <div class="cf-section" id="timer-config">
         <div class="cf-card">
             <div class="cf-card-body">
                     <h3 class="cf-card-title">Configure Timer</h3>
@@ -134,12 +145,49 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="cf-controls" style="margin-top: 2rem;">
+                        <button class="cf-btn cf-btn-primary" id="proceed-to-timer-btn">
+                            <i class="fas fa-play me-2"></i> Start Workout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sound Controls -->
+        <div class="cf-section">
+            <div class="cf-card">
+                <div class="cf-card-body">
+                    <h5 class="cf-card-title">Sound Settings</h5>
+                    <div class="cf-form-grid">
+                        <div class="cf-form-item">
+                            <div class="cf-form-switch">
+                                <input class="cf-switch-input" type="checkbox" id="sound-enabled" checked>
+                                <label class="cf-switch-label" for="sound-enabled">
+                                    Enable Sound Alerts
+                                </label>
+                            </div>
+                        </div>
+                        <div class="cf-form-item">
+                            <label for="volume-control" class="cf-form-label">Volume</label>
+                            <input type="range" class="cf-range-input" min="0" max="100" value="70" id="volume-control">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Timer Display -->
+    <!-- Page 3: Timer Only View -->
+    <div id="page-timer-only" class="cf-page" style="display: none;">
+        <div class="cf-timer-header">
+            <button class="cf-exit-timer-btn" onclick="timer.exitTimer()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Main Timer Display -->
     <div class="cf-section">
         <div class="cf-card">
             <div class="cf-card-body cf-timer-body">
@@ -188,30 +236,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Sound Controls -->
-    <div class="cf-section">
-        <div class="cf-card">
-            <div class="cf-card-body">
-                    <h5 class="cf-card-title">Sound Settings</h5>
-                    <div class="cf-form-grid">
-                        <div class="cf-form-item">
-                            <div class="cf-form-switch">
-                                <input class="cf-switch-input" type="checkbox" id="sound-enabled" checked>
-                                <label class="cf-switch-label" for="sound-enabled">
-                                    Enable Sound Alerts
-                                </label>
-                            </div>
-                        </div>
-                        <div class="cf-form-item">
-                            <label for="volume-control" class="cf-form-label">Volume</label>
-                            <input type="range" class="cf-range-input" min="0" max="100" value="70" id="volume-control">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 </body>
@@ -253,6 +277,64 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
+}
+
+/* Page System */
+.cf-page {
+    width: 100%;
+}
+
+/* Back Button */
+.cf-back-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(100, 116, 139, 0.8);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cf-back-btn:hover {
+    background: rgba(100, 116, 139, 1);
+    transform: translateY(-2px);
+}
+
+/* Timer Header for Timer-Only View */
+.cf-timer-header {
+    position: relative;
+    padding: 1rem 0;
+}
+
+.cf-exit-timer-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(239, 68, 68, 0.8);
+    border: none;
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cf-exit-timer-btn:hover {
+    background: rgba(239, 68, 68, 1);
+    transform: scale(1.1);
 }
 
 .cf-header {
@@ -708,6 +790,7 @@ class CrossFitTimer {
         this.countdownTime = 10;
         this.intervalId = null;
         this.audioContext = null;
+        this.currentPage = 'workout-selection';
         
         this.initializeElements();
         this.bindEvents();
@@ -733,9 +816,17 @@ class CrossFitTimer {
         this.resumeBtn = document.getElementById('resume-btn');
         this.stopBtn = document.getElementById('stop-btn');
         this.resetBtn = document.getElementById('reset-btn');
+        this.proceedBtn = document.getElementById('proceed-to-timer-btn');
         
         this.soundEnabled = document.getElementById('sound-enabled');
         this.volumeControl = document.getElementById('volume-control');
+        
+        // Page elements
+        this.pages = {
+            'workout-selection': document.getElementById('page-workout-selection'),
+            'timer-setup': document.getElementById('page-timer-setup'),
+            'timer-only': document.getElementById('page-timer-only')
+        };
     }
     
     bindEvents() {
@@ -748,6 +839,7 @@ class CrossFitTimer {
         this.resumeBtn.addEventListener('click', () => this.resumeTimer());
         this.stopBtn.addEventListener('click', () => this.stopTimer());
         this.resetBtn.addEventListener('click', () => this.resetTimer());
+        this.proceedBtn.addEventListener('click', () => this.proceedToTimer());
     }
     
     async initializeAudio() {
@@ -777,6 +869,15 @@ class CrossFitTimer {
         oscillator.stop(this.audioContext.currentTime + duration / 1000);
     }
     
+    goToPage(pageName) {
+        // Hide all pages
+        Object.values(this.pages).forEach(page => page.style.display = 'none');
+        
+        // Show selected page
+        this.pages[pageName].style.display = 'block';
+        this.currentPage = pageName;
+    }
+    
     selectWorkoutType(type) {
         this.workoutBtns.forEach(btn => btn.classList.remove('active'));
         document.querySelector(`[data-type="${type}"]`).classList.add('active');
@@ -786,6 +887,25 @@ class CrossFitTimer {
         
         this.currentWorkout = type;
         this.resetTimer();
+        
+        // Navigate to setup page
+        this.goToPage('timer-setup');
+    }
+    
+    proceedToTimer() {
+        if (!this.currentWorkout) {
+            alert('Please select a workout type first!');
+            return;
+        }
+        
+        this.goToPage('timer-only');
+        this.startTimer();
+    }
+    
+    exitTimer() {
+        this.stopTimer();
+        this.resetTimer();
+        this.goToPage('workout-selection');
     }
     
     getWorkoutConfig() {
@@ -1080,8 +1200,9 @@ class CrossFitTimer {
 }
 
 // Initialize timer when page loads
+let timer;
 document.addEventListener('DOMContentLoaded', () => {
-    new CrossFitTimer();
+    timer = new CrossFitTimer();
 });
 
 // Service Worker Registration for PWA
