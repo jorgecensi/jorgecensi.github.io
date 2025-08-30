@@ -201,14 +201,15 @@
                         <span class="cf-phase-badge" id="phase-badge">GET READY</span>
                     </div>
 
-                    <!-- Main Timer -->
-                    <div id="timer-display" class="cf-timer-display">
-                        00:00
-                    </div>
-
-                    <!-- Progress Bar -->
-                    <div class="cf-progress-container" style="display: none;" id="progress-container">
-                        <div class="cf-progress-bar" id="progress-bar" style="width: 0%"></div>
+                    <!-- Circular Timer Display -->
+                    <div class="cf-circular-timer" style="display: none;" id="progress-container">
+                        <svg class="cf-circular-progress" viewBox="0 0 200 200">
+                            <circle cx="100" cy="100" r="90" class="cf-progress-background"></circle>
+                            <circle cx="100" cy="100" r="90" class="cf-progress-circle" id="progress-bar"></circle>
+                        </svg>
+                        <div id="timer-display" class="cf-timer-display">
+                            00:00
+                        </div>
                     </div>
 
                     <!-- Control Buttons -->
@@ -491,6 +492,19 @@ body {
     letter-spacing: -0.05em;
 }
 
+/* Override for timer display inside circular timer */
+.cf-circular-timer .cf-timer-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3.5rem;
+    margin: 0 !important;
+    text-align: center;
+    width: auto;
+    height: auto;
+}
+
 /* Timer States */
 .timer-countdown {
     color: var(--accent-color) !important;
@@ -713,21 +727,36 @@ body {
     75% { transform: scale(1.1) rotate(-5deg); }
 }
 
-/* Progress Bar */
-.cf-progress-container {
-    height: 8px;
-    background: rgba(15, 23, 42, 0.5);
-    border-radius: 4px;
+/* Circular Progress Bar */
+.cf-circular-timer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin: 2rem 0;
-    overflow: hidden;
-    border: 1px solid var(--border-color);
 }
 
-.cf-progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-    transition: width 1s linear;
-    border-radius: 4px;
+.cf-circular-progress {
+    width: 300px;
+    height: 300px;
+    transform: rotate(-90deg);
+}
+
+.cf-progress-background {
+    fill: none;
+    stroke: var(--border-color);
+    stroke-width: 8;
+    opacity: 0.3;
+}
+
+.cf-progress-circle {
+    fill: none;
+    stroke: var(--primary-color);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 565.48;
+    stroke-dashoffset: 565.48;
+    transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
 }
 
 /* Responsive Design */
@@ -769,6 +798,15 @@ body {
     
     .cf-card-body {
         padding: 1.5rem;
+    }
+    
+    .cf-circular-progress {
+        width: 250px;
+        height: 250px;
+    }
+    
+    .cf-circular-timer .cf-timer-display {
+        font-size: 2.5rem;
     }
 }
 </style>
@@ -1133,7 +1171,21 @@ class CrossFitTimer {
             progress = 100;
         }
         
-        this.progressBar.style.width = `${progress}%`;
+        // Update circular progress bar (circumference = 2 * π * radius = 2 * π * 90 = 565.48)
+        const circumference = 565.48;
+        const offset = circumference - (progress / 100) * circumference;
+        this.progressBar.style.strokeDashoffset = offset;
+        
+        // Update stroke color based on phase
+        if (this.currentPhase === 'countdown') {
+            this.progressBar.style.stroke = 'var(--accent-color)';
+        } else if (this.currentPhase === 'work') {
+            this.progressBar.style.stroke = 'var(--success-color)';
+        } else if (this.currentPhase === 'rest') {
+            this.progressBar.style.stroke = 'var(--secondary-color)';
+        } else if (this.currentPhase === 'finished') {
+            this.progressBar.style.stroke = 'var(--primary-color)';
+        }
     }
     
     pauseTimer() {
@@ -1171,7 +1223,7 @@ class CrossFitTimer {
         this.workoutInfo.style.display = 'none';
         this.timerPhase.style.display = 'none';
         this.progressContainer.style.display = 'none';
-        this.progressBar.style.width = '0%';
+        this.progressBar.style.strokeDashoffset = '565.48';
         this.updateUI();
     }
     
