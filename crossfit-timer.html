@@ -18,7 +18,10 @@
     <!-- Page 1: Workout Selection -->
     <div id="page-workout-selection" class="cf-page">
         <div class="cf-header">
-            <h1 class="cf-title">CrossFit Timer</h1>            
+            <h1 class="cf-title">CrossFit Timer</h1>
+            <button class="cf-settings-btn" onclick="timer.goToPage('settings')">
+                <i class="fas fa-cog"></i>
+            </button>
         </div>
 
         <div class="cf-section">
@@ -64,7 +67,7 @@
         <div class="cf-section" id="timer-config">
         <div class="cf-card">
             <div class="cf-card-body">
-                    <h3 class="cf-card-title">Configure Timer</h3>
+                    
                     
                     <!-- AMRAP Configuration -->
                     <div class="cf-config-section" id="amrap-config" style="display: none;">
@@ -73,15 +76,12 @@
                                 <label for="amrap-minutes" class="cf-form-label">Duration (Minutes)</label>
                                 <input type="number" class="cf-form-input" id="amrap-minutes" value="20" min="1" max="60">
                             </div>
-                            <div class="cf-form-item">
-                                <label for="countdown-seconds" class="cf-form-label">Countdown (Seconds)</label>
-                                <input type="number" class="cf-form-input" id="countdown-seconds" value="10" min="3" max="30">
-                            </div>
                         </div>
                     </div>
 
                     <!-- EMOM Configuration -->
                     <div class="cf-config-section" id="emom-config" style="display: none;">
+                        <h3 class="cf-card-title">Configure EMOM</h3>
                         <div class="cf-form-grid">
                             <div class="cf-form-item">
                                 <label for="emom-rounds" class="cf-form-label">Rounds</label>
@@ -90,10 +90,6 @@
                             <div class="cf-form-item">
                                 <label for="emom-interval" class="cf-form-label">Interval (Minutes)</label>
                                 <input type="number" class="cf-form-input" id="emom-interval" value="1" min="1" max="5">
-                            </div>
-                            <div class="cf-form-item">
-                                <label for="emom-countdown" class="cf-form-label">Countdown (Seconds)</label>
-                                <input type="number" class="cf-form-input" id="emom-countdown" value="10" min="3" max="30">
                             </div>
                         </div>
                     </div>
@@ -113,10 +109,6 @@
                                 <label for="tabata-rest" class="cf-form-label">Rest (Seconds)</label>
                                 <input type="number" class="cf-form-input" id="tabata-rest" value="10" min="5" max="60">
                             </div>
-                            <div class="cf-form-item">
-                                <label for="tabata-countdown" class="cf-form-label">Countdown (Seconds)</label>
-                                <input type="number" class="cf-form-input" id="tabata-countdown" value="10" min="3" max="30">
-                            </div>
                         </div>
                     </div>
 
@@ -130,10 +122,6 @@
                             <div class="cf-form-item">
                                 <label for="custom-seconds" class="cf-form-label">Seconds</label>
                                 <input type="number" class="cf-form-input" id="custom-seconds" value="0" min="0" max="59">
-                            </div>
-                            <div class="cf-form-item">
-                                <label for="custom-countdown" class="cf-form-label">Countdown (Seconds)</label>
-                                <input type="number" class="cf-form-input" id="custom-countdown" value="10" min="3" max="30">
                             </div>
                             <div class="cf-form-item">
                                 <label for="custom-beep" class="cf-form-label">Interval Beep</label>
@@ -151,29 +139,6 @@
                         <button class="cf-btn cf-btn-primary" id="proceed-to-timer-btn">
                             <i class="fas fa-play me-2"></i> Start Workout
                         </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Sound Controls -->
-        <div class="cf-section">
-            <div class="cf-card">
-                <div class="cf-card-body">
-                    <h5 class="cf-card-title">Sound Settings</h5>
-                    <div class="cf-form-grid">
-                        <div class="cf-form-item">
-                            <div class="cf-form-switch">
-                                <input class="cf-switch-input" type="checkbox" id="sound-enabled" checked>
-                                <label class="cf-switch-label" for="sound-enabled">
-                                    Enable Sound Alerts
-                                </label>
-                            </div>
-                        </div>
-                        <div class="cf-form-item">
-                            <label for="volume-control" class="cf-form-label">Volume</label>
-                            <input type="range" class="cf-range-input" min="0" max="100" value="70" id="volume-control">
-                        </div>
                     </div>
                 </div>
             </div>
@@ -235,6 +200,73 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page 4: Settings -->
+    <div id="page-settings" class="cf-page" style="display: none;">
+        <div class="cf-header">
+            <h1 class="cf-title">Settings</h1>
+            <button class="cf-back-btn" onclick="timer.goToPage('workout-selection')">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+        </div>
+
+        <!-- Countdown Settings -->
+        <div class="cf-section">
+            <div class="cf-card">
+                <div class="cf-card-body">
+                    <h5 class="cf-card-title">Countdown Settings</h5>
+                    <p class="cf-settings-description">Set the default countdown time before workouts begin</p>
+                    <div class="cf-form-grid">
+                        <div class="cf-form-item">
+                            <label for="default-countdown" class="cf-form-label">Default Countdown (Seconds)</label>
+                            <input type="number" class="cf-form-input" id="default-countdown" value="10" min="3" max="30">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sound Settings -->
+        <div class="cf-section">
+            <div class="cf-card">
+                <div class="cf-card-body">
+                    <h5 class="cf-card-title">Sound Settings</h5>
+                    <p class="cf-settings-description">Configure audio alerts and volume</p>
+                    <div class="cf-form-grid">
+                        <div class="cf-form-item">
+                            <div class="cf-form-switch">
+                                <input class="cf-switch-input" type="checkbox" id="sound-enabled" checked>
+                                <label class="cf-switch-label" for="sound-enabled">
+                                    Enable Sound Alerts
+                                </label>
+                            </div>
+                        </div>
+                        <div class="cf-form-item">
+                            <label for="volume-control" class="cf-form-label">Volume</label>
+                            <div class="cf-volume-wrapper">
+                                <input type="range" class="cf-range-input" min="0" max="100" value="70" id="volume-control">
+                                <span class="cf-volume-display" id="volume-display">70%</span>
+                            </div>
+                        </div>
+                        <div class="cf-form-item">
+                            <button class="cf-btn cf-btn-secondary" onclick="timer.testSound()">
+                                <i class="fas fa-volume-up me-2"></i> Test Sound
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Settings Button -->
+        <div class="cf-section">
+            <div class="cf-controls">
+                <button class="cf-btn cf-btn-primary" onclick="timer.saveSettings()">
+                    <i class="fas fa-save me-2"></i> Save Settings
+                </button>
             </div>
         </div>
     </div>
@@ -308,6 +340,53 @@ body {
 .cf-back-btn:hover {
     background: rgba(100, 116, 139, 1);
     transform: translateY(-2px);
+}
+
+/* Settings Button */
+.cf-settings-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(100, 116, 139, 0.8);
+    border: none;
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cf-settings-btn:hover {
+    background: rgba(100, 116, 139, 1);
+    transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 6px 20px rgba(100, 116, 139, 0.3);
+}
+
+/* Settings Page Styles */
+.cf-settings-description {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.cf-volume-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+.cf-volume-display {
+    color: var(--text-primary);
+    font-weight: 500;
+    min-width: 45px;
+    text-align: right;
 }
 
 /* Timer Header for Timer-Only View */
@@ -865,8 +944,12 @@ class CrossFitTimer {
         this.pages = {
             'workout-selection': document.getElementById('page-workout-selection'),
             'timer-setup': document.getElementById('page-timer-setup'),
-            'timer-only': document.getElementById('page-timer-only')
+            'timer-only': document.getElementById('page-timer-only'),
+            'settings': document.getElementById('page-settings')
         };
+        
+        // Default countdown element
+        this.defaultCountdown = document.getElementById('default-countdown');
     }
     
     bindEvents() {
@@ -880,6 +963,14 @@ class CrossFitTimer {
         this.stopBtn.addEventListener('click', () => this.stopTimer());
         this.resetBtn.addEventListener('click', () => this.resetTimer());
         this.proceedBtn.addEventListener('click', () => this.proceedToTimer());
+        
+        // Settings events
+        this.volumeControl.addEventListener('input', (e) => {
+            document.getElementById('volume-display').textContent = e.target.value + '%';
+        });
+        
+        // Load settings on initialization
+        this.loadSettings();
     }
     
     async initializeAudio() {
@@ -888,6 +979,53 @@ class CrossFitTimer {
         } catch (e) {
             console.log('Audio not supported');
         }
+    }
+    
+    loadSettings() {
+        // Load settings from localStorage
+        const settings = JSON.parse(localStorage.getItem('crossfitTimerSettings') || '{}');
+        
+        // Apply saved settings or use defaults
+        const defaultCountdown = settings.defaultCountdown || 10;
+        const soundEnabled = settings.soundEnabled !== undefined ? settings.soundEnabled : true;
+        const volume = settings.volume || 70;
+        
+        // Update UI
+        this.defaultCountdown.value = defaultCountdown;
+        this.soundEnabled.checked = soundEnabled;
+        this.volumeControl.value = volume;
+        document.getElementById('volume-display').textContent = volume + '%';
+    }
+    
+    saveSettings() {
+        // Save settings to localStorage
+        const settings = {
+            defaultCountdown: parseInt(this.defaultCountdown.value),
+            soundEnabled: this.soundEnabled.checked,
+            volume: parseInt(this.volumeControl.value)
+        };
+        
+        localStorage.setItem('crossfitTimerSettings', JSON.stringify(settings));
+        
+        // Show confirmation
+        const saveBtn = document.querySelector('.cf-btn-primary[onclick="timer.saveSettings()"]');
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="fas fa-check me-2"></i> Saved!';
+        saveBtn.classList.add('cf-btn-success');
+        saveBtn.classList.remove('cf-btn-primary');
+        
+        setTimeout(() => {
+            saveBtn.innerHTML = originalText;
+            saveBtn.classList.remove('cf-btn-success');
+            saveBtn.classList.add('cf-btn-primary');
+        }, 2000);
+    }
+    
+    testSound() {
+        // Play a test beep sequence
+        this.playBeep(800, 200);
+        setTimeout(() => this.playBeep(1000, 200), 300);
+        setTimeout(() => this.playBeep(1200, 200), 600);
     }
     
     playBeep(frequency = 800, duration = 200) {
@@ -954,14 +1092,14 @@ class CrossFitTimer {
                 return {
                     type: 'amrap',
                     duration: parseInt(document.getElementById('amrap-minutes').value) * 60,
-                    countdown: parseInt(document.getElementById('countdown-seconds').value)
+                    countdown: parseInt(this.defaultCountdown.value)
                 };
             case 'emom':
                 return {
                     type: 'emom',
                     rounds: parseInt(document.getElementById('emom-rounds').value),
                     interval: parseInt(document.getElementById('emom-interval').value) * 60,
-                    countdown: parseInt(document.getElementById('emom-countdown').value)
+                    countdown: parseInt(this.defaultCountdown.value)
                 };
             case 'tabata':
                 return {
@@ -969,14 +1107,14 @@ class CrossFitTimer {
                     rounds: parseInt(document.getElementById('tabata-rounds').value),
                     work: parseInt(document.getElementById('tabata-work').value),
                     rest: parseInt(document.getElementById('tabata-rest').value),
-                    countdown: parseInt(document.getElementById('tabata-countdown').value)
+                    countdown: parseInt(this.defaultCountdown.value)
                 };
             case 'custom':
                 return {
                     type: 'custom',
                     duration: parseInt(document.getElementById('custom-minutes').value) * 60 + 
                              parseInt(document.getElementById('custom-seconds').value),
-                    countdown: parseInt(document.getElementById('custom-countdown').value),
+                    countdown: parseInt(this.defaultCountdown.value),
                     beepInterval: parseInt(document.getElementById('custom-beep').value)
                 };
             default:
