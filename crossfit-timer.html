@@ -82,16 +82,16 @@
                     <!-- EMOM Configuration -->
                     <div class="cf-config-section" id="emom-config" style="display: none;">
                         <h3 class="cf-card-title">Configure EMOM</h3>
+                        <div class="cf-form-item" style="margin-bottom: 1rem;">
+                            <label for="emom-exercises" class="cf-form-label">Exercises (one per minute)</label>
+                            <textarea class="cf-form-textarea" id="emom-exercises" rows="6" placeholder="10 Burpees&#10;15 Box Jumps&#10;20 Wall Balls&#10;Rest"></textarea>
+                            <small class="cf-form-help">Enter one exercise per line. Each line represents one minute. The timer will cycle through these exercises.</small>
+                        </div>
                         <div class="cf-form-grid">
                             <div class="cf-form-item">
-                                <label for="emom-rounds" class="cf-form-label">Rounds (Minutes)</label>
-                                <input type="number" class="cf-form-input" id="emom-rounds" value="12" min="1" max="50">
+                                <label for="emom-rounds" class="cf-form-label">Rounds (How many times to repeat the cycle)</label>
+                                <input type="number" class="cf-form-input" id="emom-rounds" value="3" min="1" max="20">
                             </div>
-                        </div>
-                        <div class="cf-form-item" style="margin-top: 1rem;">
-                            <label for="emom-exercises" class="cf-form-label">Exercises (one per minute, optional)</label>
-                            <textarea class="cf-form-textarea" id="emom-exercises" rows="6" placeholder="Minute 1: 10 Burpees&#10;Minute 2: 15 Box Jumps&#10;Minute 3: 20 Wall Balls&#10;..."></textarea>
-                            <small class="cf-form-help">Enter one exercise per line. Leave empty for generic minutes.</small>
                         </div>
                     </div>
 
@@ -162,7 +162,7 @@
                     <div id="workout-info" class="mb-3" style="display: none;">
                         <h4 id="current-workout-type" class="text-muted mb-0"></h4>
                         <div id="round-info" class="text-muted" style="display: none;">
-                            <span id="current-round">1</span> / <span id="total-rounds">8</span>
+                            <span id="current-round">1</span><span id="total-rounds" style="display: none;">8</span>
                         </div>
                         <div id="exercise-info" class="cf-exercise-display" style="display: none;">
                             <span id="current-exercise"></span>
@@ -183,18 +183,15 @@
                         <div id="timer-display" class="cf-timer-display">
                             00:00
                         </div>
+                        <div class="cf-pause-overlay" id="pause-overlay" style="display: none;">
+                            <i class="fas fa-pause"></i>
+                        </div>
                     </div>
 
                     <!-- Control Buttons -->
                     <div class="cf-controls">
                         <button class="cf-btn cf-btn-primary" id="start-btn">
                             <i class="fas fa-play me-2"></i>Start
-                        </button>
-                        <button class="cf-btn cf-btn-warning" id="pause-btn" style="display: none;">
-                            <i class="fas fa-pause me-2"></i> Pause
-                        </button>
-                        <button class="cf-btn cf-btn-success" id="resume-btn" style="display: none;">
-                            <i class="fas fa-play me-2"></i> Resume
                         </button>
                         <button class="cf-btn cf-btn-danger" id="stop-btn" style="display: none;">
                             <i class="fas fa-stop me-2"></i> Stop
@@ -861,6 +858,39 @@ body {
     align-items: center;
     justify-content: center;
     margin: 2rem 0;
+    cursor: pointer;
+    user-select: none;
+}
+
+.cf-circular-timer.clickable:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
+
+.cf-circular-timer.clickable:active {
+    transform: scale(0.98);
+}
+
+/* Pause Overlay */
+.cf-pause-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    background: rgba(245, 158, 11, 0.9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.cf-pause-overlay i {
+    font-size: 2rem;
+    color: white;
 }
 
 .cf-circular-progress {
@@ -977,11 +1007,10 @@ class CrossFitTimer {
         this.currentExercise = document.getElementById('current-exercise');
         
         this.startBtn = document.getElementById('start-btn');
-        this.pauseBtn = document.getElementById('pause-btn');
-        this.resumeBtn = document.getElementById('resume-btn');
         this.stopBtn = document.getElementById('stop-btn');
         this.resetBtn = document.getElementById('reset-btn');
         this.proceedBtn = document.getElementById('proceed-to-timer-btn');
+        this.pauseOverlay = document.getElementById('pause-overlay');
         
         this.soundEnabled = document.getElementById('sound-enabled');
         this.volumeControl = document.getElementById('volume-control');
@@ -1004,11 +1033,20 @@ class CrossFitTimer {
         });
         
         this.startBtn.addEventListener('click', () => this.startTimer());
-        this.pauseBtn.addEventListener('click', () => this.pauseTimer());
-        this.resumeBtn.addEventListener('click', () => this.resumeTimer());
         this.stopBtn.addEventListener('click', () => this.stopTimer());
         this.resetBtn.addEventListener('click', () => this.resetTimer());
         this.proceedBtn.addEventListener('click', () => this.proceedToTimer());
+        
+        // Add click event to timer display for pause/resume
+        this.progressContainer.addEventListener('click', () => {
+            if (this.isRunning) {
+                if (this.isPaused) {
+                    this.resumeTimer();
+                } else {
+                    this.pauseTimer();
+                }
+            }
+        });
         
         // Settings events
         this.volumeControl.addEventListener('input', (e) => {
@@ -1188,6 +1226,7 @@ class CrossFitTimer {
     }
     
     setupWorkout(config) {
+        this.config = config; // Set config first before using it
         this.currentPhase = 'countdown';
         this.timeRemaining = config.countdown;
         this.countdownTime = config.countdown;
@@ -1201,10 +1240,14 @@ class CrossFitTimer {
                 this.roundInfo.style.display = 'none';
                 break;
             case 'emom':
-                this.totalRounds = config.rounds;
-                this.workTime = config.interval;
                 this.exercises = config.exercises || [];
-                this.currentWorkoutType.textContent = `EMOM ${config.rounds} Minutes`;
+                this.emomMinutes = this.exercises.length > 0 ? this.exercises.length : 1;
+                this.emomRounds = config.rounds;
+                this.totalRounds = this.emomMinutes * this.emomRounds; // Total minutes
+                this.currentMinuteInCycle = 1;
+                this.currentCycle = 1;
+                this.workTime = config.interval;
+                this.currentWorkoutType.textContent = `EMOM ${this.emomMinutes} min x ${this.emomRounds} rounds`;
                 this.roundInfo.style.display = 'block';
                 this.updateExerciseDisplay();
                 break;
@@ -1225,11 +1268,12 @@ class CrossFitTimer {
                 break;
         }
         
-        this.totalRoundsSpan.textContent = this.totalRounds;
+        if (config.type !== 'emom') {
+            this.totalRoundsSpan.textContent = this.totalRounds;
+        }
         this.workoutInfo.style.display = 'block';
         this.timerPhase.style.display = 'block';
         this.progressContainer.style.display = 'block';
-        this.config = config;
     }
     
     tick() {
@@ -1279,6 +1323,12 @@ class CrossFitTimer {
                     this.timeRemaining = this.restTime;
                 } else if (this.config.type === 'emom' && this.currentRound < this.totalRounds) {
                     this.currentRound++;
+                    // Update minute and cycle counters
+                    this.currentMinuteInCycle++;
+                    if (this.currentMinuteInCycle > this.emomMinutes) {
+                        this.currentMinuteInCycle = 1;
+                        this.currentCycle++;
+                    }
                     this.currentPhase = 'work';
                     this.timeRemaining = this.workTime;
                 } else if (this.currentRound < this.totalRounds) {
@@ -1304,30 +1354,41 @@ class CrossFitTimer {
                 break;
         }
         
-        this.currentRoundSpan.textContent = this.currentRound;
-        
-        // Update exercise display for EMOM
+        // Update display based on workout type
         if (this.config.type === 'emom') {
             this.updateExerciseDisplay();
+        } else if (this.config.type === 'tabata') {
+            this.currentRoundSpan.textContent = `${this.currentRound} / ${this.totalRounds}`;
         }
     }
     
     updateExerciseDisplay() {
-        if (this.config.type === 'emom' && this.exercises.length > 0) {
-            const exerciseIndex = this.currentRound - 1;
-            if (exerciseIndex < this.exercises.length) {
-                this.currentExercise.textContent = this.exercises[exerciseIndex];
-                this.exerciseInfo.style.display = 'block';
+        if (!this.config) return; // Guard clause to prevent errors
+        
+        if (this.config.type === 'emom') {
+            // Update round display to show cycle/round info
+            this.currentRoundSpan.textContent = `Cycle ${this.currentCycle}/${this.emomRounds}, Min ${this.currentMinuteInCycle}/${this.emomMinutes}`;
+            
+            if (this.exercises && this.exercises.length > 0) {
+                const exerciseIndex = this.currentMinuteInCycle - 1;
+                if (exerciseIndex < this.exercises.length) {
+                    this.currentExercise.textContent = this.exercises[exerciseIndex];
+                    this.exerciseInfo.style.display = 'block';
+                } else {
+                    // Fallback if index out of range
+                    this.currentExercise.textContent = `Minute ${this.currentMinuteInCycle}`;
+                    this.exerciseInfo.style.display = 'block';
+                }
             } else {
-                // If no specific exercise for this minute, show generic
-                this.currentExercise.textContent = `Minute ${this.currentRound}`;
+                // No exercises specified, show generic minute
+                this.currentExercise.textContent = `Minute ${this.currentMinuteInCycle}`;
                 this.exerciseInfo.style.display = 'block';
             }
-        } else if (this.config.type === 'emom') {
-            // No exercises specified, show generic minute
-            this.currentExercise.textContent = `Minute ${this.currentRound}`;
-            this.exerciseInfo.style.display = 'block';
         } else {
+            // For non-EMOM workouts, update round display normally
+            if (this.config.type === 'tabata') {
+                this.currentRoundSpan.textContent = `${this.currentRound} / ${this.totalRounds}`;
+            }
             this.exerciseInfo.style.display = 'none';
         }
     }
@@ -1410,6 +1471,7 @@ class CrossFitTimer {
     
     pauseTimer() {
         this.isPaused = true;
+        this.pauseOverlay.style.display = 'flex';
         this.updateUI();
         if (this.intervalId) {
             clearTimeout(this.intervalId);
@@ -1419,6 +1481,7 @@ class CrossFitTimer {
     
     resumeTimer() {
         this.isPaused = false;
+        this.pauseOverlay.style.display = 'none';
         this.updateUI();
         this.tick();
     }
@@ -1426,6 +1489,7 @@ class CrossFitTimer {
     stopTimer() {
         this.isRunning = false;
         this.isPaused = false;
+        this.pauseOverlay.style.display = 'none';
         if (this.intervalId) {
             clearTimeout(this.intervalId);
             this.intervalId = null;
@@ -1445,6 +1509,7 @@ class CrossFitTimer {
         this.progressContainer.style.display = 'none';
         this.progressBar.style.strokeDashoffset = '565.48';
         this.exerciseInfo.style.display = 'none';
+        this.pauseOverlay.style.display = 'none';
         this.updateUI();
     }
     
@@ -1454,9 +1519,14 @@ class CrossFitTimer {
         const isStopped = !this.isRunning;
         
         this.startBtn.style.display = isStopped ? 'inline-block' : 'none';
-        this.pauseBtn.style.display = isActive ? 'inline-block' : 'none';
-        this.resumeBtn.style.display = isPaused ? 'inline-block' : 'none';
         this.stopBtn.style.display = this.isRunning ? 'inline-block' : 'none';
+        
+        // Add/remove clickable class to timer
+        if (this.isRunning) {
+            this.progressContainer.classList.add('clickable');
+        } else {
+            this.progressContainer.classList.remove('clickable');
+        }
         
         // Disable workout selection while timer is running
         this.workoutBtns.forEach(btn => {
