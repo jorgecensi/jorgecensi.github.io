@@ -195,10 +195,7 @@
                         </button>
                         <button class="cf-btn cf-btn-danger" id="stop-btn" style="display: none;">
                             <i class="fas fa-stop me-2"></i> Stop
-                        </button>
-                        <button class="cf-btn cf-btn-secondary" id="reset-btn">
-                            <i class="fas fa-undo me-2"></i> Reset
-                        </button>
+                        </button>                        
                     </div>
                 </div>
             </div>
@@ -1007,8 +1004,7 @@ class CrossFitTimer {
         this.currentExercise = document.getElementById('current-exercise');
         
         this.startBtn = document.getElementById('start-btn');
-        this.stopBtn = document.getElementById('stop-btn');
-        this.resetBtn = document.getElementById('reset-btn');
+        this.stopBtn = document.getElementById('stop-btn');        
         this.proceedBtn = document.getElementById('proceed-to-timer-btn');
         this.pauseOverlay = document.getElementById('pause-overlay');
         
@@ -1033,8 +1029,7 @@ class CrossFitTimer {
         });
         
         this.startBtn.addEventListener('click', () => this.startTimer());
-        this.stopBtn.addEventListener('click', () => this.stopTimer());
-        this.resetBtn.addEventListener('click', () => this.resetTimer());
+        this.stopBtn.addEventListener('click', () => this.stopTimer());        
         this.proceedBtn.addEventListener('click', () => this.proceedToTimer());
         
         // Add click event to timer display for pause/resume
