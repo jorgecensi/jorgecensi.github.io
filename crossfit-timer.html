@@ -1214,7 +1214,7 @@ class CrossFitTimer {
             alert('Please select a workout type first!');
             return;
         }
-        
+        this.initializeAudio();
         const config = this.getWorkoutConfig();
         this.setupWorkout(config);
         this.isRunning = true;
