@@ -1,3 +1,4 @@
+const updateDate = "2025/10/10-21:14";
 const CACHE_NAME = 'crossfit-timer-v1';
 const urlsToCache = [
   '/crossfit-timer.html',
