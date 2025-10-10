@@ -984,12 +984,43 @@ class CrossFitTimer {
         this.intervalId = null;
         this.audioContext = null;
         this.currentPage = 'workout-selection';
-        
+        this.wakeLock = null;
+
         this.initializeElements();
         this.bindEvents();
         this.initializeAudio();
     }
     
+    async requestWakeLock(onVisibilityChange = false) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+
+            wakeLock.addEventListener('release', () => {
+                console.log('Wake Lock was released');                
+                wakeLock = null;
+            });
+            console.log('Wake Lock is active');                        
+        }
+        catch(err) {
+            console.error(err);
+        }
+    }
+
+    releaseWakeLock () {
+        if (this.wakeLock) {
+            this.wakeLock.release();
+            this.wakeLock = null;
+        }
+    }
+
+    async handleVisibilityChange(){
+        if (document.visibilityState === 'visible' && this.isRunning) {
+            await this.requestWakeLock(true);
+        } else if (this.wakeLock) {
+            this.releaseWakeLock();
+        }
+    }
+
     initializeElements() {
         this.workoutBtns = document.querySelectorAll('.workout-type-btn');
         this.configSections = document.querySelectorAll('.cf-config-section');
@@ -1221,6 +1252,7 @@ class CrossFitTimer {
         this.isPaused = false;
         this.updateUI();
         this.tick();
+        this.requestWakeLock();
     }
     
     setupWorkout(config) {
@@ -1405,6 +1437,7 @@ class CrossFitTimer {
         
         this.updateDisplay();
         this.updateUI();
+        this.releaseWakeLock();
     }
     
     updateDisplay() {
@@ -1475,6 +1508,7 @@ class CrossFitTimer {
             clearTimeout(this.intervalId);
             this.intervalId = null;
         }
+        this.releaseWakeLock();
     }
     
     resumeTimer() {
@@ -1482,6 +1516,7 @@ class CrossFitTimer {
         this.pauseOverlay.style.display = 'none';
         this.updateUI();
         this.tick();
+        this.requestWakeLock();
     }
     
     stopTimer() {
@@ -1493,6 +1528,7 @@ class CrossFitTimer {
             this.intervalId = null;
         }
         this.updateUI();
+        this.releaseWakeLock();
     }
     
     resetTimer() {
