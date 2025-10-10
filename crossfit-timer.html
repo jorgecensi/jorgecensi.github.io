@@ -993,11 +993,11 @@ class CrossFitTimer {
     
     async requestWakeLock(onVisibilityChange = false) {
         try {
-            wakeLock = await navigator.wakeLock.request('screen');
+            this.wakeLock = await navigator.wakeLock.request('screen');
 
-            wakeLock.addEventListener('release', () => {
+            this.wakeLock.addEventListener('release', () => {
                 console.log('Wake Lock was released');                
-                wakeLock = null;
+                this.wakeLock = null;
             });
             console.log('Wake Lock is active');                        
         }
