@@ -51,7 +51,7 @@
                      
                 </div>
                 <button class="cf-settings-btn" onclick="timer.goToPage('settings')">
-                            <i class="fas fa-cog"></i>Settings
+                            <i class="fas fa-cog"></i> Settings
                         </button>
             </div>
         </div>
@@ -61,9 +61,7 @@
     <div id="page-timer-setup" class="cf-page" style="display: none;">
         <div class="cf-header">
             <h1 class="cf-title">CrossFit Timer</h1>            
-            <button class="cf-back-btn" onclick="timer.goToPage('workout-selection')">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
+           
         </div>
 
         <!-- Timer Configuration -->
@@ -142,6 +140,8 @@
                     <div class="cf-controls" style="margin-top: 2rem;">
                         <button class="cf-btn cf-btn-primary" id="proceed-to-timer-btn">
                             <i class="fas fa-play me-2"></i> Start Workout
+                        </button> <button class="cf-back-btn" onclick="timer.goToPage('workout-selection')">
+                            <i class="fas fa-arrow-left"></i> Back
                         </button>
                     </div>
                 </div>
@@ -152,9 +152,7 @@
     <!-- Page 3: Timer Only View -->
     <div id="page-timer-only" class="cf-page" style="display: none;">
         <div class="cf-timer-header">
-            <button class="cf-exit-timer-btn" onclick="timer.exitTimer()">
-                <i class="fas fa-times"></i>
-            </button>
+           
         </div>
 
         <!-- Main Timer Display -->
@@ -194,11 +192,14 @@
                     <!-- Control Buttons -->
                     <div class="cf-controls">
                         <button class="cf-btn cf-btn-primary" id="start-btn">
-                            <i class="fas fa-play me-2"></i>Start
+                            <i class="fas fa-play me-2"></i> Start
                         </button>
                         <button class="cf-btn cf-btn-danger" id="stop-btn" style="display: none;">
                             <i class="fas fa-stop me-2"></i> Stop
-                        </button>                        
+                        </button>                  
+                         <button class="cf-exit-timer-btn" onclick="timer.exitTimer()">
+                            <i class="fas fa-times"></i>
+                        </button>      
                     </div>
                 </div>
             </div>
@@ -209,9 +210,7 @@
     <div id="page-settings" class="cf-page" style="display: none;">
         <div class="cf-header">
             <h1 class="cf-title">Settings</h1>
-            <button class="cf-back-btn" onclick="timer.goToPage('workout-selection')">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
+           
         </div>
 
         <!-- Countdown Settings -->
@@ -265,6 +264,9 @@
         <!-- Save Settings Button -->
         <div class="cf-section">
             <div class="cf-controls">
+                 <button class="cf-back-btn" onclick="timer.goToPage('workout-selection')">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
                 <button class="cf-btn cf-btn-primary" onclick="timer.saveSettings()">
                     <i class="fas fa-save me-2"></i> Save Settings
                 </button>
@@ -322,7 +324,7 @@ body {
 /* Back Button */
 .cf-back-btn {
     /*position: absolute;*/
-    top: 20px;
+    bottom: 20px;
     left: 20px;
     background: rgba(100, 116, 139, 0.8);
     border: none;
@@ -345,12 +347,12 @@ body {
 
 /* Settings Button */
 .cf-settings-btn {
-    /*position: absolute;*/
+    justify-self: center;
     top: 20px;
-    right: 20px;
-    /*background: rgba(100, 116, 139, 0.8);*/
+    /*right: 20px;*/
+    background: rgba(100, 116, 139, 0.8);
     border: none;
-    /*color: white;*/
+    color: white;
     width: 200px;
     height: 50px;
     /*border-radius: 40%;*/
@@ -410,7 +412,7 @@ body {
 }
 
 .cf-exit-timer-btn {
-    position: absolute;
+    /*position: absolute;*/
     top: 20px;
     right: 20px;
     background: rgba(239, 68, 68, 0.8);
@@ -458,11 +460,11 @@ body {
 
 /* Card Styles */
 .cf-card {
-    background: var(--card-bg);
+    /*background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: 12px;
     backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);*/
 }
 
 .cf-card-body {
@@ -1128,6 +1130,7 @@ class CrossFitTimer {
         saveBtn.classList.remove('cf-btn-primary');
         
         setTimeout(() => {
+            this.goToPage('workout-selection')
             saveBtn.innerHTML = originalText;
             saveBtn.classList.remove('cf-btn-success');
             saveBtn.classList.add('cf-btn-primary');
