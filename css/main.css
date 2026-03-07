@@ -139,6 +139,46 @@ body::before {
 }
 
 /* ========================
+   LANGUAGE SWITCHER
+   ======================== */
+
+.lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.lang-flag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  opacity: 0.5;
+  transition: var(--transition);
+  text-decoration: none !important;
+}
+
+.lang-flag:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.lang-flag.active {
+  opacity: 1;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 10px var(--glow);
+}
+
+.lang-flag svg {
+  display: block;
+}
+
+/* ========================
    HERO SECTION
    ======================== */
 

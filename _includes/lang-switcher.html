@@ -1,0 +1,16 @@
+{% assign current_lang = page.lang | default: "en" %}
+{% assign pages = site.pages | where: "ref", page.ref %}
+<div class="lang-switcher">
+    {% for p in pages %}
+    {% if p.lang == "en" %}
+    <a href="{{ p.url }}" class="lang-flag {% if current_lang == 'en' %}active{% endif %}" title="English">
+        <svg viewBox="0 0 60 30" width="28" height="14"><clipPath id="s"><circle cx="30" cy="15" r="15"/></clipPath><rect width="60" height="30" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#s)"/><path d="M30,0 V30 M0,15 H60" stroke="#fff" stroke-width="10"/><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" stroke-width="6"/></svg>
+    </a>
+    {% endif %}
+    {% if p.lang == "pt-BR" %}
+    <a href="{{ p.url }}" class="lang-flag {% if current_lang == 'pt-BR' %}active{% endif %}" title="Português (Brasil)">
+        <svg viewBox="0 0 60 42" width="28" height="20"><rect width="60" height="42" fill="#009B3A"/><polygon points="30,3 57,21 30,39 3,21" fill="#FEDF00"/><circle cx="30" cy="21" r="9" fill="#002776"/><path d="M21.5,21 Q30,15 38.5,21" fill="none" stroke="#fff" stroke-width="1.2"/></svg>
+    </a>
+    {% endif %}
+    {% endfor %}
+</div>

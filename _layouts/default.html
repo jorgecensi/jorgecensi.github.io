@@ -1,5 +1,7 @@
+{% assign lang = page.lang | default: "en" %}
+{% assign t = site.data.translations[lang] %}
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}">
 
 <head>
     <title>{{ page.title }}</title>
@@ -17,7 +19,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">
+            <a class="navbar-brand" href="{% if lang == 'pt-BR' %}/pt-BR/{% else %}/{% endif %}">
                 jorge censi <span class="blinking-cursor">_</span>
             </a>
             <button class="navbar-toggler" data-bs-target="#my-nav" data-bs-toggle="collapse" aria-controls="my-nav" aria-expanded="false" aria-label="Toggle navigation" type="button">
@@ -26,19 +28,19 @@
             <div id="my-nav" class="collapse navbar-collapse">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
+                        <a class="nav-link" href="{% if lang == 'pt-BR' %}/pt-BR/{% else %}/{% endif %}">{{ t.nav.home }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/about">About</a>
+                        <a class="nav-link" href="{% if lang == 'pt-BR' %}/pt-BR/about{% else %}/about{% endif %}">{{ t.nav.about }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/portfolio">Portfolio</a>
+                        <a class="nav-link" href="{% if lang == 'pt-BR' %}/pt-BR/portfolio{% else %}/portfolio{% endif %}">{{ t.nav.portfolio }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/apps">Apps</a>
+                        <a class="nav-link" href="{% if lang == 'pt-BR' %}/pt-BR/apps{% else %}/apps{% endif %}">{{ t.nav.apps }}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/blog">Blog</a>
+                        <a class="nav-link" href="{% if lang == 'pt-BR' %}/pt-BR/blog{% else %}/blog{% endif %}">{{ t.nav.blog }}</a>
                     </li>
                     <li class="nav-item ms-lg-3 nav-social">
                         <a class="nav-link" href="https://github.com/jorgecensi" target="_blank" title="GitHub"><i class="fab fa-github"></i></a>
@@ -48,6 +50,9 @@
                     </li>
                     <li class="nav-item nav-social">
                         <a class="nav-link" href="https://x.com/jorgecensi" target="_blank" title="X"><i class="fab fa-x-twitter"></i></a>
+                    </li>
+                    <li class="nav-item ms-lg-2">
+                        {% include lang-switcher.html %}
                     </li>
                 </ul>
             </div>
@@ -61,13 +66,13 @@
             <div class="footer-brand">
                 jorge censi
             </div>
-            <p class="footer-tagline">Making AI feel less robot, more human.</p>
+            <p class="footer-tagline">{{ t.footer.tagline }}</p>
             <ul class="footer-social">
                 <li><a href="https://github.com/jorgecensi" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></li>
                 <li><a href="https://linkedin.com/in/jorgecensi" target="_blank" title="LinkedIn"><i class="fab fa-linkedin"></i></a></li>
                 <li><a href="https://x.com/jorgecensi" target="_blank" title="X"><i class="fab fa-x-twitter"></i></a></li>
             </ul>
-            <p class="footer-copy">&copy; <script>document.write(new Date().getFullYear())</script> Jorge Censi. Built with coffee and curiosity.</p>
+            <p class="footer-copy">&copy; <script>document.write(new Date().getFullYear())</script> Jorge Censi. {{ t.footer.copy_suffix }}</p>
         </div>
     </footer>
 

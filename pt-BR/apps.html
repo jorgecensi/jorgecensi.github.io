@@ -1,0 +1,32 @@
+---
+layout: wrapper
+title: Apps
+lang: pt-BR
+ref: apps
+---
+{% assign t = site.data.translations.pt-BR %}
+<h1>{{ t.apps_page.heading }}</h1>
+<p>{{ t.apps_page.subtitle }}</p>
+
+<div class="apps-grid">
+    <a class="app-card" href="/binary.html">
+        <span class="app-icon">🧩</span>
+        <h3>{{ t.apps_page.binary_title }}</h3>
+        <p>{{ t.apps_page.binary_desc }}</p>
+        <span class="app-tag">{{ t.apps_page.binary_tag }}</span>
+    </a>
+
+    <a class="app-card" href="/crossfit-timer.html">
+        <span class="app-icon">⏱️</span>
+        <h3>{{ t.apps_page.crossfit_title }}</h3>
+        <p>{{ t.apps_page.crossfit_desc }}</p>
+        <span class="app-tag">{{ t.apps_page.crossfit_tag }}</span>
+    </a>
+
+    <a class="app-card" href="/flappy.html">
+        <span class="app-icon">🐦</span>
+        <h3>{{ t.apps_page.flappy_title }}</h3>
+        <p>{{ t.apps_page.flappy_desc }}</p>
+        <span class="app-tag">{{ t.apps_page.flappy_tag }}</span>
+    </a>
+</div>
