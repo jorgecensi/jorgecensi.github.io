@@ -1,17 +1,17 @@
 ---
 layout: wrapperhome
-title: Jorge Censi - AI Integration Professional
-lang: en
+title: Jorge Censi - Profissional de Integração de IA
+lang: pt-BR
 ref: home
 ---
-{% assign t = site.data.translations.en %}
+{% assign t = site.data.translations.pt-BR %}
 <section class="postlist">
     <p class="section-label">{{ t.home.latest_thoughts }}</p>
     {% for post in site.posts %}
     <article class="postitem">
         <ul class="meta">
             <li class="category"><a href="">{{ post.tags }}</a></li>
-            <li class="date"><a href="{{ post.url }}"><time datetime="{{post.date}}">{{ post.date | date: "%b %d, %Y" }}</time></a></li>
+            <li class="date"><a href="{{ post.url }}"><time datetime="{{post.date}}">{{ post.date | date: "%d/%m/%Y" }}</time></a></li>
         </ul>
         <h2 class="title">
             <a href="{{ post.url }}">{{ post.title }}</a>

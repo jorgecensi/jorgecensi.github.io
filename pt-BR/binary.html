@@ -1,0 +1,37 @@
+---
+layout: wrapper
+title: Puzzle Binário
+lang: pt-BR
+ref: binary
+---
+{% assign t = site.data.translations.pt-BR %}
+
+<div style="text-align: center;">
+    <h1>{{ t.binary_page.heading }}</h1>
+    <p>{{ t.binary_page.instruction }}</p>
+    <div style="margin: 1.5rem 0;">
+        <button id="generatePuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.new_puzzle }}">{{ t.binary_page.new_puzzle }}</button>
+        <button id="toggleSolution" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.show_solution }}">{{ t.binary_page.show_solution }}</button>
+        <button id="toggleRules" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.rules }}">{{ t.binary_page.rules }}</button>
+    </div>
+    <div id="rules" style="text-align: left; max-width: 500px; margin: 1rem auto;">
+        <h3>{{ t.binary_page.rules_title }}</h3>
+        <ul style="color: var(--text-secondary);">
+            <li>{{ t.binary_page.rule_1 }}</li>
+            <li>{{ t.binary_page.rule_2 }}</li>
+            <li>{{ t.binary_page.rule_3 }}</li>
+        </ul>
+    </div>
+</div>
+
+<div id="puzzleContainer">
+    <table id="puzzleGrid" class="table table-bordered mt-3"></table>
+</div>
+
+<script src="/binary.js"></script>
+<script>
+    document.getElementById('toggleRules').addEventListener('click', function () {
+        var rules = document.getElementById('rules');
+        rules.classList.toggle('visible');
+    });
+</script>

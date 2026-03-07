@@ -1,14 +1,16 @@
 ---
 layout: default
 ---
+{% assign lang = page.lang | default: "en" %}
+{% assign t = site.data.translations[lang] %}
 <div class="hero">
     <div class="hero-content">
-        <p class="hero-wave">Hey, I'm Jorge</p>
-        <h1 class="hero-title">I help businesses <span class="hero-highlight">integrate AI</span> into what they already do.</h1>
-        <p class="hero-subtitle">Software engineer turned AI integration specialist. I take the complex stuff and make it actually useful for real people and real teams.</p>
+        <p class="hero-wave">{{ t.hero.greeting }}</p>
+        <h1 class="hero-title">{{ t.hero.title_before }}<span class="hero-highlight">{{ t.hero.title_highlight }}</span>{{ t.hero.title_after }}</h1>
+        <p class="hero-subtitle">{{ t.hero.subtitle }}</p>
         <div class="hero-cta">
-            <a href="/about" class="btn-hero-primary">Get to know me</a>
-            <a href="/portfolio" class="btn-hero-secondary">See my work</a>
+            <a href="{% if lang == 'pt-BR' %}/pt-BR/about{% else %}/about{% endif %}" class="btn-hero-primary">{{ t.hero.cta_about }}</a>
+            <a href="{% if lang == 'pt-BR' %}/pt-BR/portfolio{% else %}/portfolio{% endif %}" class="btn-hero-secondary">{{ t.hero.cta_portfolio }}</a>
         </div>
     </div>
     <div class="hero-decoration">
