@@ -19,31 +19,39 @@
     <div id="page-workout-selection" class="cf-page">
         <div class="cf-header">
             <h1 class="cf-title">CrossFit Timer</h1>
-           
+            <p class="cf-subtitle">Simple interval timing for serious workouts.</p>
+            <div class="cf-badge-row">
+                <span class="cf-pill">Offline Ready</span>
+                <span class="cf-pill">One-Tap Pause</span>
+            </div>
         </div>
 
         <div class="cf-section">
-            <div class="cf-card">
+            <div class="cf-card cf-main-card">
                 <div class="cf-card-body">                    
                     <div class="cf-workout-grid">
                         <div class="cf-workout-item">
                             <button class="cf-workout-btn workout-type-btn" data-type="amrap">
-                                <i class="fas fa-infinity mb-2"></i><br>AMRAP
+                                <i class="fas fa-infinity"></i>
+                                <span>AMRAP</span>
                             </button>
                         </div>
                         <div class="cf-workout-item">
                             <button class="cf-workout-btn workout-type-btn" data-type="emom">
-                                <i class="fas fa-clock mb-2"></i><br>EMOM
+                                <i class="fas fa-clock"></i>
+                                <span>EMOM</span>
                             </button>
                         </div>
                         <div class="cf-workout-item">
                             <button class="cf-workout-btn workout-type-btn" data-type="tabata">
-                                <i class="fas fa-bolt mb-2"></i><br>Tabata
+                                <i class="fas fa-bolt"></i>
+                                <span>Tabata</span>
                             </button>
                         </div>
                         <div class="cf-workout-item">
                             <button class="cf-workout-btn workout-type-btn" data-type="custom">
-                                <i class="fas fa-cog mb-2"></i><br>Custom
+                                <i class="fas fa-cog"></i>
+                                <span>Custom</span>
                             </button>
                         </div>
                         
@@ -51,7 +59,7 @@
                      
                 </div>
                 <button class="cf-settings-btn" onclick="timer.goToPage('settings')">
-                            <i class="fas fa-cog"></i> Settings
+                            <i class="fas fa-cog"></i> Workout Settings
                         </button>
             </div>
         </div>
@@ -60,13 +68,13 @@
     <!-- Page 2: Timer Setup -->
     <div id="page-timer-setup" class="cf-page" style="display: none;">
         <div class="cf-header">
-            <h1 class="cf-title">CrossFit Timer</h1>            
-           
+            <h1 class="cf-title">CrossFit Timer</h1>
+            <p class="cf-subtitle">Pick your format and dial in your intervals.</p>
         </div>
 
         <!-- Timer Configuration -->
         <div class="cf-section" id="timer-config">
-        <div class="cf-card">
+        <div class="cf-card cf-main-card">
             <div class="cf-card-body">
                     
                     
@@ -181,13 +189,14 @@
                             <circle cx="100" cy="100" r="90" class="cf-progress-background"></circle>
                             <circle cx="100" cy="100" r="90" class="cf-progress-circle" id="progress-bar"></circle>
                         </svg>
-                        <div id="timer-display" class="cf-timer-display timer-countdown">
+                        <div id="timer-display" class="cf-timer-display timer-countdown" aria-live="polite">
                             00:00
                         </div>
                         <div class="cf-pause-overlay" id="pause-overlay" style="display: none;">
                             <i class="fas fa-pause"></i>
                         </div>
                     </div>
+                    <p class="cf-timer-hint">Tap the timer circle to pause or resume.</p>
 
                     <!-- Control Buttons -->
                     <div class="cf-controls">
@@ -289,7 +298,10 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background:
+        radial-gradient(900px 450px at 0% -20%, rgba(37, 99, 235, 0.25), transparent 65%),
+        radial-gradient(900px 450px at 100% 0%, rgba(249, 115, 22, 0.2), transparent 60%),
+        linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
     color: #e2e8f0;
     min-height: 100vh;
     padding: 20px;
@@ -311,7 +323,7 @@ body {
 
 /* Container and Layout */
 .cf-container {
-    max-width: 1200px;
+    max-width: 980px;
     margin: 0 auto;
     width: 100%;
 }
@@ -338,6 +350,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    box-shadow: 0 8px 24px rgba(2, 6, 23, 0.35);
 }
 
 .cf-back-btn:hover {
@@ -347,27 +360,27 @@ body {
 
 /* Settings Button */
 .cf-settings-btn {
-    justify-self: center;
-    top: 20px;
-    /*right: 20px;*/
-    background: rgba(100, 116, 139, 0.8);
-    border: none;
-    color: white;
-    width: 200px;
-    height: 50px;
-    /*border-radius: 40%;*/
+    margin: 1.25rem auto 0;
+    background: rgba(100, 116, 139, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: var(--text-primary);
+    min-width: 220px;
+    height: 48px;
+    border-radius: 12px;
     cursor: pointer;
-    font-size: 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 0.5rem;
 }
 
 .cf-settings-btn:hover {
-    background: rgba(100, 116, 139, 1);
-    transform: rotate(90deg) scale(1.1);
-    box-shadow: 0 6px 20px rgba(100, 116, 139, 0.3);
+    background: rgba(100, 116, 139, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.4);
 }
 
 /* Settings Page Styles */
@@ -441,17 +454,38 @@ body {
 }
 
 .cf-title {
-    font-size: 3.5rem;
+    font-size: clamp(2rem, 6vw, 3.4rem);
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     text-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .cf-subtitle {
-    font-size: 1.25rem;
+    font-size: 1rem;
     color: var(--text-secondary);
-    font-weight: 400;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.cf-badge-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.cf-pill {
+    background: rgba(37, 99, 235, 0.16);
+    color: #bfdbfe;
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.75rem;
 }
 
 .cf-section {
@@ -460,15 +494,19 @@ body {
 
 /* Card Styles */
 .cf-card {
-    /*background: var(--card-bg);
+    background: linear-gradient(165deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.72));
     border: 1px solid var(--card-border);
     border-radius: 12px;
     backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);*/
+    box-shadow: 0 14px 32px rgba(2, 6, 23, 0.35);
 }
 
 .cf-card-body {
-    padding: 2rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.cf-main-card {
+    border-color: rgba(37, 99, 235, 0.25);
 }
 
 .cf-card-title {
@@ -481,8 +519,8 @@ body {
 /* Workout Selection */
 .cf-workout-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.85rem;
 }
 
 .cf-workout-item {
@@ -491,12 +529,12 @@ body {
 
 .cf-workout-btn {
     width: 100%;
-    height: 100px;
-    font-size: 0.9rem;
-    border: 2px solid var(--border-color);
-    background: rgba(30, 41, 59, 0.5);
-    color: var(--text-secondary);
-    border-radius: 8px;
+    min-height: 116px;
+    font-size: 0.95rem;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: linear-gradient(170deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.8));
+    color: var(--text-primary);
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
@@ -507,34 +545,44 @@ body {
 }
 
 .workout-type-btn {
-    height: 100px;
+    min-height: 116px;
     font-size: 0.9rem;
-    border: 2px solid var(--border-color);
-    background: rgba(30, 41, 59, 0.5);
-    color: var(--text-secondary);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: linear-gradient(170deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.8));
+    color: var(--text-primary);
     transition: all 0.3s ease;
 }
 
 .cf-workout-btn:hover {
     border-color: var(--primary-color);
-    background: rgba(37, 99, 235, 0.1);
-    color: var(--primary-color);
+    background: linear-gradient(165deg, rgba(37, 99, 235, 0.18), rgba(30, 41, 59, 0.8));
+    color: #dbeafe;
     transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
 }
 
 .cf-workout-btn.active {
     border-color: var(--primary-color);
-    background: var(--primary-color);
+    background: linear-gradient(160deg, #2563eb, #1d4ed8);
     color: white;
     transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
 }
 
 .cf-workout-btn i {
-    font-size: 1.5rem;
-    display: block;
-    margin-bottom: 0.5rem;
+    font-size: 1.35rem;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(148, 163, 184, 0.16);
+    margin-bottom: 0.6rem;
+}
+
+.cf-workout-btn span {
+    font-weight: 700;
+    letter-spacing: 0.04em;
 }
 
 /* Form Styles */
@@ -589,6 +637,10 @@ body {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.cf-form-textarea::placeholder {
+    color: rgba(148, 163, 184, 0.85);
 }
 
 .cf-form-help {
@@ -709,6 +761,7 @@ body {
     letter-spacing: 0.05em;
     min-width: 140px;
     justify-content: center;
+    box-shadow: 0 10px 22px rgba(2, 6, 23, 0.28);
 }
 
 .cf-btn-primary {
@@ -764,6 +817,17 @@ body {
     background: #475569;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(100, 116, 139, 0.3);
+}
+
+.cf-btn:focus-visible,
+.cf-back-btn:focus-visible,
+.cf-settings-btn:focus-visible,
+.cf-workout-btn:focus-visible,
+.cf-exit-timer-btn:focus-visible,
+.cf-form-input:focus-visible,
+.cf-form-textarea:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.55);
+    outline-offset: 2px;
 }
 
 /* Form Controls */
@@ -859,9 +923,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 2rem 0;
+    margin: 2rem auto 0.75rem;
     cursor: pointer;
     user-select: none;
+    max-width: 330px;
 }
 
 .cf-circular-timer.clickable:hover {
@@ -879,26 +944,34 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 80px;
-    height: 80px;
-    background: rgba(245, 158, 11, 0.9);
+    width: 112px;
+    height: 112px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 2px solid rgba(245, 158, 11, 0.9);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
     z-index: 10;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.45);
 }
 
 .cf-pause-overlay i {
     font-size: 2rem;
-    color: white;
+    color: var(--warning-color);
+}
+
+.cf-circular-timer.paused .cf-timer-display {
+    opacity: 0.2;
+    transition: opacity 0.2s ease;
 }
 
 .cf-circular-progress {
     width: 300px;
     height: 300px;
     transform: rotate(-90deg);
+    filter: drop-shadow(0 10px 16px rgba(15, 23, 42, 0.5));
 }
 
 .cf-progress-background {
@@ -918,6 +991,13 @@ body {
     transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
 }
 
+.cf-timer-hint {
+    text-align: center;
+    font-size: 0.82rem;
+    color: rgba(203, 213, 225, 0.9);
+    margin-top: 0.25rem;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .cf-container {
@@ -933,7 +1013,7 @@ body {
     }
     
     .cf-workout-btn {
-        height: 80px;
+        min-height: 92px;
         font-size: 0.8rem;
     }
     
@@ -958,6 +1038,11 @@ body {
     .cf-card-body {
         padding: 1.5rem;
     }
+
+    .cf-settings-btn {
+        width: 100%;
+        max-width: 280px;
+    }
     
     .cf-circular-progress {
         width: 250px;
@@ -966,6 +1051,10 @@ body {
     
     .cf-circular-timer .cf-timer-display {
         font-size: 2.5rem;
+    }
+
+    .cf-pill {
+        font-size: 0.7rem;
     }
 }
 </style>
@@ -1506,6 +1595,7 @@ class CrossFitTimer {
     pauseTimer() {
         this.isPaused = true;
         this.pauseOverlay.style.display = 'flex';
+        this.progressContainer.classList.add('paused');
         this.updateUI();
         if (this.intervalId) {
             clearTimeout(this.intervalId);
@@ -1517,6 +1607,7 @@ class CrossFitTimer {
     resumeTimer() {
         this.isPaused = false;
         this.pauseOverlay.style.display = 'none';
+        this.progressContainer.classList.remove('paused');
         this.updateUI();
         this.tick();
         this.requestWakeLock();
@@ -1526,6 +1617,7 @@ class CrossFitTimer {
         this.isRunning = false;
         this.isPaused = false;
         this.pauseOverlay.style.display = 'none';
+        this.progressContainer.classList.remove('paused');
         if (this.intervalId) {
             clearTimeout(this.intervalId);
             this.intervalId = null;
