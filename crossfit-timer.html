@@ -206,7 +206,7 @@
                         <button class="cf-btn cf-btn-danger" id="stop-btn" style="display: none;">
                             <i class="fas fa-stop me-2"></i> Stop
                         </button>                  
-                         <button class="cf-exit-timer-btn" onclick="timer.exitTimer()">
+                         <button class="cf-exit-timer-btn" onclick="timer.exitTimer()" title="Exit workout">
                             <i class="fas fa-times"></i>
                         </button>      
                     </div>
@@ -303,8 +303,11 @@ body {
         radial-gradient(900px 450px at 100% 0%, rgba(249, 115, 22, 0.2), transparent 60%),
         linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
     color: #e2e8f0;
-    min-height: 100vh;
+    min-height: 100dvh;
     padding: 20px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
 }
 
 :root {
@@ -331,6 +334,7 @@ body {
 /* Page System */
 .cf-page {
     width: 100%;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Back Button */
@@ -350,7 +354,9 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-height: 52px;
     box-shadow: 0 8px 24px rgba(2, 6, 23, 0.35);
+    touch-action: manipulation;
 }
 
 .cf-back-btn:hover {
@@ -365,7 +371,7 @@ body {
     border: 1px solid rgba(148, 163, 184, 0.35);
     color: var(--text-primary);
     min-width: 220px;
-    height: 48px;
+    height: 52px;
     border-radius: 12px;
     cursor: pointer;
     font-size: 0.95rem;
@@ -375,6 +381,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    touch-action: manipulation;
 }
 
 .cf-settings-btn:hover {
@@ -428,11 +435,12 @@ body {
     /*position: absolute;*/
     top: 20px;
     right: 20px;
-    background: rgba(239, 68, 68, 0.8);
+    background: rgba(100, 116, 139, 0.78);
+    border: 1px solid rgba(148, 163, 184, 0.4);
     border: none;
     color: white;
-    width: 50px;
-    height: 50px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     cursor: pointer;
     font-size: 1.25rem;
@@ -441,10 +449,11 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    touch-action: manipulation;
 }
 
 .cf-exit-timer-btn:hover {
-    background: rgba(239, 68, 68, 1);
+    background: rgba(100, 116, 139, 0.95);
     transform: scale(1.1);
 }
 
@@ -760,8 +769,10 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     min-width: 140px;
+    min-height: 52px;
     justify-content: center;
     box-shadow: 0 10px 22px rgba(2, 6, 23, 0.28);
+    touch-action: manipulation;
 }
 
 .cf-btn-primary {
@@ -1000,25 +1011,56 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    body {
+        padding: 12px;
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+
     .cf-container {
-        padding: 0 10px;
+        padding: 0;
+    }
+
+    .cf-header {
+        margin-bottom: 1.25rem;
     }
     
     .cf-title {
-        font-size: 2.5rem;
+        font-size: clamp(2rem, 10vw, 2.7rem);
+    }
+
+    .cf-subtitle {
+        font-size: 0.92rem;
+        max-width: 28ch;
+        margin: 0.25rem auto 0;
+    }
+
+    .cf-section {
+        margin-bottom: 1rem;
     }
     
     .cf-timer-display {
         font-size: 3rem;
     }
     
+    .cf-workout-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
+    }
+
     .cf-workout-btn {
-        min-height: 92px;
-        font-size: 0.8rem;
+        min-height: 102px;
+        font-size: 0.82rem;
     }
     
     .cf-workout-btn i {
-        font-size: 1.2rem;
+        font-size: 1.15rem;
+        width: 34px;
+        height: 34px;
+    }
+
+    .cf-workout-btn span {
+        font-size: 0.8rem;
     }
     
     .cf-form-grid {
@@ -1027,34 +1069,106 @@ body {
     
     .cf-controls {
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
+        width: 100%;
+        gap: 0.75rem;
     }
     
     .cf-btn {
         width: 100%;
-        max-width: 200px;
+        max-width: none;
     }
     
     .cf-card-body {
-        padding: 1.5rem;
+        padding: 1rem;
     }
 
+    .cf-back-btn,
     .cf-settings-btn {
         width: 100%;
-        max-width: 280px;
+        max-width: none;
+    }
+
+    .cf-controls .cf-btn,
+    .cf-controls .cf-back-btn,
+    .cf-controls .cf-settings-btn {
+        width: 100%;
+        max-width: none;
     }
     
     .cf-circular-progress {
-        width: 250px;
-        height: 250px;
+        width: min(76vw, 260px);
+        height: min(76vw, 260px);
+    }
+
+    .cf-circular-timer {
+        margin: 1rem auto 0.5rem;
     }
     
     .cf-circular-timer .cf-timer-display {
-        font-size: 2.5rem;
+        font-size: clamp(2.2rem, 12vw, 3rem);
     }
 
     .cf-pill {
         font-size: 0.7rem;
+    }
+
+    .cf-pause-overlay {
+        width: 92px;
+        height: 92px;
+    }
+
+    #page-timer-only .cf-card {
+        min-height: calc(100dvh - 110px);
+    }
+
+    #page-timer-only .cf-card-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    #page-timer-only .cf-controls {
+        margin-top: auto;
+        align-items: center;
+        padding-bottom: calc(0.35rem + env(safe-area-inset-bottom));
+    }
+
+    #page-settings .cf-controls {
+        margin: 1.25rem auto 0;
+    }
+
+    #page-settings .cf-back-btn,
+    #page-timer-setup .cf-back-btn {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 420px) {
+    .cf-workout-btn {
+        min-height: 96px;
+    }
+
+    .cf-form-input,
+    .cf-form-textarea,
+    .cf-btn,
+    .cf-back-btn,
+    .cf-settings-btn {
+        font-size: 16px;
+    }
+
+    .cf-timer-hint {
+        font-size: 0.78rem;
+    }
+}
+
+@media (hover: none) {
+    .cf-workout-btn:hover,
+    .cf-btn:hover,
+    .cf-back-btn:hover,
+    .cf-settings-btn:hover,
+    .cf-exit-timer-btn:hover {
+        transform: none;
     }
 }
 </style>
