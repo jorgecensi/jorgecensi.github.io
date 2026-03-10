@@ -1,140 +1,600 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
     const gridSize = 8;
-    const grid = document.getElementById("puzzleGrid");
+    const gridElement = document.getElementById("puzzleGrid");
     const puzzleContainer = document.getElementById("puzzleContainer");
+    const statusElement = document.getElementById("binaryStatus");
+    const newPuzzleButton = document.getElementById("generatePuzzle");
+    const toggleSolutionButton = document.getElementById("toggleSolution");
+    const checkPuzzleButton = document.getElementById("checkPuzzle");
+    const toggleRulesButton = document.getElementById("toggleRules");
+    const rulesElement = document.getElementById("rules");
 
+    if (!gridElement || !puzzleContainer || !newPuzzleButton || !toggleSolutionButton || !toggleRulesButton || !rulesElement) {
+        return;
+    }
+
+    const labels = {
+        showSolution: puzzleContainer.dataset.labelShowSolution || "Show Solution",
+        hideSolution: puzzleContainer.dataset.labelHideSolution || "Hide Solution",
+        statusProgress: puzzleContainer.dataset.statusProgress || "{filled}/{total} cells filled.",
+        statusConflicts: puzzleContainer.dataset.statusConflicts || "{count} rule issues highlighted.",
+        statusSolved: puzzleContainer.dataset.statusSolved || "Solved!",
+        statusSolutionVisible: puzzleContainer.dataset.statusSolutionVisible || "Solution preview is visible."
+    };
+
+    let solutionGrid = [];
+    let puzzleGrid = [];
+    let playerGrid = [];
+    let fixedMask = [];
     let solutionVisible = false;
-    let solutionGrid = null;
+    let selectedCell = null;
+    let conflictCells = new Set();
 
-    function generateCompletedGrid(size) {
-        const grid = Array(size).fill().map(() => Array(size).fill(null));
-        if (solveGrid(grid, 0, 0, size)) {
-            return grid;
-        }
-        return null;
+    function createMatrix(size, value = null) {
+        return Array.from({ length: size }, () => Array(size).fill(value));
     }
 
-    function solveGrid(grid, row, col, size) {
-        if (row === size) {
-            return true;
-        }
-        let nextRow = row;
-        let nextCol = col + 1;
-        if (nextCol === size) {
-            nextRow++;
-            nextCol = 0;
-        }
-        for (const value of shuffleArray([0, 1])) {
-            if (isValidPlacement(grid, row, col, value, size)) {
-                grid[row][col] = value;
-                if (solveGrid(grid, nextRow, nextCol, size)) {
-                    return true;
-                }
-                grid[row][col] = null;
-            }
-        }
-        return false;
+    function cloneGrid(source) {
+        return source.map((row) => [...row]);
     }
 
-    function shuffleArray(array) {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
+    function shuffle(values) {
+        const shuffled = [...values];
+        for (let i = shuffled.length - 1; i > 0; i -= 1) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled;
     }
 
-    function isValidPlacement(grid, row, col, value, size) {
-        if (col >= 2 && grid[row][col - 1] === value && grid[row][col - 2] === value) {
-            return false;
+    function keyForCell(row, col) {
+        return `${row},${col}`;
+    }
+
+    function lineHasThreeAdjacent(line) {
+        for (let i = 0; i <= line.length - 3; i += 1) {
+            if (line[i] !== null && line[i] === line[i + 1] && line[i] === line[i + 2]) {
+                return true;
+            }
         }
-        if (row >= 2 && grid[row - 1][col] === value && grid[row - 2][col] === value) {
-            return false;
+        return false;
+    }
+
+    function lineHasExcessValues(line) {
+        let zeroes = 0;
+        let ones = 0;
+        for (const value of line) {
+            if (value === 0) {
+                zeroes += 1;
+            } else if (value === 1) {
+                ones += 1;
+            }
         }
-        let rowCount = 0, colCount = 0;
-        let rowFilled = true, colFilled = true;
-        for (let i = 0; i < size; i++) {
-            if (grid[row][i] === value) rowCount++;
-            if (grid[row][i] === null) rowFilled = false;
-            if (grid[i][col] === value) colCount++;
-            if (grid[i][col] === null) colFilled = false;
-        }
-        if (rowFilled && rowCount >= size / 2) return false;
-        if (colFilled && colCount >= size / 2) return false;
-        if (colFilled || rowFilled) {
-            // Implementation of uniqueness check here...
+        return zeroes > line.length / 2 || ones > line.length / 2;
+    }
+
+    function lineIsComplete(line) {
+        return line.every((value) => value !== null);
+    }
+
+    function linesAreEqual(first, second) {
+        for (let i = 0; i < first.length; i += 1) {
+            if (first[i] !== second[i]) {
+                return false;
+            }
         }
         return true;
     }
 
-    function generatePuzzle() {
-        solutionGrid = generateCompletedGrid(gridSize);
-        const puzzle = solutionGrid.map(row => row.map(cell => (Math.random() < 0.2 ? cell : "")));
-        return puzzle;
+    function getColumn(board, colIndex) {
+        return board.map((row) => row[colIndex]);
     }
 
-    function renderPuzzle(puzzle) {
-        grid.innerHTML = "";
-        for (let i = 0; i < gridSize; i++) {
-            const row = document.createElement("tr");
-            for (let j = 0; j < gridSize; j++) {
-                const cell = document.createElement("td");
-                cell.textContent = puzzle[i][j];
-                cell.contentEditable = false;
-                cell.addEventListener("click", function () {
-                    if (cell.textContent === "") {
-                        cell.textContent = "0";
-                    } else if (cell.textContent === "0") {
-                        cell.textContent = "1";
-                    } else {
-                        cell.textContent = "";
-                    }
-                });
-                row.appendChild(cell);
-            }
-            grid.appendChild(row);
+    function hasDuplicateCompletedRow(board, rowIndex) {
+        const row = board[rowIndex];
+        if (!lineIsComplete(row)) {
+            return false;
         }
+        for (let i = 0; i < board.length; i += 1) {
+            if (i !== rowIndex && lineIsComplete(board[i]) && linesAreEqual(row, board[i])) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    function toggleSolution() {
-        solutionVisible = !solutionVisible;
-        const rows = grid.querySelectorAll("tr");
-        for (let i = 0; i < gridSize; i++) {
-            const row = rows[i];
-            const cells = row.querySelectorAll("td");
-            for (let j = 0; j < gridSize; j++) {
-                if (cells[j].textContent === "" || cells[j].classList.contains("solution-cell")) {
-                    if (solutionVisible) {
-                        cells[j].textContent = solutionGrid[i][j];
-                        cells[j].classList.add("solution-cell");
-                    } else {
-                        cells[j].textContent = "";
-                        cells[j].classList.remove("solution-cell");
+    function hasDuplicateCompletedColumn(board, colIndex) {
+        const column = getColumn(board, colIndex);
+        if (!lineIsComplete(column)) {
+            return false;
+        }
+        for (let i = 0; i < board.length; i += 1) {
+            if (i !== colIndex) {
+                const candidate = getColumn(board, i);
+                if (lineIsComplete(candidate) && linesAreEqual(column, candidate)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function isValidPlacement(board, row, col, value) {
+        const previous = board[row][col];
+        board[row][col] = value;
+
+        const rowValues = board[row];
+        const columnValues = getColumn(board, col);
+
+        const valid = !lineHasThreeAdjacent(rowValues)
+            && !lineHasThreeAdjacent(columnValues)
+            && !lineHasExcessValues(rowValues)
+            && !lineHasExcessValues(columnValues)
+            && !hasDuplicateCompletedRow(board, row)
+            && !hasDuplicateCompletedColumn(board, col);
+
+        board[row][col] = previous;
+        return valid;
+    }
+
+    function fillCompletedGrid(board, index = 0) {
+        if (index === gridSize * gridSize) {
+            return true;
+        }
+
+        const row = Math.floor(index / gridSize);
+        const col = index % gridSize;
+
+        if (board[row][col] !== null) {
+            return fillCompletedGrid(board, index + 1);
+        }
+
+        for (const value of shuffle([0, 1])) {
+            if (isValidPlacement(board, row, col, value)) {
+                board[row][col] = value;
+                if (fillCompletedGrid(board, index + 1)) {
+                    return true;
+                }
+                board[row][col] = null;
+            }
+        }
+
+        return false;
+    }
+
+    function generateCompletedGrid() {
+        const board = createMatrix(gridSize);
+        if (!fillCompletedGrid(board)) {
+            throw new Error("Unable to generate a valid binary puzzle grid.");
+        }
+        return board;
+    }
+
+    function findMostConstrainedCell(board) {
+        let best = null;
+
+        for (let row = 0; row < gridSize; row += 1) {
+            for (let col = 0; col < gridSize; col += 1) {
+                if (board[row][col] !== null) {
+                    continue;
+                }
+
+                const candidates = [0, 1].filter((value) => isValidPlacement(board, row, col, value));
+
+                if (candidates.length === 0) {
+                    return { row, col, candidates };
+                }
+
+                if (!best || candidates.length < best.candidates.length) {
+                    best = { row, col, candidates };
+                    if (best.candidates.length === 1) {
+                        return best;
                     }
                 }
             }
         }
+
+        return best;
+    }
+
+    function countSolutions(board, limit = 2) {
+        if (limit <= 0) {
+            return 0;
+        }
+
+        const next = findMostConstrainedCell(board);
+        if (!next) {
+            return 1;
+        }
+        if (next.candidates.length === 0) {
+            return 0;
+        }
+
+        let total = 0;
+        for (const candidate of next.candidates) {
+            board[next.row][next.col] = candidate;
+            total += countSolutions(board, limit - total);
+            board[next.row][next.col] = null;
+            if (total >= limit) {
+                return total;
+            }
+        }
+        return total;
+    }
+
+    function generatePuzzleFromSolution(solution) {
+        const puzzle = cloneGrid(solution);
+        const positions = shuffle(Array.from({ length: gridSize * gridSize }, (_, index) => index));
+        const minimumClues = Math.ceil(gridSize * gridSize * 0.42);
+        let cluesLeft = gridSize * gridSize;
+
+        for (const position of positions) {
+            if (cluesLeft <= minimumClues) {
+                break;
+            }
+
+            const row = Math.floor(position / gridSize);
+            const col = position % gridSize;
+            const backup = puzzle[row][col];
+            puzzle[row][col] = null;
+
+            const testBoard = cloneGrid(puzzle);
+            if (countSolutions(testBoard, 2) !== 1) {
+                puzzle[row][col] = backup;
+                continue;
+            }
+
+            cluesLeft -= 1;
+        }
+
+        return puzzle;
+    }
+
+    function replaceTokens(template, values) {
+        return template.replace(/\{(\w+)\}/g, (fullMatch, token) => {
+            if (Object.prototype.hasOwnProperty.call(values, token)) {
+                return values[token];
+            }
+            return fullMatch;
+        });
+    }
+
+    function collectValidation(board) {
+        const conflicts = new Set();
+
+        for (let row = 0; row < gridSize; row += 1) {
+            const line = board[row];
+
+            for (let col = 0; col <= gridSize - 3; col += 1) {
+                if (line[col] !== null && line[col] === line[col + 1] && line[col] === line[col + 2]) {
+                    conflicts.add(keyForCell(row, col));
+                    conflicts.add(keyForCell(row, col + 1));
+                    conflicts.add(keyForCell(row, col + 2));
+                }
+            }
+
+            let zeroes = 0;
+            let ones = 0;
+            for (let col = 0; col < gridSize; col += 1) {
+                if (line[col] === 0) {
+                    zeroes += 1;
+                } else if (line[col] === 1) {
+                    ones += 1;
+                }
+            }
+            if (zeroes > gridSize / 2 || ones > gridSize / 2) {
+                for (let col = 0; col < gridSize; col += 1) {
+                    if (line[col] !== null) {
+                        conflicts.add(keyForCell(row, col));
+                    }
+                }
+            }
+        }
+
+        for (let col = 0; col < gridSize; col += 1) {
+            const line = getColumn(board, col);
+
+            for (let row = 0; row <= gridSize - 3; row += 1) {
+                if (line[row] !== null && line[row] === line[row + 1] && line[row] === line[row + 2]) {
+                    conflicts.add(keyForCell(row, col));
+                    conflicts.add(keyForCell(row + 1, col));
+                    conflicts.add(keyForCell(row + 2, col));
+                }
+            }
+
+            let zeroes = 0;
+            let ones = 0;
+            for (let row = 0; row < gridSize; row += 1) {
+                if (line[row] === 0) {
+                    zeroes += 1;
+                } else if (line[row] === 1) {
+                    ones += 1;
+                }
+            }
+            if (zeroes > gridSize / 2 || ones > gridSize / 2) {
+                for (let row = 0; row < gridSize; row += 1) {
+                    if (line[row] !== null) {
+                        conflicts.add(keyForCell(row, col));
+                    }
+                }
+            }
+        }
+
+        const completedRows = [];
+        for (let row = 0; row < gridSize; row += 1) {
+            if (lineIsComplete(board[row])) {
+                completedRows.push(row);
+            }
+        }
+        for (let i = 0; i < completedRows.length; i += 1) {
+            for (let j = i + 1; j < completedRows.length; j += 1) {
+                const first = completedRows[i];
+                const second = completedRows[j];
+                if (linesAreEqual(board[first], board[second])) {
+                    for (let col = 0; col < gridSize; col += 1) {
+                        conflicts.add(keyForCell(first, col));
+                        conflicts.add(keyForCell(second, col));
+                    }
+                }
+            }
+        }
+
+        const completedColumns = [];
+        for (let col = 0; col < gridSize; col += 1) {
+            const column = getColumn(board, col);
+            if (lineIsComplete(column)) {
+                completedColumns.push(col);
+            }
+        }
+        for (let i = 0; i < completedColumns.length; i += 1) {
+            for (let j = i + 1; j < completedColumns.length; j += 1) {
+                const first = completedColumns[i];
+                const second = completedColumns[j];
+                if (linesAreEqual(getColumn(board, first), getColumn(board, second))) {
+                    for (let row = 0; row < gridSize; row += 1) {
+                        conflicts.add(keyForCell(row, first));
+                        conflicts.add(keyForCell(row, second));
+                    }
+                }
+            }
+        }
+
+        let filled = 0;
+        for (let row = 0; row < gridSize; row += 1) {
+            for (let col = 0; col < gridSize; col += 1) {
+                if (!fixedMask[row][col] && board[row][col] !== null) {
+                    filled += 1;
+                }
+            }
+        }
+
+        const totalEditable = gridSize * gridSize - fixedMask.flat().filter(Boolean).length;
+        const solved = conflicts.size === 0
+            && board.every((row) => row.every((cell) => cell !== null))
+            && board.every((row, rowIndex) => row.every((cell, colIndex) => cell === solutionGrid[rowIndex][colIndex]));
+
+        return { conflicts, filled, totalEditable, solved };
+    }
+
+    function buildGridTable() {
+        gridElement.innerHTML = "";
+        for (let row = 0; row < gridSize; row += 1) {
+            const rowElement = document.createElement("tr");
+            for (let col = 0; col < gridSize; col += 1) {
+                const cellElement = document.createElement("td");
+                cellElement.dataset.row = String(row);
+                cellElement.dataset.col = String(col);
+                cellElement.setAttribute("role", "button");
+                rowElement.appendChild(cellElement);
+            }
+            gridElement.appendChild(rowElement);
+        }
+    }
+
+    function getCellElement(row, col) {
+        return gridElement.querySelector(`td[data-row="${row}"][data-col="${col}"]`);
+    }
+
+    function updateSingleCell(row, col) {
+        const cellElement = getCellElement(row, col);
+        if (!cellElement) {
+            return;
+        }
+
+        const value = solutionVisible ? solutionGrid[row][col] : playerGrid[row][col];
+        cellElement.textContent = value === null ? "" : String(value);
+
+        const isFixed = fixedMask[row][col];
+        cellElement.classList.toggle("fixed-cell", isFixed);
+        cellElement.classList.toggle("editable-cell", !isFixed);
+        cellElement.classList.toggle("solution-cell", solutionVisible && !isFixed);
+        cellElement.classList.toggle("user-cell", !isFixed && !solutionVisible && playerGrid[row][col] !== null);
+        cellElement.classList.toggle("conflict-cell", !solutionVisible && conflictCells.has(keyForCell(row, col)));
+        cellElement.classList.toggle("selected-cell", !!selectedCell && selectedCell.row === row && selectedCell.col === col);
+        cellElement.tabIndex = isFixed ? -1 : 0;
+        cellElement.setAttribute("aria-label", `Row ${row + 1}, Column ${col + 1}`);
+    }
+
+    function renderGrid() {
+        for (let row = 0; row < gridSize; row += 1) {
+            for (let col = 0; col < gridSize; col += 1) {
+                updateSingleCell(row, col);
+            }
+        }
+    }
+
+    function setStatus(text) {
+        if (statusElement) {
+            statusElement.textContent = text;
+        }
+    }
+
+    function updateStatus() {
+        const result = collectValidation(playerGrid);
+        conflictCells = result.conflicts;
+        renderGrid();
+
+        if (solutionVisible) {
+            setStatus(labels.statusSolutionVisible);
+            return;
+        }
+
+        if (result.solved) {
+            setStatus(labels.statusSolved);
+            return;
+        }
+
+        if (result.conflicts.size > 0) {
+            setStatus(replaceTokens(labels.statusConflicts, { count: String(result.conflicts.size) }));
+            return;
+        }
+
+        setStatus(replaceTokens(labels.statusProgress, {
+            filled: String(result.filled),
+            total: String(result.totalEditable)
+        }));
+    }
+
+    function cyclePlayerCell(row, col) {
+        if (fixedMask[row][col] || solutionVisible) {
+            return;
+        }
+
+        const current = playerGrid[row][col];
+        if (current === null) {
+            playerGrid[row][col] = 0;
+        } else if (current === 0) {
+            playerGrid[row][col] = 1;
+        } else {
+            playerGrid[row][col] = null;
+        }
+        updateStatus();
+    }
+
+    function selectCell(row, col) {
+        selectedCell = { row, col };
+        renderGrid();
+    }
+
+    function toggleSolution() {
+        solutionVisible = !solutionVisible;
+        toggleSolutionButton.textContent = solutionVisible ? labels.hideSolution : labels.showSolution;
+        renderGrid();
+        updateStatus();
     }
 
     function toggleRules() {
-        const rules = document.getElementById("rules");
-        rules.classList.toggle("visible");
+        const willShow = rulesElement.hasAttribute("hidden");
+        if (willShow) {
+            rulesElement.removeAttribute("hidden");
+            rulesElement.classList.add("visible");
+        } else {
+            rulesElement.setAttribute("hidden", "");
+            rulesElement.classList.remove("visible");
+        }
+        toggleRulesButton.setAttribute("aria-expanded", String(willShow));
     }
 
-    document.getElementById("generatePuzzle").addEventListener("click", function () {
-        const puzzle = generatePuzzle();
-        renderPuzzle(puzzle);
+    function startNewPuzzle() {
+        solutionVisible = false;
+        selectedCell = null;
+        toggleSolutionButton.textContent = labels.showSolution;
+
+        solutionGrid = generateCompletedGrid();
+        puzzleGrid = generatePuzzleFromSolution(solutionGrid);
+        playerGrid = cloneGrid(puzzleGrid);
+        fixedMask = puzzleGrid.map((row) => row.map((cell) => cell !== null));
+        conflictCells = new Set();
+
+        buildGridTable();
+        updateStatus();
+    }
+
+    gridElement.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLTableCellElement)) {
+            return;
+        }
+
+        const row = Number(target.dataset.row);
+        const col = Number(target.dataset.col);
+        selectCell(row, col);
+        cyclePlayerCell(row, col);
     });
 
-    document.getElementById("toggleSolution").addEventListener("click", function () {
+    gridElement.addEventListener("keydown", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLTableCellElement)) {
+            return;
+        }
+
+        const row = Number(target.dataset.row);
+        const col = Number(target.dataset.col);
+        if (!Number.isInteger(row) || !Number.isInteger(col)) {
+            return;
+        }
+
+        const key = event.key;
+        if (key === "Enter" || key === " ") {
+            event.preventDefault();
+            cyclePlayerCell(row, col);
+            return;
+        }
+
+        if (key === "Backspace" || key === "Delete" || key === "0" || key === "1") {
+            event.preventDefault();
+            if (fixedMask[row][col] || solutionVisible) {
+                return;
+            }
+            if (key === "Backspace" || key === "Delete") {
+                playerGrid[row][col] = null;
+            } else {
+                playerGrid[row][col] = Number(key);
+            }
+            updateStatus();
+            return;
+        }
+
+        const movement = {
+            ArrowUp: { row: -1, col: 0 },
+            ArrowDown: { row: 1, col: 0 },
+            ArrowLeft: { row: 0, col: -1 },
+            ArrowRight: { row: 0, col: 1 }
+        }[key];
+
+        if (movement) {
+            event.preventDefault();
+            const nextRow = (row + movement.row + gridSize) % gridSize;
+            const nextCol = (col + movement.col + gridSize) % gridSize;
+            selectCell(nextRow, nextCol);
+            const nextCell = getCellElement(nextRow, nextCol);
+            if (nextCell) {
+                nextCell.focus();
+            }
+        }
+    });
+
+    newPuzzleButton.addEventListener("click", () => {
+        startNewPuzzle();
+    });
+
+    toggleSolutionButton.addEventListener("click", () => {
         toggleSolution();
     });
 
-    document.getElementById("toggleRules").addEventListener("click", function () {
+    if (checkPuzzleButton) {
+        checkPuzzleButton.addEventListener("click", () => {
+            updateStatus();
+        });
+    }
+
+    toggleRulesButton.addEventListener("click", () => {
         toggleRules();
     });
 
-    const puzzle = generatePuzzle();
-    renderPuzzle(puzzle);
+    if (rulesElement && !rulesElement.hasAttribute("hidden")) {
+        rulesElement.setAttribute("hidden", "");
+    }
+    toggleRulesButton.setAttribute("aria-expanded", "false");
+    startNewPuzzle();
 });
