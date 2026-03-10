@@ -54,6 +54,12 @@
                                 <span>Custom</span>
                             </button>
                         </div>
+                        <div class="cf-workout-item">
+                            <button class="cf-workout-btn workout-type-btn" data-type="clock">
+                                <i class="fas fa-stopwatch"></i>
+                                <span>Clock</span>
+                            </button>
+                        </div>
                         
                     </div>
                      
@@ -141,6 +147,21 @@
                                     <option value="60">Every 1min</option>
                                     <option value="120">Every 2min</option>
                                 </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CrossFit Clock Configuration -->
+                    <div class="cf-config-section" id="clock-config" style="display: none;">
+                        <h3 class="cf-card-title">CrossFit-Style Clock</h3>
+                        <div class="cf-form-item" style="margin-bottom: 1rem;">
+                            <small class="cf-form-help">Starts at 00:00 and counts up like a gym wall clock.</small>
+                        </div>
+                        <div class="cf-form-grid">
+                            <div class="cf-form-item">
+                                <label for="clock-cap-minutes" class="cf-form-label">Time Cap (Minutes)</label>
+                                <input type="number" inputmode="numeric" class="cf-form-input" id="clock-cap-minutes" value="0" min="0" max="240">
+                                <small class="cf-form-help">Set 0 for no cap (run until manually stopped).</small>
                             </div>
                         </div>
                     </div>
@@ -437,7 +458,6 @@ body {
     right: 20px;
     background: rgba(100, 116, 139, 0.78);
     border: 1px solid rgba(148, 163, 184, 0.4);
-    border: none;
     color: white;
     width: 56px;
     height: 56px;
@@ -706,6 +726,10 @@ body {
     color: var(--secondary-color) !important;
 }
 
+.timer-clock {
+    color: var(--primary-color) !important;
+}
+
 .timer-finished {
     color: var(--primary-color) !important;
     /*animation: celebration 2s infinite;*/
@@ -738,6 +762,11 @@ body {
 
 .cf-phase-badge.bg-rest {
     background: var(--secondary-color);
+    color: white;
+}
+
+.cf-phase-badge.bg-clock {
+    background: var(--primary-color);
     color: white;
 }
 
@@ -1441,6 +1470,12 @@ class CrossFitTimer {
                     countdown: parseInt(this.defaultCountdown.value),
                     beepInterval: parseInt(document.getElementById('custom-beep').value)
                 };
+            case 'clock':
+                return {
+                    type: 'clock',
+                    capSeconds: parseInt(document.getElementById('clock-cap-minutes').value) * 60 || 0,
+                    countdown: 0
+                };
             default:
                 return null;
         }
@@ -1502,6 +1537,16 @@ class CrossFitTimer {
                 this.currentWorkoutType.textContent = `Custom Timer`;
                 this.roundInfo.style.display = 'none';
                 break;
+            case 'clock':
+                this.totalRounds = 1;
+                this.clockCap = config.capSeconds;
+                this.currentPhase = 'clock';
+                this.timeRemaining = 0;
+                this.currentWorkoutType.textContent = this.clockCap > 0
+                    ? `CrossFit Clock - ${Math.floor(this.clockCap / 60)} min cap`
+                    : 'CrossFit Clock - Open';
+                this.roundInfo.style.display = 'none';
+                break;
         }
         
         if (config.type !== 'emom') {
@@ -1514,6 +1559,24 @@ class CrossFitTimer {
     
     tick() {
         if (!this.isRunning || this.isPaused) return;
+
+        if (this.config?.type === 'clock' && this.currentPhase === 'clock') {
+            this.updateDisplay();
+            this.updateProgress();
+
+            if (this.clockCap > 0 && this.timeRemaining >= this.clockCap) {
+                this.finishWorkout();
+                return;
+            }
+
+            this.timeRemaining++;
+            if (this.timeRemaining > 0 && this.timeRemaining % 60 === 0) {
+                this.playBeep(900, 120);
+            }
+
+            this.intervalId = setTimeout(() => this.tick(), 1000);
+            return;
+        }
         
         this.updateDisplay();
         this.updateProgress();
@@ -1632,7 +1695,9 @@ class CrossFitTimer {
     finishWorkout() {
         this.isRunning = false;
         this.currentPhase = 'finished';
-        this.timeRemaining = 0;
+        if (this.config?.type !== 'clock') {
+            this.timeRemaining = 0;
+        }
         this.playBeep(1500, 1000);
         
         setTimeout(() => {
@@ -1661,6 +1726,10 @@ class CrossFitTimer {
                 this.phaseBadge.textContent = 'GET READY';
                 this.phaseBadge.className = 'cf-phase-badge bg-countdown';
                 break;
+            case 'clock':
+                this.phaseBadge.textContent = 'CLOCK';
+                this.phaseBadge.className = 'cf-phase-badge bg-clock';
+                break;
             case 'work':
                 this.phaseBadge.textContent = 'WORK';
                 this.phaseBadge.className = 'cf-phase-badge bg-work';
@@ -1681,6 +1750,10 @@ class CrossFitTimer {
         
         if (this.currentPhase === 'countdown') {
             progress = ((this.countdownTime - this.timeRemaining) / this.countdownTime) * 100;
+        } else if (this.currentPhase === 'clock') {
+            progress = this.clockCap > 0
+                ? Math.min((this.timeRemaining / this.clockCap) * 100, 100)
+                : ((this.timeRemaining % 60) / 60) * 100;
         } else if (this.currentPhase === 'work') {
             progress = ((this.workTime - this.timeRemaining) / this.workTime) * 100;
         } else if (this.currentPhase === 'rest') {
@@ -1697,6 +1770,8 @@ class CrossFitTimer {
         // Update stroke color based on phase
         if (this.currentPhase === 'countdown') {
             this.progressBar.style.stroke = 'var(--accent-color)';
+        } else if (this.currentPhase === 'clock') {
+            this.progressBar.style.stroke = 'var(--primary-color)';
         } else if (this.currentPhase === 'work') {
             this.progressBar.style.stroke = 'var(--success-color)';
         } else if (this.currentPhase === 'rest') {
