@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const newPuzzleButton = document.getElementById("generatePuzzle");
     const toggleSolutionButton = document.getElementById("toggleSolution");
     const checkPuzzleButton = document.getElementById("checkPuzzle");
+    const installAppButton = document.getElementById("installBinaryApp");
     const toggleRulesButton = document.getElementById("toggleRules");
     const rulesElement = document.getElementById("rules");
 
@@ -19,7 +20,10 @@ document.addEventListener("DOMContentLoaded", () => {
         statusProgress: puzzleContainer.dataset.statusProgress || "{filled}/{total} cells filled.",
         statusConflicts: puzzleContainer.dataset.statusConflicts || "{count} rule issues highlighted.",
         statusSolved: puzzleContainer.dataset.statusSolved || "Solved!",
-        statusSolutionVisible: puzzleContainer.dataset.statusSolutionVisible || "Solution preview is visible."
+        statusSolutionVisible: puzzleContainer.dataset.statusSolutionVisible || "Solution preview is visible.",
+        statusInstallReady: puzzleContainer.dataset.statusInstallReady || "Install is available.",
+        statusInstallComplete: puzzleContainer.dataset.statusInstallComplete || "App installed.",
+        statusInstallCancelled: puzzleContainer.dataset.statusInstallCancelled || "Install was cancelled."
     };
 
     let solutionGrid = [];
@@ -29,6 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let solutionVisible = false;
     let selectedCell = null;
     let conflictCells = new Set();
+    let deferredInstallPrompt = null;
 
     function createMatrix(size, value = null) {
         return Array.from({ length: size }, () => Array(size).fill(value));
@@ -429,6 +434,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function registerServiceWorker() {
+        if (!("serviceWorker" in navigator)) {
+            return;
+        }
+
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("/sw.js").catch(() => {
+                // Keep gameplay functional if service worker registration fails.
+            });
+        });
+    }
+
     function updateStatus() {
         const result = collectValidation(playerGrid);
         conflictCells = result.conflicts;
@@ -493,6 +510,42 @@ document.addEventListener("DOMContentLoaded", () => {
             rulesElement.classList.remove("visible");
         }
         toggleRulesButton.setAttribute("aria-expanded", String(willShow));
+    }
+
+    function setupInstallPrompt() {
+        if (!installAppButton) {
+            return;
+        }
+
+        window.addEventListener("beforeinstallprompt", (event) => {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+            installAppButton.hidden = false;
+            setStatus(labels.statusInstallReady);
+        });
+
+        installAppButton.addEventListener("click", async () => {
+            if (!deferredInstallPrompt) {
+                return;
+            }
+
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            installAppButton.hidden = true;
+
+            if (outcome === "accepted") {
+                setStatus(labels.statusInstallComplete);
+            } else {
+                setStatus(labels.statusInstallCancelled);
+            }
+        });
+
+        window.addEventListener("appinstalled", () => {
+            deferredInstallPrompt = null;
+            installAppButton.hidden = true;
+            setStatus(labels.statusInstallComplete);
+        });
     }
 
     function startNewPuzzle() {
@@ -596,5 +649,7 @@ document.addEventListener("DOMContentLoaded", () => {
         rulesElement.setAttribute("hidden", "");
     }
     toggleRulesButton.setAttribute("aria-expanded", "false");
+    setupInstallPrompt();
+    registerServiceWorker();
     startNewPuzzle();
 });

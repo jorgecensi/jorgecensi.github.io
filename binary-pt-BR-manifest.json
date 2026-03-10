@@ -1,0 +1,43 @@
+{
+  "id": "/pt-BR/binary.html",
+  "name": "Puzzle Binario",
+  "short_name": "Puzzle Binario",
+  "description": "Resolva o Puzzle Binario preenchendo a grade com 0s e 1s usando regras logicas.",
+  "start_url": "/pt-BR/binary.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f0e24",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/img/timer-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/timer-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "games",
+    "puzzle"
+  ],
+  "lang": "pt-BR",
+  "shortcuts": [
+    {
+      "name": "Novo Puzzle",
+      "short_name": "Novo",
+      "url": "/pt-BR/binary.html"
+    },
+    {
+      "name": "English version",
+      "short_name": "EN",
+      "url": "/binary.html"
+    }
+  ]
+}

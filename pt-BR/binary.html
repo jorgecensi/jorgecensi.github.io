@@ -13,6 +13,7 @@ ref: binary
         <button id="generatePuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.new_puzzle }}">{{ t.binary_page.new_puzzle }}</button>
         <button id="toggleSolution" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.show_solution }}">{{ t.binary_page.show_solution }}</button>
         <button id="checkPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.check_progress }}">{{ t.binary_page.check_progress }}</button>
+        <button id="installBinaryApp" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.install_app }}" hidden>{{ t.binary_page.install_app }}</button>
         <button id="toggleRules" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.rules }}">{{ t.binary_page.rules }}</button>
     </div>
     <p id="binaryStatus" class="binary-status" aria-live="polite"></p>
@@ -34,6 +35,9 @@ ref: binary
     data-status-conflicts="{{ t.binary_page.status_conflicts }}"
     data-status-solved="{{ t.binary_page.status_solved }}"
     data-status-solution-visible="{{ t.binary_page.status_solution_visible }}"
+    data-status-install-ready="{{ t.binary_page.status_install_ready }}"
+    data-status-install-complete="{{ t.binary_page.status_install_complete }}"
+    data-status-install-cancelled="{{ t.binary_page.status_install_cancelled }}"
 >
     <table id="puzzleGrid" class="table table-bordered mt-3"></table>
 </div>
