@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="cf-container">
@@ -216,6 +216,10 @@
                         <div class="cf-pause-overlay" id="pause-overlay" style="display: none;">
                             <i class="fas fa-pause"></i>
                         </div>
+                    </div>
+                    <div class="cf-crossfit-clock" id="crossfit-clock-display" style="display: none;" aria-live="polite">
+                        <span class="cf-crossfit-clock-label">UP</span>
+                        <span class="cf-crossfit-clock-time" id="clock-up-display">00:00</span>
                     </div>
                     <p class="cf-timer-hint">Tap the timer circle to pause or resume.</p>
 
@@ -712,6 +716,49 @@ body {
     height: auto;
 }
 
+.cf-crossfit-clock {
+    display: none;
+    width: min(100%, 560px);
+    margin: 1rem auto 0.75rem;
+    padding: 0.8rem 1.1rem;
+    background: linear-gradient(180deg, #0a0a0a, #111827);
+    border: 3px solid #1f2937;
+    border-radius: 8px;
+    box-shadow: 0 10px 22px rgba(2, 6, 23, 0.45);
+    align-items: center;
+    justify-content: center;
+    gap: 0.85rem;
+    user-select: none;
+    cursor: pointer;
+}
+
+.cf-crossfit-clock-label {
+    font-family: 'Orbitron', 'Inter', sans-serif;
+    font-size: clamp(1.4rem, 5vw, 2.3rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #6366f1;
+    text-shadow: 0 0 16px rgba(99, 102, 241, 0.65);
+}
+
+.cf-crossfit-clock-time {
+    font-family: 'Orbitron', 'Inter', monospace;
+    font-size: clamp(2.3rem, 8vw, 4.2rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    color: #ef4444;
+    text-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+}
+
+.cf-crossfit-clock.paused .cf-crossfit-clock-time {
+    opacity: 0.35;
+}
+
+.cf-crossfit-clock.paused .cf-crossfit-clock-label {
+    opacity: 0.7;
+}
+
 /* Timer States */
 .timer-countdown {
     color: var(--accent-color) !important;
@@ -1138,6 +1185,20 @@ body {
         font-size: clamp(2.2rem, 12vw, 3rem);
     }
 
+    .cf-crossfit-clock {
+        margin: 0.75rem auto 0.5rem;
+        padding: 0.7rem 0.8rem;
+        gap: 0.5rem;
+    }
+
+    .cf-crossfit-clock-label {
+        font-size: clamp(1.2rem, 7vw, 1.8rem);
+    }
+
+    .cf-crossfit-clock-time {
+        font-size: clamp(1.9rem, 13vw, 3rem);
+    }
+
     .cf-pill {
         font-size: 0.7rem;
     }
@@ -1268,6 +1329,8 @@ class CrossFitTimer {
         this.phaseBadge = document.getElementById('phase-badge');
         this.progressContainer = document.getElementById('progress-container');
         this.progressBar = document.getElementById('progress-bar');
+        this.crossfitClockDisplay = document.getElementById('crossfit-clock-display');
+        this.clockUpDisplay = document.getElementById('clock-up-display');
         this.exerciseInfo = document.getElementById('exercise-info');
         this.currentExercise = document.getElementById('current-exercise');
         
@@ -1275,6 +1338,7 @@ class CrossFitTimer {
         this.stopBtn = document.getElementById('stop-btn');        
         this.proceedBtn = document.getElementById('proceed-to-timer-btn');
         this.pauseOverlay = document.getElementById('pause-overlay');
+        this.timerHint = document.querySelector('.cf-timer-hint');
         
         this.soundEnabled = document.getElementById('sound-enabled');
         this.volumeControl = document.getElementById('volume-control');
@@ -1300,8 +1364,8 @@ class CrossFitTimer {
         this.stopBtn.addEventListener('click', () => this.stopTimer());        
         this.proceedBtn.addEventListener('click', () => this.proceedToTimer());
         
-        // Add click event to timer display for pause/resume
-        this.progressContainer.addEventListener('click', () => {
+        // Add click event to timer surfaces for pause/resume
+        const handleTimerSurfaceClick = () => {
             if (this.isRunning) {
                 if (this.isPaused) {
                     this.resumeTimer();
@@ -1309,7 +1373,9 @@ class CrossFitTimer {
                     this.pauseTimer();
                 }
             }
-        });
+        };
+        this.progressContainer.addEventListener('click', handleTimerSurfaceClick);
+        this.crossfitClockDisplay.addEventListener('click', handleTimerSurfaceClick);
         
         // Settings events
         this.volumeControl.addEventListener('input', (e) => {
@@ -1546,6 +1612,7 @@ class CrossFitTimer {
                     ? `CrossFit Clock - ${Math.floor(this.clockCap / 60)} min cap`
                     : 'CrossFit Clock - Open';
                 this.roundInfo.style.display = 'none';
+                this.timerHint.textContent = 'Tap the clock to pause or resume.';
                 break;
         }
         
@@ -1553,8 +1620,16 @@ class CrossFitTimer {
             this.totalRoundsSpan.textContent = this.totalRounds;
         }
         this.workoutInfo.style.display = 'block';
-        this.timerPhase.style.display = 'block';
-        this.progressContainer.style.display = 'block';
+        if (config.type === 'clock') {
+            this.timerPhase.style.display = 'none';
+            this.progressContainer.style.display = 'none';
+            this.crossfitClockDisplay.style.display = 'flex';
+        } else {
+            this.timerPhase.style.display = 'block';
+            this.progressContainer.style.display = 'flex';
+            this.crossfitClockDisplay.style.display = 'none';
+            this.timerHint.textContent = 'Tap the timer circle to pause or resume.';
+        }
     }
     
     tick() {
@@ -1717,6 +1792,7 @@ class CrossFitTimer {
         const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
         this.timerDisplay.textContent = display;
+        this.clockUpDisplay.textContent = display;
         
         // Update phase badge and colors
         this.timerDisplay.className = `cf-timer-display timer-${this.currentPhase}`;
@@ -1785,6 +1861,7 @@ class CrossFitTimer {
         this.isPaused = true;
         this.pauseOverlay.style.display = 'flex';
         this.progressContainer.classList.add('paused');
+        this.crossfitClockDisplay.classList.add('paused');
         this.updateUI();
         if (this.intervalId) {
             clearTimeout(this.intervalId);
@@ -1797,6 +1874,7 @@ class CrossFitTimer {
         this.isPaused = false;
         this.pauseOverlay.style.display = 'none';
         this.progressContainer.classList.remove('paused');
+        this.crossfitClockDisplay.classList.remove('paused');
         this.updateUI();
         this.tick();
         this.requestWakeLock();
@@ -1807,6 +1885,7 @@ class CrossFitTimer {
         this.isPaused = false;
         this.pauseOverlay.style.display = 'none';
         this.progressContainer.classList.remove('paused');
+        this.crossfitClockDisplay.classList.remove('paused');
         if (this.intervalId) {
             clearTimeout(this.intervalId);
             this.intervalId = null;
@@ -1822,12 +1901,15 @@ class CrossFitTimer {
         this.currentPhase = 'countdown';
         this.timerDisplay.textContent = '00:00';
         this.timerDisplay.className = 'cf-timer-display';
+        this.clockUpDisplay.textContent = '00:00';
         this.workoutInfo.style.display = 'none';
         this.timerPhase.style.display = 'none';
         this.progressContainer.style.display = 'none';
+        this.crossfitClockDisplay.style.display = 'none';
         this.progressBar.style.strokeDashoffset = '565.48';
         this.exerciseInfo.style.display = 'none';
         this.pauseOverlay.style.display = 'none';
+        this.timerHint.textContent = 'Tap the timer circle to pause or resume.';
         this.updateUI();
     }
     
@@ -1842,8 +1924,10 @@ class CrossFitTimer {
         // Add/remove clickable class to timer
         if (this.isRunning) {
             this.progressContainer.classList.add('clickable');
+            this.crossfitClockDisplay.classList.add('clickable');
         } else {
             this.progressContainer.classList.remove('clickable');
+            this.crossfitClockDisplay.classList.remove('clickable');
         }
         
         // Disable workout selection while timer is running
