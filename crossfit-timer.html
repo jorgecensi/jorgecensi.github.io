@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="cf-container">
@@ -19,31 +19,45 @@
     <div id="page-workout-selection" class="cf-page">
         <div class="cf-header">
             <h1 class="cf-title">CrossFit Timer</h1>
-           
+            <p class="cf-subtitle">Simple interval timing for serious workouts.</p>
+            <div class="cf-badge-row">
+                <span class="cf-pill">Offline Ready</span>
+                <span class="cf-pill">One-Tap Pause</span>
+            </div>
         </div>
 
         <div class="cf-section">
-            <div class="cf-card">
+            <div class="cf-card cf-main-card">
                 <div class="cf-card-body">                    
                     <div class="cf-workout-grid">
                         <div class="cf-workout-item">
                             <button class="cf-workout-btn workout-type-btn" data-type="amrap">
-                                <i class="fas fa-infinity mb-2"></i><br>AMRAP
+                                <i class="fas fa-infinity"></i>
+                                <span>AMRAP</span>
                             </button>
                         </div>
                         <div class="cf-workout-item">
                             <button class="cf-workout-btn workout-type-btn" data-type="emom">
-                                <i class="fas fa-clock mb-2"></i><br>EMOM
+                                <i class="fas fa-clock"></i>
+                                <span>EMOM</span>
                             </button>
                         </div>
                         <div class="cf-workout-item">
                             <button class="cf-workout-btn workout-type-btn" data-type="tabata">
-                                <i class="fas fa-bolt mb-2"></i><br>Tabata
+                                <i class="fas fa-bolt"></i>
+                                <span>Tabata</span>
                             </button>
                         </div>
                         <div class="cf-workout-item">
                             <button class="cf-workout-btn workout-type-btn" data-type="custom">
-                                <i class="fas fa-cog mb-2"></i><br>Custom
+                                <i class="fas fa-cog"></i>
+                                <span>Custom</span>
+                            </button>
+                        </div>
+                        <div class="cf-workout-item">
+                            <button class="cf-workout-btn workout-type-btn" data-type="clock">
+                                <i class="fas fa-stopwatch"></i>
+                                <span>Clock</span>
                             </button>
                         </div>
                         
@@ -51,7 +65,7 @@
                      
                 </div>
                 <button class="cf-settings-btn" onclick="timer.goToPage('settings')">
-                            <i class="fas fa-cog"></i> Settings
+                            <i class="fas fa-cog"></i> Workout Settings
                         </button>
             </div>
         </div>
@@ -60,13 +74,13 @@
     <!-- Page 2: Timer Setup -->
     <div id="page-timer-setup" class="cf-page" style="display: none;">
         <div class="cf-header">
-            <h1 class="cf-title">CrossFit Timer</h1>            
-           
+            <h1 class="cf-title">CrossFit Timer</h1>
+            <p class="cf-subtitle">Pick your format and dial in your intervals.</p>
         </div>
 
         <!-- Timer Configuration -->
         <div class="cf-section" id="timer-config">
-        <div class="cf-card">
+        <div class="cf-card cf-main-card">
             <div class="cf-card-body">
                     
                     
@@ -136,6 +150,21 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- CrossFit Clock Configuration -->
+                    <div class="cf-config-section" id="clock-config" style="display: none;">
+                        <h3 class="cf-card-title">CrossFit-Style Clock</h3>
+                        <div class="cf-form-item" style="margin-bottom: 1rem;">
+                            <small class="cf-form-help">Starts at 00:00 and counts up like a gym wall clock.</small>
+                        </div>
+                        <div class="cf-form-grid">
+                            <div class="cf-form-item">
+                                <label for="clock-cap-minutes" class="cf-form-label">Time Cap (Minutes)</label>
+                                <input type="number" inputmode="numeric" class="cf-form-input" id="clock-cap-minutes" value="0" min="0" max="240">
+                                <small class="cf-form-help">Set 0 for no cap (run until manually stopped).</small>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="cf-controls" style="margin-top: 2rem;">
                         <button class="cf-btn cf-btn-primary" id="proceed-to-timer-btn">
@@ -181,13 +210,22 @@
                             <circle cx="100" cy="100" r="90" class="cf-progress-background"></circle>
                             <circle cx="100" cy="100" r="90" class="cf-progress-circle" id="progress-bar"></circle>
                         </svg>
-                        <div id="timer-display" class="cf-timer-display timer-countdown">
+                        <div id="timer-display" class="cf-timer-display timer-countdown" aria-live="polite">
                             00:00
                         </div>
                         <div class="cf-pause-overlay" id="pause-overlay" style="display: none;">
                             <i class="fas fa-pause"></i>
                         </div>
                     </div>
+                    <div class="cf-crossfit-clock" id="crossfit-clock-display" style="display: none;" aria-live="polite">
+                        <span class="cf-crossfit-clock-label">UP</span>
+                        <span class="cf-crossfit-clock-time" id="clock-up-display">00:00</span>
+                    </div>
+                    <div class="cf-clock-landscape-gate" id="clock-landscape-gate" style="display: none;">
+                        <i class="fas fa-rotate-right"></i>
+                        <p>Rotate your phone to landscape to use the CrossFit clock.</p>
+                    </div>
+                    <p class="cf-timer-hint">Tap the timer circle to pause or resume.</p>
 
                     <!-- Control Buttons -->
                     <div class="cf-controls">
@@ -197,7 +235,7 @@
                         <button class="cf-btn cf-btn-danger" id="stop-btn" style="display: none;">
                             <i class="fas fa-stop me-2"></i> Stop
                         </button>                  
-                         <button class="cf-exit-timer-btn" onclick="timer.exitTimer()">
+                         <button class="cf-exit-timer-btn" onclick="timer.exitTimer()" title="Exit workout">
                             <i class="fas fa-times"></i>
                         </button>      
                     </div>
@@ -289,10 +327,16 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background:
+        radial-gradient(900px 450px at 0% -20%, rgba(37, 99, 235, 0.25), transparent 65%),
+        radial-gradient(900px 450px at 100% 0%, rgba(249, 115, 22, 0.2), transparent 60%),
+        linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
     color: #e2e8f0;
-    min-height: 100vh;
+    min-height: 100dvh;
     padding: 20px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
 }
 
 :root {
@@ -311,7 +355,7 @@ body {
 
 /* Container and Layout */
 .cf-container {
-    max-width: 1200px;
+    max-width: 980px;
     margin: 0 auto;
     width: 100%;
 }
@@ -319,6 +363,7 @@ body {
 /* Page System */
 .cf-page {
     width: 100%;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Back Button */
@@ -338,6 +383,9 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-height: 52px;
+    box-shadow: 0 8px 24px rgba(2, 6, 23, 0.35);
+    touch-action: manipulation;
 }
 
 .cf-back-btn:hover {
@@ -347,27 +395,28 @@ body {
 
 /* Settings Button */
 .cf-settings-btn {
-    justify-self: center;
-    top: 20px;
-    /*right: 20px;*/
-    background: rgba(100, 116, 139, 0.8);
-    border: none;
-    color: white;
-    width: 200px;
-    height: 50px;
-    /*border-radius: 40%;*/
+    margin: 1.25rem auto 0;
+    background: rgba(100, 116, 139, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: var(--text-primary);
+    min-width: 220px;
+    height: 52px;
+    border-radius: 12px;
     cursor: pointer;
-    font-size: 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 0.5rem;
+    touch-action: manipulation;
 }
 
 .cf-settings-btn:hover {
-    background: rgba(100, 116, 139, 1);
-    transform: rotate(90deg) scale(1.1);
-    box-shadow: 0 6px 20px rgba(100, 116, 139, 0.3);
+    background: rgba(100, 116, 139, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.4);
 }
 
 /* Settings Page Styles */
@@ -415,11 +464,11 @@ body {
     /*position: absolute;*/
     top: 20px;
     right: 20px;
-    background: rgba(239, 68, 68, 0.8);
-    border: none;
+    background: rgba(100, 116, 139, 0.78);
+    border: 1px solid rgba(148, 163, 184, 0.4);
     color: white;
-    width: 50px;
-    height: 50px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     cursor: pointer;
     font-size: 1.25rem;
@@ -428,10 +477,11 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    touch-action: manipulation;
 }
 
 .cf-exit-timer-btn:hover {
-    background: rgba(239, 68, 68, 1);
+    background: rgba(100, 116, 139, 0.95);
     transform: scale(1.1);
 }
 
@@ -441,17 +491,38 @@ body {
 }
 
 .cf-title {
-    font-size: 3.5rem;
+    font-size: clamp(2rem, 6vw, 3.4rem);
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     text-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .cf-subtitle {
-    font-size: 1.25rem;
+    font-size: 1rem;
     color: var(--text-secondary);
-    font-weight: 400;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.cf-badge-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+.cf-pill {
+    background: rgba(37, 99, 235, 0.16);
+    color: #bfdbfe;
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.75rem;
 }
 
 .cf-section {
@@ -460,15 +531,19 @@ body {
 
 /* Card Styles */
 .cf-card {
-    /*background: var(--card-bg);
+    background: linear-gradient(165deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.72));
     border: 1px solid var(--card-border);
     border-radius: 12px;
     backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);*/
+    box-shadow: 0 14px 32px rgba(2, 6, 23, 0.35);
 }
 
 .cf-card-body {
-    padding: 2rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.cf-main-card {
+    border-color: rgba(37, 99, 235, 0.25);
 }
 
 .cf-card-title {
@@ -481,8 +556,8 @@ body {
 /* Workout Selection */
 .cf-workout-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.85rem;
 }
 
 .cf-workout-item {
@@ -491,12 +566,12 @@ body {
 
 .cf-workout-btn {
     width: 100%;
-    height: 100px;
-    font-size: 0.9rem;
-    border: 2px solid var(--border-color);
-    background: rgba(30, 41, 59, 0.5);
-    color: var(--text-secondary);
-    border-radius: 8px;
+    min-height: 116px;
+    font-size: 0.95rem;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: linear-gradient(170deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.8));
+    color: var(--text-primary);
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
@@ -507,34 +582,44 @@ body {
 }
 
 .workout-type-btn {
-    height: 100px;
+    min-height: 116px;
     font-size: 0.9rem;
-    border: 2px solid var(--border-color);
-    background: rgba(30, 41, 59, 0.5);
-    color: var(--text-secondary);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: linear-gradient(170deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.8));
+    color: var(--text-primary);
     transition: all 0.3s ease;
 }
 
 .cf-workout-btn:hover {
     border-color: var(--primary-color);
-    background: rgba(37, 99, 235, 0.1);
-    color: var(--primary-color);
+    background: linear-gradient(165deg, rgba(37, 99, 235, 0.18), rgba(30, 41, 59, 0.8));
+    color: #dbeafe;
     transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
 }
 
 .cf-workout-btn.active {
     border-color: var(--primary-color);
-    background: var(--primary-color);
+    background: linear-gradient(160deg, #2563eb, #1d4ed8);
     color: white;
     transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
 }
 
 .cf-workout-btn i {
-    font-size: 1.5rem;
-    display: block;
-    margin-bottom: 0.5rem;
+    font-size: 1.35rem;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(148, 163, 184, 0.16);
+    margin-bottom: 0.6rem;
+}
+
+.cf-workout-btn span {
+    font-weight: 700;
+    letter-spacing: 0.04em;
 }
 
 /* Form Styles */
@@ -591,6 +676,10 @@ body {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+.cf-form-textarea::placeholder {
+    color: rgba(148, 163, 184, 0.85);
+}
+
 .cf-form-help {
     color: var(--text-secondary);
     font-size: 0.75rem;
@@ -631,6 +720,72 @@ body {
     height: auto;
 }
 
+.cf-crossfit-clock {
+    display: none;
+    width: min(100%, 560px);
+    margin: 1rem auto 0.75rem;
+    padding: 0.8rem 1.1rem;
+    background: linear-gradient(180deg, #0a0a0a, #111827);
+    border: 3px solid #1f2937;
+    border-radius: 8px;
+    box-shadow: 0 10px 22px rgba(2, 6, 23, 0.45);
+    align-items: center;
+    justify-content: center;
+    gap: 0.85rem;
+    user-select: none;
+    cursor: pointer;
+}
+
+.cf-crossfit-clock-label {
+    font-family: 'Orbitron', 'Inter', sans-serif;
+    font-size: clamp(1.4rem, 5vw, 2.3rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #6366f1;
+    text-shadow: 0 0 16px rgba(99, 102, 241, 0.65);
+}
+
+.cf-crossfit-clock-time {
+    font-family: 'Orbitron', 'Inter', monospace;
+    font-size: clamp(2.3rem, 8vw, 4.2rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    color: #ef4444;
+    text-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+}
+
+.cf-crossfit-clock.paused .cf-crossfit-clock-time {
+    opacity: 0.35;
+}
+
+.cf-crossfit-clock.paused .cf-crossfit-clock-label {
+    opacity: 0.7;
+}
+
+.cf-clock-landscape-gate {
+    display: none;
+    width: min(100%, 560px);
+    margin: 0.75rem auto;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(96, 165, 250, 0.45);
+    background: rgba(30, 41, 59, 0.9);
+    color: #dbeafe;
+    text-align: center;
+}
+
+.cf-clock-landscape-gate i {
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+    color: #60a5fa;
+}
+
+.cf-clock-landscape-gate p {
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
 /* Timer States */
 .timer-countdown {
     color: var(--accent-color) !important;
@@ -643,6 +798,10 @@ body {
 
 .timer-rest {
     color: var(--secondary-color) !important;
+}
+
+.timer-clock {
+    color: var(--primary-color) !important;
 }
 
 .timer-finished {
@@ -680,6 +839,11 @@ body {
     color: white;
 }
 
+.cf-phase-badge.bg-clock {
+    background: var(--primary-color);
+    color: white;
+}
+
 .cf-phase-badge.bg-finished {
     background: var(--primary-color);
     color: white;
@@ -708,7 +872,10 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     min-width: 140px;
+    min-height: 52px;
     justify-content: center;
+    box-shadow: 0 10px 22px rgba(2, 6, 23, 0.28);
+    touch-action: manipulation;
 }
 
 .cf-btn-primary {
@@ -764,6 +931,17 @@ body {
     background: #475569;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(100, 116, 139, 0.3);
+}
+
+.cf-btn:focus-visible,
+.cf-back-btn:focus-visible,
+.cf-settings-btn:focus-visible,
+.cf-workout-btn:focus-visible,
+.cf-exit-timer-btn:focus-visible,
+.cf-form-input:focus-visible,
+.cf-form-textarea:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.55);
+    outline-offset: 2px;
 }
 
 /* Form Controls */
@@ -859,9 +1037,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 2rem 0;
+    margin: 2rem auto 0.75rem;
     cursor: pointer;
     user-select: none;
+    max-width: 330px;
 }
 
 .cf-circular-timer.clickable:hover {
@@ -879,26 +1058,34 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 80px;
-    height: 80px;
-    background: rgba(245, 158, 11, 0.9);
+    width: 112px;
+    height: 112px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 2px solid rgba(245, 158, 11, 0.9);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
     z-index: 10;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.45);
 }
 
 .cf-pause-overlay i {
     font-size: 2rem;
-    color: white;
+    color: var(--warning-color);
+}
+
+.cf-circular-timer.paused .cf-timer-display {
+    opacity: 0.2;
+    transition: opacity 0.2s ease;
 }
 
 .cf-circular-progress {
     width: 300px;
     height: 300px;
     transform: rotate(-90deg);
+    filter: drop-shadow(0 10px 16px rgba(15, 23, 42, 0.5));
 }
 
 .cf-progress-background {
@@ -918,27 +1105,65 @@ body {
     transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
 }
 
+.cf-timer-hint {
+    text-align: center;
+    font-size: 0.82rem;
+    color: rgba(203, 213, 225, 0.9);
+    margin-top: 0.25rem;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+    body {
+        padding: 12px;
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+
     .cf-container {
-        padding: 0 10px;
+        padding: 0;
+    }
+
+    .cf-header {
+        margin-bottom: 1.25rem;
     }
     
     .cf-title {
-        font-size: 2.5rem;
+        font-size: clamp(2rem, 10vw, 2.7rem);
+    }
+
+    .cf-subtitle {
+        font-size: 0.92rem;
+        max-width: 28ch;
+        margin: 0.25rem auto 0;
+    }
+
+    .cf-section {
+        margin-bottom: 1rem;
     }
     
     .cf-timer-display {
         font-size: 3rem;
     }
     
+    .cf-workout-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
+    }
+
     .cf-workout-btn {
-        height: 80px;
-        font-size: 0.8rem;
+        min-height: 102px;
+        font-size: 0.82rem;
     }
     
     .cf-workout-btn i {
-        font-size: 1.2rem;
+        font-size: 1.15rem;
+        width: 34px;
+        height: 34px;
+    }
+
+    .cf-workout-btn span {
+        font-size: 0.8rem;
     }
     
     .cf-form-grid {
@@ -947,25 +1172,128 @@ body {
     
     .cf-controls {
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
+        width: 100%;
+        gap: 0.75rem;
     }
     
     .cf-btn {
         width: 100%;
-        max-width: 200px;
+        max-width: none;
     }
     
     .cf-card-body {
-        padding: 1.5rem;
+        padding: 1rem;
+    }
+
+    .cf-back-btn,
+    .cf-settings-btn {
+        width: 100%;
+        max-width: none;
+    }
+
+    .cf-controls .cf-btn,
+    .cf-controls .cf-back-btn,
+    .cf-controls .cf-settings-btn {
+        width: 100%;
+        max-width: none;
     }
     
     .cf-circular-progress {
-        width: 250px;
-        height: 250px;
+        width: min(76vw, 260px);
+        height: min(76vw, 260px);
+    }
+
+    .cf-circular-timer {
+        margin: 1rem auto 0.5rem;
     }
     
     .cf-circular-timer .cf-timer-display {
-        font-size: 2.5rem;
+        font-size: clamp(2.2rem, 12vw, 3rem);
+    }
+
+    .cf-crossfit-clock {
+        margin: 0.75rem auto 0.5rem;
+        padding: 0.7rem 0.8rem;
+        gap: 0.5rem;
+    }
+
+    .cf-crossfit-clock-label {
+        font-size: clamp(1.2rem, 7vw, 1.8rem);
+    }
+
+    .cf-crossfit-clock-time {
+        font-size: clamp(1.9rem, 13vw, 3rem);
+    }
+
+    .cf-clock-landscape-gate {
+        padding: 0.8rem;
+    }
+
+    .cf-clock-landscape-gate p {
+        font-size: 0.82rem;
+    }
+
+    .cf-pill {
+        font-size: 0.7rem;
+    }
+
+    .cf-pause-overlay {
+        width: 92px;
+        height: 92px;
+    }
+
+    #page-timer-only .cf-card {
+        min-height: calc(100dvh - 110px);
+    }
+
+    #page-timer-only .cf-card-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    #page-timer-only .cf-controls {
+        margin-top: auto;
+        align-items: center;
+        padding-bottom: calc(0.35rem + env(safe-area-inset-bottom));
+    }
+
+    #page-settings .cf-controls {
+        margin: 1.25rem auto 0;
+    }
+
+    #page-settings .cf-back-btn,
+    #page-timer-setup .cf-back-btn {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 420px) {
+    .cf-workout-btn {
+        min-height: 96px;
+    }
+
+    .cf-form-input,
+    .cf-form-textarea,
+    .cf-btn,
+    .cf-back-btn,
+    .cf-settings-btn {
+        font-size: 16px;
+    }
+
+    .cf-timer-hint {
+        font-size: 0.78rem;
+    }
+}
+
+@media (hover: none) {
+    .cf-workout-btn:hover,
+    .cf-btn:hover,
+    .cf-back-btn:hover,
+    .cf-settings-btn:hover,
+    .cf-exit-timer-btn:hover {
+        transform: none;
     }
 }
 </style>
@@ -987,6 +1315,10 @@ class CrossFitTimer {
         this.audioContext = null;
         this.currentPage = 'workout-selection';
         this.wakeLock = null;
+        this.orientationPausedClock = false;
+        this.defaultTimerHint = 'Tap the timer circle to pause or resume.';
+        this.clockTimerHint = 'Tap the clock to pause or resume.';
+        this.clockLandscapeHint = 'Rotate your phone to landscape to use the CrossFit clock.';
 
         this.initializeElements();
         this.bindEvents();
@@ -1023,6 +1355,49 @@ class CrossFitTimer {
         }
     }
 
+    isLikelyPhoneDevice() {
+        return window.matchMedia('(pointer: coarse)').matches && Math.min(window.innerWidth, window.innerHeight) <= 950;
+    }
+
+    isLandscapeOrientation() {
+        return window.matchMedia('(orientation: landscape)').matches || window.innerWidth > window.innerHeight;
+    }
+
+    requiresClockLandscape() {
+        return this.currentPage === 'timer-only' &&
+            this.config?.type === 'clock' &&
+            this.isLikelyPhoneDevice() &&
+            !this.isLandscapeOrientation();
+    }
+
+    async tryLockLandscapeForClock() {
+        if (this.config?.type !== 'clock' || !this.isLikelyPhoneDevice()) return;
+        if (screen.orientation?.lock) {
+            try {
+                await screen.orientation.lock('landscape');
+            } catch (err) {
+                // Fallback is handled by the rotate gate.
+            }
+        }
+    }
+
+    updateClockLandscapeGate() {
+        if (!this.clockLandscapeGate) return;
+        const blocked = this.requiresClockLandscape();
+        this.clockLandscapeGate.style.display = blocked ? 'block' : 'none';
+
+        if (this.config?.type === 'clock') {
+            this.timerHint.textContent = blocked ? this.clockLandscapeHint : this.clockTimerHint;
+            this.timerHint.style.display = blocked ? 'none' : 'block';
+        } else {
+            this.timerHint.style.display = 'block';
+        }
+
+        if (blocked && this.isRunning && !this.isPaused) {
+            this.pauseTimer('orientation');
+        }
+    }
+
     initializeElements() {
         this.workoutBtns = document.querySelectorAll('.workout-type-btn');
         this.configSections = document.querySelectorAll('.cf-config-section');
@@ -1036,6 +1411,9 @@ class CrossFitTimer {
         this.phaseBadge = document.getElementById('phase-badge');
         this.progressContainer = document.getElementById('progress-container');
         this.progressBar = document.getElementById('progress-bar');
+        this.crossfitClockDisplay = document.getElementById('crossfit-clock-display');
+        this.clockUpDisplay = document.getElementById('clock-up-display');
+        this.clockLandscapeGate = document.getElementById('clock-landscape-gate');
         this.exerciseInfo = document.getElementById('exercise-info');
         this.currentExercise = document.getElementById('current-exercise');
         
@@ -1043,6 +1421,7 @@ class CrossFitTimer {
         this.stopBtn = document.getElementById('stop-btn');        
         this.proceedBtn = document.getElementById('proceed-to-timer-btn');
         this.pauseOverlay = document.getElementById('pause-overlay');
+        this.timerHint = document.querySelector('.cf-timer-hint');
         
         this.soundEnabled = document.getElementById('sound-enabled');
         this.volumeControl = document.getElementById('volume-control');
@@ -1068,8 +1447,12 @@ class CrossFitTimer {
         this.stopBtn.addEventListener('click', () => this.stopTimer());        
         this.proceedBtn.addEventListener('click', () => this.proceedToTimer());
         
-        // Add click event to timer display for pause/resume
-        this.progressContainer.addEventListener('click', () => {
+        // Add click event to timer surfaces for pause/resume
+        const handleTimerSurfaceClick = () => {
+            if (this.requiresClockLandscape()) {
+                this.updateClockLandscapeGate();
+                return;
+            }
             if (this.isRunning) {
                 if (this.isPaused) {
                     this.resumeTimer();
@@ -1077,7 +1460,13 @@ class CrossFitTimer {
                     this.pauseTimer();
                 }
             }
-        });
+        };
+        this.progressContainer.addEventListener('click', handleTimerSurfaceClick);
+        this.crossfitClockDisplay.addEventListener('click', handleTimerSurfaceClick);
+
+        window.addEventListener('resize', () => this.updateClockLandscapeGate());
+        window.addEventListener('orientationchange', () => this.updateClockLandscapeGate());
+        screen.orientation?.addEventListener?.('change', () => this.updateClockLandscapeGate());
         
         // Settings events
         this.volumeControl.addEventListener('input', (e) => {
@@ -1086,6 +1475,7 @@ class CrossFitTimer {
         
         // Load settings on initialization
         this.loadSettings();
+        this.updateClockLandscapeGate();
     }
     
     async initializeAudio() {
@@ -1170,6 +1560,7 @@ class CrossFitTimer {
         // Show selected page
         this.pages[pageName].style.display = 'block';
         this.currentPage = pageName;
+        this.updateClockLandscapeGate();
     }
     
     selectWorkoutType(type) {
@@ -1238,6 +1629,12 @@ class CrossFitTimer {
                     countdown: parseInt(this.defaultCountdown.value),
                     beepInterval: parseInt(document.getElementById('custom-beep').value)
                 };
+            case 'clock':
+                return {
+                    type: 'clock',
+                    capSeconds: parseInt(document.getElementById('clock-cap-minutes').value) * 60 || 0,
+                    countdown: 0
+                };
             default:
                 return null;
         }
@@ -1251,9 +1648,13 @@ class CrossFitTimer {
         this.initializeAudio();
         const config = this.getWorkoutConfig();
         this.setupWorkout(config);
+        if (config.type === 'clock') {
+            this.tryLockLandscapeForClock();
+        }
         this.isRunning = true;
         this.isPaused = false;
         this.updateUI();
+        this.updateClockLandscapeGate();
         this.tick();
         this.requestWakeLock();
     }
@@ -1299,18 +1700,59 @@ class CrossFitTimer {
                 this.currentWorkoutType.textContent = `Custom Timer`;
                 this.roundInfo.style.display = 'none';
                 break;
+            case 'clock':
+                this.totalRounds = 1;
+                this.clockCap = config.capSeconds;
+                this.currentPhase = 'clock';
+                this.timeRemaining = 0;
+                this.currentWorkoutType.textContent = this.clockCap > 0
+                    ? `CrossFit Clock - ${Math.floor(this.clockCap / 60)} min cap`
+                    : 'CrossFit Clock - Open';
+                this.roundInfo.style.display = 'none';
+                this.timerHint.textContent = this.clockTimerHint;
+                break;
         }
         
         if (config.type !== 'emom') {
             this.totalRoundsSpan.textContent = this.totalRounds;
         }
         this.workoutInfo.style.display = 'block';
-        this.timerPhase.style.display = 'block';
-        this.progressContainer.style.display = 'block';
+        if (config.type === 'clock') {
+            this.timerPhase.style.display = 'none';
+            this.progressContainer.style.display = 'none';
+            this.crossfitClockDisplay.style.display = 'flex';
+            this.clockLandscapeGate.style.display = 'none';
+        } else {
+            this.timerPhase.style.display = 'block';
+            this.progressContainer.style.display = 'flex';
+            this.crossfitClockDisplay.style.display = 'none';
+            this.clockLandscapeGate.style.display = 'none';
+            this.timerHint.textContent = this.defaultTimerHint;
+            this.timerHint.style.display = 'block';
+        }
+        this.updateClockLandscapeGate();
     }
     
     tick() {
         if (!this.isRunning || this.isPaused) return;
+
+        if (this.config?.type === 'clock' && this.currentPhase === 'clock') {
+            this.updateDisplay();
+            this.updateProgress();
+
+            if (this.clockCap > 0 && this.timeRemaining >= this.clockCap) {
+                this.finishWorkout();
+                return;
+            }
+
+            this.timeRemaining++;
+            if (this.timeRemaining > 0 && this.timeRemaining % 60 === 0) {
+                this.playBeep(900, 120);
+            }
+
+            this.intervalId = setTimeout(() => this.tick(), 1000);
+            return;
+        }
         
         this.updateDisplay();
         this.updateProgress();
@@ -1429,7 +1871,9 @@ class CrossFitTimer {
     finishWorkout() {
         this.isRunning = false;
         this.currentPhase = 'finished';
-        this.timeRemaining = 0;
+        if (this.config?.type !== 'clock') {
+            this.timeRemaining = 0;
+        }
         this.playBeep(1500, 1000);
         
         setTimeout(() => {
@@ -1449,6 +1893,7 @@ class CrossFitTimer {
         const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
         this.timerDisplay.textContent = display;
+        this.clockUpDisplay.textContent = display;
         
         // Update phase badge and colors
         this.timerDisplay.className = `cf-timer-display timer-${this.currentPhase}`;
@@ -1457,6 +1902,10 @@ class CrossFitTimer {
             case 'countdown':
                 this.phaseBadge.textContent = 'GET READY';
                 this.phaseBadge.className = 'cf-phase-badge bg-countdown';
+                break;
+            case 'clock':
+                this.phaseBadge.textContent = 'CLOCK';
+                this.phaseBadge.className = 'cf-phase-badge bg-clock';
                 break;
             case 'work':
                 this.phaseBadge.textContent = 'WORK';
@@ -1478,6 +1927,10 @@ class CrossFitTimer {
         
         if (this.currentPhase === 'countdown') {
             progress = ((this.countdownTime - this.timeRemaining) / this.countdownTime) * 100;
+        } else if (this.currentPhase === 'clock') {
+            progress = this.clockCap > 0
+                ? Math.min((this.timeRemaining / this.clockCap) * 100, 100)
+                : ((this.timeRemaining % 60) / 60) * 100;
         } else if (this.currentPhase === 'work') {
             progress = ((this.workTime - this.timeRemaining) / this.workTime) * 100;
         } else if (this.currentPhase === 'rest') {
@@ -1494,6 +1947,8 @@ class CrossFitTimer {
         // Update stroke color based on phase
         if (this.currentPhase === 'countdown') {
             this.progressBar.style.stroke = 'var(--accent-color)';
+        } else if (this.currentPhase === 'clock') {
+            this.progressBar.style.stroke = 'var(--primary-color)';
         } else if (this.currentPhase === 'work') {
             this.progressBar.style.stroke = 'var(--success-color)';
         } else if (this.currentPhase === 'rest') {
@@ -1503,9 +1958,12 @@ class CrossFitTimer {
         }
     }
     
-    pauseTimer() {
+    pauseTimer(source = 'user') {
         this.isPaused = true;
+        this.orientationPausedClock = source === 'orientation';
         this.pauseOverlay.style.display = 'flex';
+        this.progressContainer.classList.add('paused');
+        this.crossfitClockDisplay.classList.add('paused');
         this.updateUI();
         if (this.intervalId) {
             clearTimeout(this.intervalId);
@@ -1516,7 +1974,10 @@ class CrossFitTimer {
     
     resumeTimer() {
         this.isPaused = false;
+        this.orientationPausedClock = false;
         this.pauseOverlay.style.display = 'none';
+        this.progressContainer.classList.remove('paused');
+        this.crossfitClockDisplay.classList.remove('paused');
         this.updateUI();
         this.tick();
         this.requestWakeLock();
@@ -1525,10 +1986,19 @@ class CrossFitTimer {
     stopTimer() {
         this.isRunning = false;
         this.isPaused = false;
+        this.orientationPausedClock = false;
         this.pauseOverlay.style.display = 'none';
+        this.progressContainer.classList.remove('paused');
+        this.crossfitClockDisplay.classList.remove('paused');
         if (this.intervalId) {
             clearTimeout(this.intervalId);
             this.intervalId = null;
+        }
+        if (this.config?.type === 'clock') {
+            this.timerHint.textContent = this.requiresClockLandscape()
+                ? this.clockLandscapeHint
+                : 'Press START to run the clock.';
+            this.timerHint.style.display = this.requiresClockLandscape() ? 'none' : 'block';
         }
         this.updateUI();
         this.releaseWakeLock();
@@ -1541,12 +2011,17 @@ class CrossFitTimer {
         this.currentPhase = 'countdown';
         this.timerDisplay.textContent = '00:00';
         this.timerDisplay.className = 'cf-timer-display';
+        this.clockUpDisplay.textContent = '00:00';
         this.workoutInfo.style.display = 'none';
         this.timerPhase.style.display = 'none';
         this.progressContainer.style.display = 'none';
+        this.crossfitClockDisplay.style.display = 'none';
+        this.clockLandscapeGate.style.display = 'none';
         this.progressBar.style.strokeDashoffset = '565.48';
         this.exerciseInfo.style.display = 'none';
         this.pauseOverlay.style.display = 'none';
+        this.timerHint.textContent = this.defaultTimerHint;
+        this.timerHint.style.display = 'block';
         this.updateUI();
     }
     
@@ -1561,8 +2036,10 @@ class CrossFitTimer {
         // Add/remove clickable class to timer
         if (this.isRunning) {
             this.progressContainer.classList.add('clickable');
+            this.crossfitClockDisplay.classList.add('clickable');
         } else {
             this.progressContainer.classList.remove('clickable');
+            this.crossfitClockDisplay.classList.remove('clickable');
         }
         
         // Disable workout selection while timer is running
