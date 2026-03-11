@@ -439,8 +439,12 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        const isPortugueseRoute = window.location.pathname.startsWith("/pt-BR/binary/");
+        const serviceWorkerUrl = isPortugueseRoute ? "/pt-BR/binary-sw.js" : "/binary-sw.js";
+        const scope = isPortugueseRoute ? "/pt-BR/binary/" : "/binary/";
+
         window.addEventListener("load", () => {
-            navigator.serviceWorker.register("/sw.js").catch(() => {
+            navigator.serviceWorker.register(serviceWorkerUrl, { scope }).catch(() => {
                 // Keep gameplay functional if service worker registration fails.
             });
         });

@@ -1,6 +1,6 @@
-const CACHE_NAME = 'flappy-bird-v1';
+const CACHE_NAME = 'flappy-bird-v2';
 const urlsToCache = [
-  '/flappy.html',
+  '/flappy/',
   '/flappyBird.js',
   '/flappy-manifest.json',
   '/img/favicon.ico',
@@ -34,7 +34,7 @@ self.addEventListener('activate', function(event) {
     caches.keys().then(function(cacheNames) {
       return Promise.all(
         cacheNames.map(function(cacheName) {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName !== CACHE_NAME && cacheName.startsWith('flappy-bird-')) {
             return caches.delete(cacheName);
           }
         })

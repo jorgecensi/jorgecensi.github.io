@@ -1,10 +1,10 @@
 {
-  "id": "/pt-BR/binary.html",
+  "id": "/pt-BR/binary/",
   "name": "Puzzle Binario",
   "short_name": "Puzzle Binario",
   "description": "Resolva o Puzzle Binario preenchendo a grade com 0s e 1s usando regras logicas.",
-  "start_url": "/pt-BR/binary.html",
-  "scope": "/",
+  "start_url": "/pt-BR/binary/",
+  "scope": "/pt-BR/binary/",
   "display": "standalone",
   "background_color": "#0f0e24",
   "theme_color": "#6366f1",
@@ -32,12 +32,12 @@
     {
       "name": "Novo Puzzle",
       "short_name": "Novo",
-      "url": "/pt-BR/binary.html"
+      "url": "/pt-BR/binary/"
     },
     {
       "name": "English version",
       "short_name": "EN",
-      "url": "/binary.html"
+      "url": "/binary/"
     }
   ]
 }

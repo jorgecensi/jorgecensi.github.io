@@ -1,10 +1,10 @@
 {
-  "id": "/binary.html",
+  "id": "/binary/",
   "name": "Binary Puzzle",
   "short_name": "Binary Puzzle",
   "description": "Solve the Binary Puzzle by filling a grid with 0s and 1s using logic rules.",
-  "start_url": "/binary.html",
-  "scope": "/",
+  "start_url": "/binary/",
+  "scope": "/binary/",
   "display": "standalone",
   "background_color": "#0f0e24",
   "theme_color": "#6366f1",
@@ -32,12 +32,12 @@
     {
       "name": "New Puzzle",
       "short_name": "New",
-      "url": "/binary.html"
+      "url": "/binary/"
     },
     {
       "name": "Versao em portugues",
       "short_name": "PT-BR",
-      "url": "/pt-BR/binary.html"
+      "url": "/pt-BR/binary/"
     }
   ]
 }

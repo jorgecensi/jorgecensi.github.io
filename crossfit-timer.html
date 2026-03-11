@@ -1,13 +1,16 @@
+---
+permalink: /crossfit-timer/
+---
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CrossFit Timer</title>
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="img/timer-icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="img/timer-icon-512.png">
-    <link rel="apple-touch-icon" href="img/timer-icon-192.png">
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/timer-icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/img/timer-icon-512.png">
+    <link rel="apple-touch-icon" href="/img/timer-icon-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1586,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Service Worker Registration for PWA
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('/crossfit-sw.js', { scope: '/crossfit-timer/' })
             .then(registration => console.log('SW registered'))
             .catch(error => console.log('SW registration failed'));
     });
