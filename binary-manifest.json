@@ -1,0 +1,43 @@
+{
+  "id": "/binary/",
+  "name": "Binary Puzzle",
+  "short_name": "Binary Puzzle",
+  "description": "Solve the Binary Puzzle by filling a grid with 0s and 1s using logic rules.",
+  "start_url": "/binary/",
+  "scope": "/binary/",
+  "display": "standalone",
+  "background_color": "#0f0e24",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/img/timer-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/timer-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "games",
+    "puzzle"
+  ],
+  "lang": "en-US",
+  "shortcuts": [
+    {
+      "name": "New Puzzle",
+      "short_name": "New",
+      "url": "/binary/"
+    },
+    {
+      "name": "Versao em portugues",
+      "short_name": "PT-BR",
+      "url": "/pt-BR/binary/"
+    }
+  ]
+}

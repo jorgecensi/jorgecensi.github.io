@@ -3,20 +3,24 @@ layout: wrapper
 title: Puzzle Binário
 lang: pt-BR
 ref: binary
+permalink: /pt-BR/binary/
 ---
 {% assign t = site.data.translations.pt-BR %}
 
 <div style="text-align: center;">
     <h1>{{ t.binary_page.heading }}</h1>
     <p>{{ t.binary_page.instruction }}</p>
-    <div style="margin: 1.5rem 0;">
+    <div class="binary-controls">
         <button id="generatePuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.new_puzzle }}">{{ t.binary_page.new_puzzle }}</button>
         <button id="toggleSolution" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.show_solution }}">{{ t.binary_page.show_solution }}</button>
+        <button id="checkPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.check_progress }}">{{ t.binary_page.check_progress }}</button>
+        <button id="installBinaryApp" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.install_app }}" hidden>{{ t.binary_page.install_app }}</button>
         <button id="toggleRules" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.rules }}">{{ t.binary_page.rules }}</button>
     </div>
-    <div id="rules" style="text-align: left; max-width: 500px; margin: 1rem auto;">
+    <p id="binaryStatus" class="binary-status" aria-live="polite"></p>
+    <div id="rules" class="binary-rules" hidden>
         <h3>{{ t.binary_page.rules_title }}</h3>
-        <ul style="color: var(--text-secondary);">
+        <ul>
             <li>{{ t.binary_page.rule_1 }}</li>
             <li>{{ t.binary_page.rule_2 }}</li>
             <li>{{ t.binary_page.rule_3 }}</li>
@@ -24,14 +28,19 @@ ref: binary
     </div>
 </div>
 
-<div id="puzzleContainer">
+<div
+    id="puzzleContainer"
+    data-label-show-solution="{{ t.binary_page.show_solution }}"
+    data-label-hide-solution="{{ t.binary_page.hide_solution }}"
+    data-status-progress="{{ t.binary_page.status_progress }}"
+    data-status-conflicts="{{ t.binary_page.status_conflicts }}"
+    data-status-solved="{{ t.binary_page.status_solved }}"
+    data-status-solution-visible="{{ t.binary_page.status_solution_visible }}"
+    data-status-install-ready="{{ t.binary_page.status_install_ready }}"
+    data-status-install-complete="{{ t.binary_page.status_install_complete }}"
+    data-status-install-cancelled="{{ t.binary_page.status_install_cancelled }}"
+>
     <table id="puzzleGrid" class="table table-bordered mt-3"></table>
 </div>
 
 <script src="/binary.js"></script>
-<script>
-    document.getElementById('toggleRules').addEventListener('click', function () {
-        var rules = document.getElementById('rules');
-        rules.classList.toggle('visible');
-    });
-</script>

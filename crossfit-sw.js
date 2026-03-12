@@ -1,0 +1,64 @@
+const CACHE_NAME = "crossfit-timer-v2";
+const OFFLINE_URL = "/crossfit-timer/";
+const PRECACHE_URLS = [
+  "/crossfit-timer/",
+  "/manifest.json",
+  "/img/favicon.ico",
+  "/img/timer-icon-192.png",
+  "/img/timer-icon-512.png",
+  "/img/timer-icon.png"
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.map((cacheName) => {
+          if (
+            cacheName !== CACHE_NAME &&
+            (cacheName.startsWith("crossfit-timer-") || cacheName === "site-pwa-v2")
+          ) {
+            return caches.delete(cacheName);
+          }
+          return Promise.resolve();
+        })
+      );
+      await self.clients.claim();
+    })()
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") {
+    return;
+  }
+
+  event.respondWith(
+    (async () => {
+      const cachedResponse = await caches.match(event.request);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      try {
+        return await fetch(event.request);
+      } catch (error) {
+        if (event.request.mode === "navigate") {
+          const offlinePage = await caches.match(OFFLINE_URL);
+          if (offlinePage) {
+            return offlinePage;
+          }
+        }
+        throw error;
+      }
+    })()
+  );
+});

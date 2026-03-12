@@ -927,6 +927,36 @@ footer .footer-copy {
   margin: 0 auto;
 }
 
+.binary-controls {
+  margin: 1.5rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.binary-status {
+  min-height: 1.5rem;
+  margin: 0.5rem auto 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.binary-rules {
+  text-align: left;
+  max-width: 520px;
+  margin: 1rem auto;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(30, 27, 57, 0.55);
+}
+
+.binary-rules ul {
+  margin-bottom: 0;
+  color: var(--text-secondary);
+}
+
 #puzzleGrid {
   width: 100%;
   border-collapse: collapse;
@@ -951,14 +981,33 @@ footer .footer-copy {
   color: var(--text-primary);
 }
 
-#puzzleGrid td:hover {
+#puzzleGrid td.editable-cell:hover {
   background: rgba(99, 102, 241, 0.15);
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
-#puzzleGrid .solution-cell {
-  background: rgba(16, 185, 129, 0.2) !important;
+#puzzleGrid td.fixed-cell {
+  background: rgba(99, 102, 241, 0.16);
+  color: #c6d2ff;
+  cursor: default;
+}
+
+#puzzleGrid td.user-cell {
+  color: #f8f9ff;
+}
+
+#puzzleGrid td.selected-cell {
+  box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.95);
+}
+
+#puzzleGrid td.solution-cell {
+  background: rgba(16, 185, 129, 0.2);
   color: var(--green);
+}
+
+#puzzleGrid td.conflict-cell {
+  background: rgba(239, 68, 68, 0.18);
+  color: #ffc3c3;
 }
 
 #rules {
@@ -1046,6 +1095,10 @@ footer .footer-copy {
     width: 45px;
     height: 45px;
     font-size: 1.3rem;
+  }
+
+  .binary-controls {
+    gap: 0.5rem;
   }
 
   .blob-1, .blob-2, .blob-3 {

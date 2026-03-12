@@ -1,8 +1,10 @@
 {
+  "id": "/flappy/",
   "name": "Flappy Bird PWA",
   "short_name": "Flappy Bird",
   "description": "Classic Flappy Bird game as a Progressive Web App",
-  "start_url": "/flappy.html",
+  "start_url": "/flappy/",
+  "scope": "/flappy/",
   "display": "standalone",
   "background_color": "#70c5ce",
   "theme_color": "#70c5ce",
@@ -17,7 +19,6 @@
   ],
   "categories": ["games", "entertainment"],
   "lang": "en-US",
-  "scope": "/",
   "screenshots": [],
   "related_applications": [],
   "prefer_related_applications": false

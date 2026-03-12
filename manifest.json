@@ -1,8 +1,10 @@
 {
+  "id": "/crossfit-timer/",
   "name": "CrossFit Timer PWA",
   "short_name": "CrossFit Timer",
   "description": "Professional CrossFit and workout timer supporting AMRAP, EMOM, Tabata, and custom workouts",
-  "start_url": "/crossfit-timer.html",
+  "start_url": "/crossfit-timer/",
+  "scope": "/crossfit-timer/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#2563eb",
@@ -29,7 +31,6 @@
   ],
   "categories": ["health-fitness", "sports", "productivity"],
   "lang": "en-US",
-  "scope": "/",
   "screenshots": [],
   "related_applications": [],
   "prefer_related_applications": false
