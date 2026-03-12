@@ -1,0 +1,75 @@
+name: Bump PWA cache version
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to set (example: 1.4.0 or v1.4.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  bump-cache-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout default branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.repository.default_branch }}
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME}"
+          fi
+          VERSION="${VERSION#v}"
+          echo "value=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Update PWA version constants
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import re
+
+          version = "${{ steps.version.outputs.value }}"
+          repo = pathlib.Path(".")
+
+          files_and_patterns = {
+              "sw.js": r"const CACHE_VERSION = '[^']*';",
+              "flappy-sw.js": r"const CACHE_VERSION = '[^']*';",
+              "crossfit-timer.html": r"const SW_VERSION = '[^']*';",
+              "flappy.html": r"const SW_VERSION = '[^']*';",
+          }
+
+          for relative_path, pattern in files_and_patterns.items():
+              path = repo / relative_path
+              content = path.read_text(encoding="utf-8")
+              replacement = "const CACHE_VERSION = '{}'".format(version) if "sw.js" in relative_path else "const SW_VERSION = '{}'".format(version)
+              replacement = replacement + ";"
+              updated, count = re.subn(pattern, replacement, content, count=1)
+              if count != 1:
+                  raise RuntimeError(f"Expected to update one version constant in {relative_path}, found {count}.")
+              path.write_text(updated, encoding="utf-8")
+          PY
+
+      - name: Commit and push
+        run: |
+          if git diff --quiet; then
+            echo "No cache-version updates required."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sw.js flappy-sw.js crossfit-timer.html flappy.html
+          git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }}"
+          git push origin "HEAD:${{ github.event.repository.default_branch }}"
