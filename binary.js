@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const progressBarElement = document.getElementById("binaryProgress");
     const progressFillElement = document.getElementById("binaryProgressFill");
     const progressLabelElement = document.getElementById("binaryProgressLabel");
+    const celebrationElement = document.getElementById("binaryCelebration");
     const newPuzzleButton = document.getElementById("generatePuzzle");
     const resetPuzzleButton = document.getElementById("resetPuzzle");
     const toggleSolutionButton = document.getElementById("toggleSolution");
@@ -452,6 +453,10 @@ document.addEventListener("DOMContentLoaded", () => {
             celebrationResetTimer = null;
         }
         puzzleContainer.classList.remove("solved-celebration");
+        if (celebrationElement) {
+            celebrationElement.classList.remove("is-visible");
+            celebrationElement.setAttribute("aria-hidden", "true");
+        }
         if (statusElement) {
             statusElement.classList.remove("status-solved");
         }
@@ -465,10 +470,20 @@ document.addEventListener("DOMContentLoaded", () => {
         puzzleContainer.classList.remove("solved-celebration");
         void puzzleContainer.offsetWidth;
         puzzleContainer.classList.add("solved-celebration");
+        if (celebrationElement) {
+            celebrationElement.classList.remove("is-visible");
+            void celebrationElement.offsetWidth;
+            celebrationElement.classList.add("is-visible");
+            celebrationElement.setAttribute("aria-hidden", "false");
+        }
         celebrationResetTimer = window.setTimeout(() => {
             puzzleContainer.classList.remove("solved-celebration");
+            if (celebrationElement) {
+                celebrationElement.classList.remove("is-visible");
+                celebrationElement.setAttribute("aria-hidden", "true");
+            }
             celebrationResetTimer = null;
-        }, 1800);
+        }, 2200);
 
         if (typeof navigator.vibrate === "function") {
             navigator.vibrate([80, 40, 120]);

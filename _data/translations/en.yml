@@ -83,6 +83,7 @@ binary_page:
   install_app: "Install App"
   rules: "Rules"
   progress_label: "{filled}/{total} editable cells filled ({percent}%)."
+  celebration_text: "Puzzle Complete!"
   rules_title: "Game Rules"
   rule_1: "Each row and column should contain an equal number of 0s and 1s."
   rule_2: "No more than two of the same number can be adjacent."

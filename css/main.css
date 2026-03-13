@@ -929,6 +929,7 @@ footer .footer-copy {
 #puzzleContainer {
   max-width: 700px;
   margin: 0 auto;
+  position: relative;
 }
 
 .binary-controls {
@@ -1085,12 +1086,36 @@ footer .footer-copy {
 }
 
 #puzzleContainer.solved-celebration #puzzleGrid {
-  animation: solved-grid-pop 0.9s ease-out;
+  animation: solved-grid-pop 1.05s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4), 0 0 26px rgba(16, 185, 129, 0.45);
 }
 
 #puzzleContainer.solved-celebration #puzzleGrid td {
-  animation: solved-cell-flash 0.9s ease-out;
+  animation: solved-cell-flash 1.05s ease-out;
+}
+
+.binary-celebration {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 12%) scale(0.78);
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.7);
+  background: rgba(3, 18, 12, 0.86);
+  color: #9cffcc;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 34px rgba(16, 185, 129, 0.35);
+}
+
+.binary-celebration.is-visible {
+  animation: solved-badge-float 1.65s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes solved-status-pop {
@@ -1112,8 +1137,8 @@ footer .footer-copy {
 }
 
 @keyframes solved-grid-pop {
-  0% { transform: scale(0.97); }
-  35% { transform: scale(1.02); }
+  0% { transform: scale(0.95); filter: brightness(0.92); }
+  32% { transform: scale(1.035); filter: brightness(1.12); }
   100% { transform: scale(1); }
 }
 
@@ -1121,6 +1146,13 @@ footer .footer-copy {
   0% { background-color: rgba(16, 185, 129, 0.05); }
   45% { background-color: rgba(16, 185, 129, 0.22); }
   100% { background-color: transparent; }
+}
+
+@keyframes solved-badge-float {
+  0% { opacity: 0; transform: translate(-50%, 16%) scale(0.72); }
+  16% { opacity: 1; transform: translate(-50%, -8%) scale(1.06); }
+  58% { opacity: 1; transform: translate(-50%, -22%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -40%) scale(0.95); }
 }
 
 #rules {
@@ -1212,6 +1244,12 @@ footer .footer-copy {
 
   .binary-controls {
     gap: 0.5rem;
+  }
+
+  .binary-celebration {
+    font-size: 0.82rem;
+    padding: 0.45rem 0.9rem;
+    top: 56%;
   }
 
   .blob-1, .blob-2, .blob-3 {
