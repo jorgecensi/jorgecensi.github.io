@@ -37,6 +37,10 @@ body {
   overflow-x: hidden;
 }
 
+body.no-site-chrome {
+  padding-top: 0;
+}
+
 body::before {
   content: '';
   position: fixed;
@@ -1109,6 +1113,10 @@ footer .footer-copy {
 @media (max-width: 576px) {
   body {
     padding-top: 60px;
+  }
+
+  body.no-site-chrome {
+    padding-top: 0;
   }
 
   .hero {
