@@ -1,3 +1,6 @@
+---
+permalink: /flappy/
+---
 <!DOCTYPE html>
 <html lang="en">
 
@@ -10,7 +13,7 @@
     <title>Flappy Bird PWA</title>
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="flappy-manifest.json">
+    <link rel="manifest" href="/flappy-manifest.json">
     
     <!-- iOS specific -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,7 +21,7 @@
     <meta name="apple-mobile-web-app-title" content="Flappy Bird">
     
     <!-- Favicon -->
-    <link rel="icon" href="img/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
 </head>
 
 <body>
@@ -102,7 +105,7 @@
             window.addEventListener('load', async function() {
                 try {
                     const registration = await navigator.serviceWorker.register(`/flappy-sw.js?v=${encodeURIComponent(SW_VERSION)}`, {
-                        scope: '/flappy'
+                        scope: '/flappy/'
                     });
 
                     if (registration.waiting) {
@@ -135,7 +138,7 @@
         }
     </script>
     
-    <script src="flappyBird.js"></script>
+    <script src="/flappyBird.js"></script>
 </body>
 
 </html>
