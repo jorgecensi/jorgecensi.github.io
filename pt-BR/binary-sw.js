@@ -1,4 +1,4 @@
-const CACHE_NAME = "binary-puzzle-ptbr-v1";
+const CACHE_NAME = "binary-puzzle-ptbr-v2";
 const OFFLINE_URL = "/pt-BR/binary/";
 const PRECACHE_URLS = [
   "/pt-BR/binary/",
