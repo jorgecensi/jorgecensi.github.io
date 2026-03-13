@@ -483,7 +483,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 celebrationElement.setAttribute("aria-hidden", "true");
             }
             celebrationResetTimer = null;
-        }, 2200);
+        }, 4000);
 
         if (typeof navigator.vibrate === "function") {
             navigator.vibrate([80, 40, 120]);
