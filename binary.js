@@ -3,12 +3,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const gridElement = document.getElementById("puzzleGrid");
     const puzzleContainer = document.getElementById("puzzleContainer");
     const statusElement = document.getElementById("binaryStatus");
+    const progressBarElement = document.getElementById("binaryProgress");
+    const progressFillElement = document.getElementById("binaryProgressFill");
+    const progressLabelElement = document.getElementById("binaryProgressLabel");
     const newPuzzleButton = document.getElementById("generatePuzzle");
+    const resetPuzzleButton = document.getElementById("resetPuzzle");
     const toggleSolutionButton = document.getElementById("toggleSolution");
     const checkPuzzleButton = document.getElementById("checkPuzzle");
     const installAppButton = document.getElementById("installBinaryApp");
     const toggleRulesButton = document.getElementById("toggleRules");
     const rulesElement = document.getElementById("rules");
+    const inputModeButtons = Array.from(document.querySelectorAll("[data-input-mode]"));
+    const inputModeDescriptionElement = document.getElementById("inputModeDescription");
 
     if (!gridElement || !puzzleContainer || !newPuzzleButton || !toggleSolutionButton || !toggleRulesButton || !rulesElement) {
         return;
@@ -17,6 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const labels = {
         showSolution: puzzleContainer.dataset.labelShowSolution || "Show Solution",
         hideSolution: puzzleContainer.dataset.labelHideSolution || "Hide Solution",
+        modeCycle: puzzleContainer.dataset.labelModeCycle || "Cycle",
+        modeZero: puzzleContainer.dataset.labelModeZero || "0",
+        modeOne: puzzleContainer.dataset.labelModeOne || "1",
+        modeClear: puzzleContainer.dataset.labelModeClear || "Clear",
+        descriptionModeCycle: puzzleContainer.dataset.descriptionModeCycle || "Cycle mode: tap a cell to rotate empty -> 0 -> 1.",
+        descriptionModeZero: puzzleContainer.dataset.descriptionModeZero || "Zero mode: tap any editable cell to place 0.",
+        descriptionModeOne: puzzleContainer.dataset.descriptionModeOne || "One mode: tap any editable cell to place 1.",
+        descriptionModeClear: puzzleContainer.dataset.descriptionModeClear || "Clear mode: tap any editable cell to erase it.",
+        progressLabel: puzzleContainer.dataset.progressLabel || "{filled}/{total} editable cells filled ({percent}%).",
         statusProgress: puzzleContainer.dataset.statusProgress || "{filled}/{total} cells filled.",
         statusConflicts: puzzleContainer.dataset.statusConflicts || "{count} rule issues highlighted.",
         statusSolved: puzzleContainer.dataset.statusSolved || "Solved!",
@@ -34,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedCell = null;
     let conflictCells = new Set();
     let deferredInstallPrompt = null;
+    let inputMode = "cycle";
 
     function createMatrix(size, value = null) {
         return Array.from({ length: size }, () => Array(size).fill(value));
@@ -416,8 +432,12 @@ document.addEventListener("DOMContentLoaded", () => {
         cellElement.classList.toggle("user-cell", !isFixed && !solutionVisible && playerGrid[row][col] !== null);
         cellElement.classList.toggle("conflict-cell", !solutionVisible && conflictCells.has(keyForCell(row, col)));
         cellElement.classList.toggle("selected-cell", !!selectedCell && selectedCell.row === row && selectedCell.col === col);
+        cellElement.classList.toggle("related-row", !!selectedCell && selectedCell.row === row && selectedCell.col !== col);
+        cellElement.classList.toggle("related-col", !!selectedCell && selectedCell.col === col && selectedCell.row !== row);
         cellElement.tabIndex = isFixed ? -1 : 0;
-        cellElement.setAttribute("aria-label", `Row ${row + 1}, Column ${col + 1}`);
+        const ariaValue = value === null ? "empty" : String(value);
+        const ariaType = isFixed ? "fixed clue" : "editable";
+        cellElement.setAttribute("aria-label", `Row ${row + 1}, Column ${col + 1}, ${ariaType}, value ${ariaValue}`);
     }
 
     function renderGrid() {
@@ -432,6 +452,62 @@ document.addEventListener("DOMContentLoaded", () => {
         if (statusElement) {
             statusElement.textContent = text;
         }
+    }
+
+    function updateProgress(filled, total) {
+        if (!progressBarElement || !progressFillElement || !progressLabelElement) {
+            return;
+        }
+
+        const percent = total <= 0 ? 100 : Math.round((filled / total) * 100);
+        progressFillElement.style.width = `${percent}%`;
+        progressBarElement.setAttribute("aria-valuenow", String(percent));
+        progressLabelElement.textContent = replaceTokens(labels.progressLabel, {
+            filled: String(filled),
+            total: String(total),
+            percent: String(percent)
+        });
+    }
+
+    function getInputModeDescription(mode) {
+        return {
+            cycle: labels.descriptionModeCycle,
+            zero: labels.descriptionModeZero,
+            one: labels.descriptionModeOne,
+            clear: labels.descriptionModeClear
+        }[mode] || labels.descriptionModeCycle;
+    }
+
+    function updateInputModeControls() {
+        if (inputModeDescriptionElement) {
+            inputModeDescriptionElement.textContent = getInputModeDescription(inputMode);
+        }
+
+        const modeLabels = {
+            cycle: labels.modeCycle,
+            zero: labels.modeZero,
+            one: labels.modeOne,
+            clear: labels.modeClear
+        };
+
+        for (const button of inputModeButtons) {
+            const mode = button.dataset.inputMode;
+            if (!mode) {
+                continue;
+            }
+            button.textContent = modeLabels[mode] || button.textContent;
+            const isActive = mode === inputMode;
+            button.classList.toggle("is-active", isActive);
+            button.setAttribute("aria-pressed", String(isActive));
+        }
+    }
+
+    function setInputMode(mode) {
+        if (!["cycle", "zero", "one", "clear"].includes(mode)) {
+            return;
+        }
+        inputMode = mode;
+        updateInputModeControls();
     }
 
     function registerServiceWorker() {
@@ -454,6 +530,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const result = collectValidation(playerGrid);
         conflictCells = result.conflicts;
         renderGrid();
+        updateProgress(result.filled, result.totalEditable);
 
         if (solutionVisible) {
             setStatus(labels.statusSolutionVisible);
@@ -492,6 +569,27 @@ document.addEventListener("DOMContentLoaded", () => {
         updateStatus();
     }
 
+    function applyInputModeToCell(row, col) {
+        if (fixedMask[row][col] || solutionVisible) {
+            return;
+        }
+
+        if (inputMode === "cycle") {
+            cyclePlayerCell(row, col);
+            return;
+        }
+
+        if (inputMode === "zero") {
+            playerGrid[row][col] = 0;
+        } else if (inputMode === "one") {
+            playerGrid[row][col] = 1;
+        } else if (inputMode === "clear") {
+            playerGrid[row][col] = null;
+        }
+
+        updateStatus();
+    }
+
     function selectCell(row, col) {
         selectedCell = { row, col };
         renderGrid();
@@ -514,6 +612,15 @@ document.addEventListener("DOMContentLoaded", () => {
             rulesElement.classList.remove("visible");
         }
         toggleRulesButton.setAttribute("aria-expanded", String(willShow));
+    }
+
+    function resetCurrentPuzzle() {
+        solutionVisible = false;
+        selectedCell = null;
+        toggleSolutionButton.textContent = labels.showSolution;
+        playerGrid = cloneGrid(puzzleGrid);
+        conflictCells = new Set();
+        updateStatus();
     }
 
     function setupInstallPrompt() {
@@ -555,6 +662,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function startNewPuzzle() {
         solutionVisible = false;
         selectedCell = null;
+        setInputMode("cycle");
         toggleSolutionButton.textContent = labels.showSolution;
 
         solutionGrid = generateCompletedGrid();
@@ -576,7 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const row = Number(target.dataset.row);
         const col = Number(target.dataset.col);
         selectCell(row, col);
-        cyclePlayerCell(row, col);
+        applyInputModeToCell(row, col);
     });
 
     gridElement.addEventListener("keydown", (event) => {
@@ -594,7 +702,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const key = event.key;
         if (key === "Enter" || key === " ") {
             event.preventDefault();
-            cyclePlayerCell(row, col);
+            applyInputModeToCell(row, col);
+            return;
+        }
+
+        if (key === "c" || key === "C") {
+            event.preventDefault();
+            setInputMode("cycle");
+            return;
+        }
+
+        if (key === "x" || key === "X") {
+            event.preventDefault();
+            setInputMode("clear");
             return;
         }
 
@@ -635,6 +755,12 @@ document.addEventListener("DOMContentLoaded", () => {
         startNewPuzzle();
     });
 
+    if (resetPuzzleButton) {
+        resetPuzzleButton.addEventListener("click", () => {
+            resetCurrentPuzzle();
+        });
+    }
+
     toggleSolutionButton.addEventListener("click", () => {
         toggleSolution();
     });
@@ -649,10 +775,20 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleRules();
     });
 
+    for (const modeButton of inputModeButtons) {
+        modeButton.addEventListener("click", () => {
+            const mode = modeButton.dataset.inputMode;
+            if (mode) {
+                setInputMode(mode);
+            }
+        });
+    }
+
     if (rulesElement && !rulesElement.hasAttribute("hidden")) {
         rulesElement.setAttribute("hidden", "");
     }
     toggleRulesButton.setAttribute("aria-expanded", "false");
+    updateInputModeControls();
     setupInstallPrompt();
     registerServiceWorker();
     startNewPuzzle();

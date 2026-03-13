@@ -13,11 +13,24 @@ permalink: /pt-BR/binary/
     <p>{{ t.binary_page.instruction }}</p>
     <div class="binary-controls">
         <button id="generatePuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.new_puzzle }}">{{ t.binary_page.new_puzzle }}</button>
+        <button id="resetPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.reset_grid }}">{{ t.binary_page.reset_grid }}</button>
         <button id="toggleSolution" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.show_solution }}">{{ t.binary_page.show_solution }}</button>
         <button id="checkPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.check_progress }}">{{ t.binary_page.check_progress }}</button>
         <button id="installBinaryApp" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.install_app }}" hidden>{{ t.binary_page.install_app }}</button>
         <button id="toggleRules" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.rules }}">{{ t.binary_page.rules }}</button>
     </div>
+    <div class="binary-input-mode" role="group" aria-label="{{ t.binary_page.input_mode_aria }}">
+        <span class="binary-input-mode__label">{{ t.binary_page.input_mode_label }}</span>
+        <button type="button" class="binary-mode-btn is-active" data-input-mode="cycle">{{ t.binary_page.mode_cycle }}</button>
+        <button type="button" class="binary-mode-btn" data-input-mode="zero">{{ t.binary_page.mode_zero }}</button>
+        <button type="button" class="binary-mode-btn" data-input-mode="one">{{ t.binary_page.mode_one }}</button>
+        <button type="button" class="binary-mode-btn" data-input-mode="clear">{{ t.binary_page.mode_clear }}</button>
+    </div>
+    <p id="inputModeDescription" class="binary-mode-description"></p>
+    <div id="binaryProgress" class="binary-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="binaryProgressFill" class="binary-progress__fill"></div>
+    </div>
+    <p id="binaryProgressLabel" class="binary-progress-label"></p>
     <p id="binaryStatus" class="binary-status" aria-live="polite"></p>
     <div id="rules" class="binary-rules" hidden>
         <h3>{{ t.binary_page.rules_title }}</h3>
@@ -33,6 +46,15 @@ permalink: /pt-BR/binary/
     id="puzzleContainer"
     data-label-show-solution="{{ t.binary_page.show_solution }}"
     data-label-hide-solution="{{ t.binary_page.hide_solution }}"
+    data-label-mode-cycle="{{ t.binary_page.mode_cycle }}"
+    data-label-mode-zero="{{ t.binary_page.mode_zero }}"
+    data-label-mode-one="{{ t.binary_page.mode_one }}"
+    data-label-mode-clear="{{ t.binary_page.mode_clear }}"
+    data-description-mode-cycle="{{ t.binary_page.mode_description_cycle }}"
+    data-description-mode-zero="{{ t.binary_page.mode_description_zero }}"
+    data-description-mode-one="{{ t.binary_page.mode_description_one }}"
+    data-description-mode-clear="{{ t.binary_page.mode_description_clear }}"
+    data-progress-label="{{ t.binary_page.progress_label }}"
     data-status-progress="{{ t.binary_page.status_progress }}"
     data-status-conflicts="{{ t.binary_page.status_conflicts }}"
     data-status-solved="{{ t.binary_page.status_solved }}"
