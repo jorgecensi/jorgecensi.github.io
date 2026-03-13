@@ -223,8 +223,14 @@ permalink: /crossfit-timer/
                         </div>
                     </div>
                     <div class="cf-crossfit-clock" id="crossfit-clock-display" style="display: none;" aria-live="polite">
-                        <span class="cf-crossfit-clock-label" id="clock-mode-label">UP</span>
-                        <span class="cf-crossfit-clock-time" id="clock-up-display">00:00</span>
+                        <div class="cf-class-clock-six" id="class-clock-six">
+                            <span class="cf-class-clock-digit">U</span>
+                            <span class="cf-class-clock-digit">P</span>
+                            <span class="cf-class-clock-digit">0</span>
+                            <span class="cf-class-clock-digit">0</span>
+                            <span class="cf-class-clock-digit">0</span>
+                            <span class="cf-class-clock-digit">0</span>
+                        </div>
                     </div>
                     <div class="cf-clock-landscape-gate" id="clock-landscape-gate" style="display: none;">
                         <i class="fas fa-rotate-right"></i>
@@ -761,31 +767,39 @@ body {
     cursor: pointer;
 }
 
-.cf-crossfit-clock-label {
+.cf-class-clock-six {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.28rem;
+    width: min(100%, 540px);
+}
+
+.cf-class-clock-digit {
     font-family: 'Orbitron', 'Inter', sans-serif;
-    font-size: clamp(1.4rem, 5vw, 2.3rem);
+    font-size: clamp(2rem, 7vw, 3.4rem);
     font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #6366f1;
-    text-shadow: 0 0 16px rgba(99, 102, 241, 0.65);
-}
-
-.cf-crossfit-clock-time {
-    font-family: 'Orbitron', 'Inter', monospace;
-    font-size: clamp(2.3rem, 8vw, 4.2rem);
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    line-height: 1;
+    letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
+    text-align: center;
+    border-radius: 6px;
+    padding: 0.25rem 0.12rem;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(71, 85, 105, 0.65);
+}
+
+.cf-class-clock-digit:nth-child(-n+2) {
+    color: #6366f1;
+    text-shadow: 0 0 14px rgba(99, 102, 241, 0.65);
+}
+
+.cf-class-clock-digit:nth-child(n+3) {
     color: #ef4444;
-    text-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+    text-shadow: 0 0 14px rgba(239, 68, 68, 0.6);
 }
 
-.cf-crossfit-clock.paused .cf-crossfit-clock-time {
+.cf-crossfit-clock.paused .cf-class-clock-six {
     opacity: 0.35;
-}
-
-.cf-crossfit-clock.paused .cf-crossfit-clock-label {
-    opacity: 0.7;
 }
 
 .cf-clock-landscape-gate {
@@ -1240,15 +1254,17 @@ body {
     .cf-crossfit-clock {
         margin: 0.75rem auto 0.5rem;
         padding: 0.7rem 0.8rem;
-        gap: 0.5rem;
+        width: min(100%, 420px);
     }
 
-    .cf-crossfit-clock-label {
-        font-size: clamp(1.2rem, 7vw, 1.8rem);
+    .cf-class-clock-six {
+        gap: 0.18rem;
     }
 
-    .cf-crossfit-clock-time {
-        font-size: clamp(1.9rem, 13vw, 3rem);
+    .cf-class-clock-digit {
+        font-size: clamp(1.2rem, 10vw, 2.2rem);
+        border-radius: 4px;
+        padding: 0.2rem 0.05rem;
     }
 
     .cf-clock-landscape-gate {
@@ -1400,6 +1416,40 @@ class CrossFitTimer {
         return Boolean(config) && (config.type === 'clock' || this.displayMode === 'class');
     }
 
+    getClassClockPrefix() {
+        if (!this.config || this.config.type === 'clock') {
+            return 'UP';
+        }
+
+        if (this.currentPhase === 'countdown') {
+            return 'dn';
+        }
+
+        if (this.config.type === 'tabata') {
+            if (this.currentPhase === 'work') return 'H1';
+            if (this.currentPhase === 'rest') return 'H2';
+            return 'dn';
+        }
+
+        if (this.config.type === 'emom') {
+            const cycle = Math.max(1, Math.min(9, this.currentCycle || 1));
+            return `C${cycle}`;
+        }
+
+        return 'dn';
+    }
+
+    setClassClockDisplay(mmssDigits) {
+        if (!this.classClockDigits || this.classClockDigits.length !== 6) return;
+        const prefix = this.getClassClockPrefix().slice(0, 2).padEnd(2, ' ');
+        const safeDigits = (mmssDigits || '0000').replace(/[^0-9]/g, '').padStart(4, '0').slice(-4);
+        const sixChars = `${prefix}${safeDigits}`;
+
+        this.classClockDigits.forEach((digitEl, index) => {
+            digitEl.textContent = sixChars[index] || ' ';
+        });
+    }
+
     async tryLockLandscapeForClock() {
         if (this.config?.type !== 'clock' || !this.isLikelyPhoneDevice()) return;
         if (screen.orientation?.lock) {
@@ -1442,8 +1492,7 @@ class CrossFitTimer {
         this.progressContainer = document.getElementById('progress-container');
         this.progressBar = document.getElementById('progress-bar');
         this.crossfitClockDisplay = document.getElementById('crossfit-clock-display');
-        this.clockModeLabel = document.getElementById('clock-mode-label');
-        this.clockUpDisplay = document.getElementById('clock-up-display');
+        this.classClockDigits = this.crossfitClockDisplay.querySelectorAll('.cf-class-clock-digit');
         this.clockLandscapeGate = document.getElementById('clock-landscape-gate');
         this.exerciseInfo = document.getElementById('exercise-info');
         this.currentExercise = document.getElementById('current-exercise');
@@ -1928,10 +1977,12 @@ class CrossFitTimer {
     updateDisplay() {
         const minutes = Math.floor(Math.abs(this.timeRemaining) / 60);
         const seconds = Math.abs(this.timeRemaining) % 60;
-        const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const clampedMinutes = Math.min(minutes, 99);
+        const mmssDigits = `${clampedMinutes.toString().padStart(2, '0')}${seconds.toString().padStart(2, '0')}`;
+        const display = `${clampedMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
         this.timerDisplay.textContent = display;
-        this.clockUpDisplay.textContent = display;
+        this.setClassClockDisplay(mmssDigits);
         
         // Update phase badge and colors
         this.timerDisplay.className = `cf-timer-display timer-${this.currentPhase}`;
@@ -1940,27 +1991,22 @@ class CrossFitTimer {
             case 'countdown':
                 this.phaseBadge.textContent = 'GET READY';
                 this.phaseBadge.className = 'cf-phase-badge bg-countdown';
-                this.clockModeLabel.textContent = 'READY';
                 break;
             case 'clock':
                 this.phaseBadge.textContent = 'CLOCK';
                 this.phaseBadge.className = 'cf-phase-badge bg-clock';
-                this.clockModeLabel.textContent = 'UP';
                 break;
             case 'work':
                 this.phaseBadge.textContent = 'WORK';
                 this.phaseBadge.className = 'cf-phase-badge bg-work';
-                this.clockModeLabel.textContent = 'WORK';
                 break;
             case 'rest':
                 this.phaseBadge.textContent = 'REST';
                 this.phaseBadge.className = 'cf-phase-badge bg-rest';
-                this.clockModeLabel.textContent = 'REST';
                 break;
             case 'finished':
                 this.phaseBadge.textContent = 'FINISHED!';
                 this.phaseBadge.className = 'cf-phase-badge bg-finished';
-                this.clockModeLabel.textContent = 'DONE';
                 break;
         }
     }
@@ -2057,7 +2103,7 @@ class CrossFitTimer {
         this.currentPhase = 'countdown';
         this.timerDisplay.textContent = '00:00';
         this.timerDisplay.className = 'cf-timer-display';
-        this.clockUpDisplay.textContent = '00:00';
+        this.setClassClockDisplay('0000');
         this.workoutInfo.style.display = 'none';
         this.timerPhase.style.display = 'none';
         this.progressContainer.style.display = 'none';
@@ -2066,7 +2112,6 @@ class CrossFitTimer {
         this.progressBar.style.strokeDashoffset = '565.48';
         this.exerciseInfo.style.display = 'none';
         this.pauseOverlay.style.display = 'none';
-        this.clockModeLabel.textContent = 'UP';
         this.timerHint.textContent = this.defaultTimerHint;
         this.timerHint.style.display = 'block';
         this.updateUI();
