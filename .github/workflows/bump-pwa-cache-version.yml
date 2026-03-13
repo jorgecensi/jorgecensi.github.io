@@ -1,6 +1,6 @@
 name: Bump PWA cache version
 
-on:
+"on":
   push:
     tags:
       - "v*"
@@ -9,7 +9,6 @@ on:
       version:
         description: "Version to set (example: 1.4.0 or v1.4.0)"
         required: true
-        type: string
 
 permissions:
   contents: write
