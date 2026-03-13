@@ -1097,11 +1097,11 @@ footer .footer-copy {
 .binary-celebration {
   position: absolute;
   left: 50%;
-  top: 52%;
+  top: 36%;
   z-index: 8;
   pointer-events: none;
   opacity: 0;
-  transform: translate(-50%, 12%) scale(0.78);
+  transform: translate(-50%, -6%) scale(0.72);
   padding: 0.55rem 1.1rem;
   border-radius: 999px;
   border: 1px solid rgba(16, 185, 129, 0.7);
@@ -1115,7 +1115,9 @@ footer .footer-copy {
 }
 
 .binary-celebration.is-visible {
-  animation: solved-badge-float 1.65s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  transform: translate(-50%, -26%) scale(1);
+  animation: solved-badge-pop 0.55s cubic-bezier(0.16, 1, 0.3, 1), solved-badge-pulse 1.2s ease-in-out 0.55s infinite;
 }
 
 @keyframes solved-status-pop {
@@ -1148,11 +1150,15 @@ footer .footer-copy {
   100% { background-color: transparent; }
 }
 
-@keyframes solved-badge-float {
-  0% { opacity: 0; transform: translate(-50%, 16%) scale(0.72); }
-  16% { opacity: 1; transform: translate(-50%, -8%) scale(1.06); }
-  58% { opacity: 1; transform: translate(-50%, -22%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -40%) scale(0.95); }
+@keyframes solved-badge-pop {
+  0% { transform: translate(-50%, -6%) scale(0.72); }
+  65% { transform: translate(-50%, -30%) scale(1.08); }
+  100% { transform: translate(-50%, -26%) scale(1); }
+}
+
+@keyframes solved-badge-pulse {
+  0%, 100% { box-shadow: 0 10px 34px rgba(16, 185, 129, 0.35); }
+  50% { box-shadow: 0 14px 42px rgba(16, 185, 129, 0.52); }
 }
 
 #rules {
@@ -1249,7 +1255,7 @@ footer .footer-copy {
   .binary-celebration {
     font-size: 0.82rem;
     padding: 0.45rem 0.9rem;
-    top: 56%;
+    top: 42%;
   }
 
   .blob-1, .blob-2, .blob-3 {
