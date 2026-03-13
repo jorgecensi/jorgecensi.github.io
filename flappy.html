@@ -89,16 +89,51 @@ permalink: /flappy/
     </style>
     
     <script>
-        // Register service worker
+        const SW_VERSION = 'dev';
+
+        // Register service worker with opt-in update flow
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/flappy-sw.js', { scope: '/flappy/' })
-                    .then(function(registration) {
-                        console.log('Flappy Bird SW registered with scope: ', registration.scope);
-                    })
-                    .catch(function(error) {
-                        console.log('Flappy Bird SW registration failed: ', error);
+            let hasRefreshedForUpdate = false;
+
+            const askToUpdate = (registration) => {
+                const shouldUpdate = window.confirm('A new Flappy Bird update is ready. Update now?');
+                if (shouldUpdate && registration.waiting) {
+                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+            };
+
+            window.addEventListener('load', async function() {
+                try {
+                    const registration = await navigator.serviceWorker.register(`/flappy-sw.js?v=${encodeURIComponent(SW_VERSION)}`, {
+                        scope: '/flappy/'
                     });
+
+                    if (registration.waiting) {
+                        askToUpdate(registration);
+                    }
+
+                    registration.addEventListener('updatefound', function() {
+                        const newWorker = registration.installing;
+                        if (!newWorker) return;
+
+                        newWorker.addEventListener('statechange', function() {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                askToUpdate(registration);
+                            }
+                        });
+                    });
+
+                    navigator.serviceWorker.addEventListener('controllerchange', function() {
+                        if (hasRefreshedForUpdate) return;
+                        hasRefreshedForUpdate = true;
+                        window.location.reload();
+                    });
+
+                    window.addEventListener('focus', function() { registration.update(); });
+                    setInterval(function() { registration.update(); }, 60 * 60 * 1000);
+                } catch (error) {
+                    console.log('Flappy Bird SW registration failed: ', error);
+                }
             });
         }
     </script>

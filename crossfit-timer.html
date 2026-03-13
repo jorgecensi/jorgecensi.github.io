@@ -2065,11 +2065,49 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Service Worker Registration for PWA
+const SW_VERSION = 'dev';
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/crossfit-sw.js', { scope: '/crossfit-timer/' })
-            .then(registration => console.log('SW registered'))
-            .catch(error => console.log('SW registration failed'));
+    let hasRefreshedForUpdate = false;
+
+    const askToUpdate = (registration) => {
+        const shouldUpdate = window.confirm('A new CrossFit Timer update is ready. Update now?');
+        if (shouldUpdate && registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+    };
+
+    window.addEventListener('load', async () => {
+        try {
+            const registration = await navigator.serviceWorker.register(`/crossfit-sw.js?v=${encodeURIComponent(SW_VERSION)}`, {
+                scope: '/crossfit-timer/'
+            });
+
+            if (registration.waiting) {
+                askToUpdate(registration);
+            }
+
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (!newWorker) return;
+
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        askToUpdate(registration);
+                    }
+                });
+            });
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (hasRefreshedForUpdate) return;
+                hasRefreshedForUpdate = true;
+                window.location.reload();
+            });
+
+            window.addEventListener('focus', () => registration.update());
+            setInterval(() => registration.update(), 60 * 60 * 1000);
+        } catch (error) {
+            console.log('SW registration failed', error);
+        }
     });
 }
 </script>
