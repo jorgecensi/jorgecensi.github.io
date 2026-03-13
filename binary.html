@@ -9,7 +9,7 @@ permalink: /binary/
 
 <div style="text-align: center;">
     <h1>Binary Puzzle</h1>
-    <p>Fill the grid with 0s and 1s. Pick an input mode, or stay on Cycle to rotate values on click.</p>
+    <p>Fill the grid with 0s and 1s. Click a cell to cycle through values.</p>
     <div class="binary-controls">
         <button id="generatePuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="Generate a new puzzle">New Puzzle</button>
         <button id="resetPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="Reset this puzzle to its starting clues">Reset Grid</button>
@@ -18,14 +18,6 @@ permalink: /binary/
         <button id="installBinaryApp" class="btn btn-primary" data-bs-toggle="tooltip" title="Install this app on your phone" hidden>Install App</button>
         <button id="toggleRules" class="btn btn-primary" data-bs-toggle="tooltip" title="Show or hide the game rules">Rules</button>
     </div>
-    <div class="binary-input-mode" role="group" aria-label="Cell input mode">
-        <span class="binary-input-mode__label">Input mode</span>
-        <button type="button" class="binary-mode-btn is-active" data-input-mode="cycle">Cycle</button>
-        <button type="button" class="binary-mode-btn" data-input-mode="zero">0</button>
-        <button type="button" class="binary-mode-btn" data-input-mode="one">1</button>
-        <button type="button" class="binary-mode-btn" data-input-mode="clear">Clear</button>
-    </div>
-    <p id="inputModeDescription" class="binary-mode-description"></p>
     <div id="binaryProgress" class="binary-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <div id="binaryProgressFill" class="binary-progress__fill"></div>
     </div>
@@ -45,14 +37,6 @@ permalink: /binary/
     id="puzzleContainer"
     data-label-show-solution="Show Solution"
     data-label-hide-solution="Hide Solution"
-    data-label-mode-cycle="Cycle"
-    data-label-mode-zero="0"
-    data-label-mode-one="1"
-    data-label-mode-clear="Clear"
-    data-description-mode-cycle="Cycle mode: tap a cell to rotate empty -> 0 -> 1."
-    data-description-mode-zero="Zero mode: tap any editable cell to place 0."
-    data-description-mode-one="One mode: tap any editable cell to place 1."
-    data-description-mode-clear="Clear mode: tap any editable cell to erase it."
     data-progress-label="{filled}/{total} editable cells filled ({percent}%)."
     data-status-progress="{filled}/{total} editable cells filled."
     data-status-conflicts="{count} rule issues highlighted."

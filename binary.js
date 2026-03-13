@@ -13,8 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const installAppButton = document.getElementById("installBinaryApp");
     const toggleRulesButton = document.getElementById("toggleRules");
     const rulesElement = document.getElementById("rules");
-    const inputModeButtons = Array.from(document.querySelectorAll("[data-input-mode]"));
-    const inputModeDescriptionElement = document.getElementById("inputModeDescription");
 
     if (!gridElement || !puzzleContainer || !newPuzzleButton || !toggleSolutionButton || !toggleRulesButton || !rulesElement) {
         return;
@@ -23,14 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const labels = {
         showSolution: puzzleContainer.dataset.labelShowSolution || "Show Solution",
         hideSolution: puzzleContainer.dataset.labelHideSolution || "Hide Solution",
-        modeCycle: puzzleContainer.dataset.labelModeCycle || "Cycle",
-        modeZero: puzzleContainer.dataset.labelModeZero || "0",
-        modeOne: puzzleContainer.dataset.labelModeOne || "1",
-        modeClear: puzzleContainer.dataset.labelModeClear || "Clear",
-        descriptionModeCycle: puzzleContainer.dataset.descriptionModeCycle || "Cycle mode: tap a cell to rotate empty -> 0 -> 1.",
-        descriptionModeZero: puzzleContainer.dataset.descriptionModeZero || "Zero mode: tap any editable cell to place 0.",
-        descriptionModeOne: puzzleContainer.dataset.descriptionModeOne || "One mode: tap any editable cell to place 1.",
-        descriptionModeClear: puzzleContainer.dataset.descriptionModeClear || "Clear mode: tap any editable cell to erase it.",
         progressLabel: puzzleContainer.dataset.progressLabel || "{filled}/{total} editable cells filled ({percent}%).",
         statusProgress: puzzleContainer.dataset.statusProgress || "{filled}/{total} cells filled.",
         statusConflicts: puzzleContainer.dataset.statusConflicts || "{count} rule issues highlighted.",
@@ -49,7 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedCell = null;
     let conflictCells = new Set();
     let deferredInstallPrompt = null;
-    let inputMode = "cycle";
+    let hasCelebratedSolved = false;
+    let celebrationResetTimer = null;
 
     function createMatrix(size, value = null) {
         return Array.from({ length: size }, () => Array(size).fill(value));
@@ -454,6 +445,36 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function resetCelebrationState() {
+        hasCelebratedSolved = false;
+        if (celebrationResetTimer) {
+            window.clearTimeout(celebrationResetTimer);
+            celebrationResetTimer = null;
+        }
+        puzzleContainer.classList.remove("solved-celebration");
+        if (statusElement) {
+            statusElement.classList.remove("status-solved");
+        }
+    }
+
+    function triggerSolvedCelebration() {
+        if (celebrationResetTimer) {
+            window.clearTimeout(celebrationResetTimer);
+        }
+
+        puzzleContainer.classList.remove("solved-celebration");
+        void puzzleContainer.offsetWidth;
+        puzzleContainer.classList.add("solved-celebration");
+        celebrationResetTimer = window.setTimeout(() => {
+            puzzleContainer.classList.remove("solved-celebration");
+            celebrationResetTimer = null;
+        }, 1800);
+
+        if (typeof navigator.vibrate === "function") {
+            navigator.vibrate([80, 40, 120]);
+        }
+    }
+
     function updateProgress(filled, total) {
         if (!progressBarElement || !progressFillElement || !progressLabelElement) {
             return;
@@ -467,47 +488,6 @@ document.addEventListener("DOMContentLoaded", () => {
             total: String(total),
             percent: String(percent)
         });
-    }
-
-    function getInputModeDescription(mode) {
-        return {
-            cycle: labels.descriptionModeCycle,
-            zero: labels.descriptionModeZero,
-            one: labels.descriptionModeOne,
-            clear: labels.descriptionModeClear
-        }[mode] || labels.descriptionModeCycle;
-    }
-
-    function updateInputModeControls() {
-        if (inputModeDescriptionElement) {
-            inputModeDescriptionElement.textContent = getInputModeDescription(inputMode);
-        }
-
-        const modeLabels = {
-            cycle: labels.modeCycle,
-            zero: labels.modeZero,
-            one: labels.modeOne,
-            clear: labels.modeClear
-        };
-
-        for (const button of inputModeButtons) {
-            const mode = button.dataset.inputMode;
-            if (!mode) {
-                continue;
-            }
-            button.textContent = modeLabels[mode] || button.textContent;
-            const isActive = mode === inputMode;
-            button.classList.toggle("is-active", isActive);
-            button.setAttribute("aria-pressed", String(isActive));
-        }
-    }
-
-    function setInputMode(mode) {
-        if (!["cycle", "zero", "one", "clear"].includes(mode)) {
-            return;
-        }
-        inputMode = mode;
-        updateInputModeControls();
     }
 
     function registerServiceWorker() {
@@ -531,6 +511,17 @@ document.addEventListener("DOMContentLoaded", () => {
         conflictCells = result.conflicts;
         renderGrid();
         updateProgress(result.filled, result.totalEditable);
+        if (statusElement) {
+            statusElement.classList.toggle("status-solved", result.solved);
+        }
+
+        if (result.solved && !hasCelebratedSolved) {
+            triggerSolvedCelebration();
+            hasCelebratedSolved = true;
+        } else if (!result.solved) {
+            hasCelebratedSolved = false;
+            puzzleContainer.classList.remove("solved-celebration");
+        }
 
         if (solutionVisible) {
             setStatus(labels.statusSolutionVisible);
@@ -569,27 +560,6 @@ document.addEventListener("DOMContentLoaded", () => {
         updateStatus();
     }
 
-    function applyInputModeToCell(row, col) {
-        if (fixedMask[row][col] || solutionVisible) {
-            return;
-        }
-
-        if (inputMode === "cycle") {
-            cyclePlayerCell(row, col);
-            return;
-        }
-
-        if (inputMode === "zero") {
-            playerGrid[row][col] = 0;
-        } else if (inputMode === "one") {
-            playerGrid[row][col] = 1;
-        } else if (inputMode === "clear") {
-            playerGrid[row][col] = null;
-        }
-
-        updateStatus();
-    }
-
     function selectCell(row, col) {
         selectedCell = { row, col };
         renderGrid();
@@ -617,6 +587,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function resetCurrentPuzzle() {
         solutionVisible = false;
         selectedCell = null;
+        resetCelebrationState();
         toggleSolutionButton.textContent = labels.showSolution;
         playerGrid = cloneGrid(puzzleGrid);
         conflictCells = new Set();
@@ -662,7 +633,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function startNewPuzzle() {
         solutionVisible = false;
         selectedCell = null;
-        setInputMode("cycle");
+        resetCelebrationState();
         toggleSolutionButton.textContent = labels.showSolution;
 
         solutionGrid = generateCompletedGrid();
@@ -684,7 +655,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const row = Number(target.dataset.row);
         const col = Number(target.dataset.col);
         selectCell(row, col);
-        applyInputModeToCell(row, col);
+        cyclePlayerCell(row, col);
     });
 
     gridElement.addEventListener("keydown", (event) => {
@@ -702,19 +673,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const key = event.key;
         if (key === "Enter" || key === " ") {
             event.preventDefault();
-            applyInputModeToCell(row, col);
-            return;
-        }
-
-        if (key === "c" || key === "C") {
-            event.preventDefault();
-            setInputMode("cycle");
-            return;
-        }
-
-        if (key === "x" || key === "X") {
-            event.preventDefault();
-            setInputMode("clear");
+            cyclePlayerCell(row, col);
             return;
         }
 
@@ -775,20 +734,10 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleRules();
     });
 
-    for (const modeButton of inputModeButtons) {
-        modeButton.addEventListener("click", () => {
-            const mode = modeButton.dataset.inputMode;
-            if (mode) {
-                setInputMode(mode);
-            }
-        });
-    }
-
     if (rulesElement && !rulesElement.hasAttribute("hidden")) {
         rulesElement.setAttribute("hidden", "");
     }
     toggleRulesButton.setAttribute("aria-expanded", "false");
-    updateInputModeControls();
     setupInstallPrompt();
     registerServiceWorker();
     startNewPuzzle();
