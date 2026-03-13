@@ -11,12 +11,17 @@ permalink: /binary/
     <h1>Binary Puzzle</h1>
     <p>Fill the grid with 0s and 1s. Click a cell to cycle through values.</p>
     <div class="binary-controls">
-        <button id="generatePuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="Generate a new puzzle">New Puzzle</button>
-        <button id="resetPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="Reset this puzzle to its starting clues">Reset Grid</button>
-        <button id="toggleSolution" class="btn btn-primary" data-bs-toggle="tooltip" title="Show or hide the solution">Show Solution</button>
-        <button id="checkPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="Check for rule issues">Check Progress</button>
-        <button id="installBinaryApp" class="btn btn-primary" data-bs-toggle="tooltip" title="Install this app on your phone" hidden>Install App</button>
-        <button id="toggleRules" class="btn btn-primary" data-bs-toggle="tooltip" title="Show or hide the game rules">Rules</button>
+        <div class="binary-controls-primary">
+            <button id="generatePuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="Generate a new puzzle">New Puzzle</button>
+            <button id="resetPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="Reset this puzzle to its starting clues">Reset Grid</button>
+            <button id="toggleActions" class="btn btn-primary binary-controls-toggle" aria-expanded="false" aria-controls="binarySecondaryActions" title="Show or hide game actions">More</button>
+        </div>
+        <div id="binarySecondaryActions" class="binary-controls-secondary">
+            <button id="toggleSolution" class="btn btn-primary" data-bs-toggle="tooltip" title="Show or hide the solution">Show Solution</button>
+            <button id="checkPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="Check for rule issues">Check Progress</button>
+            <button id="installBinaryApp" class="btn btn-primary" data-bs-toggle="tooltip" title="Install this app on your phone" hidden>Install App</button>
+            <button id="toggleRules" class="btn btn-primary" data-bs-toggle="tooltip" title="Show or hide the game rules">Rules</button>
+        </div>
     </div>
     <div id="binaryProgress" class="binary-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <div id="binaryProgressFill" class="binary-progress__fill"></div>

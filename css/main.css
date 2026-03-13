@@ -933,11 +933,31 @@ footer .footer-copy {
 }
 
 .binary-controls {
-  margin: 1.5rem 0;
+  margin: 1.2rem auto 0.9rem;
+  width: min(680px, 100%);
+}
+
+.binary-controls-primary,
+.binary-controls-secondary {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.55rem;
+}
+
+.binary-controls-secondary {
+  margin-top: 0.55rem;
+}
+
+.binary-controls .btn {
+  border-radius: 14px;
+  padding: 0.52rem 0.95rem;
+  font-size: 0.9rem;
+  box-shadow: 0 3px 12px var(--glow);
+}
+
+.binary-controls-toggle {
+  display: none;
 }
 
 .binary-progress {
@@ -1250,7 +1270,41 @@ footer .footer-copy {
   }
 
   .binary-controls {
-    gap: 0.5rem;
+    width: min(360px, 100%);
+  }
+
+  .binary-controls .btn {
+    font-size: 0.84rem;
+    padding: 0.46rem 0.78rem;
+  }
+
+  .binary-controls-toggle {
+    display: inline-flex;
+    min-width: 72px;
+  }
+
+  .binary-controls-secondary {
+    display: none;
+    width: 100%;
+    max-width: 330px;
+    margin: 0.55rem auto 0;
+    padding: 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(25, 22, 50, 0.78);
+    backdrop-filter: blur(8px);
+  }
+
+  .binary-controls-secondary.is-open {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.42rem;
+  }
+
+  .binary-controls-secondary .btn {
+    width: 100%;
+    box-shadow: none;
+    padding: 0.44rem 0.65rem;
   }
 
   .binary-celebration {
@@ -1271,6 +1325,19 @@ footer .footer-copy {
 
   body.no-site-chrome {
     padding-top: 0;
+  }
+
+  .binary-controls {
+    width: min(330px, 100%);
+  }
+
+  .binary-controls .btn {
+    font-size: 0.8rem;
+    padding: 0.42rem 0.68rem;
+  }
+
+  .binary-controls-secondary.is-open {
+    grid-template-columns: 1fr;
   }
 
   .hero {

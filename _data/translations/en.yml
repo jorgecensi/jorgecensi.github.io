@@ -80,6 +80,7 @@ binary_page:
   show_solution: "Show Solution"
   hide_solution: "Hide Solution"
   check_progress: "Check Progress"
+  more_actions: "More"
   install_app: "Install App"
   rules: "Rules"
   progress_label: "{filled}/{total} editable cells filled ({percent}%)."

@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const celebrationElement = document.getElementById("binaryCelebration");
     const newPuzzleButton = document.getElementById("generatePuzzle");
     const resetPuzzleButton = document.getElementById("resetPuzzle");
+    const toggleActionsButton = document.getElementById("toggleActions");
+    const secondaryActionsElement = document.getElementById("binarySecondaryActions");
     const toggleSolutionButton = document.getElementById("toggleSolution");
     const checkPuzzleButton = document.getElementById("checkPuzzle");
     const installAppButton = document.getElementById("installBinaryApp");
@@ -446,6 +448,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function isCompactControls() {
+        return window.matchMedia("(max-width: 768px)").matches;
+    }
+
+    function setSecondaryActionsOpen(isOpen) {
+        if (!secondaryActionsElement || !toggleActionsButton) {
+            return;
+        }
+        const open = isOpen && isCompactControls();
+        secondaryActionsElement.classList.toggle("is-open", open);
+        toggleActionsButton.setAttribute("aria-expanded", String(open));
+    }
+
+    function closeSecondaryActions() {
+        setSecondaryActionsOpen(false);
+    }
+
     function resetCelebrationState() {
         hasCelebratedSolved = false;
         if (celebrationResetTimer) {
@@ -602,6 +621,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function resetCurrentPuzzle() {
         solutionVisible = false;
         selectedCell = null;
+        closeSecondaryActions();
         resetCelebrationState();
         toggleSolutionButton.textContent = labels.showSolution;
         playerGrid = cloneGrid(puzzleGrid);
@@ -622,6 +642,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         installAppButton.addEventListener("click", async () => {
+            closeSecondaryActions();
             if (!deferredInstallPrompt) {
                 return;
             }
@@ -648,6 +669,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function startNewPuzzle() {
         solutionVisible = false;
         selectedCell = null;
+        closeSecondaryActions();
         resetCelebrationState();
         toggleSolutionButton.textContent = labels.showSolution;
 
@@ -737,22 +759,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
     toggleSolutionButton.addEventListener("click", () => {
         toggleSolution();
+        closeSecondaryActions();
     });
 
     if (checkPuzzleButton) {
         checkPuzzleButton.addEventListener("click", () => {
             updateStatus();
+            closeSecondaryActions();
         });
     }
 
     toggleRulesButton.addEventListener("click", () => {
         toggleRules();
+        closeSecondaryActions();
     });
+
+    if (toggleActionsButton && secondaryActionsElement) {
+        toggleActionsButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            const willOpen = !secondaryActionsElement.classList.contains("is-open");
+            setSecondaryActionsOpen(willOpen);
+        });
+
+        document.addEventListener("click", (event) => {
+            if (!isCompactControls()) {
+                return;
+            }
+            const target = event.target;
+            if (!(target instanceof Node)) {
+                return;
+            }
+            if (secondaryActionsElement.contains(target) || toggleActionsButton.contains(target)) {
+                return;
+            }
+            closeSecondaryActions();
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                closeSecondaryActions();
+            }
+        });
+
+        window.addEventListener("resize", () => {
+            if (!isCompactControls()) {
+                closeSecondaryActions();
+            }
+        });
+    }
 
     if (rulesElement && !rulesElement.hasAttribute("hidden")) {
         rulesElement.setAttribute("hidden", "");
     }
     toggleRulesButton.setAttribute("aria-expanded", "false");
+    if (toggleActionsButton) {
+        toggleActionsButton.setAttribute("aria-expanded", "false");
+    }
     setupInstallPrompt();
     registerServiceWorker();
     startNewPuzzle();
