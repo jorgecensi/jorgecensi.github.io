@@ -3,7 +3,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const gridElement = document.getElementById("puzzleGrid");
     const puzzleContainer = document.getElementById("puzzleContainer");
     const statusElement = document.getElementById("binaryStatus");
+    const progressBarElement = document.getElementById("binaryProgress");
+    const progressFillElement = document.getElementById("binaryProgressFill");
+    const progressLabelElement = document.getElementById("binaryProgressLabel");
+    const celebrationElement = document.getElementById("binaryCelebration");
     const newPuzzleButton = document.getElementById("generatePuzzle");
+    const resetPuzzleButton = document.getElementById("resetPuzzle");
+    const toggleActionsButton = document.getElementById("toggleActions");
+    const secondaryActionsElement = document.getElementById("binarySecondaryActions");
     const toggleSolutionButton = document.getElementById("toggleSolution");
     const checkPuzzleButton = document.getElementById("checkPuzzle");
     const installAppButton = document.getElementById("installBinaryApp");
@@ -17,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const labels = {
         showSolution: puzzleContainer.dataset.labelShowSolution || "Show Solution",
         hideSolution: puzzleContainer.dataset.labelHideSolution || "Hide Solution",
+        progressLabel: puzzleContainer.dataset.progressLabel || "{filled}/{total} editable cells filled ({percent}%).",
         statusProgress: puzzleContainer.dataset.statusProgress || "{filled}/{total} cells filled.",
         statusConflicts: puzzleContainer.dataset.statusConflicts || "{count} rule issues highlighted.",
         statusSolved: puzzleContainer.dataset.statusSolved || "Solved!",
@@ -34,6 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedCell = null;
     let conflictCells = new Set();
     let deferredInstallPrompt = null;
+    let hasCelebratedSolved = false;
+    let celebrationResetTimer = null;
 
     function createMatrix(size, value = null) {
         return Array.from({ length: size }, () => Array(size).fill(value));
@@ -416,8 +426,12 @@ document.addEventListener("DOMContentLoaded", () => {
         cellElement.classList.toggle("user-cell", !isFixed && !solutionVisible && playerGrid[row][col] !== null);
         cellElement.classList.toggle("conflict-cell", !solutionVisible && conflictCells.has(keyForCell(row, col)));
         cellElement.classList.toggle("selected-cell", !!selectedCell && selectedCell.row === row && selectedCell.col === col);
+        cellElement.classList.toggle("related-row", !!selectedCell && selectedCell.row === row && selectedCell.col !== col);
+        cellElement.classList.toggle("related-col", !!selectedCell && selectedCell.col === col && selectedCell.row !== row);
         cellElement.tabIndex = isFixed ? -1 : 0;
-        cellElement.setAttribute("aria-label", `Row ${row + 1}, Column ${col + 1}`);
+        const ariaValue = value === null ? "empty" : String(value);
+        const ariaType = isFixed ? "fixed clue" : "editable";
+        cellElement.setAttribute("aria-label", `Row ${row + 1}, Column ${col + 1}, ${ariaType}, value ${ariaValue}`);
     }
 
     function renderGrid() {
@@ -432,6 +446,82 @@ document.addEventListener("DOMContentLoaded", () => {
         if (statusElement) {
             statusElement.textContent = text;
         }
+    }
+
+    function isCompactControls() {
+        return window.matchMedia("(max-width: 768px)").matches;
+    }
+
+    function setSecondaryActionsOpen(isOpen) {
+        if (!secondaryActionsElement || !toggleActionsButton) {
+            return;
+        }
+        const open = isOpen && isCompactControls();
+        secondaryActionsElement.classList.toggle("is-open", open);
+        toggleActionsButton.setAttribute("aria-expanded", String(open));
+    }
+
+    function closeSecondaryActions() {
+        setSecondaryActionsOpen(false);
+    }
+
+    function resetCelebrationState() {
+        hasCelebratedSolved = false;
+        if (celebrationResetTimer) {
+            window.clearTimeout(celebrationResetTimer);
+            celebrationResetTimer = null;
+        }
+        puzzleContainer.classList.remove("solved-celebration");
+        if (celebrationElement) {
+            celebrationElement.classList.remove("is-visible");
+            celebrationElement.setAttribute("aria-hidden", "true");
+        }
+        if (statusElement) {
+            statusElement.classList.remove("status-solved");
+        }
+    }
+
+    function triggerSolvedCelebration() {
+        if (celebrationResetTimer) {
+            window.clearTimeout(celebrationResetTimer);
+        }
+
+        puzzleContainer.classList.remove("solved-celebration");
+        void puzzleContainer.offsetWidth;
+        puzzleContainer.classList.add("solved-celebration");
+        if (celebrationElement) {
+            celebrationElement.classList.remove("is-visible");
+            void celebrationElement.offsetWidth;
+            celebrationElement.classList.add("is-visible");
+            celebrationElement.setAttribute("aria-hidden", "false");
+        }
+        celebrationResetTimer = window.setTimeout(() => {
+            puzzleContainer.classList.remove("solved-celebration");
+            if (celebrationElement) {
+                celebrationElement.classList.remove("is-visible");
+                celebrationElement.setAttribute("aria-hidden", "true");
+            }
+            celebrationResetTimer = null;
+        }, 4000);
+
+        if (typeof navigator.vibrate === "function") {
+            navigator.vibrate([80, 40, 120]);
+        }
+    }
+
+    function updateProgress(filled, total) {
+        if (!progressBarElement || !progressFillElement || !progressLabelElement) {
+            return;
+        }
+
+        const percent = total <= 0 ? 100 : Math.round((filled / total) * 100);
+        progressFillElement.style.width = `${percent}%`;
+        progressBarElement.setAttribute("aria-valuenow", String(percent));
+        progressLabelElement.textContent = replaceTokens(labels.progressLabel, {
+            filled: String(filled),
+            total: String(total),
+            percent: String(percent)
+        });
     }
 
     function registerServiceWorker() {
@@ -454,6 +544,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const result = collectValidation(playerGrid);
         conflictCells = result.conflicts;
         renderGrid();
+        updateProgress(result.filled, result.totalEditable);
+        if (statusElement) {
+            statusElement.classList.toggle("status-solved", result.solved);
+        }
+
+        if (result.solved && !hasCelebratedSolved) {
+            triggerSolvedCelebration();
+            hasCelebratedSolved = true;
+        } else if (!result.solved) {
+            hasCelebratedSolved = false;
+            puzzleContainer.classList.remove("solved-celebration");
+        }
 
         if (solutionVisible) {
             setStatus(labels.statusSolutionVisible);
@@ -516,6 +618,17 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleRulesButton.setAttribute("aria-expanded", String(willShow));
     }
 
+    function resetCurrentPuzzle() {
+        solutionVisible = false;
+        selectedCell = null;
+        closeSecondaryActions();
+        resetCelebrationState();
+        toggleSolutionButton.textContent = labels.showSolution;
+        playerGrid = cloneGrid(puzzleGrid);
+        conflictCells = new Set();
+        updateStatus();
+    }
+
     function setupInstallPrompt() {
         if (!installAppButton) {
             return;
@@ -529,6 +642,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         installAppButton.addEventListener("click", async () => {
+            closeSecondaryActions();
             if (!deferredInstallPrompt) {
                 return;
             }
@@ -555,6 +669,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function startNewPuzzle() {
         solutionVisible = false;
         selectedCell = null;
+        closeSecondaryActions();
+        resetCelebrationState();
         toggleSolutionButton.textContent = labels.showSolution;
 
         solutionGrid = generateCompletedGrid();
@@ -635,24 +751,70 @@ document.addEventListener("DOMContentLoaded", () => {
         startNewPuzzle();
     });
 
+    if (resetPuzzleButton) {
+        resetPuzzleButton.addEventListener("click", () => {
+            resetCurrentPuzzle();
+        });
+    }
+
     toggleSolutionButton.addEventListener("click", () => {
         toggleSolution();
+        closeSecondaryActions();
     });
 
     if (checkPuzzleButton) {
         checkPuzzleButton.addEventListener("click", () => {
             updateStatus();
+            closeSecondaryActions();
         });
     }
 
     toggleRulesButton.addEventListener("click", () => {
         toggleRules();
+        closeSecondaryActions();
     });
+
+    if (toggleActionsButton && secondaryActionsElement) {
+        toggleActionsButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            const willOpen = !secondaryActionsElement.classList.contains("is-open");
+            setSecondaryActionsOpen(willOpen);
+        });
+
+        document.addEventListener("click", (event) => {
+            if (!isCompactControls()) {
+                return;
+            }
+            const target = event.target;
+            if (!(target instanceof Node)) {
+                return;
+            }
+            if (secondaryActionsElement.contains(target) || toggleActionsButton.contains(target)) {
+                return;
+            }
+            closeSecondaryActions();
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                closeSecondaryActions();
+            }
+        });
+
+        window.addEventListener("resize", () => {
+            if (!isCompactControls()) {
+                closeSecondaryActions();
+            }
+        });
+    }
 
     if (rulesElement && !rulesElement.hasAttribute("hidden")) {
         rulesElement.setAttribute("hidden", "");
     }
     toggleRulesButton.setAttribute("aria-expanded", "false");
+    if (toggleActionsButton) {
+        toggleActionsButton.setAttribute("aria-expanded", "false");
+    }
     setupInstallPrompt();
     registerServiceWorker();
     startNewPuzzle();

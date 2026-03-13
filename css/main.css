@@ -929,21 +929,71 @@ footer .footer-copy {
 #puzzleContainer {
   max-width: 700px;
   margin: 0 auto;
+  position: relative;
 }
 
 .binary-controls {
-  margin: 1.5rem 0;
+  margin: 1.2rem auto 0.9rem;
+  width: min(680px, 100%);
+}
+
+.binary-controls-primary,
+.binary-controls-secondary {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.55rem;
+}
+
+.binary-controls-secondary {
+  margin-top: 0.55rem;
+}
+
+.binary-controls .btn {
+  border-radius: 14px;
+  padding: 0.52rem 0.95rem;
+  font-size: 0.9rem;
+  box-shadow: 0 3px 12px var(--glow);
+}
+
+.binary-controls-toggle {
+  display: none;
+}
+
+.binary-progress {
+  width: min(560px, 92%);
+  height: 10px;
+  border-radius: 999px;
+  margin: 0.5rem auto 0;
+  border: 1px solid var(--border);
+  background: rgba(25, 22, 50, 0.6);
+  overflow: hidden;
+}
+
+.binary-progress__fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan), var(--primary-light));
+  transition: width 0.25s ease;
+}
+
+.binary-progress-label {
+  margin: 0.35rem auto 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
 }
 
 .binary-status {
   min-height: 1.5rem;
-  margin: 0.5rem auto 0;
+  margin: 0.4rem auto 0;
   color: var(--text-secondary);
   font-size: 0.95rem;
+}
+
+.binary-status.status-solved {
+  color: #8cffc1;
+  animation: solved-status-pop 0.7s ease-out;
 }
 
 .binary-rules {
@@ -990,6 +1040,11 @@ footer .footer-copy {
   transform: scale(1.03);
 }
 
+#puzzleGrid td.editable-cell:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(6, 182, 212, 0.95);
+}
+
 #puzzleGrid td.fixed-cell {
   background: rgba(99, 102, 241, 0.16);
   color: #c6d2ff;
@@ -1004,6 +1059,11 @@ footer .footer-copy {
   box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.95);
 }
 
+#puzzleGrid td.related-row,
+#puzzleGrid td.related-col {
+  background: rgba(99, 102, 241, 0.08);
+}
+
 #puzzleGrid td.solution-cell {
   background: rgba(16, 185, 129, 0.2);
   color: var(--green);
@@ -1012,6 +1072,114 @@ footer .footer-copy {
 #puzzleGrid td.conflict-cell {
   background: rgba(239, 68, 68, 0.18);
   color: #ffc3c3;
+}
+
+#puzzleGrid td:nth-child(2n):not(:last-child) {
+  border-right-color: rgba(99, 102, 241, 0.38);
+}
+
+#puzzleGrid tr:nth-child(2n):not(:last-child) td {
+  border-bottom-color: rgba(99, 102, 241, 0.38);
+}
+
+#puzzleContainer.solved-celebration {
+  position: relative;
+}
+
+#puzzleContainer.solved-celebration::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: calc(var(--radius) + 6px);
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(99, 102, 241, 0.08) 40%, transparent 70%);
+  animation: solved-burst 1s ease-out;
+}
+
+#puzzleContainer.solved-celebration::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.18) 50%, transparent 62%);
+  animation: solved-sweep 0.9s ease-out;
+}
+
+#puzzleContainer.solved-celebration #puzzleGrid {
+  animation: solved-grid-pop 1.05s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4), 0 0 26px rgba(16, 185, 129, 0.45);
+}
+
+#puzzleContainer.solved-celebration #puzzleGrid td {
+  animation: solved-cell-flash 1.05s ease-out;
+}
+
+.binary-celebration {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -4%) scale(0.72);
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.7);
+  background: rgba(3, 18, 12, 0.86);
+  color: #9cffcc;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 34px rgba(16, 185, 129, 0.35);
+}
+
+.binary-celebration.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -14%) scale(1);
+  animation: solved-badge-pop 0.55s cubic-bezier(0.16, 1, 0.3, 1), solved-badge-pulse 1.2s ease-in-out 0.55s infinite;
+}
+
+@keyframes solved-status-pop {
+  0% { transform: scale(0.94); opacity: 0.4; }
+  65% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes solved-burst {
+  0% { transform: scale(0.85); opacity: 0.05; }
+  40% { opacity: 1; }
+  100% { transform: scale(1.03); opacity: 0; }
+}
+
+@keyframes solved-sweep {
+  0% { transform: translateX(-115%); opacity: 0; }
+  35% { opacity: 1; }
+  100% { transform: translateX(115%); opacity: 0; }
+}
+
+@keyframes solved-grid-pop {
+  0% { transform: scale(0.95); filter: brightness(0.92); }
+  32% { transform: scale(1.035); filter: brightness(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes solved-cell-flash {
+  0% { background-color: rgba(16, 185, 129, 0.05); }
+  45% { background-color: rgba(16, 185, 129, 0.22); }
+  100% { background-color: transparent; }
+}
+
+@keyframes solved-badge-pop {
+  0% { transform: translate(-50%, -4%) scale(0.72); }
+  65% { transform: translate(-50%, -20%) scale(1.08); }
+  100% { transform: translate(-50%, -14%) scale(1); }
+}
+
+@keyframes solved-badge-pulse {
+  0%, 100% { box-shadow: 0 10px 34px rgba(16, 185, 129, 0.35); }
+  50% { box-shadow: 0 14px 42px rgba(16, 185, 129, 0.52); }
 }
 
 #rules {
@@ -1102,7 +1270,47 @@ footer .footer-copy {
   }
 
   .binary-controls {
-    gap: 0.5rem;
+    width: min(360px, 100%);
+  }
+
+  .binary-controls .btn {
+    font-size: 0.84rem;
+    padding: 0.46rem 0.78rem;
+  }
+
+  .binary-controls-toggle {
+    display: inline-flex;
+    min-width: 72px;
+  }
+
+  .binary-controls-secondary {
+    display: none;
+    width: 100%;
+    max-width: 330px;
+    margin: 0.55rem auto 0;
+    padding: 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(25, 22, 50, 0.78);
+    backdrop-filter: blur(8px);
+  }
+
+  .binary-controls-secondary.is-open {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.42rem;
+  }
+
+  .binary-controls-secondary .btn {
+    width: 100%;
+    box-shadow: none;
+    padding: 0.44rem 0.65rem;
+  }
+
+  .binary-celebration {
+    font-size: 0.82rem;
+    padding: 0.45rem 0.9rem;
+    top: 56%;
   }
 
   .blob-1, .blob-2, .blob-3 {
@@ -1117,6 +1325,19 @@ footer .footer-copy {
 
   body.no-site-chrome {
     padding-top: 0;
+  }
+
+  .binary-controls {
+    width: min(330px, 100%);
+  }
+
+  .binary-controls .btn {
+    font-size: 0.8rem;
+    padding: 0.42rem 0.68rem;
+  }
+
+  .binary-controls-secondary.is-open {
+    grid-template-columns: 1fr;
   }
 
   .hero {

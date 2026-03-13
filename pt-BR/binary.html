@@ -12,12 +12,22 @@ permalink: /pt-BR/binary/
     <h1>{{ t.binary_page.heading }}</h1>
     <p>{{ t.binary_page.instruction }}</p>
     <div class="binary-controls">
-        <button id="generatePuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.new_puzzle }}">{{ t.binary_page.new_puzzle }}</button>
-        <button id="toggleSolution" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.show_solution }}">{{ t.binary_page.show_solution }}</button>
-        <button id="checkPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.check_progress }}">{{ t.binary_page.check_progress }}</button>
-        <button id="installBinaryApp" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.install_app }}" hidden>{{ t.binary_page.install_app }}</button>
-        <button id="toggleRules" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.rules }}">{{ t.binary_page.rules }}</button>
+        <div class="binary-controls-primary">
+            <button id="generatePuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.new_puzzle }}">{{ t.binary_page.new_puzzle }}</button>
+            <button id="resetPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.reset_grid }}">{{ t.binary_page.reset_grid }}</button>
+            <button id="toggleActions" class="btn btn-primary binary-controls-toggle" aria-expanded="false" aria-controls="binarySecondaryActions" title="{{ t.binary_page.more_actions }}">{{ t.binary_page.more_actions }}</button>
+        </div>
+        <div id="binarySecondaryActions" class="binary-controls-secondary">
+            <button id="toggleSolution" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.show_solution }}">{{ t.binary_page.show_solution }}</button>
+            <button id="checkPuzzle" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.check_progress }}">{{ t.binary_page.check_progress }}</button>
+            <button id="installBinaryApp" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.install_app }}" hidden>{{ t.binary_page.install_app }}</button>
+            <button id="toggleRules" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ t.binary_page.rules }}">{{ t.binary_page.rules }}</button>
+        </div>
     </div>
+    <div id="binaryProgress" class="binary-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="binaryProgressFill" class="binary-progress__fill"></div>
+    </div>
+    <p id="binaryProgressLabel" class="binary-progress-label"></p>
     <p id="binaryStatus" class="binary-status" aria-live="polite"></p>
     <div id="rules" class="binary-rules" hidden>
         <h3>{{ t.binary_page.rules_title }}</h3>
@@ -33,6 +43,7 @@ permalink: /pt-BR/binary/
     id="puzzleContainer"
     data-label-show-solution="{{ t.binary_page.show_solution }}"
     data-label-hide-solution="{{ t.binary_page.hide_solution }}"
+    data-progress-label="{{ t.binary_page.progress_label }}"
     data-status-progress="{{ t.binary_page.status_progress }}"
     data-status-conflicts="{{ t.binary_page.status_conflicts }}"
     data-status-solved="{{ t.binary_page.status_solved }}"
@@ -42,6 +53,7 @@ permalink: /pt-BR/binary/
     data-status-install-cancelled="{{ t.binary_page.status_install_cancelled }}"
 >
     <table id="puzzleGrid" class="table table-bordered mt-3"></table>
+    <div id="binaryCelebration" class="binary-celebration" aria-hidden="true">{{ t.binary_page.celebration_text }}</div>
 </div>
 
 <script src="/binary.js"></script>
