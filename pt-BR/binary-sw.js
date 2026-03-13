@@ -1,4 +1,4 @@
-const CACHE_NAME = "binary-puzzle-ptbr-v2";
+const CACHE_NAME = "binary-puzzle-ptbr-v3";
 const OFFLINE_URL = "/pt-BR/binary/";
 const PRECACHE_URLS = [
   "/pt-BR/binary/",
@@ -6,8 +6,8 @@ const PRECACHE_URLS = [
   "/binary-pt-BR-manifest.json",
   "/css/main.css",
   "/img/favicon.ico",
-  "/img/timer-icon-192.png",
-  "/img/timer-icon-512.png"
+  "/img/binary-icon-192.png",
+  "/img/binary-icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
