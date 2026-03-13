@@ -1810,7 +1810,7 @@ class CrossFitTimer {
             this.clockLandscapeGate.style.display = 'none';
         } else {
             const useClassClock = this.usesClassClockDisplay(config);
-            this.timerPhase.style.display = 'block';
+            this.timerPhase.style.display = useClassClock ? 'none' : 'block';
             this.progressContainer.style.display = useClassClock ? 'none' : 'flex';
             this.crossfitClockDisplay.style.display = useClassClock ? 'flex' : 'none';
             this.clockLandscapeGate.style.display = 'none';
