@@ -223,8 +223,14 @@ permalink: /crossfit-timer/
                         </div>
                     </div>
                     <div class="cf-crossfit-clock" id="crossfit-clock-display" style="display: none;" aria-live="polite">
-                        <span class="cf-crossfit-clock-label">UP</span>
-                        <span class="cf-crossfit-clock-time" id="clock-up-display">00:00</span>
+                        <div class="cf-class-clock-six" id="class-clock-six">
+                            <span class="cf-class-clock-digit">U</span>
+                            <span class="cf-class-clock-digit">P</span>
+                            <span class="cf-class-clock-digit">0</span>
+                            <span class="cf-class-clock-digit">0</span>
+                            <span class="cf-class-clock-digit">0</span>
+                            <span class="cf-class-clock-digit">0</span>
+                        </div>
                     </div>
                     <div class="cf-clock-landscape-gate" id="clock-landscape-gate" style="display: none;">
                         <i class="fas fa-rotate-right"></i>
@@ -266,6 +272,26 @@ permalink: /crossfit-timer/
                         <div class="cf-form-item">
                             <label for="default-countdown" class="cf-form-label">Default Countdown (Seconds)</label>
                             <input type="number" class="cf-form-input" id="default-countdown" value="10" min="3" max="30">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Display Settings -->
+        <div class="cf-section">
+            <div class="cf-card">
+                <div class="cf-card-body">
+                    <h5 class="cf-card-title">Display Settings</h5>
+                    <p class="cf-settings-description">Choose how the timer looks during workouts</p>
+                    <div class="cf-form-grid">
+                        <div class="cf-form-item">
+                            <label for="timer-display-mode" class="cf-form-label">Timer Display Mode</label>
+                            <select class="cf-form-input" id="timer-display-mode">
+                                <option value="round">Round Timer</option>
+                                <option value="class">Class Clock</option>
+                            </select>
+                            <small class="cf-form-help">Round Timer shows the circular dial. Class Clock shows a gym-style display.</small>
                         </div>
                     </div>
                 </div>
@@ -741,31 +767,39 @@ body {
     cursor: pointer;
 }
 
-.cf-crossfit-clock-label {
+.cf-class-clock-six {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.28rem;
+    width: min(100%, 540px);
+}
+
+.cf-class-clock-digit {
     font-family: 'Orbitron', 'Inter', sans-serif;
-    font-size: clamp(1.4rem, 5vw, 2.3rem);
+    font-size: clamp(2rem, 7vw, 3.4rem);
     font-weight: 700;
-    letter-spacing: 0.06em;
-    color: #6366f1;
-    text-shadow: 0 0 16px rgba(99, 102, 241, 0.65);
-}
-
-.cf-crossfit-clock-time {
-    font-family: 'Orbitron', 'Inter', monospace;
-    font-size: clamp(2.3rem, 8vw, 4.2rem);
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    line-height: 1;
+    letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
+    text-align: center;
+    border-radius: 6px;
+    padding: 0.25rem 0.12rem;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(71, 85, 105, 0.65);
+}
+
+.cf-class-clock-digit:nth-child(-n+2) {
+    color: #6366f1;
+    text-shadow: 0 0 14px rgba(99, 102, 241, 0.65);
+}
+
+.cf-class-clock-digit:nth-child(n+3) {
     color: #ef4444;
-    text-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+    text-shadow: 0 0 14px rgba(239, 68, 68, 0.6);
 }
 
-.cf-crossfit-clock.paused .cf-crossfit-clock-time {
+.cf-crossfit-clock.paused .cf-class-clock-six {
     opacity: 0.35;
-}
-
-.cf-crossfit-clock.paused .cf-crossfit-clock-label {
-    opacity: 0.7;
 }
 
 .cf-clock-landscape-gate {
@@ -1220,15 +1254,17 @@ body {
     .cf-crossfit-clock {
         margin: 0.75rem auto 0.5rem;
         padding: 0.7rem 0.8rem;
-        gap: 0.5rem;
+        width: min(100%, 420px);
     }
 
-    .cf-crossfit-clock-label {
-        font-size: clamp(1.2rem, 7vw, 1.8rem);
+    .cf-class-clock-six {
+        gap: 0.18rem;
     }
 
-    .cf-crossfit-clock-time {
-        font-size: clamp(1.9rem, 13vw, 3rem);
+    .cf-class-clock-digit {
+        font-size: clamp(1.2rem, 10vw, 2.2rem);
+        border-radius: 4px;
+        padding: 0.2rem 0.05rem;
     }
 
     .cf-clock-landscape-gate {
@@ -1321,6 +1357,7 @@ class CrossFitTimer {
         this.currentPage = 'workout-selection';
         this.wakeLock = null;
         this.orientationPausedClock = false;
+        this.displayMode = 'round';
         this.defaultTimerHint = 'Tap the timer circle to pause or resume.';
         this.clockTimerHint = 'Tap the clock to pause or resume.';
         this.clockLandscapeHint = 'Rotate your phone to landscape to use the CrossFit clock.';
@@ -1375,6 +1412,44 @@ class CrossFitTimer {
             !this.isLandscapeOrientation();
     }
 
+    usesClassClockDisplay(config = this.config) {
+        return Boolean(config) && (config.type === 'clock' || this.displayMode === 'class');
+    }
+
+    getClassClockPrefix() {
+        if (!this.config || this.config.type === 'clock') {
+            return 'UP';
+        }
+
+        if (this.currentPhase === 'countdown') {
+            return 'dn';
+        }
+
+        if (this.config.type === 'tabata') {
+            if (this.currentPhase === 'work') return 'H1';
+            if (this.currentPhase === 'rest') return 'H2';
+            return 'dn';
+        }
+
+        if (this.config.type === 'emom') {
+            const cycle = Math.max(1, Math.min(9, this.currentCycle || 1));
+            return `C${cycle}`;
+        }
+
+        return 'dn';
+    }
+
+    setClassClockDisplay(mmssDigits) {
+        if (!this.classClockDigits || this.classClockDigits.length !== 6) return;
+        const prefix = this.getClassClockPrefix().slice(0, 2).padEnd(2, ' ');
+        const safeDigits = (mmssDigits || '0000').replace(/[^0-9]/g, '').padStart(4, '0').slice(-4);
+        const sixChars = `${prefix}${safeDigits}`;
+
+        this.classClockDigits.forEach((digitEl, index) => {
+            digitEl.textContent = sixChars[index] || ' ';
+        });
+    }
+
     async tryLockLandscapeForClock() {
         if (this.config?.type !== 'clock' || !this.isLikelyPhoneDevice()) return;
         if (screen.orientation?.lock) {
@@ -1417,7 +1492,7 @@ class CrossFitTimer {
         this.progressContainer = document.getElementById('progress-container');
         this.progressBar = document.getElementById('progress-bar');
         this.crossfitClockDisplay = document.getElementById('crossfit-clock-display');
-        this.clockUpDisplay = document.getElementById('clock-up-display');
+        this.classClockDigits = this.crossfitClockDisplay.querySelectorAll('.cf-class-clock-digit');
         this.clockLandscapeGate = document.getElementById('clock-landscape-gate');
         this.exerciseInfo = document.getElementById('exercise-info');
         this.currentExercise = document.getElementById('current-exercise');
@@ -1430,6 +1505,7 @@ class CrossFitTimer {
         
         this.soundEnabled = document.getElementById('sound-enabled');
         this.volumeControl = document.getElementById('volume-control');
+        this.displayModeSelect = document.getElementById('timer-display-mode');
         
         // Page elements
         this.pages = {
@@ -1499,11 +1575,14 @@ class CrossFitTimer {
         const defaultCountdown = settings.defaultCountdown || 10;
         const soundEnabled = settings.soundEnabled !== undefined ? settings.soundEnabled : true;
         const volume = settings.volume || 70;
+        const displayMode = settings.displayMode === 'class' ? 'class' : 'round';
         
         // Update UI
         this.defaultCountdown.value = defaultCountdown;
         this.soundEnabled.checked = soundEnabled;
         this.volumeControl.value = volume;
+        this.displayMode = displayMode;
+        this.displayModeSelect.value = displayMode;
         document.getElementById('volume-display').textContent = volume + '%';
     }
     
@@ -1512,10 +1591,12 @@ class CrossFitTimer {
         const settings = {
             defaultCountdown: parseInt(this.defaultCountdown.value),
             soundEnabled: this.soundEnabled.checked,
-            volume: parseInt(this.volumeControl.value)
+            volume: parseInt(this.volumeControl.value),
+            displayMode: this.displayModeSelect.value
         };
         
         localStorage.setItem('crossfitTimerSettings', JSON.stringify(settings));
+        this.displayMode = settings.displayMode;
         
         // Show confirmation
         const saveBtn = document.querySelector('.cf-btn-primary[onclick="timer.saveSettings()"]');
@@ -1728,11 +1809,12 @@ class CrossFitTimer {
             this.crossfitClockDisplay.style.display = 'flex';
             this.clockLandscapeGate.style.display = 'none';
         } else {
-            this.timerPhase.style.display = 'block';
-            this.progressContainer.style.display = 'flex';
-            this.crossfitClockDisplay.style.display = 'none';
+            const useClassClock = this.usesClassClockDisplay(config);
+            this.timerPhase.style.display = useClassClock ? 'none' : 'block';
+            this.progressContainer.style.display = useClassClock ? 'none' : 'flex';
+            this.crossfitClockDisplay.style.display = useClassClock ? 'flex' : 'none';
             this.clockLandscapeGate.style.display = 'none';
-            this.timerHint.textContent = this.defaultTimerHint;
+            this.timerHint.textContent = useClassClock ? this.clockTimerHint : this.defaultTimerHint;
             this.timerHint.style.display = 'block';
         }
         this.updateClockLandscapeGate();
@@ -1895,10 +1977,12 @@ class CrossFitTimer {
     updateDisplay() {
         const minutes = Math.floor(Math.abs(this.timeRemaining) / 60);
         const seconds = Math.abs(this.timeRemaining) % 60;
-        const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const clampedMinutes = Math.min(minutes, 99);
+        const mmssDigits = `${clampedMinutes.toString().padStart(2, '0')}${seconds.toString().padStart(2, '0')}`;
+        const display = `${clampedMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
         this.timerDisplay.textContent = display;
-        this.clockUpDisplay.textContent = display;
+        this.setClassClockDisplay(mmssDigits);
         
         // Update phase badge and colors
         this.timerDisplay.className = `cf-timer-display timer-${this.currentPhase}`;
@@ -1966,7 +2050,7 @@ class CrossFitTimer {
     pauseTimer(source = 'user') {
         this.isPaused = true;
         this.orientationPausedClock = source === 'orientation';
-        this.pauseOverlay.style.display = 'flex';
+        this.pauseOverlay.style.display = this.progressContainer.style.display !== 'none' ? 'flex' : 'none';
         this.progressContainer.classList.add('paused');
         this.crossfitClockDisplay.classList.add('paused');
         this.updateUI();
@@ -2004,6 +2088,9 @@ class CrossFitTimer {
                 ? this.clockLandscapeHint
                 : 'Press START to run the clock.';
             this.timerHint.style.display = this.requiresClockLandscape() ? 'none' : 'block';
+        } else if (this.usesClassClockDisplay()) {
+            this.timerHint.textContent = 'Press START to run the timer.';
+            this.timerHint.style.display = 'block';
         }
         this.updateUI();
         this.releaseWakeLock();
@@ -2016,7 +2103,7 @@ class CrossFitTimer {
         this.currentPhase = 'countdown';
         this.timerDisplay.textContent = '00:00';
         this.timerDisplay.className = 'cf-timer-display';
-        this.clockUpDisplay.textContent = '00:00';
+        this.setClassClockDisplay('0000');
         this.workoutInfo.style.display = 'none';
         this.timerPhase.style.display = 'none';
         this.progressContainer.style.display = 'none';
