@@ -11,13 +11,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/img/timer-icon-192.png",
+      "src": "/img/binary-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/img/timer-icon-512.png",
+      "src": "/img/binary-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
