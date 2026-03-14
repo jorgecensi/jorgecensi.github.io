@@ -16,6 +16,10 @@ It is a community-driven platform that provides structured, visual roadmaps for 
 
 At its core, roadmap.sh offers **interactive roadmaps** that break down complex career paths into clear, step-by-step learning journeys. Each node on a roadmap links to curated resources so you always know *what* to learn and *where* to learn it.
 
+Here is what the <a href="https://roadmap.sh/frontend">Frontend Developer roadmap</a> looks like:
+
+<img src="/img/posts/frontend-developer-roadmap-sh.webp" alt="Frontend Developer roadmap on roadmap.sh" width="100%" />
+
 The platform covers a wide range of topics:
 
 - **Role-based roadmaps** — Frontend, Backend, Full Stack, DevOps, AI/ML Engineer, Data Engineer, Android, iOS, QA, and more.
