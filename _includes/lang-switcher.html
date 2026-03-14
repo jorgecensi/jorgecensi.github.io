@@ -1,4 +1,5 @@
 {% assign current_lang = page.lang | default: "en" %}
+{% if page.ref %}
 {% assign pages = site.pages | where: "ref", page.ref %}
 <div class="lang-switcher">
     {% for p in pages %}
@@ -14,3 +15,4 @@
     {% endif %}
     {% endfor %}
 </div>
+{% endif %}
