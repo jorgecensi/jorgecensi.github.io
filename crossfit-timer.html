@@ -7,7 +7,11 @@ permalink: /crossfit-timer/
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CrossFit Timer">
+    <meta name="theme-color" content="#0f172a">
     <title>CrossFit Timer</title>
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" sizes="192x192" href="/img/timer-icon-192.png">
@@ -356,6 +360,10 @@ permalink: /crossfit-timer/
     padding: 0;
 }
 
+html {
+    background: #0f172a;
+}
+
 body {
     font-family: 'Inter', sans-serif;
     background:
@@ -367,6 +375,8 @@ body {
     padding: 20px;
     padding-top: max(20px, env(safe-area-inset-top));
     padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -1157,6 +1167,8 @@ body {
         padding: 12px;
         padding-top: max(12px, env(safe-area-inset-top));
         padding-bottom: max(16px, env(safe-area-inset-bottom));
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
     }
 
     .cf-container {
