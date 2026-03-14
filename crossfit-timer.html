@@ -1337,6 +1337,167 @@ body {
         transform: none;
     }
 }
+
+/* Landscape immersive timer */
+@media (orientation: landscape) and (max-height: 600px) {
+    #page-timer-only {
+        padding: 0;
+    }
+
+    #page-timer-only .cf-timer-header {
+        display: none;
+    }
+
+    #page-timer-only .cf-section {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        margin: 0;
+        background:
+            radial-gradient(500px 250px at 0% 0%, rgba(37, 99, 235, 0.12), transparent 60%),
+            linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    }
+
+    #page-timer-only .cf-card {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+        height: 100%;
+        min-height: 0 !important;
+    }
+
+    #page-timer-only .cf-card-body.cf-timer-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100dvh;
+        padding: max(0.5rem, env(safe-area-inset-top))
+                 max(0.5rem, env(safe-area-inset-right))
+                 max(0.5rem, env(safe-area-inset-bottom))
+                 max(0.5rem, env(safe-area-inset-left));
+        position: relative;
+    }
+
+    #page-timer-only .cf-timer-hint,
+    #page-timer-only #stop-btn,
+    #page-timer-only #timer-phase,
+    #page-timer-only .cf-clock-landscape-gate {
+        display: none !important;
+    }
+
+    #page-timer-only #workout-info {
+        position: absolute;
+        top: max(0.4rem, env(safe-area-inset-top));
+        left: max(0.75rem, env(safe-area-inset-left));
+        margin: 0 !important;
+        z-index: 2;
+    }
+
+    #page-timer-only #workout-info h4 {
+        font-size: 0.78rem !important;
+        opacity: 0.45;
+        margin: 0;
+    }
+
+    #page-timer-only #round-info {
+        font-size: 0.72rem !important;
+        opacity: 0.5;
+    }
+
+    #page-timer-only .cf-exercise-display {
+        font-size: 0.75rem !important;
+        padding: 0.2rem 0.5rem !important;
+        margin-top: 0.15rem !important;
+        opacity: 0.7;
+    }
+
+    #page-timer-only .cf-controls {
+        position: absolute;
+        top: max(0.35rem, env(safe-area-inset-top));
+        right: max(0.5rem, env(safe-area-inset-right));
+        bottom: auto;
+        left: auto;
+        margin: 0;
+        padding: 0;
+        flex-direction: row;
+        align-items: center;
+        width: auto;
+        gap: 0.5rem;
+        z-index: 2;
+    }
+
+    #page-timer-only .cf-exit-timer-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 0.85rem;
+        opacity: 0.3;
+        transition: opacity 0.3s ease;
+        background: rgba(100, 116, 139, 0.35);
+        border: none;
+    }
+
+    #page-timer-only .cf-exit-timer-btn:hover,
+    #page-timer-only .cf-exit-timer-btn:active {
+        opacity: 0.85;
+    }
+
+    #page-timer-only #start-btn {
+        padding: 0.4rem 1.2rem;
+        min-width: auto;
+        min-height: 36px;
+        font-size: 0.78rem;
+        opacity: 0.8;
+    }
+
+    #page-timer-only .cf-crossfit-clock {
+        width: 95%;
+        max-width: none;
+        margin: 0 auto;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+    }
+
+    #page-timer-only .cf-class-clock-six {
+        width: 100%;
+        max-width: none;
+        gap: clamp(0.25rem, 0.8vw, 0.6rem);
+    }
+
+    #page-timer-only .cf-class-clock-digit {
+        font-size: clamp(3.5rem, 22vh, 14rem);
+        padding: clamp(0.25rem, 1.5vh, 0.8rem) clamp(0.1rem, 0.4vw, 0.4rem);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.45);
+        border-color: rgba(71, 85, 105, 0.35);
+    }
+
+    #page-timer-only .cf-circular-timer {
+        max-width: none;
+        margin: 0;
+    }
+
+    #page-timer-only .cf-circular-progress {
+        width: min(72vh, 42vw);
+        height: min(72vh, 42vw);
+    }
+
+    #page-timer-only .cf-circular-timer .cf-timer-display {
+        font-size: clamp(2.5rem, 15vh, 5.5rem);
+    }
+
+    #page-timer-only .cf-pause-overlay {
+        width: min(70px, 14vh);
+        height: min(70px, 14vh);
+    }
+
+    #page-timer-only .cf-pause-overlay i {
+        font-size: min(1.4rem, 5vh);
+    }
+}
 </style>
 
 <!-- JavaScript -->
