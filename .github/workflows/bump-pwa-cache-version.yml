@@ -1,6 +1,6 @@
 name: Bump PWA cache version
 
-"on":
+on:
   push:
     tags:
       - "v*"
