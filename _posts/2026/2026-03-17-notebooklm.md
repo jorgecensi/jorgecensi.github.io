@@ -20,7 +20,7 @@ Every answer comes with citations. No hallucinated references. No invented stati
 
 ## The Feature That Broke the Internet
 
-NotebookLM's **Audio Overview** takes your documents and generates a full podcast about them. Two AI hosts banter, crack jokes, and sound more excited about your quarterly report than anyone in your actual office ever has.
+NotebookLM's **Audio Overview** takes your documents and generates a full podcast about them. Two AI hosts banter, crack jokes, and sound more excited about your CV than your Mom.
 
 Your brain *knows* these are not real people. Your ears are not so sure.
 
