@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="description" content="Curator — your personal YouTube feed, no algorithm." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Curator" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+  <title>Curator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & tokens ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #111111;
+      --surface2:  #161616;
+      --border:    #1e1e1e;
+      --border2:   #252525;
+      --text:      #f0e6d0;
+      --muted:     #666666;
+      --dim:       #333333;
+      --accent:    #f0e6d0;
+      --danger:    #c0392b;
+      --warn:      #7a3030;
+      --serif:     'DM Serif Display', Georgia, serif;
+      --mono:      'DM Mono', 'Courier New', monospace;
+      --radius:    10px;
+      --radius-sm: 6px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { cursor: pointer; font-family: var(--mono); }
+    a { color: inherit; }
+    input { font-family: var(--mono); }
+
+    /* ── Layout ── */
+    #app {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--surface2);
+      position: sticky;
+      top: 0;
+      background: rgba(10,10,10,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+
+    .logo {
+      font-family: var(--serif);
+      font-size: 24px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .counter {
+      font-size: 11px;
+      color: var(--dim);
+      margin-right: 4px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      padding: 7px 13px;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: rgba(255,255,255,0.08);
+      color: #bbb;
+      border-color: var(--border2);
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0a0a;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 11px 24px;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { background: #fff; }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-ghost {
+      background: none;
+      border: none;
+      color: var(--dim);
+      font-size: 18px;
+      line-height: 1;
+      padding: 4px 8px;
+      transition: color 0.15s;
+    }
+    .btn-ghost:hover { color: var(--muted); }
+
+    /* ── Nav buttons (prev/next) ── */
+    .nav-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: rgba(240,230,208,0.12);
+      color: var(--text);
+    }
+    .nav-btn:disabled { opacity: 0.2; cursor: default; }
+
+    /* ── Main content ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      gap: 20px;
+    }
+
+    /* ── Empty / loading states ── */
+    .state-screen {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      max-width: 400px;
+    }
+
+    .state-title {
+      font-family: var(--serif);
+      font-size: 32px;
+      color: var(--text);
+    }
+
+    .state-sub {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .loading-text {
+      color: var(--dim);
+      font-size: 13px;
+    }
+
+    .error-line {
+      font-size: 11px;
+      color: var(--danger);
+      max-width: 480px;
+      word-break: break-word;
+    }
+
+    .warn-line {
+      font-size: 11px;
+      color: var(--warn);
+      max-width: 720px;
+      word-break: break-word;
+    }
+
+    /* ── Video card ── */
+    .video-card {
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .video-frame {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: var(--surface);
+      border-radius: var(--radius) var(--radius) 0 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .video-thumb {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      cursor: pointer;
+    }
+
+    .thumb-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    .play-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: rgba(240,230,208,0.93);
+      border: none;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+      transition: transform 0.15s, background 0.15s;
+      padding-left: 4px;
+    }
+    .play-btn:hover { transform: translate(-50%, -50%) scale(1.08); background: #fff; }
+
+    .video-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .video-info {
+      background: var(--surface);
+      border-radius: 0 0 var(--radius) var(--radius);
+      padding: 18px 22px;
+      border-top: 1px solid var(--surface2);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .video-title {
+      font-family: var(--serif);
+      font-size: 20px;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    .video-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .video-meta .channel { color: var(--muted); }
+    .video-meta .dot { color: #252525; }
+    .video-meta .age { color: var(--dim); }
+    .video-meta .source { color: #333; font-size: 11px; }
+
+    .video-nav {
+      display: flex;
+      gap: 12px;
+      margin-top: 22px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .yt-link {
+      font-size: 11px;
+      color: var(--dim);
+      text-decoration: none;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .yt-link:hover { color: var(--muted); border-color: var(--border2); }
+
+    /* ── API Key screen ── */
+    #key-screen {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 32px;
+    }
+
+    #key-screen .logo { font-size: 42px; }
+
+    .input-field {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 11px 14px;
+      outline: none;
+      width: 100%;
+      max-width: 440px;
+      transition: border-color 0.15s;
+    }
+    .input-field:focus { border-color: var(--muted); }
+    .input-field::placeholder { color: var(--dim); }
+
+    .key-hint {
+      color: var(--dim);
+      font-size: 11px;
+      text-align: center;
+      max-width: 380px;
+      line-height: 1.7;
+    }
+
+    .key-link {
+      color: #444;
+      font-size: 12px;
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1px;
+      transition: color 0.15s;
+    }
+    .key-link:hover { color: var(--muted); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal {
+      background: #0f0f0f;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 85dvh;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-family: var(--serif);
+      font-size: 22px;
+      color: var(--text);
+    }
+
+    .modal-hint {
+      font-size: 11px;
+      color: #444;
+      line-height: 1.7;
+    }
+
+    .modal-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .modal-input-row .input-field { max-width: none; }
+
+    .sources-list {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 280px;
+    }
+
+    .source-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      border: 1px solid var(--surface2);
+    }
+
+    .source-label {
+      flex: 1;
+      font-size: 12px;
+      color: #888;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .source-type {
+      font-size: 10px;
+      color: var(--dim);
+      flex-shrink: 0;
+    }
+
+    .sources-empty {
+      text-align: center;
+      color: var(--dim);
+      font-size: 12px;
+      padding: 20px 0;
+    }
+
+    /* ── Install banner ── */
+    #install-banner {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      z-index: 50;
+      max-width: calc(100vw - 40px);
+    }
+
+    #install-banner.hidden { display: none !important; }
+
+    .install-text { font-size: 12px; color: var(--muted); }
+    .install-dismiss { background: none; border: none; color: var(--dim); font-size: 16px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 500px) {
+      header { padding: 12px 16px; }
+      main { padding: 20px 12px; }
+      .video-info { padding: 14px 16px; }
+      .video-title { font-size: 17px; }
+      .btn { padding: 6px 10px; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- API Key setup screen (shown when no key stored) -->
+<div id="key-screen" style="display:none">
+  <span class="logo">Curator</span>
+  <p class="key-hint">Your personal YouTube feed, no algorithm.<br>Your API key is stored only in your browser — never sent anywhere.</p>
+  <input id="key-input" class="input-field" type="password" placeholder="YouTube Data API v3 key (AIza…)" autocomplete="off" />
+  <button class="btn-primary" id="key-save-btn">Get started →</button>
+  <a class="key-link" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">How to get a free API key ↗</a>
+  <p class="key-hint" style="font-size:10px; color:#333;">
+    Free tier: 10,000 units/day. A channel fetch costs ~3 units. Your key never leaves your device.
+  </p>
+</div>
+
+<!-- Main app -->
+<div id="app" style="display:none">
+  <header>
+    <a href="#" class="logo" id="logo-btn">Curator</a>
+    <div class="header-right">
+      <span class="counter" id="counter"></span>
+      <button class="btn" id="sources-btn">⚙ Sources</button>
+      <button class="btn" id="refresh-btn">⟳ Refresh</button>
+      <button class="btn" id="key-btn" title="Change API key">🔑</button>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <!-- Populated by JS -->
+  </main>
+</div>
+
+<!-- Sources modal -->
+<div class="modal-overlay" id="sources-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Sources</span>
+      <button class="btn-ghost" id="modal-close">✕</button>
+    </div>
+    <p class="modal-hint">Add a channel URL, @handle, playlist URL/ID, or search keyword.</p>
+    <div class="modal-input-row">
+      <input class="input-field" id="source-input" placeholder="@mkbhd · youtube.com/... · PLxxx · formula 1" />
+      <button class="btn-primary" id="source-add-btn" style="padding:11px 18px">Add</button>
+    </div>
+    <div class="sources-list" id="sources-list"></div>
+    <button class="btn-primary" id="modal-done-btn" style="width:100%">Done — load feed</button>
+  </div>
+</div>
+
+<!-- PWA install banner -->
+<div id="install-banner" class="hidden">
+  <span class="install-text">📱 Add Curator to your home screen</span>
+  <button class="btn-primary" id="install-btn" style="padding:8px 16px; font-size:11px">Install</button>
+  <button class="install-dismiss" id="install-dismiss">×</button>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const KEY_API   = 'curator_api_key';
+const KEY_SRCS  = 'curator_sources';
+const KEY_IDX   = 'curator_idx';
+const YT_BASE   = 'https://www.googleapis.com/youtube/v3';
+
+// ── State ────────────────────────────────────────────────────────────────────
+let apiKey  = localStorage.getItem(KEY_API) || '';
+let sources = safeJson(localStorage.getItem(KEY_SRCS), []);
+let videos  = [];
+let idx     = 0;
+let status  = 'idle'; // idle | loading | done
+let playerActive = false;
+let deferredInstallPrompt = null;
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function safeJson(str, fallback) {
+  try { return JSON.parse(str) || fallback; } catch { return fallback; }
+}
+
+function save() {
+  localStorage.setItem(KEY_API, apiKey);
+  localStorage.setItem(KEY_SRCS, JSON.stringify(sources));
+}
+
+function parseSource(raw) {
+  const u = raw.trim();
+  let m;
+  m = u.match(/youtube\.com\/channel\/(UC[\w-]+)/);
+  if (m) return { type: 'channel', value: m[1], raw: u };
+  m = u.match(/youtube\.com\/@([\w-]+)/);
+  if (m) return { type: 'channel', value: '@' + m[1], raw: u };
+  if (u.includes('list=')) {
+    m = u.match(/list=([\w-]+)/);
+    if (m) return { type: 'playlist', value: m[1], raw: u };
+  }
+  if (/^UC[\w-]{20,}$/.test(u)) return { type: 'channel', value: u, raw: u };
+  if (/^PL[\w-]{10,}$/.test(u)) return { type: 'playlist', value: u, raw: u };
+  if (u.startsWith('@')) return { type: 'channel', value: u, raw: u };
+  return { type: 'keyword', value: u, raw: u };
+}
+
+function srcIcon(s) {
+  return s.type === 'channel' ? '📺' : s.type === 'playlist' ? '🎵' : '🔍';
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '?';
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (diff < 3600)    return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400)   return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+  return `${Math.floor(diff / 2592000)}mo ago`;
+}
+
+// ── YouTube API ───────────────────────────────────────────────────────────────
+async function ytFetch(path) {
+  const r = await fetch(`${YT_BASE}${path}`);
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  return d;
+}
+
+async function resolveChannelId(value) {
+  if (/^UC[\w-]{20,}$/.test(value)) return value;
+  const handle = value.startsWith('@') ? value.slice(1) : value;
+  const d = await ytFetch(`/search?part=snippet&q=${encodeURIComponent(handle)}&type=channel&maxResults=1&key=${apiKey}`);
+  if (!d.items?.length) throw new Error(`Channel not found: ${value}`);
+  return d.items[0].id.channelId;
+}
+
+async function fetchChannelVideos(value) {
+  const cid = await resolveChannelId(value);
+  const ch = await ytFetch(`/channels?part=contentDetails,snippet&id=${cid}&key=${apiKey}`);
+  const uploadsId = ch.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  const channelName = ch.items?.[0]?.snippet?.title || value;
+  if (!uploadsId) throw new Error(`No uploads playlist for: ${value}`);
+  const pl = await ytFetch(`/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=20&key=${apiKey}`);
+  return (pl.items || [])
+    .filter(i => i.snippet.title !== 'Deleted video' && i.snippet.title !== 'Private video')
+    .map(i => ({
+      id: i.snippet.resourceId?.videoId,
+      title: i.snippet.title,
+      channel: channelName,
+      published: i.snippet.publishedAt,
+      thumb: i.snippet.thumbnails?.medium?.url || i.snippet.thumbnails?.default?.url,
+      sourceLabel: channelName,
+    })).filter(v => v.id);
+}
+
+async function fetchPlaylistVideos(playlistId) {
+  const pl = await ytFetch(`/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=20&key=${apiKey}`);
+  return (pl.items || [])
+    .filter(i => i.snippet.title !== 'Deleted video' && i.snippet.title !== 'Private video')
+    .map(i => ({
+      id: i.snippet.resourceId?.videoId,
+      title: i.snippet.title,
+      channel: i.snippet.channelTitle,
+      published: i.snippet.publishedAt,
+      thumb: i.snippet.thumbnails?.medium?.url || i.snippet.thumbnails?.default?.url,
+      sourceLabel: 'Playlist',
+    })).filter(v => v.id);
+}
+
+async function fetchKeywordVideos(keyword) {
+  const d = await ytFetch(`/search?part=snippet&q=${encodeURIComponent(keyword)}&type=video&order=date&maxResults=20&key=${apiKey}`);
+  return (d.items || []).map(i => ({
+    id: i.id.videoId,
+    title: i.snippet.title,
+    channel: i.snippet.channelTitle,
+    published: i.snippet.publishedAt,
+    thumb: i.snippet.thumbnails?.medium?.url || i.snippet.thumbnails?.default?.url,
+    sourceLabel: keyword,
+  })).filter(v => v.id);
+}
+
+async function loadFeed() {
+  if (!sources.length || !apiKey) return;
+  status = 'loading';
+  playerActive = false;
+  idx = 0;
+  renderMain();
+
+  const errors = [];
+  const settled = await Promise.allSettled(sources.map(src => {
+    if (src.type === 'channel')  return fetchChannelVideos(src.value);
+    if (src.type === 'playlist') return fetchPlaylistVideos(src.value);
+    return fetchKeywordVideos(src.value);
+  }));
+
+  const all = [];
+  settled.forEach((r, i) => {
+    if (r.status === 'fulfilled') all.push(...r.value);
+    else errors.push(`${sources[i].raw}: ${r.reason?.message || 'unknown error'}`);
+  });
+
+  all.sort((a, b) => new Date(b.published) - new Date(a.published));
+  videos = all;
+  status = 'done';
+  renderMain(errors);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderMain(errors = []) {
+  const main = document.getElementById('main-content');
+  const counter = document.getElementById('counter');
+
+  counter.textContent = videos.length && status === 'done'
+    ? `${idx + 1} / ${videos.length}` : '';
+
+  // Loading
+  if (status === 'loading') {
+    main.innerHTML = `<p class="loading-text">Fetching your feed…</p>`;
+    return;
+  }
+
+  // No sources
+  if (!sources.length) {
+    main.innerHTML = `
+      <div class="state-screen">
+        <div class="state-title">No sources yet</div>
+        <p class="state-sub">Add channels, playlists, or keywords.<br>You decide what's in your feed.</p>
+        <button class="btn-primary" onclick="openModal()">+ Add sources</button>
+      </div>`;
+    return;
+  }
+
+  // Errors only (no videos)
+  if (!videos.length) {
+    main.innerHTML = `
+      <div class="state-screen">
+        <p class="state-sub">No videos found.</p>
+        ${errors.map(e => `<p class="error-line">${e}</p>`).join('')}
+        <button class="btn-primary" onclick="openModal()">Edit sources</button>
+      </div>`;
+    return;
+  }
+
+  const cur = videos[idx];
+  const errHtml = errors.map(e => `<p class="warn-line">⚠ ${e}</p>`).join('');
+
+  main.innerHTML = `
+    ${errHtml}
+    <div class="video-card">
+      <div class="video-frame" id="video-frame">
+        ${playerActive
+          ? `<iframe class="video-iframe" src="https://www.youtube.com/embed/${cur.id}?autoplay=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
+          : `
+            <img class="video-thumb" src="${cur.thumb || ''}" alt="${escHtml(cur.title)}" onerror="this.style.display='none'" />
+            <div class="thumb-overlay"></div>
+            <button class="play-btn" onclick="activatePlayer()" aria-label="Play">▶</button>
+          `
+        }
+      </div>
+      <div class="video-info">
+        <div class="video-title">${escHtml(cur.title)}</div>
+        <div class="video-meta">
+          <span class="channel">${escHtml(cur.channel)}</span>
+          <span class="dot">·</span>
+          <span class="age">${timeAgo(cur.published)}</span>
+          <span class="dot">·</span>
+          <span class="source">${escHtml(cur.sourceLabel)}</span>
+        </div>
+      </div>
+      <div class="video-nav">
+        <button class="nav-btn" onclick="navigate(-1)" ${idx === 0 ? 'disabled' : ''} aria-label="Previous">←</button>
+        <a class="yt-link" href="https://www.youtube.com/watch?v=${cur.id}" target="_blank" rel="noopener">Open on YouTube ↗</a>
+        <button class="nav-btn" onclick="navigate(1)" ${idx >= videos.length - 1 ? 'disabled' : ''} aria-label="Next">→</button>
+      </div>
+    </div>`;
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function activatePlayer() {
+  playerActive = true;
+  renderMain();
+}
+
+function navigate(dir) {
+  const next = idx + dir;
+  if (next < 0 || next >= videos.length) return;
+  idx = next;
+  playerActive = false;
+  renderMain();
+  document.getElementById('counter').textContent = `${idx + 1} / ${videos.length}`;
+}
+
+// ── Sources modal ─────────────────────────────────────────────────────────────
+function openModal() {
+  renderSourcesList();
+  document.getElementById('sources-modal').style.display = 'flex';
+  document.getElementById('source-input').focus();
+}
+
+function closeModal() {
+  document.getElementById('sources-modal').style.display = 'none';
+}
+
+function renderSourcesList() {
+  const list = document.getElementById('sources-list');
+  if (!sources.length) {
+    list.innerHTML = `<p class="sources-empty">No sources yet.</p>`;
+    return;
+  }
+  list.innerHTML = sources.map((src, i) => `
+    <div class="source-row">
+      <span class="source-label">${srcIcon(src)} ${escHtml(src.raw)}</span>
+      <span class="source-type">${src.type}</span>
+      <button class="btn-ghost" onclick="removeSource(${i})" style="font-size:20px; padding:2px 6px">×</button>
+    </div>`).join('');
+}
+
+function addSource() {
+  const input = document.getElementById('source-input');
+  const raw = input.value.trim();
+  if (!raw) return;
+  sources.push(parseSource(raw));
+  save();
+  input.value = '';
+  renderSourcesList();
+}
+
+function removeSource(i) {
+  sources.splice(i, 1);
+  save();
+  renderSourcesList();
+}
+
+// ── Key screen ────────────────────────────────────────────────────────────────
+function showKeyScreen() {
+  document.getElementById('key-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('key-input').value = '';
+  document.getElementById('key-input').focus();
+}
+
+function showApp() {
+  document.getElementById('key-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+function saveKey() {
+  const val = document.getElementById('key-input').value.trim();
+  if (!val) return;
+  apiKey = val;
+  save();
+  showApp();
+  if (sources.length) loadFeed();
+  else renderMain();
+}
+
+// ── Event wiring ──────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Key screen
+  document.getElementById('key-save-btn').addEventListener('click', saveKey);
+  document.getElementById('key-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveKey();
+  });
+
+  // Header buttons
+  document.getElementById('sources-btn').addEventListener('click', openModal);
+  document.getElementById('refresh-btn').addEventListener('click', loadFeed);
+  document.getElementById('key-btn').addEventListener('click', showKeyScreen);
+  document.getElementById('logo-btn').addEventListener('click', e => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Modal
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-done-btn').addEventListener('click', () => {
+    closeModal();
+    loadFeed();
+  });
+  document.getElementById('source-add-btn').addEventListener('click', addSource);
+  document.getElementById('source-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addSource();
+  });
+  document.getElementById('sources-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('sources-modal')) closeModal();
+  });
+
+  // Keyboard nav
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('sources-modal').style.display !== 'none') return;
+    if (document.activeElement?.tagName === 'INPUT') return;
+    if (e.key === 'ArrowLeft')  navigate(-1);
+    if (e.key === 'ArrowRight') navigate(1);
+  });
+
+  // PWA install banner
+  document.getElementById('install-btn').addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') hideBanner();
+    deferredInstallPrompt = null;
+  });
+  document.getElementById('install-dismiss').addEventListener('click', hideBanner);
+
+  // Boot
+  if (!apiKey) {
+    showKeyScreen();
+  } else {
+    showApp();
+    if (sources.length) loadFeed();
+    else renderMain();
+  }
+});
+
+// ── PWA Install ───────────────────────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const banner = document.getElementById('install-banner');
+  banner.classList.remove('hidden');
+  banner.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', hideBanner);
+
+function hideBanner() {
+  const banner = document.getElementById('install-banner');
+  banner.classList.add('hidden');
+}
+
+// ── Service Worker ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(console.error);
+}
+</script>
+</body>
+</html>
