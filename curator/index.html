@@ -666,6 +666,25 @@ async function fetchKeywordVideos(keyword) {
   })).filter(v => v.id);
 }
 
+function parseDuration(iso) {
+  const m = iso?.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  return (parseInt(m[1] || 0) * 3600) + (parseInt(m[2] || 0) * 60) + parseInt(m[3] || 0);
+}
+
+async function filterShorts(vids) {
+  if (!vids.length) return vids;
+  const durations = {};
+  for (let i = 0; i < vids.length; i += 50) {
+    const ids = vids.slice(i, i + 50).map(v => v.id).join(',');
+    const d = await ytFetch(`/videos?part=contentDetails&id=${ids}&key=${apiKey}`);
+    (d.items || []).forEach(item => {
+      durations[item.id] = parseDuration(item.contentDetails?.duration);
+    });
+  }
+  return vids.filter(v => (durations[v.id] ?? 0) > 60);
+}
+
 async function loadFeed() {
   if (!sources.length || !apiKey) return;
   status = 'loading';
@@ -686,8 +705,9 @@ async function loadFeed() {
     else errors.push(`${sources[i].raw}: ${r.reason?.message || 'unknown error'}`);
   });
 
-  all.sort((a, b) => new Date(b.published) - new Date(a.published));
-  videos = all;
+  const noShorts = await filterShorts(all);
+  noShorts.sort((a, b) => new Date(b.published) - new Date(a.published));
+  videos = noShorts;
   status = 'done';
   renderMain(errors);
 }
