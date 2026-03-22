@@ -1,3 +1,5 @@
+const APP_VERSION = 'dev';
+
 document.addEventListener("DOMContentLoaded", () => {
     const gridSize = 8;
     const gridElement = document.getElementById("puzzleGrid");
@@ -869,4 +871,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupInstallPrompt();
     registerServiceWorker();
     startNewPuzzle();
+
+    const versionEl = document.getElementById("binary-app-version");
+    if (versionEl) versionEl.textContent = "v" + APP_VERSION;
 });

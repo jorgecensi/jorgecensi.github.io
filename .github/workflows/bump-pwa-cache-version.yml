@@ -7,10 +7,6 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to set (example: 1.4.0 or v1.4.0)"
-        required: true
 
 permissions:
   contents: write
@@ -29,14 +25,7 @@ jobs:
       - name: Resolve version
         id: version
         run: |
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          elif [ "${GITHUB_EVENT_NAME}" = "push" ] && [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            VERSION="${GITHUB_REF_NAME}"
-          else
-            VERSION="$(git rev-parse --short HEAD)"
-          fi
-          VERSION="${VERSION#v}"
+          VERSION="$(date -u +"%y%m%d%H%M")"
           echo "value=${VERSION}" >> "${GITHUB_OUTPUT}"
 
       - name: Detect changed PWA files
@@ -95,10 +84,12 @@ jobs:
           # Files with only CACHE_VERSION (binary, curator)
           if bump_all or changed["binary"]:
               versioned_files["binary-sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["binary.js"] = ("APP_VERSION", version)
           if bump_all or changed["binary_ptbr"]:
               versioned_files["pt-BR/binary-sw.js"] = ("CACHE_VERSION", version)
           if bump_all or changed["curator"]:
               versioned_files["curator/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["curator/index.html"] = ("APP_VERSION", version)
 
           for relative_path, (const_name, ver) in versioned_files.items():
               path = repo / relative_path
@@ -123,10 +114,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             binary-sw.js \
+            binary.js \
             pt-BR/binary-sw.js \
             crossfit-sw.js \
             flappy-sw.js \
             curator/sw.js \
+            curator/index.html \
             crossfit-timer.html \
             flappy.html
           git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }} [skip ci]"
