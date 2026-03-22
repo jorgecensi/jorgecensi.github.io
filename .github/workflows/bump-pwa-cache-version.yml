@@ -3,7 +3,7 @@ name: Bump PWA cache version
 on:
   push:
     branches:
-      - main
+      - master
     tags:
       - "v*"
   workflow_dispatch:
