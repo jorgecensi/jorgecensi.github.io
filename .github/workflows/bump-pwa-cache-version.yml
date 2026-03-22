@@ -2,6 +2,8 @@ name: Bump PWA cache version
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -16,48 +18,98 @@ permissions:
 jobs:
   bump-cache-version:
     runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
     steps:
       - name: Checkout default branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 2
 
       - name: Resolve version
         id: version
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.version }}"
-          else
+          elif [ "${GITHUB_EVENT_NAME}" = "push" ] && [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="$(git rev-parse --short HEAD)"
           fi
           VERSION="${VERSION#v}"
           echo "value=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Detect changed PWA files
+        id: changed
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+
+          check() {
+            local files="$1"
+            for f in $files; do
+              if echo "$CHANGED" | grep -qF "$f"; then
+                echo "true"
+                return
+              fi
+            done
+            echo "false"
+          }
+
+          echo "binary=$(check 'binary-sw.js binary.js binary.html binary-manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "binary_ptbr=$(check 'pt-BR/binary-sw.js pt-BR/binary.html binary.js binary-pt-BR-manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "flappy=$(check 'flappy-sw.js flappy.html flappyBird.js flappy-manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "crossfit=$(check 'crossfit-sw.js crossfit-timer.html manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "curator=$(check 'curator/sw.js curator/index.html curator/manifest.json')" >> "${GITHUB_OUTPUT}"
 
       - name: Update PWA version constants
         run: |
           python3 - <<'PY'
           import pathlib
           import re
+          import os
 
           version = "${{ steps.version.outputs.value }}"
-          repo = pathlib.Path(".")
-
-          files_and_patterns = {
-              "crossfit-sw.js": r"const CACHE_VERSION = '[^']*';",
-              "flappy-sw.js": r"const CACHE_VERSION = '[^']*';",
-              "crossfit-timer.html": r"const SW_VERSION = '[^']*';",
-              "flappy.html": r"const SW_VERSION = '[^']*';",
+          is_tag_or_dispatch = "${{ github.event_name }}" in ("workflow_dispatch",) or "${{ github.ref }}".startswith("refs/tags/")
+          changed = {
+              "binary":       "${{ steps.changed.outputs.binary }}" == "true",
+              "binary_ptbr":  "${{ steps.changed.outputs.binary_ptbr }}" == "true",
+              "flappy":       "${{ steps.changed.outputs.flappy }}" == "true",
+              "crossfit":     "${{ steps.changed.outputs.crossfit }}" == "true",
+              "curator":      "${{ steps.changed.outputs.curator }}" == "true",
           }
 
-          for relative_path, pattern in files_and_patterns.items():
+          # On tag/dispatch, bump everything; on push to main, only bump changed PWAs
+          bump_all = is_tag_or_dispatch
+
+          repo = pathlib.Path(".")
+
+          # Files with separate CACHE_VERSION + SW_VERSION constants (flappy, crossfit)
+          versioned_files = {}
+          if bump_all or changed["flappy"]:
+              versioned_files["flappy-sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["flappy.html"] = ("SW_VERSION", version)
+          if bump_all or changed["crossfit"]:
+              versioned_files["crossfit-sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["crossfit-timer.html"] = ("SW_VERSION", version)
+
+          # Files with only CACHE_VERSION (binary, curator)
+          if bump_all or changed["binary"]:
+              versioned_files["binary-sw.js"] = ("CACHE_VERSION", version)
+          if bump_all or changed["binary_ptbr"]:
+              versioned_files["pt-BR/binary-sw.js"] = ("CACHE_VERSION", version)
+          if bump_all or changed["curator"]:
+              versioned_files["curator/sw.js"] = ("CACHE_VERSION", version)
+
+          for relative_path, (const_name, ver) in versioned_files.items():
               path = repo / relative_path
               content = path.read_text(encoding="utf-8")
-              replacement = "const CACHE_VERSION = '{}'".format(version) if "sw.js" in relative_path else "const SW_VERSION = '{}'".format(version)
-              replacement = replacement + ";"
+              pattern = rf"const {const_name} = '[^']*';"
+              replacement = f"const {const_name} = '{ver}';"
               updated, count = re.subn(pattern, replacement, content, count=1)
               if count != 1:
-                  raise RuntimeError(f"Expected to update one version constant in {relative_path}, found {count}.")
+                  raise RuntimeError(f"Expected to update one {const_name} in {relative_path}, found {count}.")
               path.write_text(updated, encoding="utf-8")
+              print(f"Updated {const_name} in {relative_path} -> {ver}")
           PY
 
       - name: Commit and push
@@ -69,6 +121,13 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add crossfit-sw.js flappy-sw.js crossfit-timer.html flappy.html
-          git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }}"
+          git add \
+            binary-sw.js \
+            pt-BR/binary-sw.js \
+            crossfit-sw.js \
+            flappy-sw.js \
+            curator/sw.js \
+            crossfit-timer.html \
+            flappy.html
+          git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }} [skip ci]"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"

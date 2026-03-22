@@ -533,8 +533,59 @@ document.addEventListener("DOMContentLoaded", () => {
         const serviceWorkerUrl = isPortugueseRoute ? "/pt-BR/binary-sw.js" : "/binary-sw.js";
         const scope = isPortugueseRoute ? "/pt-BR/binary/" : "/binary/";
 
+        function showUpdateBanner(registration) {
+            if (document.getElementById("sw-update-banner")) {
+                return;
+            }
+            const banner = document.createElement("div");
+            banner.id = "sw-update-banner";
+            banner.style.cssText = [
+                "position:fixed", "bottom:0", "left:0", "right:0",
+                "background:#1e1d3a", "color:#e2e8f0", "padding:12px 16px",
+                "display:flex", "align-items:center", "justify-content:space-between",
+                "z-index:9999", "font-family:inherit", "font-size:14px",
+                "border-top:1px solid #6366f1"
+            ].join(";");
+            banner.innerHTML = [
+                "<span>A new version is available.</span>",
+                "<button style=\"background:#6366f1;color:#fff;border:none;padding:6px 14px;",
+                "border-radius:4px;cursor:pointer;font-size:14px\">Refresh</button>"
+            ].join("");
+            banner.querySelector("button").addEventListener("click", () => {
+                if (registration.waiting) {
+                    registration.waiting.postMessage({ type: "SKIP_WAITING" });
+                }
+            });
+            document.body.appendChild(banner);
+        }
+
+        let hasRefreshedForUpdate = false;
+
         window.addEventListener("load", () => {
-            navigator.serviceWorker.register(serviceWorkerUrl, { scope }).catch(() => {
+            navigator.serviceWorker.register(serviceWorkerUrl, { scope }).then((registration) => {
+                if (registration.waiting) {
+                    showUpdateBanner(registration);
+                }
+
+                registration.addEventListener("updatefound", () => {
+                    const newWorker = registration.installing;
+                    if (!newWorker) return;
+                    newWorker.addEventListener("statechange", () => {
+                        if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                            showUpdateBanner(registration);
+                        }
+                    });
+                });
+
+                navigator.serviceWorker.addEventListener("controllerchange", () => {
+                    if (hasRefreshedForUpdate) return;
+                    hasRefreshedForUpdate = true;
+                    window.location.reload();
+                });
+
+                window.addEventListener("focus", () => registration.update());
+                setInterval(() => registration.update(), 60 * 60 * 1000);
+            }).catch(() => {
                 // Keep gameplay functional if service worker registration fails.
             });
         });
