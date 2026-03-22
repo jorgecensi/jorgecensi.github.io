@@ -30,6 +30,7 @@ permalink: /flappy/
         <div class="instructions">
             <p>Tap or press Space to fly!</p>
             <p>Avoid the pipes and get the highest score!</p>
+            <p id="flappy-version" style="font-size:11px;opacity:0.6;margin-top:4px"></p>
         </div>
     </div>
     <style>
@@ -90,6 +91,7 @@ permalink: /flappy/
     
     <script>
         const SW_VERSION = 'dev';
+        document.getElementById('flappy-version').textContent = 'v' + SW_VERSION;
 
         // Register service worker with opt-in update flow
         if ('serviceWorker' in navigator) {

@@ -514,6 +514,7 @@
     <a href="#" class="logo" id="logo-btn">Curator</a>
     <div class="header-right">
       <span class="counter" id="counter"></span>
+      <span id="curator-version" style="font-size:10px;opacity:0.4;font-family:var(--mono)"></span>
       <button class="btn" id="sources-btn">⚙ Sources</button>
       <button class="btn" id="refresh-btn">⟳ Refresh</button>
       <button class="btn" id="key-btn" title="Change API key">🔑</button>
@@ -551,6 +552,7 @@
 
 <script>
 // ── Constants ────────────────────────────────────────────────────────────────
+const APP_VERSION = 'dev';
 const KEY_API   = 'curator_api_key';
 const KEY_SRCS  = 'curator_sources';
 const KEY_IDX   = 'curator_idx';
@@ -870,6 +872,8 @@ function saveKey() {
 
 // ── Event wiring ──────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('curator-version').textContent = 'v' + APP_VERSION;
+
   // Key screen
   document.getElementById('key-save-btn').addEventListener('click', saveKey);
   document.getElementById('key-input').addEventListener('keydown', e => {

@@ -32,6 +32,7 @@ permalink: /crossfit-timer/
             <div class="cf-badge-row">
                 <span class="cf-pill">Offline Ready</span>
                 <span class="cf-pill">One-Tap Pause</span>
+                <span class="cf-pill" id="crossfit-version" style="opacity:0.6"></span>
             </div>
         </div>
 
@@ -2327,6 +2328,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Service Worker Registration for PWA
 const SW_VERSION = 'dev';
+document.getElementById('crossfit-version').textContent = 'v' + SW_VERSION;
 if ('serviceWorker' in navigator) {
     let hasRefreshedForUpdate = false;
 
