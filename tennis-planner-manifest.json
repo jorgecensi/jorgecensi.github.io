@@ -1,0 +1,32 @@
+{
+  "id": "/tennis-planner/",
+  "name": "Monthly Wednesday Tennis Planner",
+  "short_name": "Tennis Planner",
+  "description": "Plan your Wednesday tennis sessions, track player availability, and calculate court costs for the month.",
+  "start_url": "/tennis-planner/",
+  "scope": "/tennis-planner/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#0d9488",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/img/tennis-planner-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "sports",
+    "productivity"
+  ],
+  "lang": "en-US",
+  "shortcuts": [
+    {
+      "name": "Open Planner",
+      "short_name": "Planner",
+      "url": "/tennis-planner/"
+    }
+  ]
+}
