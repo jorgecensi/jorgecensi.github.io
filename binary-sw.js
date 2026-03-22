@@ -1,4 +1,5 @@
-const CACHE_NAME = "binary-puzzle-en-v3";
+const CACHE_VERSION = '2603220405';
+const CACHE_NAME = `binary-puzzle-en-${CACHE_VERSION}`;
 const OFFLINE_URL = "/binary/";
 const PRECACHE_URLS = [
   "/binary/",
@@ -14,7 +15,12 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.skipWaiting();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {
@@ -23,7 +29,7 @@ self.addEventListener("activate", (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName.startsWith("binary-puzzle-")) {
+          if (cacheName !== CACHE_NAME && cacheName.startsWith("binary-puzzle-en-")) {
             return caches.delete(cacheName);
           }
           return Promise.resolve();
