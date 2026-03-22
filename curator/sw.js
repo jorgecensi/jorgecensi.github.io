@@ -1,4 +1,5 @@
-const CACHE = 'curator-v1';
+const CACHE_VERSION = 'dev';
+const CACHE = `curator-${CACHE_VERSION}`;
 const SHELL = [
   './',
   './index.html',
@@ -13,7 +14,12 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(cache => cache.addAll(SHELL))
   );
-  self.skipWaiting();
+});
+
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Activate: clean old caches
