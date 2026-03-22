@@ -1,4 +1,4 @@
-const APP_VERSION = 'dev';
+const APP_VERSION = '2603220405';
 
 document.addEventListener("DOMContentLoaded", () => {
     const gridSize = 8;
