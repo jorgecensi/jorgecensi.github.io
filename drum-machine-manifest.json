@@ -1,0 +1,21 @@
+{
+  "id": "/drum-machine/",
+  "name": "Drum Machine",
+  "short_name": "Drum Machine",
+  "description": "A circular step sequencer inspired by the Dato Drum. Build beats with 4 voices, effects and BPM control.",
+  "start_url": "/drum-machine/",
+  "scope": "/drum-machine/",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/img/favicon.ico",
+      "sizes": "16x16 32x32",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["music", "entertainment"]
+}
