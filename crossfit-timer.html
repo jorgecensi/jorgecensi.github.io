@@ -32,6 +32,7 @@ permalink: /crossfit-timer/
             <div class="cf-badge-row">
                 <span class="cf-pill">Offline Ready</span>
                 <span class="cf-pill">One-Tap Pause</span>
+                <span class="cf-pill" id="crossfit-version" style="opacity:0.6"></span>
             </div>
         </div>
 
@@ -2326,15 +2327,33 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Service Worker Registration for PWA
-const SW_VERSION = 'dev';
+const SW_VERSION = '2603220941';
+document.getElementById('crossfit-version').textContent = 'v' + SW_VERSION;
 if ('serviceWorker' in navigator) {
     let hasRefreshedForUpdate = false;
 
     const askToUpdate = (registration) => {
-        const shouldUpdate = window.confirm('A new CrossFit Timer update is ready. Update now?');
-        if (shouldUpdate && registration.waiting) {
-            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-        }
+        if (document.getElementById('sw-update-banner')) return;
+        const banner = document.createElement('div');
+        banner.id = 'sw-update-banner';
+        banner.style.cssText = [
+            'position:fixed', 'bottom:0', 'left:0', 'right:0',
+            'background:#1e293b', 'color:#e2e8f0', 'padding:12px 16px',
+            'display:flex', 'align-items:center', 'justify-content:space-between',
+            'z-index:9999', 'font-family:inherit', 'font-size:14px',
+            'border-top:2px solid #2563eb'
+        ].join(';');
+        banner.innerHTML = [
+            '<span>A new version is available.</span>',
+            '<button style="background:#2563eb;color:#fff;border:none;padding:6px 14px;',
+            'border-radius:4px;cursor:pointer;font-size:14px">Refresh</button>'
+        ].join('');
+        banner.querySelector('button').addEventListener('click', () => {
+            if (registration.waiting) {
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+        });
+        document.body.appendChild(banner);
     };
 
     window.addEventListener('load', async () => {
