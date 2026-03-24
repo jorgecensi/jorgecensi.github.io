@@ -504,6 +504,10 @@ function midiToName(midi) {
 function midiToId(midi) {
   return NOTE_IDS[midi % 12] + Math.floor(midi / 12 - 1);
 }
+// Map pitch class (0=C … 11=B) to the same palette used on piano keys
+const PITCH_COLORS = ['#ff4757','#cc2233','#ff6b35','#cc4410','#ffd32a',
+                      '#2ed573','#1aaa50','#1e90ff','#0060cc','#7c3aed','#5020bb','#ff6b81'];
+function noteColor(midi) { return PITCH_COLORS[midi % 12]; }
 
 // ─── Synth ─────────────────────────────────────────────────────────────────
 class Synth {
@@ -674,8 +678,11 @@ function buildSteps() {
     wrap.style.gap = '3px';
 
     const btn = document.createElement('button');
-    btn.className = `step-btn step-${i}`;
+    btn.className = 'step-btn';
     btn.dataset.index = i;
+    const c = noteColor(step.midi);
+    btn.style.background = c;
+    btn.style.color = c;
     if (!step.active) btn.classList.add('off');
     if (seq.selectedStep === i) btn.classList.add('selected');
     btn.textContent = i + 1;
@@ -765,9 +772,15 @@ function buildPiano() {
       synth.play(k.midi);
       if (seq.selectedStep !== null) {
         seq.steps[seq.selectedStep].midi = k.midi;
-        // Update note label in-place (no DOM rebuild)
+        // Update note label and button color in-place (no DOM rebuild)
         const labels = document.querySelectorAll('.step-note');
         if (labels[seq.selectedStep]) labels[seq.selectedStep].textContent = midiToName(k.midi);
+        const btns = document.querySelectorAll('.step-btn');
+        if (btns[seq.selectedStep]) {
+          const c = noteColor(k.midi);
+          btns[seq.selectedStep].style.background = c;
+          btns[seq.selectedStep].style.color = c;
+        }
         updateHint();
       }
       key.classList.add('pressed');
