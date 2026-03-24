@@ -1,0 +1,461 @@
+---
+title: Monthly Wednesday Tennis Planner
+permalink: /tennis-planner/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Wednesday Tennis Planner</title>
+    <meta name="theme-color" content="#0d9488">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tennis Planner">
+    <link rel="apple-touch-icon" href="/img/tennis-planner-icon.svg">
+    <link rel="manifest" href="/tennis-planner-manifest.json">
+    <link rel="shortcut icon" href="/img/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .day-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid #d1d5db;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .day-checkbox:checked {
+            background-color: #10b981;
+            border-color: #059669;
+        }
+        .day-checkbox:checked::after {
+            content: '✓';
+            font-size: 1.2rem;
+            color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            line-height: 1;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 140px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -70px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+        .tooltip.show .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        #install-banner {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <!-- Install Banner -->
+    <div id="install-banner" class="fixed top-0 left-0 right-0 z-50 bg-teal-600 text-white px-4 py-3 flex items-center justify-between shadow-lg">
+        <span class="text-sm font-medium">Install Tennis Planner for quick access</span>
+        <div class="flex gap-2">
+            <button id="install-btn" class="bg-white text-teal-600 text-sm font-semibold px-3 py-1 rounded-lg hover:bg-teal-50 transition">Install</button>
+            <button id="install-dismiss" class="text-white text-lg leading-none px-1 hover:text-teal-200 transition">&times;</button>
+        </div>
+    </div>
+
+    <div id="app-container" class="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
+        <!-- Header -->
+        <header class="text-center animate-fade-in">
+            <h1 class="text-4xl md:text-5xl font-bold text-teal-600">Monthly Wednesday Tennis Planner</h1>
+            <p class="text-gray-600 mt-2">Plan your Wednesday tennis sessions for the upcoming month.</p>
+        </header>
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Config & Players -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- Configuration Card -->
+                <div class="bg-white p-6 rounded-xl shadow-lg animate-fade-in" style="animation-delay: 0.1s;">
+                    <h2 class="text-2xl font-bold mb-4 border-b pb-2 text-gray-700">Configuration</h2>
+                    <label for="court-cost" class="font-semibold text-lg">Cost per Court per Hour ($)</label>
+                    <input type="number" id="court-cost" placeholder="e.g., 50" min="0" class="w-full mt-2 p-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none transition">
+                </div>
+                <!-- Player Management Card -->
+                <div class="bg-white p-6 rounded-xl shadow-lg animate-fade-in" style="animation-delay: 0.2s;">
+                    <h2 class="text-2xl font-bold mb-4 border-b pb-2 text-gray-700">Players</h2>
+                    <div id="player-list" class="space-y-2 mb-4 min-h-[50px]">
+                        <p class="text-gray-500">Loading players...</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <input type="text" id="new-player-name" placeholder="Enter player name" class="flex-grow p-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none transition">
+                        <button id="add-player-btn" class="bg-teal-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-600 transition-transform transform hover:scale-105">Add</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Right Column: Availability & Report -->
+            <div class="lg:col-span-2 space-y-8">
+                 <!-- Monthly Availability Card -->
+                <div class="bg-white p-6 rounded-xl shadow-lg animate-fade-in" style="animation-delay: 0.3s;">
+                     <h2 class="text-2xl font-bold mb-4 text-gray-700">Availability for <span id="month-name-display">Next Month</span></h2>
+                     <div class="overflow-x-auto">
+                        <table class="w-full text-center">
+                            <thead id="availability-header">
+                                <!-- Header will be generated by JS -->
+                            </thead>
+                            <tbody id="availability-grid">
+                                <tr><td colspan="5" class="text-center p-8 text-gray-500">Add players to set their availability.</td></tr>
+                            </tbody>
+                        </table>
+                     </div>
+                </div>
+                <!-- Report Card -->
+                <div class="bg-white p-6 rounded-xl shadow-lg animate-fade-in" style="animation-delay: 0.4s;">
+                    <div class="flex flex-wrap justify-between items-center mb-4 border-b pb-2">
+                        <h2 class="text-2xl font-bold text-gray-700">Monthly Report</h2>
+                        <div class="tooltip" id="copy-tooltip">
+                             <span class="tooltiptext" id="copy-tooltip-text">Copy to clipboard</span>
+                            <button id="copy-report-btn" class="bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-transform transform hover:scale-105">
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                    <button id="generate-report-btn" class="w-full bg-green-500 text-white font-bold px-4 py-3 mb-4 rounded-lg hover:bg-green-600 transition-transform transform hover:scale-105 text-lg">Generate Monthly Report</button>
+                    <pre id="report-output" class="bg-gray-50 p-4 rounded-lg min-h-[150px] whitespace-pre-wrap font-mono text-sm overflow-x-auto">Click the button to generate the report.</pre>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!-- App Logic -->
+    <script>
+        // --- App State ---
+        let players = {}; // { id: { id, name }, ... }
+        let availability = {}; // { playerId: ["2025-11-05", "2025-11-12"], ... }
+        let courtCostPerHour = 0;
+        let nextMonthWednesdays = [];
+        let currentMonthId = '';
+        // --- DOM Elements ---
+        const courtCostInput = document.getElementById('court-cost');
+        const playerList = document.getElementById('player-list');
+        const newPlayerNameInput = document.getElementById('new-player-name');
+        const addPlayerBtn = document.getElementById('add-player-btn');
+        const availabilityGrid = document.getElementById('availability-grid');
+        const availabilityHeader = document.getElementById('availability-header');
+        const monthNameDisplay = document.getElementById('month-name-display');
+        const generateReportBtn = document.getElementById('generate-report-btn');
+        const reportOutput = document.getElementById('report-output');
+        const copyReportBtn = document.getElementById('copy-report-btn');
+        const copyTooltip = document.getElementById('copy-tooltip');
+        const copyTooltipText = document.getElementById('copy-tooltip-text');
+        // --- localStorage Helpers ---
+        function loadSettings() {
+            return JSON.parse(localStorage.getItem('tennis-planner:settings') || '{}');
+        }
+        function saveSettings(data) {
+            localStorage.setItem('tennis-planner:settings', JSON.stringify(data));
+        }
+        function loadPlayers() {
+            return JSON.parse(localStorage.getItem('tennis-planner:players') || '{}');
+        }
+        function savePlayers(data) {
+            localStorage.setItem('tennis-planner:players', JSON.stringify(data));
+        }
+        function loadAvailability(monthId) {
+            return JSON.parse(localStorage.getItem(`tennis-planner:availability:${monthId}`) || '{}');
+        }
+        function saveAvailability(monthId, data) {
+            localStorage.setItem(`tennis-planner:availability:${monthId}`, JSON.stringify(data));
+        }
+        // --- Utility Functions ---
+        function getNextMonthWednesdays() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+
+            const nextMonth = new Date(year, month + 1, 1);
+            const nextMonthYear = nextMonth.getFullYear();
+            const nextMonthIndex = nextMonth.getMonth();
+            currentMonthId = `${nextMonthYear}-${String(nextMonthIndex + 1).padStart(2, '0')}`;
+            monthNameDisplay.textContent = nextMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+            const wednesdays = [];
+            const date = new Date(Date.UTC(nextMonthYear, nextMonthIndex, 1));
+
+            // Find the first Wednesday
+            while (date.getUTCDay() !== 3) {
+                date.setUTCDate(date.getUTCDate() + 1);
+            }
+            // Add all Wednesdays of the month
+            while (date.getUTCMonth() === nextMonthIndex) {
+                wednesdays.push(date.toISOString().slice(0, 10)); // Format as YYYY-MM-DD
+                date.setUTCDate(date.getUTCDate() + 7);
+            }
+            return wednesdays;
+        }
+        function calculateCourts(playerCount) {
+            if (playerCount >= 10) return 3;
+            if (playerCount >= 4) return 2;
+            if (playerCount >= 1) return 1;
+            return 0;
+        }
+        // --- App Initialization ---
+        function startApp() {
+            nextMonthWednesdays = getNextMonthWednesdays();
+
+            const settings = loadSettings();
+            courtCostPerHour = settings.courtCostPerHour || 0;
+            courtCostInput.value = courtCostPerHour || '';
+
+            players = loadPlayers();
+            availability = loadAvailability(currentMonthId);
+
+            renderAvailabilityHeader();
+            renderPlayerList();
+            renderAvailabilityGrid();
+        }
+        // --- Render Functions ---
+        function renderAvailabilityHeader() {
+            let headerHTML = '<tr><th class="p-2 text-left font-semibold">Player</th>';
+            nextMonthWednesdays.forEach(dateStr => {
+                const date = new Date(dateStr + 'T00:00:00');
+                const day = date.getDate();
+                headerHTML += `<th class="p-2 font-semibold">Wed ${day}</th>`;
+            });
+            headerHTML += '</tr>';
+            availabilityHeader.innerHTML = headerHTML;
+        }
+        function renderPlayerList() {
+            playerList.innerHTML = '';
+            if (Object.keys(players).length > 0) {
+                 Object.values(players).forEach(player => {
+                    const playerEl = document.createElement('div');
+                    playerEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-lg';
+                    playerEl.innerHTML = `<span class="font-medium">${player.name}</span>`;
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.innerHTML = '&times;';
+                    deleteBtn.className = 'text-red-500 font-bold text-xl hover:text-red-700 px-2';
+                    deleteBtn.onclick = () => deletePlayer(player.id);
+                    playerEl.appendChild(deleteBtn);
+                    playerList.appendChild(playerEl);
+                });
+            } else {
+                playerList.innerHTML = '<p class="text-gray-500">No players added yet.</p>';
+            }
+        }
+        function renderAvailabilityGrid() {
+            availabilityGrid.innerHTML = '';
+            if (Object.keys(players).length === 0) {
+                 availabilityGrid.innerHTML = `<tr><td colspan="${nextMonthWednesdays.length + 1}" class="text-center p-8 text-gray-500">Add players to set their availability.</td></tr>`;
+                 return;
+            }
+
+            Object.values(players).forEach(player => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b';
+
+                let cells = `<td class="p-2 text-left font-semibold">${player.name}</td>`;
+                const playerDates = availability[player.id] || [];
+                nextMonthWednesdays.forEach(date => {
+                    const isChecked = playerDates.includes(date);
+                    cells += `<td class="p-2"><input type="checkbox" class="day-checkbox" data-player-id="${player.id}" data-date="${date}" ${isChecked ? 'checked' : ''}></td>`;
+                });
+
+                tr.innerHTML = cells;
+                availabilityGrid.appendChild(tr);
+            });
+        }
+        // --- Data Update Functions ---
+        function saveCourtCost() {
+            courtCostPerHour = parseFloat(courtCostInput.value) || 0;
+            saveSettings({ courtCostPerHour });
+        }
+        function addPlayer() {
+            const name = newPlayerNameInput.value.trim();
+            if (name) {
+                const id = crypto.randomUUID();
+                players[id] = { id, name };
+                savePlayers(players);
+                newPlayerNameInput.value = '';
+                renderPlayerList();
+                renderAvailabilityGrid();
+            }
+        }
+        function deletePlayer(playerId) {
+            if (confirm(`Are you sure you want to delete ${players[playerId].name}? This also removes their availability.`)) {
+                delete players[playerId];
+                savePlayers(players);
+                delete availability[playerId];
+                saveAvailability(currentMonthId, availability);
+                renderPlayerList();
+                renderAvailabilityGrid();
+            }
+        }
+        function updateAvailability(playerId, date, isPlaying) {
+            const currentDates = availability[playerId] || [];
+            if (isPlaying) {
+                availability[playerId] = [...new Set([...currentDates, date])];
+            } else {
+                availability[playerId] = currentDates.filter(d => d !== date);
+            }
+            saveAvailability(currentMonthId, availability);
+        }
+        // --- Report Generation ---
+        function generateReport() {
+            if (courtCostPerHour <= 0) {
+                reportOutput.textContent = "Please set a valid 'Cost per Court per Hour' to generate a report.";
+                return;
+            }
+            let dailyBreakdown = '';
+            const playerTotals = Object.keys(players).reduce((acc, id) => ({ ...acc, [id]: 0 }), {});
+            nextMonthWednesdays.forEach(date => {
+                const playersOnDay = Object.keys(availability).filter(playerId => availability[playerId]?.includes(date));
+                const playerCount = playersOnDay.length;
+
+                if (playerCount > 0) {
+                    const courts = calculateCourts(playerCount);
+                    const dailyTotalCost = courts * courtCostPerHour;
+                    const costPerPlayer = dailyTotalCost / playerCount;
+                    dailyBreakdown += `\n--- Wednesday, ${date} ---\n`;
+                    dailyBreakdown += `Players: ${playerCount} | Courts: ${courts} | Total: $${dailyTotalCost.toFixed(2)}\n`;
+                    dailyBreakdown += `Cost per Player: $${costPerPlayer.toFixed(2)}\n`;
+
+                    playersOnDay.forEach(playerId => {
+                        playerTotals[playerId] += costPerPlayer;
+                    });
+                }
+            });
+            let playerBreakdown = '\n\n=== MONTHLY PLAYER TOTALS ===\n';
+            let grandTotal = 0;
+            Object.keys(playerTotals).sort((a,b) => players[a].name.localeCompare(players[b].name)).forEach(playerId => {
+                 if (playerTotals[playerId] > 0) {
+                    const playerName = players[playerId]?.name || 'Unknown';
+                    const total = playerTotals[playerId];
+                    grandTotal += total;
+                    playerBreakdown += `${playerName}: $${total.toFixed(2)}\n`;
+                }
+            });
+            playerBreakdown += `\nGrand Total: $${grandTotal.toFixed(2)}`;
+            const monthName = document.getElementById('month-name-display').textContent;
+            const fullReport = `TENNIS REPORT FOR ${monthName.toUpperCase()}\n========================\n${dailyBreakdown.trim()}\n${playerBreakdown.trim()}`;
+            reportOutput.textContent = fullReport;
+        }
+        // --- Event Listeners ---
+        courtCostInput.addEventListener('change', saveCourtCost);
+        addPlayerBtn.addEventListener('click', addPlayer);
+        newPlayerNameInput.addEventListener('keypress', (e) => e.key === 'Enter' && addPlayer());
+        availabilityGrid.addEventListener('change', (e) => {
+            if (e.target.matches('.day-checkbox')) {
+                const { playerId, date } = e.target.dataset;
+                updateAvailability(playerId, date, e.target.checked);
+            }
+        });
+        generateReportBtn.addEventListener('click', generateReport);
+        copyReportBtn.addEventListener('click', () => {
+            const reportText = reportOutput.textContent;
+            if (reportText && reportText.includes("TOTALS")) {
+                const textArea = document.createElement("textarea");
+                textArea.value = reportText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    copyTooltipText.textContent = 'Copied!';
+                } catch (err) {
+                    copyTooltipText.textContent = 'Failed!';
+                }
+                document.body.removeChild(textArea);
+            } else {
+                 copyTooltipText.textContent = 'Nothing to copy!';
+            }
+             copyTooltip.classList.add('show');
+             setTimeout(() => { copyTooltip.classList.remove('show'); }, 2000);
+        });
+        window.onload = startApp;
+    </script>
+
+    <!-- PWA: Service Worker Registration & Install Prompt -->
+    <script>
+        // Service worker registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/tennis-planner-sw.js').then(reg => {
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                if (confirm('A new version of Tennis Planner is available. Reload to update?')) {
+                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    });
+                });
+            });
+        }
+
+        // Install prompt (A2HS banner)
+        let deferredPrompt;
+        const installBanner = document.getElementById('install-banner');
+        const installBtn = document.getElementById('install-btn');
+        const installDismiss = document.getElementById('install-dismiss');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBanner.style.display = 'flex';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            installBanner.style.display = 'none';
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+        });
+
+        installDismiss.addEventListener('click', () => {
+            installBanner.style.display = 'none';
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBanner.style.display = 'none';
+            deferredPrompt = null;
+        });
+    </script>
+</body>
+</html>
