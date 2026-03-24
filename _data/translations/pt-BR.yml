@@ -1,7 +1,6 @@
 nav:
   home: "Início"
   about: "Sobre"
-  portfolio: "Portfólio"
   apps: "Apps"
   blog: "Blog"
 
@@ -12,7 +11,6 @@ hero:
   title_after: " no que elas já fazem."
   subtitle: "Engenheiro de software que virou especialista em integração de IA. Eu pego o que é complexo e transformo em algo realmente útil para pessoas e equipes reais."
   cta_about: "Me conheça"
-  cta_portfolio: "Veja meu trabalho"
 
 home:
   latest_thoughts: "Últimos Posts"
@@ -35,17 +33,6 @@ about:
   beyond_code_title: "Além do código"
   beyond_code_p: "Quando não estou mexendo com APIs ou ajustando prompts, você me encontra assistindo filmes, fazendo churrasco (levo muito a sério), ou curtindo uma boa cerveja artesanal. Acredito que a melhor tecnologia é feita por pessoas que têm uma vida fora da tecnologia."
   buy_coffee: "Me pague um café"
-
-portfolio:
-  title: "Portfólio"
-  heading: "O que já entreguei"
-  subtitle: "Uma mistura de projetos pessoais, trabalhos para clientes e coisas que construí para aprender algo novo."
-  apps_label: "Apps"
-  websites_label: "Websites"
-  view_github: "Ver no GitHub"
-  gighub_desc: "Uma mini rede social para amantes de música ao vivo acompanharem shows dos seus artistas favoritos. Construído como projeto de aprendizado para explorar a arquitetura .NET MVC."
-  canastra_desc: "Um marcador de pontos para Canastra feito com Xamarin.Forms. Porque marcar pontos no papel é coisa do século passado."
-  betania_desc: "Website para uma agência de viagens em Brisbane. Limpo, funcional e feito para converter visitantes em viajantes."
 
 apps_page:
   title: "Apps"
