@@ -11,9 +11,9 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/img/favicon.ico",
-      "sizes": "16x16 32x32",
-      "type": "image/x-icon",
+      "src": "/img/drum-machine-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],
