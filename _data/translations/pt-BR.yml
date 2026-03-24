@@ -60,6 +60,9 @@ apps_page:
   flappy_title: "Flappy Bird"
   flappy_desc: "O jogo clássico que acabou com a produtividade de todo mundo. Agora disponível como PWA no seu celular."
   flappy_tag: "Jogo"
+  synth_title: "Sintetizador"
+  synth_desc: "Um sintetizador de 8 passos com sequenciador e teclado. Ajuste o som, toque ao vivo e instale no celular."
+  synth_tag: "Sintetizador PWA"
 
 blog_page:
   title: "Blog"

@@ -60,6 +60,9 @@ apps_page:
   flappy_title: "Flappy Bird"
   flappy_desc: "The classic game that ruined everyone's productivity. Now available as a PWA on your phone."
   flappy_tag: "Game"
+  synth_title: "Synth"
+  synth_desc: "An 8-step synthesizer with a step sequencer and piano keyboard. Tweak the sound, play it live, install it on your phone."
+  synth_tag: "Synth PWA"
 
 blog_page:
   title: "Blog"

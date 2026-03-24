@@ -21,6 +21,14 @@
     <link rel="apple-touch-icon" href="/img/binary-icon-192.png">
     <link rel="manifest" href="{% if lang == 'pt-BR' %}/binary-pt-BR-manifest.json{% else %}/binary-manifest.json{% endif %}">
     {% endif %}
+    {% if page.ref == "synth" %}
+    <meta name="theme-color" content="#0f0f1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Synth">
+    <link rel="apple-touch-icon" href="/img/synth-icon-192.png">
+    <link rel="manifest" href="/synth/manifest.json">
+    {% endif %}
     {% seo %}
 </head>
 
