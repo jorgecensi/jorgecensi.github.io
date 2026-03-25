@@ -13,7 +13,7 @@ permalink: /flappy/
     <title>Flappy Bird PWA</title>
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/flappy-manifest.json">
+    <link rel="manifest" href="/flappy/manifest.json">
     
     <!-- iOS specific -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -123,7 +123,7 @@ permalink: /flappy/
 
             window.addEventListener('load', async function() {
                 try {
-                    const registration = await navigator.serviceWorker.register(`/flappy-sw.js?v=${encodeURIComponent(SW_VERSION)}`, {
+                    const registration = await navigator.serviceWorker.register(`/flappy/sw.js?v=${encodeURIComponent(SW_VERSION)}`, {
                         scope: '/flappy/'
                     });
 
@@ -157,7 +157,7 @@ permalink: /flappy/
         }
     </script>
     
-    <script src="/flappyBird.js"></script>
+    <script src="/flappy/flappyBird.js"></script>
 </body>
 
 </html>

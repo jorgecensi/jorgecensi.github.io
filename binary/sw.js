@@ -3,8 +3,8 @@ const CACHE_NAME = `binary-puzzle-en-${CACHE_VERSION}`;
 const OFFLINE_URL = "/binary/";
 const PRECACHE_URLS = [
   "/binary/",
-  "/binary.js",
-  "/binary-manifest.json",
+  "/binary/binary.js",
+  "/binary/manifest.json",
   "/css/main.css",
   "/img/favicon.ico",
   "/img/binary-icon-192.png",
