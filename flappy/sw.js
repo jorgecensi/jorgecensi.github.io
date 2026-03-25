@@ -3,8 +3,8 @@ const CACHE_NAME = `flappy-bird-${CACHE_VERSION}`;
 const OFFLINE_URL = '/flappy/';
 const PRECACHE_URLS = [
   '/flappy/',
-  '/flappyBird.js',
-  '/flappy-manifest.json',
+  '/flappy/flappyBird.js',
+  '/flappy/manifest.json',
   '/img/favicon.ico'
 ];
 

@@ -532,7 +532,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const isPortugueseRoute = window.location.pathname.startsWith("/pt-BR/binary/");
-        const serviceWorkerUrl = isPortugueseRoute ? "/pt-BR/binary-sw.js" : "/binary-sw.js";
+        const serviceWorkerUrl = isPortugueseRoute ? "/pt-BR/binary/sw.js" : "/binary/sw.js";
         const scope = isPortugueseRoute ? "/pt-BR/binary/" : "/binary/";
 
         function showUpdateBanner(registration) {

@@ -3,7 +3,7 @@ const CACHE_NAME = `crossfit-timer-${CACHE_VERSION}`;
 const OFFLINE_URL = '/crossfit-timer/';
 const PRECACHE_URLS = [
   '/crossfit-timer/',
-  '/manifest.json',
+  '/crossfit-timer/manifest.json',
   '/img/favicon.ico',
   '/img/timer-icon-192.png',
   '/img/timer-icon-512.png',
