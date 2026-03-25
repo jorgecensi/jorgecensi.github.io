@@ -1,13 +1,10 @@
-const CACHE_NAME = "binary-puzzle-en-v3";
-const OFFLINE_URL = "/binary/";
+const CACHE_NAME = "tennis-planner-v1";
+const OFFLINE_URL = "/tennis-planner/";
 const PRECACHE_URLS = [
-  "/binary/",
-  "/binary.js",
-  "/binary-manifest.json",
-  "/css/main.css",
-  "/img/favicon.ico",
-  "/img/binary-icon-192.png",
-  "/img/binary-icon-512.png"
+  "/tennis-planner/",
+  "/tennis-planner-manifest.json",
+  "/img/tennis-planner-icon.svg",
+  "/img/favicon.ico"
 ];
 
 self.addEventListener("install", (event) => {
@@ -23,7 +20,7 @@ self.addEventListener("activate", (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName.startsWith("binary-puzzle-")) {
+          if (cacheName !== CACHE_NAME && cacheName.startsWith("tennis-planner-")) {
             return caches.delete(cacheName);
           }
           return Promise.resolve();
@@ -32,6 +29,12 @@ self.addEventListener("activate", (event) => {
       await self.clients.claim();
     })()
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {

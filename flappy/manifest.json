@@ -11,7 +11,7 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "img/favicon.ico",
+      "src": "/img/favicon.ico",
       "sizes": "16x16 32x32",
       "type": "image/x-icon",
       "purpose": "any maskable"

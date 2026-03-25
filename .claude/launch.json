@@ -4,7 +4,7 @@
     {
       "name": "Jekyll",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "bundle", "exec", "jekyll", "serve"],
+      "runtimeArgs": ["/c", "bundle", "exec", "jekyll", "serve", "--livereload"],
       "port": 4000
     }
   ]

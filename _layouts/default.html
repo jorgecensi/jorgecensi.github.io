@@ -19,7 +19,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="{% if lang == 'pt-BR' %}Puzzle Binário{% else %}Binary Puzzle{% endif %}">
     <link rel="apple-touch-icon" href="/img/binary-icon-192.png">
-    <link rel="manifest" href="{% if lang == 'pt-BR' %}/binary-pt-BR-manifest.json{% else %}/binary-manifest.json{% endif %}">
+    <link rel="manifest" href="{% if lang == 'pt-BR' %}/binary/manifest-pt-BR.json{% else %}/binary/manifest.json{% endif %}">
+    {% endif %}
+    {% if page.ref == "synth" %}
+    <meta name="theme-color" content="#0f0f1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Synth">
+    <link rel="apple-touch-icon" href="/img/synth-icon-192.png">
+    <link rel="manifest" href="/synth/manifest.json">
     {% endif %}
     {% seo %}
 </head>
@@ -41,9 +49,6 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% if lang == 'pt-BR' %}/pt-BR/about{% else %}/about{% endif %}">{{ t.nav.about }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% if lang == 'pt-BR' %}/pt-BR/portfolio{% else %}/portfolio{% endif %}">{{ t.nav.portfolio }}</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% if lang == 'pt-BR' %}/pt-BR/apps{% else %}/apps{% endif %}">{{ t.nav.apps }}</a>
@@ -89,6 +94,7 @@
     {% endunless %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="/js/jorge-cli.js"></script>
 </body>
 
 </html>
