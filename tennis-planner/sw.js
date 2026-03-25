@@ -2,7 +2,7 @@ const CACHE_NAME = "tennis-planner-v1";
 const OFFLINE_URL = "/tennis-planner/";
 const PRECACHE_URLS = [
   "/tennis-planner/",
-  "/tennis-planner-manifest.json",
+  "/tennis-planner/manifest.json",
   "/img/tennis-planner-icon.svg",
   "/img/favicon.ico"
 ];

@@ -13,7 +13,7 @@ permalink: /tennis-planner/
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tennis Planner">
     <link rel="apple-touch-icon" href="/img/tennis-planner-icon.svg">
-    <link rel="manifest" href="/tennis-planner-manifest.json">
+    <link rel="manifest" href="/tennis-planner/manifest.json">
     <link rel="shortcut icon" href="/img/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -413,7 +413,7 @@ permalink: /tennis-planner/
         // Service worker registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/tennis-planner-sw.js').then(reg => {
+                navigator.serviceWorker.register('/tennis-planner/sw.js').then(reg => {
                     reg.addEventListener('updatefound', () => {
                         const newWorker = reg.installing;
                         newWorker.addEventListener('statechange', () => {

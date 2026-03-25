@@ -13,7 +13,7 @@ permalink: /drum-machine/
     <meta name="theme-color" content="#0d0d0d">
     <meta name="description" content="A circular step sequencer inspired by the Dato Drum. Build beats with 4 voices, swappable samples, effects and BPM/swing control.">
     <title>Drum Machine</title>
-    <link rel="manifest" href="/drum-machine-manifest.json">
+    <link rel="manifest" href="/drum-machine/manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="/img/drum-machine-icon-192.png">
     <link rel="apple-touch-icon" href="/img/drum-machine-icon-192.png">
     <style>
@@ -988,7 +988,7 @@ animLoop();
 if ('serviceWorker' in navigator) {
     const SW_VERSION = 'v2';
     navigator.serviceWorker.register(
-        `/drum-machine-sw.js?v=${encodeURIComponent(SW_VERSION)}`,
+        `/drum-machine/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
         { scope: '/drum-machine/' }
     ).then(reg => {
         reg.addEventListener('updatefound', () => {

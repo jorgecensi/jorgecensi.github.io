@@ -2,7 +2,7 @@ const CACHE_NAME = 'drum-machine-v1';
 const OFFLINE_URL = '/drum-machine/';
 const PRECACHE_URLS = [
     '/drum-machine/',
-    '/drum-machine-manifest.json',
+    '/drum-machine/manifest.json',
 ];
 
 self.addEventListener('install', event => {
