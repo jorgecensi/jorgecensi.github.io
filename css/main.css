@@ -519,8 +519,15 @@ strong {
 }
 
 /* ========================
-   ABOUT PAGE
+   ABOUT SECTION (home + about page)
    ======================== */
+
+.about-section,
+.apps-section {
+  padding-bottom: 3rem;
+  margin-bottom: 3rem;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+}
 
 .about-hero {
   text-align: center;
