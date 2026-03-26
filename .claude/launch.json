@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "Jekyll",
-      "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "bundle", "exec", "jekyll", "serve", "--livereload"],
+      "runtimeExecutable": "bundle",
+      "runtimeArgs": ["exec", "jekyll", "serve", "--livereload"],
       "port": 4000
     }
   ]
