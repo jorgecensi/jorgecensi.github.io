@@ -5,6 +5,68 @@ lang: pt-BR
 ref: home
 ---
 {% assign t = site.data.translations.pt-BR %}
+<section id="about" class="about-section">
+    <div class="about-hero">
+        <img class="about-avatar" src="/img/Jorge Luis Censi profile.jpg" alt="Jorge Censi - Profissional de Integração de IA">
+        <h1>{{ t.about.greeting }}</h1>
+        <p class="about-intro">{{ t.about.intro }}</p>
+    </div>
+    <h2>{{ t.about.short_version_title }}</h2>
+    <p>{{ t.about.short_version_p1 }}</p>
+    <p>{{ t.about.short_version_p2 }}</p>
+    <h2>{{ t.about.what_i_do_title }}</h2>
+    <p>{{ t.about.what_i_do_p1 }}</p>
+    <p>{{ t.about.what_i_do_p2 }}</p>
+    <h2>{{ t.about.beyond_code_title }}</h2>
+    <p>{{ t.about.beyond_code_p }}</p>
+</section>
+<section id="apps" class="apps-section">
+    <p class="section-label">{{ t.apps_page.heading }}</p>
+    <div class="apps-grid">
+        <a class="app-card" href="/pt-BR/binary/">
+            <span class="app-icon">🧩</span>
+            <h3>{{ t.apps_page.binary_title }}</h3>
+            <p>{{ t.apps_page.binary_desc }}</p>
+            <span class="app-tag">{{ t.apps_page.binary_tag }}</span>
+        </a>
+        <a class="app-card" href="/crossfit-timer/">
+            <span class="app-icon">⏱️</span>
+            <h3>{{ t.apps_page.crossfit_title }}</h3>
+            <p>{{ t.apps_page.crossfit_desc }}</p>
+            <span class="app-tag">{{ t.apps_page.crossfit_tag }}</span>
+        </a>
+        <a class="app-card" href="/curator/">
+            <span class="app-icon">📺</span>
+            <h3>Curator</h3>
+            <p>Seu feed pessoal do YouTube. Sem algoritmo, sem recomendações — você decide o que entra. Funciona offline como PWA.</p>
+            <span class="app-tag">PWA</span>
+        </a>
+        <a class="app-card" href="/flappy/">
+            <span class="app-icon">🐦</span>
+            <h3>{{ t.apps_page.flappy_title }}</h3>
+            <p>{{ t.apps_page.flappy_desc }}</p>
+            <span class="app-tag">{{ t.apps_page.flappy_tag }}</span>
+        </a>
+        <a class="app-card" href="/tennis-planner/">
+            <span class="app-icon">🎾</span>
+            <h3>Tennis Planner</h3>
+            <p>Planeje suas sessões de tênis de quarta, acompanhe quem está disponível e divida os custos da quadra automaticamente.</p>
+            <span class="app-tag">PWA</span>
+        </a>
+        <a class="app-card" href="/synth/">
+            <span class="app-icon">🎹</span>
+            <h3>{{ t.apps_page.synth_title }}</h3>
+            <p>{{ t.apps_page.synth_desc }}</p>
+            <span class="app-tag">{{ t.apps_page.synth_tag }}</span>
+        </a>
+        <a class="app-card" href="/drum-machine/">
+            <span class="app-icon">🥁</span>
+            <h3>Drum Machine</h3>
+            <p>Um sequenciador circular inspirado no Dato Drum. Crie batidas com 4 vozes, efeitos e controle de BPM.</p>
+            <span class="app-tag">PWA</span>
+        </a>
+    </div>
+</section>
 <section class="postlist">
     <p class="section-label">{{ t.home.latest_thoughts }}</p>
     {% for post in site.posts %}

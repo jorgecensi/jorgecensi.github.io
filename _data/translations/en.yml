@@ -1,7 +1,6 @@
 nav:
   home: "Home"
   about: "About"
-  portfolio: "Portfolio"
   apps: "Apps"
   blog: "Blog"
 
@@ -12,7 +11,6 @@ hero:
   title_after: "."
   subtitle: "Software engineer with 15+ years of experience. I build products, ship features, and use modern tools — including AI — to make better software faster."
   cta_about: "Get to know me"
-  cta_portfolio: "See my work"
 
 home:
   latest_thoughts: "Latest Thoughts"
@@ -36,17 +34,6 @@ about:
   beyond_code_p: "When I'm not writing code or reading docs, you'll find me watching movies, making BBQ (I take it very seriously), or enjoying a good craft beer. I believe the best tech is built by people who have a life outside of tech."
   buy_coffee: "Buy me a coffee"
 
-portfolio:
-  title: "Portfolio"
-  heading: "Stuff I've Shipped"
-  subtitle: "A mix of personal projects, client work, and things I built to learn something new."
-  apps_label: "Apps"
-  websites_label: "Websites"
-  view_github: "View on GitHub"
-  gighub_desc: "A mini social network for live music lovers to track gigs from their favorite artists. Built as a learning project to explore .NET MVC architecture."
-  canastra_desc: "A scorekeeper for Canastra (a Brazilian card game) made with Xamarin.Forms. Because keeping score on paper is so last century."
-  betania_desc: "Website for a travel agency based in Brisbane. Clean, functional, and built to convert visitors into travelers."
-
 apps_page:
   title: "Apps"
   heading: "Things I've Built for Fun"
@@ -60,6 +47,9 @@ apps_page:
   flappy_title: "Flappy Bird"
   flappy_desc: "The classic game that ruined everyone's productivity. Now available as a PWA on your phone."
   flappy_tag: "Game"
+  synth_title: "Synth"
+  synth_desc: "An 8-step synthesizer with a step sequencer and piano keyboard. Tweak the sound, play it live, install it on your phone."
+  synth_tag: "Synth PWA"
 
 blog_page:
   title: "Blog"

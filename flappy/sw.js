@@ -1,20 +1,16 @@
-const CACHE_VERSION = 'dev';
-const CACHE_NAME = `crossfit-timer-${CACHE_VERSION}`;
-const OFFLINE_URL = '/crossfit-timer/';
+const CACHE_VERSION = '2603220405';
+const CACHE_NAME = `flappy-bird-${CACHE_VERSION}`;
+const OFFLINE_URL = '/flappy/';
 const PRECACHE_URLS = [
-  '/crossfit-timer/',
-  '/manifest.json',
-  '/img/favicon.ico',
-  '/img/timer-icon-192.png',
-  '/img/timer-icon-512.png',
-  '/img/timer-icon.png'
+  '/flappy/',
+  '/flappy/flappyBird.js',
+  '/flappy/manifest.json',
+  '/img/favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_URLS.map((url) => new Request(url, { cache: 'reload' })));
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
 });
 
@@ -23,7 +19,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) =>
       Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && (cacheName.startsWith('crossfit-timer-') || cacheName === 'site-pwa-v2')) {
+          if (cacheName !== CACHE_NAME && cacheName.startsWith('flappy-bird-')) {
             return caches.delete(cacheName);
           }
           return Promise.resolve();

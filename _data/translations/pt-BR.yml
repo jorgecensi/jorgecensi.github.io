@@ -1,7 +1,6 @@
 nav:
   home: "Início"
   about: "Sobre"
-  portfolio: "Portfólio"
   apps: "Apps"
   blog: "Blog"
 
@@ -12,7 +11,6 @@ hero:
   title_after: "."
   subtitle: "Engenheiro de software com mais de 15 anos de experiência. Construo produtos, entrego funcionalidades e uso ferramentas modernas — incluindo IA — para fazer software melhor e mais rápido."
   cta_about: "Me conheça"
-  cta_portfolio: "Veja meu trabalho"
 
 home:
   latest_thoughts: "Últimos Posts"
@@ -36,17 +34,6 @@ about:
   beyond_code_p: "Quando não estou escrevendo código ou lendo docs, você me encontra assistindo filmes, fazendo churrasco (levo muito a sério), ou curtindo uma boa cerveja artesanal. Acredito que a melhor tecnologia é feita por pessoas que têm uma vida fora da tecnologia."
   buy_coffee: "Me pague um café"
 
-portfolio:
-  title: "Portfólio"
-  heading: "O que já entreguei"
-  subtitle: "Uma mistura de projetos pessoais, trabalhos para clientes e coisas que construí para aprender algo novo."
-  apps_label: "Apps"
-  websites_label: "Websites"
-  view_github: "Ver no GitHub"
-  gighub_desc: "Uma mini rede social para amantes de música ao vivo acompanharem shows dos seus artistas favoritos. Construído como projeto de aprendizado para explorar a arquitetura .NET MVC."
-  canastra_desc: "Um marcador de pontos para Canastra feito com Xamarin.Forms. Porque marcar pontos no papel é coisa do século passado."
-  betania_desc: "Website para uma agência de viagens em Brisbane. Limpo, funcional e feito para converter visitantes em viajantes."
-
 apps_page:
   title: "Apps"
   heading: "Coisas que construí por diversão"
@@ -60,6 +47,9 @@ apps_page:
   flappy_title: "Flappy Bird"
   flappy_desc: "O jogo clássico que acabou com a produtividade de todo mundo. Agora disponível como PWA no seu celular."
   flappy_tag: "Jogo"
+  synth_title: "Sintetizador"
+  synth_desc: "Um sintetizador de 8 passos com sequenciador e teclado. Ajuste o som, toque ao vivo e instale no celular."
+  synth_tag: "Sintetizador PWA"
 
 blog_page:
   title: "Blog"

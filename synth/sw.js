@@ -1,13 +1,10 @@
-const CACHE_NAME = "binary-puzzle-ptbr-v3";
-const OFFLINE_URL = "/pt-BR/binary/";
+const CACHE_NAME = "synth-v1";
+const OFFLINE_URL = "/synth/";
 const PRECACHE_URLS = [
-  "/pt-BR/binary/",
-  "/binary.js",
-  "/binary-pt-BR-manifest.json",
-  "/css/main.css",
-  "/img/favicon.ico",
-  "/img/binary-icon-192.png",
-  "/img/binary-icon-512.png"
+  "/synth/",
+  "/synth/manifest.json",
+  "/img/synth-icon-192.png",
+  "/img/synth-icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -23,7 +20,7 @@ self.addEventListener("activate", (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName.startsWith("binary-puzzle-")) {
+          if (cacheName !== CACHE_NAME && cacheName.startsWith("synth-")) {
             return caches.delete(cacheName);
           }
           return Promise.resolve();
@@ -35,25 +32,19 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") {
-    return;
-  }
+  if (event.request.method !== "GET") return;
 
   event.respondWith(
     (async () => {
       const cachedResponse = await caches.match(event.request);
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+      if (cachedResponse) return cachedResponse;
 
       try {
         return await fetch(event.request);
       } catch (error) {
         if (event.request.mode === "navigate") {
           const offlinePage = await caches.match(OFFLINE_URL);
-          if (offlinePage) {
-            return offlinePage;
-          }
+          if (offlinePage) return offlinePage;
         }
         throw error;
       }
