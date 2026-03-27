@@ -53,6 +53,7 @@ permalink: /drum-machine/
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: space-evenly;
             gap: 8px;
             height: 100%;
             width: 100%;
@@ -83,7 +84,13 @@ permalink: /drum-machine/
             font-size: 0.7rem;
             color: var(--text-mid);
             letter-spacing: 0.08em;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background 0.1s;
+            -webkit-tap-highlight-color: transparent;
         }
+        #tempo-display:active { background: var(--surface2); }
 
         /* ── Sample selectors ────────────────────────────── */
         #sample-row {
@@ -125,7 +132,7 @@ permalink: /drum-machine/
         /* ── Sequencer ───────────────────────────────────── */
         #sequencer-wrap {
             position: relative;
-            width: min(88vw, 340px);
+            width: min(92vw, 380px);
             aspect-ratio: 1;
             flex-shrink: 0;
         }
@@ -240,6 +247,28 @@ permalink: /drum-machine/
             border: none; border-radius: 6px;
             padding: 4px 12px; font-size: 0.8rem;
             font-weight: 700; cursor: pointer;
+        }
+
+        /* ── FX toast ────────────────────────────────────── */
+        #fx-toast {
+            display: none;
+            position: fixed; bottom: 70px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px; padding: 8px 16px;
+            font-size: 0.75rem; color: var(--text);
+            white-space: nowrap; z-index: 99;
+            pointer-events: none;
+        }
+        #fx-toast.show { display: block; animation: toast-fade 2.5s ease forwards; }
+        @keyframes toast-fade {
+            0%   { opacity: 0; transform: translateX(-50%) translateY(4px); }
+            15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+            70%  { opacity: 1; }
+            100% { opacity: 0; }
         }
 
         /* ── Effect button active pulse ──────────────────── */
@@ -366,42 +395,42 @@ permalink: /drum-machine/
             <!-- ── Voice pads — diamonds at cardinal positions, r=158 ── -->
             <!-- V0 Kick — top (200, 42) -->
             <g class="voice-pad" data-voice="0">
-                <circle cx="200" cy="42" r="20" fill="transparent"/>
-                <polygon points="200,28 214,42 200,56 186,42"
+                <circle cx="200" cy="42" r="26" fill="transparent"/>
+                <polygon points="200,24 218,42 200,60 182,42"
                          fill="rgba(255,71,87,0.18)" stroke="#FF4757" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-0"/>
                 <text x="200" y="43" text-anchor="middle" dominant-baseline="middle"
-                      font-size="8" font-weight="900" fill="#FF4757"
+                      font-size="10" font-weight="900" fill="#FF4757"
                       pointer-events="none">K</text>
             </g>
             <!-- V1 Snare — right (358, 200) -->
             <g class="voice-pad" data-voice="1">
-                <circle cx="358" cy="200" r="20" fill="transparent"/>
-                <polygon points="358,186 372,200 358,214 344,200"
+                <circle cx="358" cy="200" r="26" fill="transparent"/>
+                <polygon points="358,182 376,200 358,218 340,200"
                          fill="rgba(255,165,2,0.18)" stroke="#FFA502" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-1"/>
                 <text x="358" y="201" text-anchor="middle" dominant-baseline="middle"
-                      font-size="8" font-weight="900" fill="#FFA502"
+                      font-size="10" font-weight="900" fill="#FFA502"
                       pointer-events="none">S</text>
             </g>
             <!-- V2 HiHat — bottom (200, 358) -->
             <g class="voice-pad" data-voice="2">
-                <circle cx="200" cy="358" r="20" fill="transparent"/>
-                <polygon points="200,344 214,358 200,372 186,358"
+                <circle cx="200" cy="358" r="26" fill="transparent"/>
+                <polygon points="200,340 218,358 200,376 182,358"
                          fill="rgba(46,213,115,0.18)" stroke="#2ED573" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-2"/>
                 <text x="200" y="359" text-anchor="middle" dominant-baseline="middle"
-                      font-size="8" font-weight="900" fill="#2ED573"
+                      font-size="10" font-weight="900" fill="#2ED573"
                       pointer-events="none">H</text>
             </g>
             <!-- V3 Clap — left (42, 200) -->
             <g class="voice-pad" data-voice="3">
-                <circle cx="42" cy="200" r="20" fill="transparent"/>
-                <polygon points="42,186 56,200 42,214 28,200"
+                <circle cx="42" cy="200" r="26" fill="transparent"/>
+                <polygon points="42,182 60,200 42,218 24,200"
                          fill="rgba(162,155,254,0.18)" stroke="#A29BFE" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-3"/>
                 <text x="42" y="201" text-anchor="middle" dominant-baseline="middle"
-                      font-size="8" font-weight="900" fill="#A29BFE"
+                      font-size="10" font-weight="900" fill="#A29BFE"
                       pointer-events="none">C</text>
             </g>
 
@@ -410,45 +439,33 @@ permalink: /drum-machine/
             <g class="effect-btn" data-fx="repeat">
                 <circle cx="312" cy="88" r="23" fill="rgba(255,71,87,0.1)"
                         stroke="#FF4757" stroke-width="1.5" id="fx-c-repeat"/>
-                <text x="312" y="85" text-anchor="middle" dominant-baseline="middle"
-                      font-size="6" font-weight="800" fill="#FF4757" letter-spacing="0.06em"
+                <text x="312" y="89" text-anchor="middle" dominant-baseline="middle"
+                      font-size="9" font-weight="800" fill="#FF4757" letter-spacing="0.04em"
                       pointer-events="none">REPEAT</text>
-                <text x="312" y="95" text-anchor="middle" dominant-baseline="middle"
-                      font-size="5" fill="#FF4757" opacity="0.55" letter-spacing="0.04em"
-                      pointer-events="none">hold</text>
             </g>
             <!-- FILTER — bottom-right (312, 312), angle +45° -->
             <g class="effect-btn" data-fx="filter">
                 <circle cx="312" cy="312" r="23" fill="rgba(46,213,115,0.1)"
                         stroke="#2ED573" stroke-width="1.5" id="fx-c-filter"/>
-                <text x="312" y="309" text-anchor="middle" dominant-baseline="middle"
-                      font-size="6" font-weight="800" fill="#2ED573" letter-spacing="0.06em"
+                <text x="312" y="313" text-anchor="middle" dominant-baseline="middle"
+                      font-size="9" font-weight="800" fill="#2ED573" letter-spacing="0.04em"
                       pointer-events="none">FILTER</text>
-                <text x="312" y="319" text-anchor="middle" dominant-baseline="middle"
-                      font-size="5" fill="#2ED573" opacity="0.55" letter-spacing="0.04em"
-                      pointer-events="none">hold</text>
             </g>
             <!-- RANDOM — bottom-left (88, 312), angle +135° -->
             <g class="effect-btn" data-fx="random">
                 <circle cx="88" cy="312" r="23" fill="rgba(255,165,2,0.1)"
                         stroke="#FFA502" stroke-width="1.5" id="fx-c-random"/>
-                <text x="88" y="309" text-anchor="middle" dominant-baseline="middle"
-                      font-size="6" font-weight="800" fill="#FFA502" letter-spacing="0.06em"
+                <text x="88" y="313" text-anchor="middle" dominant-baseline="middle"
+                      font-size="9" font-weight="800" fill="#FFA502" letter-spacing="0.04em"
                       pointer-events="none">RANDOM</text>
-                <text x="88" y="319" text-anchor="middle" dominant-baseline="middle"
-                      font-size="5" fill="#FFA502" opacity="0.55" letter-spacing="0.04em"
-                      pointer-events="none">hold</text>
             </g>
             <!-- DISTORT — top-left (88, 88), angle -135° -->
             <g class="effect-btn" data-fx="distortion">
                 <circle cx="88" cy="88" r="23" fill="rgba(91,138,255,0.1)"
                         stroke="#5B8AFF" stroke-width="1.5" id="fx-c-distortion"/>
-                <text x="88" y="85" text-anchor="middle" dominant-baseline="middle"
-                      font-size="6" font-weight="800" fill="#5B8AFF" letter-spacing="0.06em"
+                <text x="88" y="89" text-anchor="middle" dominant-baseline="middle"
+                      font-size="9" font-weight="800" fill="#5B8AFF" letter-spacing="0.04em"
                       pointer-events="none">DISTORT</text>
-                <text x="88" y="95" text-anchor="middle" dominant-baseline="middle"
-                      font-size="5" fill="#5B8AFF" opacity="0.55" letter-spacing="0.04em"
-                      pointer-events="none">hold</text>
             </g>
 
             <!-- Center play button -->
@@ -502,6 +519,8 @@ permalink: /drum-machine/
 
 </div>
 
+<div id="fx-toast">Hold effect buttons to activate</div>
+
 <div id="update-banner">
     <span>Update available</span>
     <button id="update-btn">Reload</button>
@@ -541,6 +560,14 @@ let nextStepTime   = 0;
 let schedulerTimer = null;
 let visualStep     = -1;
 let fx = { repeat: false, random: false, filter: false, distortion: false };
+let fxToastShown = false;
+
+// ─── Persistence ──────────────────────────────────────────────────────────────
+function saveState() {
+    try {
+        localStorage.setItem('dm_state', JSON.stringify({ grid, bpm, swing, pitches, selectedSamples }));
+    } catch(e) {}
+}
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let audioCtx, masterGain, filterNode, distortionNode;
@@ -931,6 +958,7 @@ function toggleStep(voice, step) {
     grid[voice][step] = !grid[voice][step];
     if (grid[voice][step]) { triggerVoice(voice, audioCtx.currentTime); navigator.vibrate && navigator.vibrate(10); }
     renderSteps();
+    saveState();
 }
 
 // ─── Effects ──────────────────────────────────────────────────────────────────
@@ -969,6 +997,7 @@ document.querySelectorAll('.effect-btn').forEach(btn => {
         e.preventDefault();
         initAudio();
         if (audioCtx.state === 'suspended') audioCtx.resume();
+        btn._holdStart = Date.now();
         fx[name] = true;
         circle.setAttribute('fill', FX_ACTIVE[name]);
         circle.setAttribute('stroke-width', '2.5');
@@ -976,11 +1005,20 @@ document.querySelectorAll('.effect-btn').forEach(btn => {
         applyEffect(name, true);
     }
     function deactivate() {
+        const holdDuration = Date.now() - (btn._holdStart || Date.now());
         fx[name] = false;
         circle.setAttribute('fill', FX_DIM[name]);
         circle.setAttribute('stroke-width', '1.5');
         btn.classList.remove('active');
         applyEffect(name, false);
+        if (!fxToastShown && holdDuration < 300) {
+            fxToastShown = true;
+            const toast = document.getElementById('fx-toast');
+            toast.classList.remove('show');
+            void toast.offsetWidth;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2600);
+        }
     }
 
     btn.addEventListener('pointerdown', activate);
@@ -1005,6 +1043,7 @@ bpmSlider.addEventListener('input', () => {
     bpm = +bpmSlider.value;
     bpmValueEl.textContent = bpm;
     updateTempoDisplay();
+    saveState();
 });
 
 const swingSlider  = document.getElementById('swing-slider');
@@ -1014,10 +1053,11 @@ swingSlider.addEventListener('input', () => {
     swing = +swingSlider.value / 100;
     swingValueEl.textContent = `${swingSlider.value}%`;
     updateTempoDisplay();
+    saveState();
 });
 
 document.querySelectorAll('.pitch-slider').forEach(el => {
-    el.addEventListener('input', () => { pitches[+el.dataset.voice] = +el.value; });
+    el.addEventListener('input', () => { pitches[+el.dataset.voice] = +el.value; saveState(); });
 });
 
 document.querySelectorAll('.sample-btn').forEach(btn => {
@@ -1028,7 +1068,25 @@ document.querySelectorAll('.sample-btn').forEach(btn => {
         selectedSamples[v] = (selectedSamples[v] + 1) % SAMPLE_BANKS[v].length;
         document.getElementById(`sample-name-${v}`).textContent = SAMPLE_BANKS[v][selectedSamples[v]].name;
         triggerVoice(v, audioCtx.currentTime);
+        saveState();
     });
+});
+
+// ─── Tap tempo ────────────────────────────────────────────────────────────────
+let tapTimes = [];
+tempoDisplay.addEventListener('click', () => {
+    const now = Date.now();
+    tapTimes = tapTimes.filter(t => now - t < 3000);
+    tapTimes.push(now);
+    if (tapTimes.length >= 2) {
+        const intervals = tapTimes.slice(1).map((t, i) => t - tapTimes[i]);
+        const avgMs = intervals.reduce((a, b) => a + b) / intervals.length;
+        bpm = Math.max(60, Math.min(200, Math.round(60000 / avgMs)));
+        bpmSlider.value = bpm;
+        bpmValueEl.textContent = bpm;
+        updateTempoDisplay();
+        saveState();
+    }
 });
 
 // ─── Default pattern ──────────────────────────────────────────────────────────
@@ -1041,7 +1099,20 @@ function loadDefault() {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 buildStepsSVG();
-loadDefault();
+
+(function loadState() {
+    try {
+        const s = JSON.parse(localStorage.getItem('dm_state') || 'null');
+        if (!s) { loadDefault(); return; }
+        if (s.grid)            grid = s.grid;
+        if (s.bpm != null)     { bpm = s.bpm; bpmSlider.value = bpm; bpmValueEl.textContent = bpm; }
+        if (s.swing != null)   { swing = s.swing; swingSlider.value = Math.round(swing * 100); swingValueEl.textContent = Math.round(swing * 100) + '%'; }
+        if (s.pitches)         { pitches = s.pitches; document.querySelectorAll('.pitch-slider').forEach(el => { el.value = pitches[+el.dataset.voice]; }); }
+        if (s.selectedSamples) { selectedSamples = s.selectedSamples; selectedSamples.forEach((idx, v) => { document.getElementById(`sample-name-${v}`).textContent = SAMPLE_BANKS[v][idx].name; }); }
+        updateTempoDisplay();
+    } catch(e) { loadDefault(); }
+})();
+
 renderSteps();
 animLoop();
 
