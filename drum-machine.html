@@ -45,6 +45,7 @@ permalink: /drum-machine/
             overflow: hidden;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-touch-callout: none;
             touch-action: manipulation;
         }
 
@@ -119,7 +120,7 @@ permalink: /drum-machine/
         .sample-btn[data-voice="2"] .sample-voice { color: var(--hihat); }
         .sample-btn[data-voice="3"] .sample-voice { color: var(--clap); }
         .sample-name  { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; color: var(--text); }
-        .sample-hint  { font-size: 0.5rem; color: var(--text-dim); letter-spacing: 0.05em; }
+        .sample-hint  { font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.05em; }
 
         /* ── Sequencer ───────────────────────────────────── */
         #sequencer-wrap {
@@ -154,7 +155,7 @@ permalink: /drum-machine/
             -webkit-appearance: none;
             appearance: none;
             flex: 1;
-            height: 3px;
+            height: 5px;
             background: var(--surface3);
             border-radius: 2px;
             outline: none;
@@ -162,14 +163,14 @@ permalink: /drum-machine/
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 18px; height: 18px;
+            width: 20px; height: 20px;
             border-radius: 50%;
             background: var(--text);
             cursor: pointer;
             box-shadow: 0 0 6px rgba(255,255,255,0.2);
         }
         input[type=range]::-moz-range-thumb {
-            width: 18px; height: 18px;
+            width: 20px; height: 20px;
             border: none; border-radius: 50%;
             background: var(--text); cursor: pointer;
         }
@@ -206,7 +207,7 @@ permalink: /drum-machine/
         .pitch-badge.clap  { background: var(--clap); }
         .pitch-slider {
             -webkit-appearance: none; appearance: none;
-            width: 100%; height: 3px;
+            width: 100%; height: 5px;
             border-radius: 2px; outline: none; cursor: pointer;
         }
         .pitch-slider.kick  { background: linear-gradient(to right, var(--surface3), var(--kick)); }
@@ -215,11 +216,11 @@ permalink: /drum-machine/
         .pitch-slider.clap  { background: linear-gradient(to right, var(--surface3), var(--clap)); }
         .pitch-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px; height: 16px;
+            width: 20px; height: 20px;
             border-radius: 50%; background: var(--text); cursor: pointer;
         }
         .pitch-slider::-moz-range-thumb {
-            width: 16px; height: 16px;
+            width: 20px; height: 20px;
             border: none; border-radius: 50%; background: var(--text);
         }
 
@@ -239,6 +240,42 @@ permalink: /drum-machine/
             border: none; border-radius: 6px;
             padding: 4px 12px; font-size: 0.8rem;
             font-weight: 700; cursor: pointer;
+        }
+
+        /* ── Effect button active pulse ──────────────────── */
+        @keyframes fx-pulse {
+            0%, 100% { stroke-width: 1.5; }
+            50%       { stroke-width: 3; }
+        }
+        .effect-btn.active circle {
+            animation: fx-pulse 0.8s ease-in-out infinite;
+        }
+
+        /* ── Landscape layout (phones rotated) ───────────── */
+        @media (orientation: landscape) and (max-height: 500px) {
+            #app {
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: flex-start;
+                max-width: 100%;
+                overflow-y: auto;
+            }
+            #header { width: 100%; }
+            #sample-row {
+                flex-direction: column;
+                width: clamp(80px, 18vw, 110px);
+                flex-shrink: 0;
+            }
+            .sample-btn { padding: 4px 3px; }
+            #sequencer-wrap {
+                width: min(46vw, 260px);
+                flex-shrink: 0;
+            }
+            .slider-row, #pitch-row {
+                width: clamp(100px, 22vw, 160px);
+                flex-shrink: 0;
+            }
+            .slider-label, #pitch-label { min-width: 28px; }
         }
     </style>
 </head>
@@ -277,7 +314,7 @@ permalink: /drum-machine/
 
     <!-- Circular Sequencer -->
     <div id="sequencer-wrap">
-        <svg id="sequencer-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <svg id="sequencer-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" oncontextmenu="return false">
             <defs>
                 <radialGradient id="bg-gradient" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stop-color="#1c1c1c"/>
@@ -373,33 +410,45 @@ permalink: /drum-machine/
             <g class="effect-btn" data-fx="repeat">
                 <circle cx="312" cy="88" r="23" fill="rgba(255,71,87,0.1)"
                         stroke="#FF4757" stroke-width="1.5" id="fx-c-repeat"/>
-                <text x="312" y="89" text-anchor="middle" dominant-baseline="middle"
+                <text x="312" y="85" text-anchor="middle" dominant-baseline="middle"
                       font-size="6" font-weight="800" fill="#FF4757" letter-spacing="0.06em"
                       pointer-events="none">REPEAT</text>
+                <text x="312" y="95" text-anchor="middle" dominant-baseline="middle"
+                      font-size="5" fill="#FF4757" opacity="0.55" letter-spacing="0.04em"
+                      pointer-events="none">hold</text>
             </g>
             <!-- FILTER — bottom-right (312, 312), angle +45° -->
             <g class="effect-btn" data-fx="filter">
                 <circle cx="312" cy="312" r="23" fill="rgba(46,213,115,0.1)"
                         stroke="#2ED573" stroke-width="1.5" id="fx-c-filter"/>
-                <text x="312" y="313" text-anchor="middle" dominant-baseline="middle"
+                <text x="312" y="309" text-anchor="middle" dominant-baseline="middle"
                       font-size="6" font-weight="800" fill="#2ED573" letter-spacing="0.06em"
                       pointer-events="none">FILTER</text>
+                <text x="312" y="319" text-anchor="middle" dominant-baseline="middle"
+                      font-size="5" fill="#2ED573" opacity="0.55" letter-spacing="0.04em"
+                      pointer-events="none">hold</text>
             </g>
             <!-- RANDOM — bottom-left (88, 312), angle +135° -->
             <g class="effect-btn" data-fx="random">
                 <circle cx="88" cy="312" r="23" fill="rgba(255,165,2,0.1)"
                         stroke="#FFA502" stroke-width="1.5" id="fx-c-random"/>
-                <text x="88" y="313" text-anchor="middle" dominant-baseline="middle"
+                <text x="88" y="309" text-anchor="middle" dominant-baseline="middle"
                       font-size="6" font-weight="800" fill="#FFA502" letter-spacing="0.06em"
                       pointer-events="none">RANDOM</text>
+                <text x="88" y="319" text-anchor="middle" dominant-baseline="middle"
+                      font-size="5" fill="#FFA502" opacity="0.55" letter-spacing="0.04em"
+                      pointer-events="none">hold</text>
             </g>
             <!-- DISTORT — top-left (88, 88), angle -135° -->
             <g class="effect-btn" data-fx="distortion">
                 <circle cx="88" cy="88" r="23" fill="rgba(91,138,255,0.1)"
                         stroke="#5B8AFF" stroke-width="1.5" id="fx-c-distortion"/>
-                <text x="88" y="89" text-anchor="middle" dominant-baseline="middle"
+                <text x="88" y="85" text-anchor="middle" dominant-baseline="middle"
                       font-size="6" font-weight="800" fill="#5B8AFF" letter-spacing="0.06em"
                       pointer-events="none">DISTORT</text>
+                <text x="88" y="95" text-anchor="middle" dominant-baseline="middle"
+                      font-size="5" fill="#5B8AFF" opacity="0.55" letter-spacing="0.04em"
+                      pointer-events="none">hold</text>
             </g>
 
             <!-- Center play button -->
@@ -774,7 +823,7 @@ function stopPlayback() {
     updatePlayIcon();
 }
 
-function togglePlay() { isPlaying ? stopPlayback() : startPlayback(); }
+function togglePlay() { navigator.vibrate && navigator.vibrate(10); isPlaying ? stopPlayback() : startPlayback(); }
 
 function updatePlayIcon() {
     document.getElementById('play-icon').textContent = isPlaying ? '■' : '▶';
@@ -805,7 +854,16 @@ function buildStepsSVG() {
             circle.setAttribute('cy', pos.y);
             circle.setAttribute('r',  NODE_R);
             circle.setAttribute('fill', COLORS_DIM[v]);
+            circle.setAttribute('class', 'step-vis');
+            circle.setAttribute('pointer-events', 'none');
 
+            const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            hit.setAttribute('cx', pos.x);
+            hit.setAttribute('cy', pos.y);
+            hit.setAttribute('r', 18);
+            hit.setAttribute('fill', 'transparent');
+
+            group.appendChild(hit);
             group.appendChild(circle);
             g.appendChild(group);
 
@@ -821,7 +879,7 @@ function renderSteps() {
     document.querySelectorAll('.step-node').forEach(node => {
         const v = +node.dataset.voice;
         const s = +node.dataset.step;
-        const c = node.querySelector('circle');
+        const c = node.querySelector('.step-vis');
         const active  = grid[v][s];
         const playing = s === visualStep;
 
@@ -871,7 +929,7 @@ function toggleStep(voice, step) {
     initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     grid[voice][step] = !grid[voice][step];
-    if (grid[voice][step]) triggerVoice(voice, audioCtx.currentTime);
+    if (grid[voice][step]) { triggerVoice(voice, audioCtx.currentTime); navigator.vibrate && navigator.vibrate(10); }
     renderSteps();
 }
 
@@ -893,6 +951,7 @@ document.querySelectorAll('.voice-pad').forEach(pad => {
 
     pad.addEventListener('pointerdown', e => {
         e.preventDefault();
+        navigator.vibrate && navigator.vibrate(10);
         initAudio();
         if (audioCtx.state === 'suspended') audioCtx.resume();
         triggerVoice(v, audioCtx.currentTime);
@@ -913,12 +972,14 @@ document.querySelectorAll('.effect-btn').forEach(btn => {
         fx[name] = true;
         circle.setAttribute('fill', FX_ACTIVE[name]);
         circle.setAttribute('stroke-width', '2.5');
+        btn.classList.add('active');
         applyEffect(name, true);
     }
     function deactivate() {
         fx[name] = false;
         circle.setAttribute('fill', FX_DIM[name]);
         circle.setAttribute('stroke-width', '1.5');
+        btn.classList.remove('active');
         applyEffect(name, false);
     }
 
