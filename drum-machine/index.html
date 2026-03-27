@@ -136,6 +136,43 @@ permalink: /drum-machine/
         }
         .step-node, .voice-pad, .effect-btn { cursor: pointer; }
 
+        /* ── Roll indicator ──────────────────────────────── */
+        #roll-indicator {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: rgba(10, 10, 10, 0.88);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 10px 16px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        #roll-indicator.visible { display: flex; }
+        .ri-hint {
+            font-size: 0.5rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+        .ri-speed {
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            padding: 2px 8px;
+            border-radius: 5px;
+            transition: color 0.06s, background 0.06s;
+        }
+        .ri-speed.active {
+            color: var(--text);
+            background: rgba(255,255,255,0.12);
+        }
+
         /* ── Sliders ─────────────────────────────────────── */
         .slider-row {
             display: flex;
@@ -335,7 +372,7 @@ permalink: /drum-machine/
                          stroke-linejoin="round" id="pad-poly-0"/>
                 <text x="200" y="43" text-anchor="middle" dominant-baseline="middle"
                       font-size="8" font-weight="900" fill="#FF4757"
-                      pointer-events="none">K</text>
+                      pointer-events="none" id="pad-text-0">K</text>
             </g>
             <!-- V1 Snare — right (358, 200) -->
             <g class="voice-pad" data-voice="1">
@@ -345,7 +382,7 @@ permalink: /drum-machine/
                          stroke-linejoin="round" id="pad-poly-1"/>
                 <text x="358" y="201" text-anchor="middle" dominant-baseline="middle"
                       font-size="8" font-weight="900" fill="#FFA502"
-                      pointer-events="none">S</text>
+                      pointer-events="none" id="pad-text-1">S</text>
             </g>
             <!-- V2 HiHat — bottom (200, 358) -->
             <g class="voice-pad" data-voice="2">
@@ -355,7 +392,7 @@ permalink: /drum-machine/
                          stroke-linejoin="round" id="pad-poly-2"/>
                 <text x="200" y="359" text-anchor="middle" dominant-baseline="middle"
                       font-size="8" font-weight="900" fill="#2ED573"
-                      pointer-events="none">H</text>
+                      pointer-events="none" id="pad-text-2">H</text>
             </g>
             <!-- V3 Clap — left (42, 200) -->
             <g class="voice-pad" data-voice="3">
@@ -365,7 +402,7 @@ permalink: /drum-machine/
                          stroke-linejoin="round" id="pad-poly-3"/>
                 <text x="42" y="201" text-anchor="middle" dominant-baseline="middle"
                       font-size="8" font-weight="900" fill="#A29BFE"
-                      pointer-events="none">C</text>
+                      pointer-events="none" id="pad-text-3">C</text>
             </g>
 
             <!-- ── Effect buttons — large circles at diagonal positions, r=158 ── -->
@@ -414,6 +451,15 @@ permalink: /drum-machine/
             <text x="200" y="219" text-anchor="middle" font-size="5.5" fill="#282828"
                   font-weight="900" letter-spacing="0.22em" font-family="monospace">DATO</text>
         </svg>
+        <div id="roll-indicator">
+            <span class="ri-hint">↑ faster</span>
+            <div class="ri-speed" data-level="2">64th</div>
+            <div class="ri-speed" data-level="1">32nd</div>
+            <div class="ri-speed" data-level="0">16th</div>
+            <div class="ri-speed" data-level="-1">8th</div>
+            <div class="ri-speed" data-level="-2">4th</div>
+            <span class="ri-hint">↓ slower</span>
+        </div>
     </div>
 
     <!-- SPEED -->
@@ -491,7 +537,9 @@ let currentStep    = 0;
 let nextStepTime   = 0;
 let schedulerTimer = null;
 let visualStep     = -1;
-let fx = { repeat: false, random: false, filter: false, distortion: false };
+let fx             = { repeat: false, random: false, filter: false, distortion: false };
+let voiceHeld      = [false, false, false, false];
+let voiceHoldLevel = [-1, -1, -1, -1]; // -2=4th, -1=8th, 0=16th, 1=32nd, 2=64th
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let audioCtx, masterGain, filterNode, distortionNode;
@@ -731,13 +779,26 @@ function scheduleStep(step, baseTime) {
     const time = baseTime + swingOffset(step);
     const dur  = stepDuration();
     for (let v = 0; v < VOICES; v++) {
-        const fire = fx.random ? (Math.random() > 0.5) : grid[v][step];
-        if (!fire) continue;
-        if (fx.repeat) {
-            triggerVoice(v, time);
-            triggerVoice(v, time + dur / 2);
+        if (voiceHeld[v]) {
+            // Roll mode: subdivide step, skip grid to avoid duplicates
+            const level = voiceHoldLevel[v];
+            if (level === -2) {
+                // quarter notes: fire on every other step
+                if (step % 2 === 0) triggerVoice(v, time);
+            } else {
+                const mult   = Math.pow(2, level + 1); // -1→1, 0→2, 1→4, 2→8
+                const subDur = dur / mult;
+                for (let i = 0; i < mult; i++) triggerVoice(v, time + i * subDur);
+            }
         } else {
-            triggerVoice(v, time);
+            const fire = fx.random ? (Math.random() > 0.5) : grid[v][step];
+            if (!fire) continue;
+            if (fx.repeat) {
+                triggerVoice(v, time);
+                triggerVoice(v, time + dur / 2);
+            } else {
+                triggerVoice(v, time);
+            }
         }
     }
 }
@@ -887,18 +948,50 @@ function applyEffect(name, on) {
 }
 
 // ─── Voice pads ───────────────────────────────────────────────────────────────
+const rollIndicator    = document.getElementById('roll-indicator');
+const rollSpeedEls     = rollIndicator.querySelectorAll('.ri-speed');
+
+function showRollIndicator(level) {
+    rollIndicator.classList.add('visible');
+    rollSpeedEls.forEach(el => el.classList.toggle('active', +el.dataset.level === level));
+}
+function hideRollIndicator() { rollIndicator.classList.remove('visible'); }
+
 document.querySelectorAll('.voice-pad').forEach(pad => {
     const v    = +pad.dataset.voice;
     const poly = document.getElementById(`pad-poly-${v}`);
+    let startY = 0;
 
     pad.addEventListener('pointerdown', e => {
         e.preventDefault();
         initAudio();
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        triggerVoice(v, audioCtx.currentTime);
+        pad.setPointerCapture(e.pointerId);
+        startY             = e.clientY;
+        voiceHeld[v]       = true;
+        voiceHoldLevel[v]  = -1;
+        triggerVoice(v, audioCtx.currentTime); // immediate feel on press
         poly.setAttribute('fill', COLORS[v]);
-        setTimeout(() => poly.setAttribute('fill', PAD_FILL[v]), 130);
+        showRollIndicator(-1);
     });
+
+    pad.addEventListener('pointermove', e => {
+        if (!voiceHeld[v]) return;
+        const deltaY  = startY - e.clientY; // positive = dragged up = faster
+        const newLevel = Math.max(-2, Math.min(2, Math.round(deltaY / 40) - 1));
+        if (newLevel !== voiceHoldLevel[v]) {
+            voiceHoldLevel[v] = newLevel;
+            showRollIndicator(newLevel);
+        }
+    });
+
+    function stopRoll() {
+        voiceHeld[v] = false;
+        poly.setAttribute('fill', PAD_FILL[v]);
+        hideRollIndicator();
+    }
+    pad.addEventListener('pointerup',     stopRoll);
+    pad.addEventListener('pointercancel', stopRoll);
 });
 
 // ─── Effect buttons ───────────────────────────────────────────────────────────
