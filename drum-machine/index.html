@@ -327,20 +327,20 @@ permalink: /drum-machine/
                      fill="url(#bg-gradient)" stroke="#0d4a44" stroke-width="5" stroke-linejoin="round"/>
 
             <!-- Ring track -->
-            <circle cx="200" cy="200" r="120" fill="none" stroke="#181818" stroke-width="24"/>
+            <circle cx="200" cy="200" r="155" fill="none" stroke="#181818" stroke-width="24"/>
 
             <!-- Voice arc backgrounds (dim colour segments on the ring) -->
             <!-- Kick  top:    -125° → -55° -->
-            <path d="M 131.2 101.7 A 120 120 0 0 1 268.8 101.7"
+            <path d="M 111.1 73.1 A 155 155 0 0 1 288.9 73.1"
                   fill="none" stroke="rgba(255,71,87,0.09)" stroke-width="24"/>
             <!-- Snare right:  -35° → +35° -->
-            <path d="M 298.3 131.2 A 120 120 0 0 1 298.3 268.8"
+            <path d="M 326.9 111.1 A 155 155 0 0 1 326.9 288.9"
                   fill="none" stroke="rgba(255,165,2,0.09)" stroke-width="24"/>
             <!-- HiHat bottom: +55° → +125° -->
-            <path d="M 268.8 298.3 A 120 120 0 0 1 131.2 298.3"
+            <path d="M 288.9 326.9 A 155 155 0 0 1 111.1 326.9"
                   fill="none" stroke="rgba(46,213,115,0.09)" stroke-width="24"/>
             <!-- Clap  left:  +145° → +215° -->
-            <path d="M 101.7 268.8 A 120 120 0 0 1 101.7 131.2"
+            <path d="M 73.1 288.9 A 155 155 0 0 1 73.1 111.1"
                   fill="none" stroke="rgba(162,155,254,0.09)" stroke-width="24"/>
 
             <!-- Step nodes — built by JS -->
@@ -363,78 +363,78 @@ permalink: /drum-machine/
                   font-size="10" font-weight="800" letter-spacing="0.1em"
                   fill="rgba(162,155,254,0.45)">CLAP</text>
 
-            <!-- ── Voice pads — diamonds at cardinal positions, r=158 ── -->
-            <!-- V0 Kick — top (200, 42) -->
+            <!-- ── Voice pads — diamonds at cardinal positions, r=75 ── -->
+            <!-- V0 Kick — top (200, 125) -->
             <g class="voice-pad" data-voice="0">
-                <circle cx="200" cy="42" r="20" fill="transparent"/>
-                <polygon points="200,28 214,42 200,56 186,42"
+                <circle cx="200" cy="125" r="20" fill="transparent"/>
+                <polygon points="200,111 214,125 200,139 186,125"
                          fill="rgba(255,71,87,0.18)" stroke="#FF4757" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-0"/>
-                <text x="200" y="43" text-anchor="middle" dominant-baseline="middle"
+                <text x="200" y="126" text-anchor="middle" dominant-baseline="middle"
                       font-size="8" font-weight="900" fill="#FF4757"
                       pointer-events="none" id="pad-text-0">K</text>
             </g>
-            <!-- V1 Snare — right (358, 200) -->
+            <!-- V1 Snare — right (275, 200) -->
             <g class="voice-pad" data-voice="1">
-                <circle cx="358" cy="200" r="20" fill="transparent"/>
-                <polygon points="358,186 372,200 358,214 344,200"
+                <circle cx="275" cy="200" r="20" fill="transparent"/>
+                <polygon points="275,186 289,200 275,214 261,200"
                          fill="rgba(255,165,2,0.18)" stroke="#FFA502" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-1"/>
-                <text x="358" y="201" text-anchor="middle" dominant-baseline="middle"
+                <text x="275" y="201" text-anchor="middle" dominant-baseline="middle"
                       font-size="8" font-weight="900" fill="#FFA502"
                       pointer-events="none" id="pad-text-1">S</text>
             </g>
-            <!-- V2 HiHat — bottom (200, 358) -->
+            <!-- V2 HiHat — bottom (200, 275) -->
             <g class="voice-pad" data-voice="2">
-                <circle cx="200" cy="358" r="20" fill="transparent"/>
-                <polygon points="200,344 214,358 200,372 186,358"
+                <circle cx="200" cy="275" r="20" fill="transparent"/>
+                <polygon points="200,261 214,275 200,289 186,275"
                          fill="rgba(46,213,115,0.18)" stroke="#2ED573" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-2"/>
-                <text x="200" y="359" text-anchor="middle" dominant-baseline="middle"
+                <text x="200" y="276" text-anchor="middle" dominant-baseline="middle"
                       font-size="8" font-weight="900" fill="#2ED573"
                       pointer-events="none" id="pad-text-2">H</text>
             </g>
-            <!-- V3 Clap — left (42, 200) -->
+            <!-- V3 Clap — left (125, 200) -->
             <g class="voice-pad" data-voice="3">
-                <circle cx="42" cy="200" r="20" fill="transparent"/>
-                <polygon points="42,186 56,200 42,214 28,200"
+                <circle cx="125" cy="200" r="20" fill="transparent"/>
+                <polygon points="125,186 139,200 125,214 111,200"
                          fill="rgba(162,155,254,0.18)" stroke="#A29BFE" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-3"/>
-                <text x="42" y="201" text-anchor="middle" dominant-baseline="middle"
+                <text x="125" y="201" text-anchor="middle" dominant-baseline="middle"
                       font-size="8" font-weight="900" fill="#A29BFE"
                       pointer-events="none" id="pad-text-3">C</text>
             </g>
 
-            <!-- ── Effect buttons — large circles at diagonal positions, r=158 ── -->
-            <!-- REPEAT — top-right (312, 88), angle -45° -->
+            <!-- ── Effect buttons — circles at diagonal positions, r=75 ── -->
+            <!-- REPEAT — top-right (253, 147), angle -45° -->
             <g class="effect-btn" data-fx="repeat">
-                <circle cx="312" cy="88" r="23" fill="rgba(255,71,87,0.1)"
+                <circle cx="253" cy="147" r="17" fill="rgba(255,71,87,0.1)"
                         stroke="#FF4757" stroke-width="1.5" id="fx-c-repeat"/>
-                <text x="312" y="89" text-anchor="middle" dominant-baseline="middle"
+                <text x="253" y="148" text-anchor="middle" dominant-baseline="middle"
                       font-size="6" font-weight="800" fill="#FF4757" letter-spacing="0.06em"
                       pointer-events="none">REPEAT</text>
             </g>
-            <!-- FILTER — bottom-right (312, 312), angle +45° -->
+            <!-- FILTER — bottom-right (253, 253), angle +45° -->
             <g class="effect-btn" data-fx="filter">
-                <circle cx="312" cy="312" r="23" fill="rgba(46,213,115,0.1)"
+                <circle cx="253" cy="253" r="17" fill="rgba(46,213,115,0.1)"
                         stroke="#2ED573" stroke-width="1.5" id="fx-c-filter"/>
-                <text x="312" y="313" text-anchor="middle" dominant-baseline="middle"
+                <text x="253" y="254" text-anchor="middle" dominant-baseline="middle"
                       font-size="6" font-weight="800" fill="#2ED573" letter-spacing="0.06em"
                       pointer-events="none">FILTER</text>
             </g>
-            <!-- RANDOM — bottom-left (88, 312), angle +135° -->
+            <!-- RANDOM — bottom-left (147, 253), angle +135° -->
             <g class="effect-btn" data-fx="random">
-                <circle cx="88" cy="312" r="23" fill="rgba(255,165,2,0.1)"
+                <circle cx="147" cy="253" r="17" fill="rgba(255,165,2,0.1)"
                         stroke="#FFA502" stroke-width="1.5" id="fx-c-random"/>
-                <text x="88" y="313" text-anchor="middle" dominant-baseline="middle"
+                <text x="147" y="254" text-anchor="middle" dominant-baseline="middle"
                       font-size="6" font-weight="800" fill="#FFA502" letter-spacing="0.06em"
                       pointer-events="none">RANDOM</text>
             </g>
-            <!-- DISTORT — top-left (88, 88), angle -135° -->
+            <!-- DISTORT — top-left (147, 147), angle -135° -->
             <g class="effect-btn" data-fx="distortion">
-                <circle cx="88" cy="88" r="23" fill="rgba(91,138,255,0.1)"
+                <circle cx="147" cy="147" r="17" fill="rgba(91,138,255,0.1)"
                         stroke="#5B8AFF" stroke-width="1.5" id="fx-c-distortion"/>
-                <text x="88" y="89" text-anchor="middle" dominant-baseline="middle"
+                <text x="147" y="148" text-anchor="middle" dominant-baseline="middle"
                       font-size="6" font-weight="800" fill="#5B8AFF" letter-spacing="0.06em"
                       pointer-events="none">DISTORT</text>
             </g>
@@ -512,7 +512,7 @@ permalink: /drum-machine/
 const STEPS   = 8;
 const VOICES  = 4;
 const CX = 200, CY = 200;
-const RING_R  = 120;
+const RING_R  = 155;
 const COLORS      = ['#FF4757', '#FFA502', '#2ED573', '#A29BFE'];
 const COLORS_DIM  = ['rgba(255,71,87,0.15)','rgba(255,165,2,0.15)',
                      'rgba(46,213,115,0.15)','rgba(162,155,254,0.15)'];
@@ -522,7 +522,7 @@ const FX_ACTIVE   = { repeat:'rgba(255,71,87,0.55)',    filter:'rgba(46,213,115,
                        random:'rgba(255,165,2,0.55)',    distortion:'rgba(91,138,255,0.55)' };
 const FX_DIM      = { repeat:'rgba(255,71,87,0.1)',      filter:'rgba(46,213,115,0.1)',
                        random:'rgba(255,165,2,0.1)',      distortion:'rgba(91,138,255,0.1)' };
-const NODE_R      = 11;
+const NODE_R      = 12;
 const LOOKAHEAD   = 25.0;   // ms
 const SCHED_AHEAD = 0.1;    // s
 
