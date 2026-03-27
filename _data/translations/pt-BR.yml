@@ -7,10 +7,10 @@ nav:
 
 hero:
   greeting: "Oi, eu sou o Jorge"
-  title_before: "Eu ajudo empresas a "
-  title_highlight: "integrar IA"
-  title_after: " no que elas já fazem."
-  subtitle: "Engenheiro de software que virou especialista em integração de IA. Eu pego o que é complexo e transformo em algo realmente útil para pessoas e equipes reais."
+  title_before: "Eu construo software que "
+  title_highlight: "resolve problemas reais"
+  title_after: "."
+  subtitle: "Engenheiro de software com mais de 15 anos de experiência. Construo produtos, entrego funcionalidades e uso ferramentas modernas — incluindo IA — para fazer software melhor e mais rápido."
   cta_about: "Me conheça"
   cta_portfolio: "Veja meu trabalho"
 
@@ -19,21 +19,21 @@ home:
   read_more: "Leia Mais"
 
 footer:
-  tagline: "Fazendo a IA parecer menos robô e mais humana."
+  tagline: "Escrevendo código. Entregando coisas. Mantendo simples."
   copy_suffix: "Feito com café e curiosidade."
 
 about:
   title: "Sobre Jorge Censi"
   greeting: "Oi, eu sou o Jorge!"
-  intro: "Sou um engenheiro de software que se apaixonou por IA. Agora eu ajudo empresas a descobrir como realmente usá-la — não só falar sobre isso."
+  intro: "Sou um engenheiro de software que ama construir coisas que funcionam. Estou nisso desde 2010 — de aplicativos desktop a produtos web e o que vier depois."
   short_version_title: "Resumindo"
-  short_version_p1: "Desenvolvo software desde 2010. Comecei com aplicativos desktop e a stack Microsoft, migrei para a web, e então a IA chegou e mudou tudo. Vi equipes se afogando em buzzwords e ferramentas caras que ninguém sabia usar. Então decidi ser a pessoa que faz essa ponte."
-  short_version_p2: "Eu pego as coisas complexas de IA — modelos de linguagem, automação, fluxos inteligentes — e transformo em coisas que realmente ajudam pessoas reais a fazer seu trabalho melhor. Sem jargão. Sem hype. Apenas integração prática que funciona."
+  short_version_p1: "Desenvolvo software desde 2010. Comecei com aplicativos desktop e a stack Microsoft, migrei para a web e continuei aprendendo no caminho. IA é uma das coisas que aprendi e uso no dia a dia — mas é uma ferramenta, não o trabalho."
+  short_version_p2: "Me importo com software que vai pra produção, código que se mantém, e produtos que as pessoas realmente querem usar. Uso IA quando ajuda. Dispenso quando não ajuda."
   what_i_do_title: "O que eu faço"
-  what_i_do_p1: "Pense em mim como a pessoa que você chama quando sabe que a IA pode ajudar seu negócio, mas não sabe por onde começar. Eu sento com sua equipe, entendo seus processos e construo integrações que parecem naturais — não como se você tivesse parafusado um robô no seu processo."
-  what_i_do_p2: "Seja automatizando tarefas repetitivas, construindo processamento inteligente de documentos, criando funcionalidades com IA para seu produto, ou configurando assistentes estilo copiloto para sua equipe — eu já fiz e adoro fazer."
+  what_i_do_p1: "Pense em mim como o engenheiro que você chama quando precisa de algo construído direitinho — um produto, uma funcionalidade, uma integração, ou a correção de algo que está quebrado há tempo demais."
+  what_i_do_p2: "Seja um app web, um serviço de backend, uma integração complicada, ou um produto que precisa de funcionalidades de IA feitas do jeito certo — eu já construí e sei como fazer funcionar."
   beyond_code_title: "Além do código"
-  beyond_code_p: "Quando não estou mexendo com APIs ou ajustando prompts, você me encontra assistindo filmes, fazendo churrasco (levo muito a sério), ou curtindo uma boa cerveja artesanal. Acredito que a melhor tecnologia é feita por pessoas que têm uma vida fora da tecnologia."
+  beyond_code_p: "Quando não estou escrevendo código ou lendo docs, você me encontra assistindo filmes, fazendo churrasco (levo muito a sério), ou curtindo uma boa cerveja artesanal. Acredito que a melhor tecnologia é feita por pessoas que têm uma vida fora da tecnologia."
   buy_coffee: "Me pague um café"
 
 portfolio:
