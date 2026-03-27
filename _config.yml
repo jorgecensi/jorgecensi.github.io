@@ -1,6 +1,6 @@
 name: Jorge Censi
-title: Jorge Censi - AI Integration Professional
-description: I help businesses integrate AI into their workflows. Software engineer turned AI whisperer — making smart tech feel human.
+title: Jorge Censi - Software Engineer
+description: Software engineer building things that work. I write code, ship products, and use AI as one of many tools to get there faster and smarter.
 markdown: kramdown
 permalink: /blog/:year/:month/:day/:title
 theme: jekyll-theme-architect

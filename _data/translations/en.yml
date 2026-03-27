@@ -6,10 +6,10 @@ nav:
 
 hero:
   greeting: "Hey, I'm Jorge"
-  title_before: "I help businesses "
-  title_highlight: "integrate AI"
-  title_after: " into what they already do."
-  subtitle: "Software engineer turned AI integration specialist. I take the complex stuff and make it actually useful for real people and real teams."
+  title_before: "I build software that "
+  title_highlight: "solves real problems"
+  title_after: "."
+  subtitle: "Software engineer with 15+ years of experience. I build products, ship features, and use modern tools — including AI — to make better software faster."
   cta_about: "Get to know me"
 
 home:
@@ -17,21 +17,21 @@ home:
   read_more: "Read More"
 
 footer:
-  tagline: "Making AI feel less robot, more human."
+  tagline: "Writing code. Shipping things. Keeping it simple."
   copy_suffix: "Built with coffee and curiosity."
 
 about:
   title: "About Jorge Censi"
   greeting: "Hey, I'm Jorge!"
-  intro: "I'm a software engineer who fell in love with AI. Now I help businesses figure out how to actually use it — not just talk about it."
+  intro: "I'm a software engineer who loves building things that work. I've been at it since 2010 — from desktop apps to web products to whatever comes next."
   short_version_title: "The short version"
-  short_version_p1: "I've been building software since 2010. Started with desktop apps and the Microsoft stack, moved to the web, and then AI came along and changed everything. I saw teams drowning in buzzwords and expensive tools that nobody knew how to use. So I decided to be the person who bridges that gap."
-  short_version_p2: "I take the complex AI stuff — large language models, automation, intelligent workflows — and turn it into things that actually help real people do their jobs better. No jargon. No hype. Just practical integration that works."
+  short_version_p1: "I've been building software since 2010. Started with desktop apps and the Microsoft stack, moved to the web, and kept learning along the way. AI is one of the things I've picked up and actually use day-to-day — but it's a tool, not the job."
+  short_version_p2: "I care about software that ships, code that's maintainable, and products that people actually want to use. I'll reach for AI when it helps. I'll skip it when it doesn't."
   what_i_do_title: "What I actually do"
-  what_i_do_p1: "Think of me as the person you call when you know AI could help your business, but you're not sure where to start. I'll sit down with your team, understand your workflows, and build integrations that feel natural — not like you bolted a robot onto your process."
-  what_i_do_p2: "Whether it's automating repetitive tasks, building smart document processing, creating AI-powered features for your product, or setting up copilot-style assistants for your team — I've done it and I love doing it."
+  what_i_do_p1: "Think of me as the engineer you call when you need something built properly — a product, a feature, an integration, or a fix for something that's been broken too long."
+  what_i_do_p2: "Whether it's a web app, a backend service, a tricky integration, or a product that needs AI features done right — I've built it and I know how to make it work."
   beyond_code_title: "Beyond the code"
-  beyond_code_p: "When I'm not wrangling APIs or fine-tuning prompts, you'll find me watching movies, making BBQ (I take it very seriously), or enjoying a good craft beer. I believe the best tech is built by people who have a life outside of tech."
+  beyond_code_p: "When I'm not writing code or reading docs, you'll find me watching movies, making BBQ (I take it very seriously), or enjoying a good craft beer. I believe the best tech is built by people who have a life outside of tech."
   buy_coffee: "Buy me a coffee"
 
 apps_page:
