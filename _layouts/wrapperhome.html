@@ -7,7 +7,9 @@ layout: default
     <div class="hero-content">
         <p class="hero-wave">{{ t.hero.greeting }}</p>
         <h1 class="hero-title">{{ t.hero.title_before }}<span class="hero-highlight">{{ t.hero.title_highlight }}</span>{{ t.hero.title_after }}</h1>
-        <p class="hero-subtitle">{{ t.hero.subtitle }}</p>
+        <div class="slot-machine">
+          <canvas id="subtitle-slot"></canvas>
+        </div>
         <div class="hero-cta">
             <a href="#about" class="btn-hero-primary">{{ t.hero.cta_about }}</a>
         </div>
@@ -21,3 +23,113 @@ layout: default
 <div class="content-wrapper">
     {{ content }}
 </div>
+
+<script type="module">
+import { prepare, layoutWithLines } from 'https://unpkg.com/@chenglou/pretext/dist/layout.js';
+
+const PHRASES = [
+  "Software engineer with 15+ years of experience.",
+  "Coffee \u2192 code converter. Ships things for real.",
+  "AI wrangler & prompt whisperer since before it was cool.",
+  "Bug creator, destroyer, and occasional BBQ master.",
+  "Makes the computer do the thing. Correctly.",
+  "Building software since before ChatGPT was a thing.",
+];
+
+const FONT_SIZE = 19;
+const FONT = `400 ${FONT_SIZE}px Inter`;
+const SLOT_H = 52;
+const COLOR = '#a5a2c8';
+const SLOT_DURATION = 5000;
+const ANIM_MS = 700;
+
+async function initSlotMachine() {
+  await document.fonts.ready;
+
+  const canvas = document.getElementById('subtitle-slot');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  function setSize() {
+    const wrapper = canvas.parentElement;
+    canvas.width = Math.min(wrapper.clientWidth, 580);
+    canvas.height = SLOT_H;
+  }
+  setSize();
+  window.addEventListener('resize', () => { setSize(); drawFrame(1); });
+
+  // Pre-measure all phrases with pretext — no DOM reflow needed
+  const measured = PHRASES.map(phrase => {
+    const prepared = prepare(phrase, FONT);
+    const { lines } = layoutWithLines(prepared, canvas.width - 40, SLOT_H);
+    return { phrase, lines };
+  });
+
+  let currentIdx = 0;
+  let nextIdx = 1;
+  let animStart = null;
+  let phase = 'settled';
+
+  function easeOutBounce(t) {
+    const n1 = 7.5625, d1 = 2.75;
+    if (t < 1 / d1)       return n1 * t * t;
+    if (t < 2 / d1)       return n1 * (t -= 1.5 / d1) * t + 0.75;
+    if (t < 2.5 / d1)     return n1 * (t -= 2.25 / d1) * t + 0.9375;
+    return                        n1 * (t -= 2.625 / d1) * t + 0.984375;
+  }
+
+  function drawPhrase(linesData, offsetY, alpha) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.font = FONT;
+    ctx.fillStyle = COLOR;
+    ctx.textBaseline = 'middle';
+    const lineH = SLOT_H / Math.max(linesData.length, 1);
+    linesData.forEach((line, i) => {
+      // pretext gives us the exact rendered width — use it to center on canvas
+      const x = (canvas.width - line.width) / 2;
+      const y = offsetY + lineH * i + lineH / 2;
+      ctx.fillText(line.text, x, y);
+    });
+    ctx.restore();
+  }
+
+  function drawFrame(progress) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const bounced = easeOutBounce(progress);
+
+    if (phase === 'entering') {
+      drawPhrase(measured[currentIdx].lines, -SLOT_H * bounced, 1 - progress);
+      drawPhrase(measured[nextIdx].lines,    SLOT_H * (1 - bounced), progress);
+    } else {
+      drawPhrase(measured[currentIdx].lines, 0, 1);
+    }
+  }
+
+  function animate(ts) {
+    if (!animStart) animStart = ts;
+    const progress = Math.min((ts - animStart) / ANIM_MS, 1);
+    drawFrame(progress);
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      currentIdx = nextIdx;
+      nextIdx = (currentIdx + 1) % PHRASES.length;
+      phase = 'settled';
+      animStart = null;
+      drawFrame(1);
+    }
+  }
+
+  function spin() {
+    phase = 'entering';
+    animStart = null;
+    requestAnimationFrame(animate);
+  }
+
+  drawFrame(1);
+  setInterval(spin, SLOT_DURATION);
+}
+
+initSlotMachine();
+</script>
