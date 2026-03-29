@@ -1,0 +1,39 @@
+{
+  "id": "/f1-championship/",
+  "name": "F1 Championship Dashboard",
+  "short_name": "F1 Champ",
+  "description": "Track your lap time championship across the full 2026 F1 season.",
+  "start_url": "/f1-championship/",
+  "scope": "/f1-championship/",
+  "display": "standalone",
+  "background_color": "#0c0a1a",
+  "theme_color": "#0c0a1a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/f1-championship/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/f1-championship/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/f1-championship/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Calendar",
+      "url": "/f1-championship/#calendar",
+      "description": "View race calendar"
+    }
+  ]
+}
