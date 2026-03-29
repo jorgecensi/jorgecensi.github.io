@@ -241,6 +241,20 @@ body::before {
   line-height: 1.7;
 }
 
+.slot-machine {
+  max-width: 580px;
+  margin: 0 auto 2.5rem;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#subtitle-slot {
+  display: block;
+}
+
 .hero-cta {
   display: flex;
   gap: 1rem;
