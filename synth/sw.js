@@ -1,4 +1,5 @@
-const CACHE_NAME = "synth-v1";
+const CACHE_VERSION = '2603220405';
+const CACHE_NAME = `synth-${CACHE_VERSION}`;
 const OFFLINE_URL = "/synth/";
 const PRECACHE_URLS = [
   "/synth/",
