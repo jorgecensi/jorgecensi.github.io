@@ -104,7 +104,7 @@ permalink: /drum-machine/
             flex-direction: column;
             align-items: center;
             gap: 2px;
-            padding: 6px 4px;
+            padding: 10px 6px;
             background: var(--surface);
             border: 1.5px solid var(--surface3);
             border-radius: 10px;
@@ -121,13 +121,13 @@ permalink: /drum-machine/
         .sample-btn[data-voice="1"]:active { border-color: var(--snare); }
         .sample-btn[data-voice="2"]:active { border-color: var(--hihat); }
         .sample-btn[data-voice="3"]:active { border-color: var(--clap); }
-        .sample-voice { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; }
+        .sample-voice { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; }
         .sample-btn[data-voice="0"] .sample-voice { color: var(--kick); }
         .sample-btn[data-voice="1"] .sample-voice { color: var(--snare); }
         .sample-btn[data-voice="2"] .sample-voice { color: var(--hihat); }
         .sample-btn[data-voice="3"] .sample-voice { color: var(--clap); }
-        .sample-name  { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; color: var(--text); }
-        .sample-hint  { font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.05em; }
+        .sample-name  { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; color: var(--text); }
+        .sample-hint  { font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.05em; }
 
         /* ── Sequencer ───────────────────────────────────── */
         #sequencer-wrap {
@@ -280,6 +280,40 @@ permalink: /drum-machine/
             animation: fx-pulse 0.8s ease-in-out infinite;
         }
 
+        /* ── Clap recording panel ───────────────────────── */
+        #clap-record-row {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
+        #clap-record-row.visible { display: flex; }
+        #rec-btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 18px;
+            background: var(--surface);
+            border: 1.5px solid var(--clap-dim);
+            border-radius: 20px;
+            color: var(--clap);
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        #rec-btn:active { background: var(--surface2); }
+        #rec-btn.recording { border-color: var(--clap); animation: rec-pulse 0.8s ease-in-out infinite; }
+        @keyframes rec-pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+        #rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--clap); flex-shrink: 0; }
+        #rec-btn.recording #rec-dot { background: #ff4757; }
+        #rec-clear-btn {
+            background: none; border: none;
+            color: var(--text-dim); font-size: 0.7rem;
+            cursor: pointer; padding: 4px 8px;
+            border-radius: 8px;
+        }
+        #rec-clear-btn:active { color: var(--text); }
+
         /* ── Landscape layout (phones rotated) ───────────── */
         @media (orientation: landscape) and (max-height: 500px) {
             #app {
@@ -314,7 +348,7 @@ permalink: /drum-machine/
     <!-- Header -->
     <div id="header">
         <h1>Drum Machine</h1>
-        <span id="tempo-display">♩ 120 · swing 0%</span>
+        <span id="tempo-display">♩ 140 · swing 15%</span>
     </div>
 
     <!-- Sample selectors -->
@@ -339,6 +373,12 @@ permalink: /drum-machine/
             <span class="sample-name" id="sample-name-3">CLAP</span>
             <span class="sample-hint">tap to swap</span>
         </button>
+    </div>
+
+    <!-- Clap recording row -->
+    <div id="clap-record-row">
+        <button id="rec-btn"><span id="rec-dot"></span><span id="rec-label">● REC CLAP</span></button>
+        <button id="rec-clear-btn" style="display:none">✕ clear</button>
     </div>
 
     <!-- Circular Sequencer -->
@@ -395,7 +435,7 @@ permalink: /drum-machine/
             <!-- ── Voice pads — diamonds at cardinal positions, r=158 ── -->
             <!-- V0 Kick — top (200, 42) -->
             <g class="voice-pad" data-voice="0">
-                <circle cx="200" cy="42" r="26" fill="transparent"/>
+                <circle cx="200" cy="42" r="34" fill="transparent"/>
                 <polygon points="200,24 218,42 200,60 182,42"
                          fill="rgba(255,71,87,0.18)" stroke="#FF4757" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-0"/>
@@ -405,7 +445,7 @@ permalink: /drum-machine/
             </g>
             <!-- V1 Snare — right (358, 200) -->
             <g class="voice-pad" data-voice="1">
-                <circle cx="358" cy="200" r="26" fill="transparent"/>
+                <circle cx="358" cy="200" r="34" fill="transparent"/>
                 <polygon points="358,182 376,200 358,218 340,200"
                          fill="rgba(255,165,2,0.18)" stroke="#FFA502" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-1"/>
@@ -415,7 +455,7 @@ permalink: /drum-machine/
             </g>
             <!-- V2 HiHat — bottom (200, 358) -->
             <g class="voice-pad" data-voice="2">
-                <circle cx="200" cy="358" r="26" fill="transparent"/>
+                <circle cx="200" cy="358" r="34" fill="transparent"/>
                 <polygon points="200,340 218,358 200,376 182,358"
                          fill="rgba(46,213,115,0.18)" stroke="#2ED573" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-2"/>
@@ -425,7 +465,7 @@ permalink: /drum-machine/
             </g>
             <!-- V3 Clap — left (42, 200) -->
             <g class="voice-pad" data-voice="3">
-                <circle cx="42" cy="200" r="26" fill="transparent"/>
+                <circle cx="42" cy="200" r="34" fill="transparent"/>
                 <polygon points="42,182 60,200 42,218 24,200"
                          fill="rgba(162,155,254,0.18)" stroke="#A29BFE" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-3"/>
@@ -437,7 +477,7 @@ permalink: /drum-machine/
             <!-- ── Effect buttons — large circles at diagonal positions, r=158 ── -->
             <!-- REPEAT — top-right (312, 88), angle -45° -->
             <g class="effect-btn" data-fx="repeat">
-                <circle cx="312" cy="88" r="23" fill="rgba(255,71,87,0.1)"
+                <circle cx="312" cy="88" r="30" fill="rgba(255,71,87,0.1)"
                         stroke="#FF4757" stroke-width="1.5" id="fx-c-repeat"/>
                 <text x="312" y="89" text-anchor="middle" dominant-baseline="middle"
                       font-size="9" font-weight="800" fill="#FF4757" letter-spacing="0.04em"
@@ -445,7 +485,7 @@ permalink: /drum-machine/
             </g>
             <!-- FILTER — bottom-right (312, 312), angle +45° -->
             <g class="effect-btn" data-fx="filter">
-                <circle cx="312" cy="312" r="23" fill="rgba(46,213,115,0.1)"
+                <circle cx="312" cy="312" r="30" fill="rgba(46,213,115,0.1)"
                         stroke="#2ED573" stroke-width="1.5" id="fx-c-filter"/>
                 <text x="312" y="313" text-anchor="middle" dominant-baseline="middle"
                       font-size="9" font-weight="800" fill="#2ED573" letter-spacing="0.04em"
@@ -453,7 +493,7 @@ permalink: /drum-machine/
             </g>
             <!-- RANDOM — bottom-left (88, 312), angle +135° -->
             <g class="effect-btn" data-fx="random">
-                <circle cx="88" cy="312" r="23" fill="rgba(255,165,2,0.1)"
+                <circle cx="88" cy="312" r="30" fill="rgba(255,165,2,0.1)"
                         stroke="#FFA502" stroke-width="1.5" id="fx-c-random"/>
                 <text x="88" y="313" text-anchor="middle" dominant-baseline="middle"
                       font-size="9" font-weight="800" fill="#FFA502" letter-spacing="0.04em"
@@ -461,7 +501,7 @@ permalink: /drum-machine/
             </g>
             <!-- DISTORT — top-left (88, 88), angle -135° -->
             <g class="effect-btn" data-fx="distortion">
-                <circle cx="88" cy="88" r="23" fill="rgba(91,138,255,0.1)"
+                <circle cx="88" cy="88" r="30" fill="rgba(91,138,255,0.1)"
                         stroke="#5B8AFF" stroke-width="1.5" id="fx-c-distortion"/>
                 <text x="88" y="89" text-anchor="middle" dominant-baseline="middle"
                       font-size="9" font-weight="800" fill="#5B8AFF" letter-spacing="0.04em"
@@ -485,15 +525,15 @@ permalink: /drum-machine/
     <!-- SPEED -->
     <div class="slider-row">
         <span class="slider-label">SPEED</span>
-        <input type="range" id="bpm-slider" min="60" max="200" value="120" step="1">
-        <span class="slider-value" id="bpm-value">120</span>
+        <input type="range" id="bpm-slider" min="60" max="200" value="140" step="1">
+        <span class="slider-value" id="bpm-value">140</span>
     </div>
 
     <!-- SWING -->
     <div class="slider-row">
         <span class="slider-label">SWING</span>
-        <input type="range" id="swing-slider" min="0" max="100" value="0" step="1">
-        <span class="slider-value" id="swing-value">0%</span>
+        <input type="range" id="swing-slider" min="0" max="100" value="15" step="1">
+        <span class="slider-value" id="swing-value">15%</span>
     </div>
 
     <!-- TUNE -->
@@ -544,7 +584,7 @@ const FX_ACTIVE   = { repeat:'rgba(255,71,87,0.55)',    filter:'rgba(46,213,115,
                        random:'rgba(255,165,2,0.55)',    distortion:'rgba(91,138,255,0.55)' };
 const FX_DIM      = { repeat:'rgba(255,71,87,0.1)',      filter:'rgba(46,213,115,0.1)',
                        random:'rgba(255,165,2,0.1)',      distortion:'rgba(91,138,255,0.1)' };
-const NODE_R      = 11;
+const NODE_R      = 14;
 const LOOKAHEAD   = 25.0;   // ms
 const SCHED_AHEAD = 0.1;    // s
 
@@ -552,8 +592,8 @@ const SCHED_AHEAD = 0.1;    // s
 let grid           = Array.from({length: VOICES}, () => Array(STEPS).fill(false));
 let pitches        = [0, 0, 0, 0];
 let selectedSamples = [0, 0, 0, 0];
-let bpm            = 120;
-let swing          = 0;
+let bpm            = 140;
+let swing          = 0.15;
 let isPlaying      = false;
 let currentStep    = 0;
 let nextStepTime   = 0;
@@ -561,6 +601,13 @@ let schedulerTimer = null;
 let visualStep     = -1;
 let fx = { repeat: false, random: false, filter: false, distortion: false };
 let fxToastShown = false;
+
+// Recording state
+let recordedClapBuffer  = null;
+let isRecording         = false;
+let mediaRecorder       = null;
+let recordChunks        = [];
+let recCountdownTimer   = null;
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 function saveState() {
@@ -728,6 +775,17 @@ function playShaker(time, pitch) {
     }
 }
 function playClap(time, pitch) {
+    if (recordedClapBuffer) {
+        const src = audioCtx.createBufferSource();
+        src.buffer = recordedClapBuffer;
+        src.playbackRate.value = semitonesToRate(pitch);
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.9, time);
+        src.connect(g); g.connect(masterGain);
+        src.start(time);
+        src.stop(time + recordedClapBuffer.duration + 0.01);
+        return;
+    }
     const r = semitonesToRate(pitch);
     for (let b = 0; b < 3; b++) {
         const t = time + b * 0.012;
@@ -887,7 +945,7 @@ function buildStepsSVG() {
             const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             hit.setAttribute('cx', pos.x);
             hit.setAttribute('cy', pos.y);
-            hit.setAttribute('r', 18);
+            hit.setAttribute('r', 22);
             hit.setAttribute('fill', 'transparent');
 
             group.appendChild(hit);
@@ -1068,6 +1126,7 @@ document.querySelectorAll('.sample-btn').forEach(btn => {
         selectedSamples[v] = (selectedSamples[v] + 1) % SAMPLE_BANKS[v].length;
         document.getElementById(`sample-name-${v}`).textContent = SAMPLE_BANKS[v][selectedSamples[v]].name;
         triggerVoice(v, audioCtx.currentTime);
+        if (v === 3) updateClapRecordUI();
         saveState();
     });
 });
@@ -1089,12 +1148,103 @@ tempoDisplay.addEventListener('click', () => {
     }
 });
 
+// ─── Clap recording ───────────────────────────────────────────────────────────
+const clapRecordRow = document.getElementById('clap-record-row');
+const recBtn        = document.getElementById('rec-btn');
+const recLabelEl    = document.getElementById('rec-label');
+const recClearBtn   = document.getElementById('rec-clear-btn');
+
+function updateClapRecordUI() {
+    const clapSelected = selectedSamples[3] === 0;
+    clapRecordRow.classList.toggle('visible', clapSelected);
+    if (!clapSelected) return;
+    if (isRecording) {
+        recBtn.classList.add('recording');
+        recLabelEl.textContent = '◼ STOP';
+        recClearBtn.style.display = 'none';
+    } else if (recordedClapBuffer) {
+        recBtn.classList.remove('recording');
+        recLabelEl.textContent = '✓ CUSTOM';
+        recClearBtn.style.display = '';
+    } else {
+        recBtn.classList.remove('recording');
+        recLabelEl.textContent = '● REC CLAP';
+        recClearBtn.style.display = 'none';
+    }
+}
+
+async function startRecording() {
+    if (isRecording) return;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        isRecording = true;
+        recordChunks = [];
+        updateClapRecordUI();
+
+        let elapsed = 0;
+        recCountdownTimer = setInterval(() => {
+            elapsed += 100;
+            const rem = ((1500 - elapsed) / 1000).toFixed(1);
+            if (elapsed <= 1500) recLabelEl.textContent = `◼ ${rem}s`;
+        }, 100);
+
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordChunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+            clearInterval(recCountdownTimer);
+            stream.getTracks().forEach(t => t.stop());
+            const blob = new Blob(recordChunks, { type: mediaRecorder.mimeType });
+            const arrayBuf = await blob.arrayBuffer();
+            initAudio();
+            try {
+                const decoded = await audioCtx.decodeAudioData(arrayBuf);
+                const maxSamples = Math.min(decoded.length, Math.ceil(audioCtx.sampleRate * 1.5));
+                recordedClapBuffer = audioCtx.createBuffer(
+                    decoded.numberOfChannels, maxSamples, decoded.sampleRate
+                );
+                for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+                    recordedClapBuffer.getChannelData(ch)
+                        .set(decoded.getChannelData(ch).subarray(0, maxSamples));
+                }
+            } catch (e) { recordedClapBuffer = null; }
+            isRecording = false;
+            updateClapRecordUI();
+        };
+        mediaRecorder.start();
+        setTimeout(() => { if (isRecording) stopRecording(); }, 1500);
+    } catch (e) {
+        isRecording = false;
+        updateClapRecordUI();
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+}
+
+recBtn.addEventListener('click', () => {
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (isRecording) stopRecording();
+    else startRecording();
+});
+
+recClearBtn.addEventListener('click', () => {
+    recordedClapBuffer = null;
+    updateClapRecordUI();
+});
+
 // ─── Default pattern ──────────────────────────────────────────────────────────
 function loadDefault() {
-    grid[0][0] = true; grid[0][4] = true;
-    grid[1][2] = true; grid[1][6] = true;
-    grid[2][0] = true; grid[2][2] = true; grid[2][4] = true; grid[2][6] = true;
-    grid[3][3] = true; grid[3][7] = true;
+    bpm = 140; swing = 0.15;
+    // Kick: beat 1, syncopated "a" of beat 1, beat 2
+    grid[0][0] = true; grid[0][3] = true; grid[0][4] = true;
+    // Snare: half-time on beat 2 only (punchy, trap feel)
+    grid[1][4] = true;
+    // HiHat: all 16ths — dense trap hat roll
+    grid[2].fill(true);
+    // Clap: layers with snare on beat 2, ghost clap on "and" of beat 2
+    grid[3][4] = true; grid[3][6] = true;
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -1115,6 +1265,7 @@ buildStepsSVG();
 
 renderSteps();
 animLoop();
+updateClapRecordUI();
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
