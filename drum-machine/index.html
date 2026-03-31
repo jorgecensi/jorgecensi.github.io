@@ -45,6 +45,7 @@ permalink: /drum-machine/
             overflow: hidden;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-touch-callout: none;
             touch-action: manipulation;
         }
 
@@ -52,6 +53,7 @@ permalink: /drum-machine/
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: space-evenly;
             gap: 8px;
             height: 100%;
             width: 100%;
@@ -82,7 +84,13 @@ permalink: /drum-machine/
             font-size: 0.7rem;
             color: var(--text-mid);
             letter-spacing: 0.08em;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background 0.1s;
+            -webkit-tap-highlight-color: transparent;
         }
+        #tempo-display:active { background: var(--surface2); }
 
         /* ── Sample selectors ────────────────────────────── */
         #sample-row {
@@ -96,7 +104,7 @@ permalink: /drum-machine/
             flex-direction: column;
             align-items: center;
             gap: 2px;
-            padding: 6px 4px;
+            padding: 10px 6px;
             background: var(--surface);
             border: 1.5px solid var(--surface3);
             border-radius: 10px;
@@ -113,18 +121,18 @@ permalink: /drum-machine/
         .sample-btn[data-voice="1"]:active { border-color: var(--snare); }
         .sample-btn[data-voice="2"]:active { border-color: var(--hihat); }
         .sample-btn[data-voice="3"]:active { border-color: var(--clap); }
-        .sample-voice { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; }
+        .sample-voice { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; }
         .sample-btn[data-voice="0"] .sample-voice { color: var(--kick); }
         .sample-btn[data-voice="1"] .sample-voice { color: var(--snare); }
         .sample-btn[data-voice="2"] .sample-voice { color: var(--hihat); }
         .sample-btn[data-voice="3"] .sample-voice { color: var(--clap); }
-        .sample-name  { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; color: var(--text); }
-        .sample-hint  { font-size: 0.5rem; color: var(--text-dim); letter-spacing: 0.05em; }
+        .sample-name  { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; color: var(--text); }
+        .sample-hint  { font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.05em; }
 
         /* ── Sequencer ───────────────────────────────────── */
         #sequencer-wrap {
             position: relative;
-            width: min(88vw, 340px);
+            width: min(96vw, 420px);
             aspect-ratio: 1;
             flex-shrink: 0;
         }
@@ -135,43 +143,6 @@ permalink: /drum-machine/
             touch-action: none;
         }
         .step-node, .voice-pad, .effect-btn { cursor: pointer; }
-
-        /* ── Roll indicator ──────────────────────────────── */
-        #roll-indicator {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            background: rgba(10, 10, 10, 0.88);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 10px 16px;
-            pointer-events: none;
-            z-index: 10;
-        }
-        #roll-indicator.visible { display: flex; }
-        .ri-hint {
-            font-size: 0.5rem;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--text-dim);
-        }
-        .ri-speed {
-            font-size: 0.62rem;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            color: var(--text-dim);
-            padding: 2px 8px;
-            border-radius: 5px;
-            transition: color 0.06s, background 0.06s;
-        }
-        .ri-speed.active {
-            color: var(--text);
-            background: rgba(255,255,255,0.12);
-        }
 
         /* ── Sliders ─────────────────────────────────────── */
         .slider-row {
@@ -191,7 +162,7 @@ permalink: /drum-machine/
             -webkit-appearance: none;
             appearance: none;
             flex: 1;
-            height: 3px;
+            height: 5px;
             background: var(--surface3);
             border-radius: 2px;
             outline: none;
@@ -199,14 +170,14 @@ permalink: /drum-machine/
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 18px; height: 18px;
+            width: 20px; height: 20px;
             border-radius: 50%;
             background: var(--text);
             cursor: pointer;
             box-shadow: 0 0 6px rgba(255,255,255,0.2);
         }
         input[type=range]::-moz-range-thumb {
-            width: 18px; height: 18px;
+            width: 20px; height: 20px;
             border: none; border-radius: 50%;
             background: var(--text); cursor: pointer;
         }
@@ -243,7 +214,7 @@ permalink: /drum-machine/
         .pitch-badge.clap  { background: var(--clap); }
         .pitch-slider {
             -webkit-appearance: none; appearance: none;
-            width: 100%; height: 3px;
+            width: 100%; height: 5px;
             border-radius: 2px; outline: none; cursor: pointer;
         }
         .pitch-slider.kick  { background: linear-gradient(to right, var(--surface3), var(--kick)); }
@@ -252,11 +223,11 @@ permalink: /drum-machine/
         .pitch-slider.clap  { background: linear-gradient(to right, var(--surface3), var(--clap)); }
         .pitch-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px; height: 16px;
+            width: 20px; height: 20px;
             border-radius: 50%; background: var(--text); cursor: pointer;
         }
         .pitch-slider::-moz-range-thumb {
-            width: 16px; height: 16px;
+            width: 20px; height: 20px;
             border: none; border-radius: 50%; background: var(--text);
         }
 
@@ -277,6 +248,98 @@ permalink: /drum-machine/
             padding: 4px 12px; font-size: 0.8rem;
             font-weight: 700; cursor: pointer;
         }
+
+        /* ── FX toast ────────────────────────────────────── */
+        #fx-toast {
+            display: none;
+            position: fixed; bottom: 70px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px; padding: 8px 16px;
+            font-size: 0.75rem; color: var(--text);
+            white-space: nowrap; z-index: 99;
+            pointer-events: none;
+        }
+        #fx-toast.show { display: block; animation: toast-fade 2.5s ease forwards; }
+        @keyframes toast-fade {
+            0%   { opacity: 0; transform: translateX(-50%) translateY(4px); }
+            15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+            70%  { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* ── Effect button active pulse ──────────────────── */
+        @keyframes fx-pulse {
+            0%, 100% { stroke-width: 1.5; }
+            50%       { stroke-width: 3; }
+        }
+        .effect-btn.active circle {
+            animation: fx-pulse 0.8s ease-in-out infinite;
+        }
+
+        /* ── Clap recording panel ───────────────────────── */
+        #clap-record-row {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
+        #clap-record-row.visible { display: flex; }
+        #rec-btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 18px;
+            background: var(--surface);
+            border: 1.5px solid var(--clap-dim);
+            border-radius: 20px;
+            color: var(--clap);
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        #rec-btn:active { background: var(--surface2); }
+        #rec-btn.recording { border-color: var(--clap); animation: rec-pulse 0.8s ease-in-out infinite; }
+        @keyframes rec-pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+        #rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--clap); flex-shrink: 0; }
+        #rec-btn.recording #rec-dot { background: #ff4757; }
+        #rec-clear-btn {
+            background: none; border: none;
+            color: var(--text-dim); font-size: 0.7rem;
+            cursor: pointer; padding: 4px 8px;
+            border-radius: 8px;
+        }
+        #rec-clear-btn:active { color: var(--text); }
+
+        /* ── Landscape layout (phones rotated) ───────────── */
+        @media (orientation: landscape) and (max-height: 500px) {
+            #app {
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: flex-start;
+                max-width: 100%;
+                overflow-y: auto;
+            }
+            #header { width: 100%; }
+            #sample-row {
+                flex-direction: column;
+                width: clamp(80px, 18vw, 110px);
+                flex-shrink: 0;
+            }
+            .sample-btn { padding: 4px 3px; }
+            #sequencer-wrap {
+                width: min(46vw, 260px);
+                flex-shrink: 0;
+            }
+            .slider-row, #pitch-row {
+                width: clamp(100px, 22vw, 160px);
+                flex-shrink: 0;
+            }
+            .slider-label, #pitch-label { min-width: 28px; }
+        }
     </style>
 </head>
 <body>
@@ -285,7 +348,7 @@ permalink: /drum-machine/
     <!-- Header -->
     <div id="header">
         <h1>Drum Machine</h1>
-        <span id="tempo-display">♩ 120 · swing 0%</span>
+        <span id="tempo-display">♩ 140 · swing 15%</span>
     </div>
 
     <!-- Sample selectors -->
@@ -312,9 +375,15 @@ permalink: /drum-machine/
         </button>
     </div>
 
+    <!-- Clap recording row -->
+    <div id="clap-record-row">
+        <button id="rec-btn"><span id="rec-dot"></span><span id="rec-label">● REC CLAP</span></button>
+        <button id="rec-clear-btn" style="display:none">✕ clear</button>
+    </div>
+
     <!-- Circular Sequencer -->
     <div id="sequencer-wrap">
-        <svg id="sequencer-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <svg id="sequencer-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" oncontextmenu="return false">
             <defs>
                 <radialGradient id="bg-gradient" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stop-color="#1c1c1c"/>
@@ -322,25 +391,21 @@ permalink: /drum-machine/
                 </radialGradient>
             </defs>
 
-            <!-- Octagonal body -->
-            <polygon points="272.7,24.5 375.5,127.3 375.5,272.7 272.7,375.5 127.3,375.5 24.5,272.7 24.5,127.3 127.3,24.5"
-                     fill="url(#bg-gradient)" stroke="#0d4a44" stroke-width="5" stroke-linejoin="round"/>
-
             <!-- Ring track -->
-            <circle cx="200" cy="200" r="155" fill="none" stroke="#181818" stroke-width="24"/>
+            <circle cx="200" cy="200" r="168" fill="none" stroke="#181818" stroke-width="24"/>
 
             <!-- Voice arc backgrounds (dim colour segments on the ring) -->
             <!-- Kick  top:    -125° → -55° -->
-            <path d="M 111.1 73.1 A 155 155 0 0 1 288.9 73.1"
+            <path d="M 103.6 62.4 A 168 168 0 0 1 296.4 62.4"
                   fill="none" stroke="rgba(255,71,87,0.09)" stroke-width="24"/>
             <!-- Snare right:  -35° → +35° -->
-            <path d="M 326.9 111.1 A 155 155 0 0 1 326.9 288.9"
+            <path d="M 337.6 103.6 A 168 168 0 0 1 337.6 296.4"
                   fill="none" stroke="rgba(255,165,2,0.09)" stroke-width="24"/>
             <!-- HiHat bottom: +55° → +125° -->
-            <path d="M 288.9 326.9 A 155 155 0 0 1 111.1 326.9"
+            <path d="M 296.4 337.6 A 168 168 0 0 1 103.6 337.6"
                   fill="none" stroke="rgba(46,213,115,0.09)" stroke-width="24"/>
             <!-- Clap  left:  +145° → +215° -->
-            <path d="M 73.1 288.9 A 155 155 0 0 1 73.1 111.1"
+            <path d="M 62.4 296.4 A 168 168 0 0 1 62.4 103.6"
                   fill="none" stroke="rgba(162,155,254,0.09)" stroke-width="24"/>
 
             <!-- Step nodes — built by JS -->
@@ -363,79 +428,79 @@ permalink: /drum-machine/
                   font-size="10" font-weight="800" letter-spacing="0.1em"
                   fill="rgba(162,155,254,0.45)">CLAP</text>
 
-            <!-- ── Voice pads — diamonds at cardinal positions, r=75 ── -->
-            <!-- V0 Kick — top (200, 125) -->
+            <!-- ── Voice pads — diamonds at cardinal positions, moved inward ── -->
+            <!-- V0 Kick — top (200, 70) -->
             <g class="voice-pad" data-voice="0">
-                <circle cx="200" cy="125" r="20" fill="transparent"/>
-                <polygon points="200,111 214,125 200,139 186,125"
+                <circle cx="200" cy="70" r="26" fill="transparent"/>
+                <polygon points="200,55 215,70 200,85 185,70"
                          fill="rgba(255,71,87,0.18)" stroke="#FF4757" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-0"/>
-                <text x="200" y="126" text-anchor="middle" dominant-baseline="middle"
-                      font-size="8" font-weight="900" fill="#FF4757"
-                      pointer-events="none" id="pad-text-0">K</text>
+                <text x="200" y="71" text-anchor="middle" dominant-baseline="middle"
+                      font-size="10" font-weight="900" fill="#FF4757"
+                      pointer-events="none">K</text>
             </g>
-            <!-- V1 Snare — right (275, 200) -->
+            <!-- V1 Snare — right (330, 200) -->
             <g class="voice-pad" data-voice="1">
-                <circle cx="275" cy="200" r="20" fill="transparent"/>
-                <polygon points="275,186 289,200 275,214 261,200"
+                <circle cx="330" cy="200" r="26" fill="transparent"/>
+                <polygon points="330,185 345,200 330,215 315,200"
                          fill="rgba(255,165,2,0.18)" stroke="#FFA502" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-1"/>
-                <text x="275" y="201" text-anchor="middle" dominant-baseline="middle"
-                      font-size="8" font-weight="900" fill="#FFA502"
-                      pointer-events="none" id="pad-text-1">S</text>
+                <text x="330" y="201" text-anchor="middle" dominant-baseline="middle"
+                      font-size="10" font-weight="900" fill="#FFA502"
+                      pointer-events="none">S</text>
             </g>
-            <!-- V2 HiHat — bottom (200, 275) -->
+            <!-- V2 HiHat — bottom (200, 330) -->
             <g class="voice-pad" data-voice="2">
-                <circle cx="200" cy="275" r="20" fill="transparent"/>
-                <polygon points="200,261 214,275 200,289 186,275"
+                <circle cx="200" cy="330" r="26" fill="transparent"/>
+                <polygon points="200,315 215,330 200,345 185,330"
                          fill="rgba(46,213,115,0.18)" stroke="#2ED573" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-2"/>
-                <text x="200" y="276" text-anchor="middle" dominant-baseline="middle"
-                      font-size="8" font-weight="900" fill="#2ED573"
-                      pointer-events="none" id="pad-text-2">H</text>
+                <text x="200" y="331" text-anchor="middle" dominant-baseline="middle"
+                      font-size="10" font-weight="900" fill="#2ED573"
+                      pointer-events="none">H</text>
             </g>
-            <!-- V3 Clap — left (125, 200) -->
+            <!-- V3 Clap — left (70, 200) -->
             <g class="voice-pad" data-voice="3">
-                <circle cx="125" cy="200" r="20" fill="transparent"/>
-                <polygon points="125,186 139,200 125,214 111,200"
+                <circle cx="70" cy="200" r="26" fill="transparent"/>
+                <polygon points="70,185 85,200 70,215 55,200"
                          fill="rgba(162,155,254,0.18)" stroke="#A29BFE" stroke-width="1.5"
                          stroke-linejoin="round" id="pad-poly-3"/>
-                <text x="125" y="201" text-anchor="middle" dominant-baseline="middle"
-                      font-size="8" font-weight="900" fill="#A29BFE"
-                      pointer-events="none" id="pad-text-3">C</text>
+                <text x="70" y="201" text-anchor="middle" dominant-baseline="middle"
+                      font-size="10" font-weight="900" fill="#A29BFE"
+                      pointer-events="none">C</text>
             </g>
 
-            <!-- ── Effect buttons — circles at diagonal positions, r=75 ── -->
+            <!-- ── Effect buttons — circles at diagonal positions, inside ring ── -->
             <!-- REPEAT — top-right (253, 147), angle -45° -->
             <g class="effect-btn" data-fx="repeat">
-                <circle cx="253" cy="147" r="17" fill="rgba(255,71,87,0.1)"
+                <circle cx="253" cy="147" r="23" fill="rgba(255,71,87,0.1)"
                         stroke="#FF4757" stroke-width="1.5" id="fx-c-repeat"/>
                 <text x="253" y="148" text-anchor="middle" dominant-baseline="middle"
-                      font-size="6" font-weight="800" fill="#FF4757" letter-spacing="0.06em"
+                      font-size="7" font-weight="800" fill="#FF4757" letter-spacing="0.04em"
                       pointer-events="none">REPEAT</text>
             </g>
             <!-- FILTER — bottom-right (253, 253), angle +45° -->
             <g class="effect-btn" data-fx="filter">
-                <circle cx="253" cy="253" r="17" fill="rgba(46,213,115,0.1)"
+                <circle cx="253" cy="253" r="23" fill="rgba(46,213,115,0.1)"
                         stroke="#2ED573" stroke-width="1.5" id="fx-c-filter"/>
                 <text x="253" y="254" text-anchor="middle" dominant-baseline="middle"
-                      font-size="6" font-weight="800" fill="#2ED573" letter-spacing="0.06em"
+                      font-size="7" font-weight="800" fill="#2ED573" letter-spacing="0.04em"
                       pointer-events="none">FILTER</text>
             </g>
             <!-- RANDOM — bottom-left (147, 253), angle +135° -->
             <g class="effect-btn" data-fx="random">
-                <circle cx="147" cy="253" r="17" fill="rgba(255,165,2,0.1)"
+                <circle cx="147" cy="253" r="23" fill="rgba(255,165,2,0.1)"
                         stroke="#FFA502" stroke-width="1.5" id="fx-c-random"/>
                 <text x="147" y="254" text-anchor="middle" dominant-baseline="middle"
-                      font-size="6" font-weight="800" fill="#FFA502" letter-spacing="0.06em"
+                      font-size="7" font-weight="800" fill="#FFA502" letter-spacing="0.04em"
                       pointer-events="none">RANDOM</text>
             </g>
             <!-- DISTORT — top-left (147, 147), angle -135° -->
             <g class="effect-btn" data-fx="distortion">
-                <circle cx="147" cy="147" r="17" fill="rgba(91,138,255,0.1)"
+                <circle cx="147" cy="147" r="23" fill="rgba(91,138,255,0.1)"
                         stroke="#5B8AFF" stroke-width="1.5" id="fx-c-distortion"/>
                 <text x="147" y="148" text-anchor="middle" dominant-baseline="middle"
-                      font-size="6" font-weight="800" fill="#5B8AFF" letter-spacing="0.06em"
+                      font-size="7" font-weight="800" fill="#5B8AFF" letter-spacing="0.04em"
                       pointer-events="none">DISTORT</text>
             </g>
 
@@ -451,29 +516,20 @@ permalink: /drum-machine/
             <text x="200" y="219" text-anchor="middle" font-size="5.5" fill="#282828"
                   font-weight="900" letter-spacing="0.22em" font-family="monospace">DATO</text>
         </svg>
-        <div id="roll-indicator">
-            <span class="ri-hint">↑ faster</span>
-            <div class="ri-speed" data-level="2">64th</div>
-            <div class="ri-speed" data-level="1">32nd</div>
-            <div class="ri-speed" data-level="0">16th</div>
-            <div class="ri-speed" data-level="-1">8th</div>
-            <div class="ri-speed" data-level="-2">4th</div>
-            <span class="ri-hint">↓ slower</span>
-        </div>
     </div>
 
     <!-- SPEED -->
     <div class="slider-row">
         <span class="slider-label">SPEED</span>
-        <input type="range" id="bpm-slider" min="60" max="200" value="120" step="1">
-        <span class="slider-value" id="bpm-value">120</span>
+        <input type="range" id="bpm-slider" min="60" max="200" value="140" step="1">
+        <span class="slider-value" id="bpm-value">140</span>
     </div>
 
     <!-- SWING -->
     <div class="slider-row">
         <span class="slider-label">SWING</span>
-        <input type="range" id="swing-slider" min="0" max="100" value="0" step="1">
-        <span class="slider-value" id="swing-value">0%</span>
+        <input type="range" id="swing-slider" min="0" max="100" value="15" step="1">
+        <span class="slider-value" id="swing-value">15%</span>
     </div>
 
     <!-- TUNE -->
@@ -499,6 +555,8 @@ permalink: /drum-machine/
 
 </div>
 
+<div id="fx-toast">Hold effect buttons to activate</div>
+
 <div id="update-banner">
     <span>Update available</span>
     <button id="update-btn">Reload</button>
@@ -512,7 +570,7 @@ permalink: /drum-machine/
 const STEPS   = 8;
 const VOICES  = 4;
 const CX = 200, CY = 200;
-const RING_R  = 155;
+const RING_R  = 168;
 const COLORS      = ['#FF4757', '#FFA502', '#2ED573', '#A29BFE'];
 const COLORS_DIM  = ['rgba(255,71,87,0.15)','rgba(255,165,2,0.15)',
                      'rgba(46,213,115,0.15)','rgba(162,155,254,0.15)'];
@@ -530,16 +588,29 @@ const SCHED_AHEAD = 0.1;    // s
 let grid           = Array.from({length: VOICES}, () => Array(STEPS).fill(false));
 let pitches        = [0, 0, 0, 0];
 let selectedSamples = [0, 0, 0, 0];
-let bpm            = 120;
-let swing          = 0;
+let bpm            = 140;
+let swing          = 0.15;
 let isPlaying      = false;
 let currentStep    = 0;
 let nextStepTime   = 0;
 let schedulerTimer = null;
 let visualStep     = -1;
-let fx             = { repeat: false, random: false, filter: false, distortion: false };
-let voiceHeld      = [false, false, false, false];
-let voiceHoldLevel = [-1, -1, -1, -1]; // -2=4th, -1=8th, 0=16th, 1=32nd, 2=64th
+let fx = { repeat: false, random: false, filter: false, distortion: false };
+let fxToastShown = false;
+
+// Recording state
+let recordedClapBuffer  = null;
+let isRecording         = false;
+let mediaRecorder       = null;
+let recordChunks        = [];
+let recCountdownTimer   = null;
+
+// ─── Persistence ──────────────────────────────────────────────────────────────
+function saveState() {
+    try {
+        localStorage.setItem('dm_state', JSON.stringify({ grid, bpm, swing, pitches, selectedSamples }));
+    } catch(e) {}
+}
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 let audioCtx, masterGain, filterNode, distortionNode;
@@ -700,6 +771,17 @@ function playShaker(time, pitch) {
     }
 }
 function playClap(time, pitch) {
+    if (recordedClapBuffer) {
+        const src = audioCtx.createBufferSource();
+        src.buffer = recordedClapBuffer;
+        src.playbackRate.value = semitonesToRate(pitch);
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.9, time);
+        src.connect(g); g.connect(masterGain);
+        src.start(time);
+        src.stop(time + recordedClapBuffer.duration + 0.01);
+        return;
+    }
     const r = semitonesToRate(pitch);
     for (let b = 0; b < 3; b++) {
         const t = time + b * 0.012;
@@ -779,26 +861,13 @@ function scheduleStep(step, baseTime) {
     const time = baseTime + swingOffset(step);
     const dur  = stepDuration();
     for (let v = 0; v < VOICES; v++) {
-        if (voiceHeld[v]) {
-            // Roll mode: subdivide step, skip grid to avoid duplicates
-            const level = voiceHoldLevel[v];
-            if (level === -2) {
-                // quarter notes: fire on every other step
-                if (step % 2 === 0) triggerVoice(v, time);
-            } else {
-                const mult   = Math.pow(2, level + 1); // -1→1, 0→2, 1→4, 2→8
-                const subDur = dur / mult;
-                for (let i = 0; i < mult; i++) triggerVoice(v, time + i * subDur);
-            }
+        const fire = fx.random ? (Math.random() > 0.5) : grid[v][step];
+        if (!fire) continue;
+        if (fx.repeat) {
+            triggerVoice(v, time);
+            triggerVoice(v, time + dur / 2);
         } else {
-            const fire = fx.random ? (Math.random() > 0.5) : grid[v][step];
-            if (!fire) continue;
-            if (fx.repeat) {
-                triggerVoice(v, time);
-                triggerVoice(v, time + dur / 2);
-            } else {
-                triggerVoice(v, time);
-            }
+            triggerVoice(v, time);
         }
     }
 }
@@ -835,7 +904,7 @@ function stopPlayback() {
     updatePlayIcon();
 }
 
-function togglePlay() { isPlaying ? stopPlayback() : startPlayback(); }
+function togglePlay() { navigator.vibrate && navigator.vibrate(10); isPlaying ? stopPlayback() : startPlayback(); }
 
 function updatePlayIcon() {
     document.getElementById('play-icon').textContent = isPlaying ? '■' : '▶';
@@ -866,7 +935,16 @@ function buildStepsSVG() {
             circle.setAttribute('cy', pos.y);
             circle.setAttribute('r',  NODE_R);
             circle.setAttribute('fill', COLORS_DIM[v]);
+            circle.setAttribute('class', 'step-vis');
+            circle.setAttribute('pointer-events', 'none');
 
+            const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            hit.setAttribute('cx', pos.x);
+            hit.setAttribute('cy', pos.y);
+            hit.setAttribute('r', 22);
+            hit.setAttribute('fill', 'transparent');
+
+            group.appendChild(hit);
             group.appendChild(circle);
             g.appendChild(group);
 
@@ -882,7 +960,7 @@ function renderSteps() {
     document.querySelectorAll('.step-node').forEach(node => {
         const v = +node.dataset.voice;
         const s = +node.dataset.step;
-        const c = node.querySelector('circle');
+        const c = node.querySelector('.step-vis');
         const active  = grid[v][s];
         const playing = s === visualStep;
 
@@ -932,8 +1010,9 @@ function toggleStep(voice, step) {
     initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     grid[voice][step] = !grid[voice][step];
-    if (grid[voice][step]) triggerVoice(voice, audioCtx.currentTime);
+    if (grid[voice][step]) { triggerVoice(voice, audioCtx.currentTime); navigator.vibrate && navigator.vibrate(10); }
     renderSteps();
+    saveState();
 }
 
 // ─── Effects ──────────────────────────────────────────────────────────────────
@@ -948,50 +1027,19 @@ function applyEffect(name, on) {
 }
 
 // ─── Voice pads ───────────────────────────────────────────────────────────────
-const rollIndicator    = document.getElementById('roll-indicator');
-const rollSpeedEls     = rollIndicator.querySelectorAll('.ri-speed');
-
-function showRollIndicator(level) {
-    rollIndicator.classList.add('visible');
-    rollSpeedEls.forEach(el => el.classList.toggle('active', +el.dataset.level === level));
-}
-function hideRollIndicator() { rollIndicator.classList.remove('visible'); }
-
 document.querySelectorAll('.voice-pad').forEach(pad => {
     const v    = +pad.dataset.voice;
     const poly = document.getElementById(`pad-poly-${v}`);
-    let startY = 0;
 
     pad.addEventListener('pointerdown', e => {
         e.preventDefault();
+        navigator.vibrate && navigator.vibrate(10);
         initAudio();
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        pad.setPointerCapture(e.pointerId);
-        startY             = e.clientY;
-        voiceHeld[v]       = true;
-        voiceHoldLevel[v]  = -1;
-        triggerVoice(v, audioCtx.currentTime); // immediate feel on press
+        triggerVoice(v, audioCtx.currentTime);
         poly.setAttribute('fill', COLORS[v]);
-        showRollIndicator(-1);
+        setTimeout(() => poly.setAttribute('fill', PAD_FILL[v]), 130);
     });
-
-    pad.addEventListener('pointermove', e => {
-        if (!voiceHeld[v]) return;
-        const deltaY  = startY - e.clientY; // positive = dragged up = faster
-        const newLevel = Math.max(-2, Math.min(2, Math.round(deltaY / 40) - 1));
-        if (newLevel !== voiceHoldLevel[v]) {
-            voiceHoldLevel[v] = newLevel;
-            showRollIndicator(newLevel);
-        }
-    });
-
-    function stopRoll() {
-        voiceHeld[v] = false;
-        poly.setAttribute('fill', PAD_FILL[v]);
-        hideRollIndicator();
-    }
-    pad.addEventListener('pointerup',     stopRoll);
-    pad.addEventListener('pointercancel', stopRoll);
 });
 
 // ─── Effect buttons ───────────────────────────────────────────────────────────
@@ -1003,16 +1051,28 @@ document.querySelectorAll('.effect-btn').forEach(btn => {
         e.preventDefault();
         initAudio();
         if (audioCtx.state === 'suspended') audioCtx.resume();
+        btn._holdStart = Date.now();
         fx[name] = true;
         circle.setAttribute('fill', FX_ACTIVE[name]);
         circle.setAttribute('stroke-width', '2.5');
+        btn.classList.add('active');
         applyEffect(name, true);
     }
     function deactivate() {
+        const holdDuration = Date.now() - (btn._holdStart || Date.now());
         fx[name] = false;
         circle.setAttribute('fill', FX_DIM[name]);
         circle.setAttribute('stroke-width', '1.5');
+        btn.classList.remove('active');
         applyEffect(name, false);
+        if (!fxToastShown && holdDuration < 300) {
+            fxToastShown = true;
+            const toast = document.getElementById('fx-toast');
+            toast.classList.remove('show');
+            void toast.offsetWidth;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2600);
+        }
     }
 
     btn.addEventListener('pointerdown', activate);
@@ -1037,6 +1097,7 @@ bpmSlider.addEventListener('input', () => {
     bpm = +bpmSlider.value;
     bpmValueEl.textContent = bpm;
     updateTempoDisplay();
+    saveState();
 });
 
 const swingSlider  = document.getElementById('swing-slider');
@@ -1046,10 +1107,11 @@ swingSlider.addEventListener('input', () => {
     swing = +swingSlider.value / 100;
     swingValueEl.textContent = `${swingSlider.value}%`;
     updateTempoDisplay();
+    saveState();
 });
 
 document.querySelectorAll('.pitch-slider').forEach(el => {
-    el.addEventListener('input', () => { pitches[+el.dataset.voice] = +el.value; });
+    el.addEventListener('input', () => { pitches[+el.dataset.voice] = +el.value; saveState(); });
 });
 
 document.querySelectorAll('.sample-btn').forEach(btn => {
@@ -1060,22 +1122,146 @@ document.querySelectorAll('.sample-btn').forEach(btn => {
         selectedSamples[v] = (selectedSamples[v] + 1) % SAMPLE_BANKS[v].length;
         document.getElementById(`sample-name-${v}`).textContent = SAMPLE_BANKS[v][selectedSamples[v]].name;
         triggerVoice(v, audioCtx.currentTime);
+        if (v === 3) updateClapRecordUI();
+        saveState();
     });
+});
+
+// ─── Tap tempo ────────────────────────────────────────────────────────────────
+let tapTimes = [];
+tempoDisplay.addEventListener('click', () => {
+    const now = Date.now();
+    tapTimes = tapTimes.filter(t => now - t < 3000);
+    tapTimes.push(now);
+    if (tapTimes.length >= 2) {
+        const intervals = tapTimes.slice(1).map((t, i) => t - tapTimes[i]);
+        const avgMs = intervals.reduce((a, b) => a + b) / intervals.length;
+        bpm = Math.max(60, Math.min(200, Math.round(60000 / avgMs)));
+        bpmSlider.value = bpm;
+        bpmValueEl.textContent = bpm;
+        updateTempoDisplay();
+        saveState();
+    }
+});
+
+// ─── Clap recording ───────────────────────────────────────────────────────────
+const clapRecordRow = document.getElementById('clap-record-row');
+const recBtn        = document.getElementById('rec-btn');
+const recLabelEl    = document.getElementById('rec-label');
+const recClearBtn   = document.getElementById('rec-clear-btn');
+
+function updateClapRecordUI() {
+    const clapSelected = selectedSamples[3] === 0;
+    clapRecordRow.classList.toggle('visible', clapSelected);
+    if (!clapSelected) return;
+    if (isRecording) {
+        recBtn.classList.add('recording');
+        recLabelEl.textContent = '◼ STOP';
+        recClearBtn.style.display = 'none';
+    } else if (recordedClapBuffer) {
+        recBtn.classList.remove('recording');
+        recLabelEl.textContent = '✓ CUSTOM';
+        recClearBtn.style.display = '';
+    } else {
+        recBtn.classList.remove('recording');
+        recLabelEl.textContent = '● REC CLAP';
+        recClearBtn.style.display = 'none';
+    }
+}
+
+async function startRecording() {
+    if (isRecording) return;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        isRecording = true;
+        recordChunks = [];
+        updateClapRecordUI();
+
+        let elapsed = 0;
+        recCountdownTimer = setInterval(() => {
+            elapsed += 100;
+            const rem = ((1500 - elapsed) / 1000).toFixed(1);
+            if (elapsed <= 1500) recLabelEl.textContent = `◼ ${rem}s`;
+        }, 100);
+
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordChunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+            clearInterval(recCountdownTimer);
+            stream.getTracks().forEach(t => t.stop());
+            const blob = new Blob(recordChunks, { type: mediaRecorder.mimeType });
+            const arrayBuf = await blob.arrayBuffer();
+            initAudio();
+            try {
+                const decoded = await audioCtx.decodeAudioData(arrayBuf);
+                const maxSamples = Math.min(decoded.length, Math.ceil(audioCtx.sampleRate * 1.5));
+                recordedClapBuffer = audioCtx.createBuffer(
+                    decoded.numberOfChannels, maxSamples, decoded.sampleRate
+                );
+                for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+                    recordedClapBuffer.getChannelData(ch)
+                        .set(decoded.getChannelData(ch).subarray(0, maxSamples));
+                }
+            } catch (e) { recordedClapBuffer = null; }
+            isRecording = false;
+            updateClapRecordUI();
+        };
+        mediaRecorder.start();
+        setTimeout(() => { if (isRecording) stopRecording(); }, 1500);
+    } catch (e) {
+        isRecording = false;
+        updateClapRecordUI();
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+}
+
+recBtn.addEventListener('click', () => {
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (isRecording) stopRecording();
+    else startRecording();
+});
+
+recClearBtn.addEventListener('click', () => {
+    recordedClapBuffer = null;
+    updateClapRecordUI();
 });
 
 // ─── Default pattern ──────────────────────────────────────────────────────────
 function loadDefault() {
-    grid[0][0] = true; grid[0][4] = true;
-    grid[1][2] = true; grid[1][6] = true;
-    grid[2][0] = true; grid[2][2] = true; grid[2][4] = true; grid[2][6] = true;
-    grid[3][3] = true; grid[3][7] = true;
+    bpm = 140; swing = 0.15;
+    // Kick: beat 1, syncopated "a" of beat 1, beat 2
+    grid[0][0] = true; grid[0][3] = true; grid[0][4] = true;
+    // Snare: half-time on beat 2 only (punchy, trap feel)
+    grid[1][4] = true;
+    // HiHat: all 16ths — dense trap hat roll
+    grid[2].fill(true);
+    // Clap: layers with snare on beat 2, ghost clap on "and" of beat 2
+    grid[3][4] = true; grid[3][6] = true;
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 buildStepsSVG();
-loadDefault();
+
+(function loadState() {
+    try {
+        const s = JSON.parse(localStorage.getItem('dm_state') || 'null');
+        if (!s) { loadDefault(); return; }
+        if (s.grid)            grid = s.grid;
+        if (s.bpm != null)     { bpm = s.bpm; bpmSlider.value = bpm; bpmValueEl.textContent = bpm; }
+        if (s.swing != null)   { swing = s.swing; swingSlider.value = Math.round(swing * 100); swingValueEl.textContent = Math.round(swing * 100) + '%'; }
+        if (s.pitches)         { pitches = s.pitches; document.querySelectorAll('.pitch-slider').forEach(el => { el.value = pitches[+el.dataset.voice]; }); }
+        if (s.selectedSamples) { selectedSamples = s.selectedSamples; selectedSamples.forEach((idx, v) => { document.getElementById(`sample-name-${v}`).textContent = SAMPLE_BANKS[v][idx].name; }); }
+        updateTempoDisplay();
+    } catch(e) { loadDefault(); }
+})();
+
 renderSteps();
 animLoop();
+updateClapRecordUI();
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
