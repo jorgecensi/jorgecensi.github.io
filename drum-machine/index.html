@@ -144,6 +144,43 @@ permalink: /drum-machine/
         }
         .step-node, .voice-pad, .effect-btn { cursor: pointer; }
 
+        /* ── Roll indicator ──────────────────────────────── */
+        #roll-indicator {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: rgba(10, 10, 10, 0.88);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 10px 16px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        #roll-indicator.visible { display: flex; }
+        .ri-hint {
+            font-size: 0.5rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+        .ri-speed {
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            padding: 2px 8px;
+            border-radius: 5px;
+            transition: color 0.06s, background 0.06s;
+        }
+        .ri-speed.active {
+            color: var(--text);
+            background: rgba(255,255,255,0.12);
+        }
+
         /* ── Sliders ─────────────────────────────────────── */
         .slider-row {
             display: flex;
@@ -516,6 +553,15 @@ permalink: /drum-machine/
             <text x="200" y="219" text-anchor="middle" font-size="5.5" fill="#282828"
                   font-weight="900" letter-spacing="0.22em" font-family="monospace">DATO</text>
         </svg>
+        <div id="roll-indicator">
+            <span class="ri-hint">↑ faster</span>
+            <div class="ri-speed" data-level="2">64th</div>
+            <div class="ri-speed" data-level="1">32nd</div>
+            <div class="ri-speed" data-level="0">16th</div>
+            <div class="ri-speed" data-level="-1">8th</div>
+            <div class="ri-speed" data-level="-2">4th</div>
+            <span class="ri-hint">↓ slower</span>
+        </div>
     </div>
 
     <!-- SPEED -->
@@ -597,6 +643,10 @@ let schedulerTimer = null;
 let visualStep     = -1;
 let fx = { repeat: false, random: false, filter: false, distortion: false };
 let fxToastShown = false;
+const FILTER_DRAG_THRESHOLD = 12;
+let filterDrag = { active: false, pointerId: null, startY: 0, mode: 'neutral' };
+let voiceHeld = [false, false, false, false];
+let voiceHoldLevel = [-1, -1, -1, -1]; // -2=4th, -1=8th, 0=16th, 1=32nd, 2=64th
 
 // Recording state
 let recordedClapBuffer  = null;
@@ -861,6 +911,17 @@ function scheduleStep(step, baseTime) {
     const time = baseTime + swingOffset(step);
     const dur  = stepDuration();
     for (let v = 0; v < VOICES; v++) {
+        if (voiceHeld[v]) {
+            const level = voiceHoldLevel[v];
+            if (level === -2) {
+                if (step % 2 === 0) triggerVoice(v, time);
+                continue;
+            }
+            const mult = Math.pow(2, level + 1); // -1->1, 0->2, 1->4, 2->8
+            const subDur = dur / mult;
+            for (let i = 0; i < mult; i++) triggerVoice(v, time + i * subDur);
+            continue;
+        }
         const fire = fx.random ? (Math.random() > 0.5) : grid[v][step];
         if (!fire) continue;
         if (fx.repeat) {
@@ -1019,7 +1080,27 @@ function toggleStep(voice, step) {
 function applyEffect(name, on) {
     if (!audioCtx) return;
     if (name === 'filter') {
-        filterNode.frequency.setTargetAtTime(on ? 450 : 20000, audioCtx.currentTime, 0.06);
+        if (!on) {
+            filterNode.type = 'lowpass';
+            filterNode.frequency.setTargetAtTime(20000, audioCtx.currentTime, 0.06);
+            filterNode.Q.setTargetAtTime(1.2, audioCtx.currentTime, 0.06);
+            return;
+        }
+        if (filterDrag.mode === 'bass') {
+            filterNode.type = 'lowpass';
+            filterNode.frequency.setTargetAtTime(450, audioCtx.currentTime, 0.06);
+            filterNode.Q.setTargetAtTime(1.2, audioCtx.currentTime, 0.06);
+            return;
+        }
+        if (filterDrag.mode === 'treble') {
+            filterNode.type = 'highpass';
+            filterNode.frequency.setTargetAtTime(2200, audioCtx.currentTime, 0.06);
+            filterNode.Q.setTargetAtTime(0.9, audioCtx.currentTime, 0.06);
+            return;
+        }
+        filterNode.type = 'lowpass';
+        filterNode.frequency.setTargetAtTime(20000, audioCtx.currentTime, 0.06);
+        filterNode.Q.setTargetAtTime(1.2, audioCtx.currentTime, 0.06);
     }
     if (name === 'distortion') {
         distortionNode.curve = makeDistCurve(on ? 400 : 0);
@@ -1027,19 +1108,61 @@ function applyEffect(name, on) {
 }
 
 // ─── Voice pads ───────────────────────────────────────────────────────────────
+const rollIndicator = document.getElementById('roll-indicator');
+const rollSpeedEls = rollIndicator.querySelectorAll('.ri-speed');
+
+function showRollIndicator(level) {
+    rollIndicator.classList.add('visible');
+    rollSpeedEls.forEach(el => el.classList.toggle('active', +el.dataset.level === level));
+}
+function hideRollIndicator() {
+    rollIndicator.classList.remove('visible');
+}
+
 document.querySelectorAll('.voice-pad').forEach(pad => {
     const v    = +pad.dataset.voice;
     const poly = document.getElementById(`pad-poly-${v}`);
+    let startY = 0;
 
     pad.addEventListener('pointerdown', e => {
         e.preventDefault();
         navigator.vibrate && navigator.vibrate(10);
         initAudio();
         if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (pad.setPointerCapture) {
+            try { pad.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        startY = e.clientY;
+        voiceHeld[v] = true;
+        voiceHoldLevel[v] = -1;
         triggerVoice(v, audioCtx.currentTime);
         poly.setAttribute('fill', COLORS[v]);
-        setTimeout(() => poly.setAttribute('fill', PAD_FILL[v]), 130);
+        showRollIndicator(-1);
     });
+
+    pad.addEventListener('pointermove', e => {
+        if (!voiceHeld[v]) return;
+        const dy = startY - e.clientY;
+        const newLevel = Math.max(-2, Math.min(2, Math.round(dy / 40) - 1));
+        if (newLevel !== voiceHoldLevel[v]) {
+            voiceHoldLevel[v] = newLevel;
+            showRollIndicator(newLevel);
+        }
+    });
+
+    function stopRoll(e) {
+        if (e && pad.releasePointerCapture) {
+            try { pad.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+        voiceHeld[v] = false;
+        voiceHoldLevel[v] = -1;
+        poly.setAttribute('fill', PAD_FILL[v]);
+        hideRollIndicator();
+    }
+
+    pad.addEventListener('pointerup', stopRoll);
+    pad.addEventListener('pointercancel', stopRoll);
+    pad.addEventListener('pointerleave', stopRoll);
 });
 
 // ─── Effect buttons ───────────────────────────────────────────────────────────
@@ -1052,15 +1175,44 @@ document.querySelectorAll('.effect-btn').forEach(btn => {
         initAudio();
         if (audioCtx.state === 'suspended') audioCtx.resume();
         btn._holdStart = Date.now();
+        if (name === 'filter') {
+            filterDrag.active = true;
+            filterDrag.pointerId = e.pointerId;
+            filterDrag.startY = e.clientY;
+            filterDrag.mode = 'neutral';
+            if (btn.setPointerCapture) {
+                try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+            }
+        }
         fx[name] = true;
         circle.setAttribute('fill', FX_ACTIVE[name]);
         circle.setAttribute('stroke-width', '2.5');
         btn.classList.add('active');
         applyEffect(name, true);
     }
+    function handleMove(e) {
+        if (name !== 'filter' || !filterDrag.active || !fx.filter) return;
+        if (filterDrag.pointerId !== null && e.pointerId !== filterDrag.pointerId) return;
+        const dy = e.clientY - filterDrag.startY;
+        let nextMode = 'neutral';
+        if (dy <= -FILTER_DRAG_THRESHOLD) nextMode = 'bass';
+        if (dy >= FILTER_DRAG_THRESHOLD) nextMode = 'treble';
+        if (nextMode !== filterDrag.mode) {
+            filterDrag.mode = nextMode;
+            applyEffect('filter', true);
+        }
+    }
     function deactivate() {
         const holdDuration = Date.now() - (btn._holdStart || Date.now());
+        if (name === 'filter' && filterDrag.pointerId !== null && btn.releasePointerCapture) {
+            try { btn.releasePointerCapture(filterDrag.pointerId); } catch (_) {}
+        }
         fx[name] = false;
+        if (name === 'filter') {
+            filterDrag.active = false;
+            filterDrag.pointerId = null;
+            filterDrag.mode = 'neutral';
+        }
         circle.setAttribute('fill', FX_DIM[name]);
         circle.setAttribute('stroke-width', '1.5');
         btn.classList.remove('active');
@@ -1076,6 +1228,7 @@ document.querySelectorAll('.effect-btn').forEach(btn => {
     }
 
     btn.addEventListener('pointerdown', activate);
+    btn.addEventListener('pointermove', handleMove);
     btn.addEventListener('pointerup',   deactivate);
     btn.addEventListener('pointerleave',deactivate);
     btn.addEventListener('pointercancel', deactivate);
