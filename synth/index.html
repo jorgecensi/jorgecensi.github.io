@@ -27,7 +27,6 @@ ref: synth
       --text: #e0e0ff;
       --text-dim: #6060a0;
       --accent: #7c3aed;
-      --step-colors: #ff4757, #ff6b35, #ffd32a, #2ed573, #1e90ff, #7c3aed, #ff6b81, #eccc68;
     }
 
     html, body {
@@ -192,54 +191,145 @@ ref: synth
       flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      padding: 8px 14px;
-      gap: 6px;
+      padding: 8px 10px;
+      gap: 10px;
       overflow: hidden;
     }
 
-    .steps-row {
+    /* One row (label + steps) */
+    .seq-row {
       display: flex;
-      gap: 6px;
-      align-items: center;
-      justify-content: center;
+      align-items: flex-start;
+      gap: 8px;
+      width: 100%;
     }
 
+    .row-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-dim);
+      width: 26px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-top: 10px; /* align with button center roughly */
+      letter-spacing: 0.5px;
+    }
+
+    .steps-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+    .steps-container::-webkit-scrollbar { display: none; }
+
+    /* Group spacer for 16th note grouping */
+    .group-gap {
+      width: 5px;
+      flex-shrink: 0;
+    }
+
+    /* Step wrapper: button + note label + extend bar */
+    .step-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Step buttons — base */
     .step-btn {
       position: relative;
-      width: 44px;
-      height: 44px;
       border-radius: 50%;
-      border: 3px solid transparent;
+      border: 2px solid transparent;
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.1s;
+      transition: transform 0.1s, box-shadow 0.1s, opacity 0.15s;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10px;
       font-weight: 700;
-      color: rgba(255,255,255,0.7);
+      color: rgba(255,255,255,0.75);
       user-select: none;
       -webkit-user-select: none;
     }
+    /* Quarter (1/4) — 40px */
+    .step-btn-lg {
+      width: 40px;
+      height: 40px;
+      font-size: 11px;
+    }
+    /* 8th (1/8) — 28px */
+    .step-btn-md {
+      width: 28px;
+      height: 28px;
+      font-size: 9px;
+    }
+    /* 16th (1/16) — 20px */
+    .step-btn-sm {
+      width: 20px;
+      height: 20px;
+      font-size: 7px;
+    }
+
     .step-btn.off {
-      opacity: 0.25;
-      filter: grayscale(0.4);
+      opacity: 0.22;
+      filter: grayscale(0.5);
     }
     .step-btn.current {
-      transform: scale(1.18);
-      box-shadow: 0 0 18px 4px currentColor;
+      transform: scale(1.2);
+      box-shadow: 0 0 14px 3px currentColor;
     }
     .step-btn.selected {
       border-color: #fff;
     }
 
     .step-note {
-      font-size: 8px;
+      font-size: 7px;
       color: var(--text-dim);
       text-align: center;
       font-weight: 600;
+      line-height: 1;
+    }
+
+    /* Extend bar */
+    .extend-bar {
+      border-radius: 2px;
+      background: var(--border);
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      height: 3px;
+    }
+    .extend-bar.on {
+      /* color set inline to match step color */
+      opacity: 1;
+    }
+    .extend-bar.off {
+      opacity: 0.35;
+    }
+    /* widths match button widths */
+    .extend-bar-lg { width: 40px; }
+    .extend-bar-md { width: 28px; }
+    .extend-bar-sm { width: 20px; }
+
+    /* ─── Note select hint ────────────────────────────── */
+    .hint {
+      font-size: 9px;
+      color: var(--text-dim);
+      text-align: center;
+      letter-spacing: 0.5px;
+      padding: 2px 0;
+      flex-shrink: 0;
+      width: 100%;
+    }
+    .hint span {
+      color: #fff;
+      font-weight: 700;
     }
 
     /* ─── Transport ───────────────────────────────────── */
@@ -267,9 +357,7 @@ ref: synth
       color: var(--text-dim);
       letter-spacing: 1px;
     }
-    #bpm-range {
-      width: 80px;
-    }
+    #bpm-range { width: 80px; }
     #bpm-display {
       font-size: 13px;
       font-weight: 700;
@@ -277,10 +365,7 @@ ref: synth
       min-width: 30px;
     }
 
-    .transport-btns {
-      display: flex;
-      gap: 8px;
-    }
+    .transport-btns { display: flex; gap: 8px; }
 
     .play-btn {
       background: #2ed573;
@@ -296,9 +381,7 @@ ref: synth
       color: #0f0f1a;
       transition: transform 0.1s, background 0.15s;
     }
-    .play-btn.playing {
-      background: #ff4757;
-    }
+    .play-btn.playing { background: #ff4757; }
     .play-btn:active { transform: scale(0.92); }
 
     .random-btn {
@@ -372,7 +455,6 @@ ref: synth
       transform: scaleY(0.96);
     }
 
-    /* Key colors based on octave / semitone */
     .key[data-note="C4"]  { background: #ff4757; }
     .key[data-note="Cs4"] { background: #cc2233; }
     .key[data-note="D4"]  { background: #ff6b35; }
@@ -390,30 +472,6 @@ ref: synth
     .key[data-note="D5"]  { background: #ff6b35; }
     .key[data-note="Ds5"] { background: #cc4410; }
     .key[data-note="E5"]  { background: #ffd32a; }
-
-    /* Step colors applied via JS */
-    .step-0 { background: #ff4757; color: #ff4757; }
-    .step-1 { background: #ff6b35; color: #ff6b35; }
-    .step-2 { background: #ffd32a; color: #ffd32a; }
-    .step-3 { background: #2ed573; color: #2ed573; }
-    .step-4 { background: #1e90ff; color: #1e90ff; }
-    .step-5 { background: #7c3aed; color: #7c3aed; }
-    .step-6 { background: #ff6b81; color: #ff6b81; }
-    .step-7 { background: #eccc68; color: #eccc68; }
-
-    /* ─── Note select hint ────────────────────────────── */
-    .hint {
-      font-size: 9px;
-      color: var(--text-dim);
-      text-align: center;
-      letter-spacing: 0.5px;
-      padding: 2px 0;
-      flex-shrink: 0;
-    }
-    .hint span {
-      color: #fff;
-      font-weight: 700;
-    }
   </style>
 </head>
 <body>
@@ -439,42 +497,40 @@ ref: synth
     <div class="ctrl-group">
       <div class="ctrl-label">Filter</div>
       <div class="ctrl-slider">
-        <input type="range" id="filter-range" min="80" max="8000" value="2000" step="10">
-        <span class="ctrl-value" id="filter-val">2k</span>
+        <input type="range" id="filter-range" min="80" max="8000" value="3000" step="10">
+        <span class="ctrl-value" id="filter-val">3k</span>
       </div>
     </div>
 
     <div class="ctrl-group">
       <div class="ctrl-label">Release</div>
       <div class="ctrl-slider">
-        <input type="range" id="release-range" min="0.05" max="2" value="0.3" step="0.05">
-        <span class="ctrl-value" id="release-val">.3</span>
+        <input type="range" id="release-range" min="0.05" max="2" value="0.4" step="0.05">
+        <span class="ctrl-value" id="release-val">.4</span>
       </div>
     </div>
 
     <div class="ctrl-group">
       <div class="ctrl-label">Fx</div>
       <div class="wave-btns">
-        <button class="toggle-btn" id="delay-btn">DLY</button>
+        <button class="toggle-btn active" id="delay-btn">DLY</button>
         <button class="toggle-btn" id="glide-btn">GLD</button>
       </div>
     </div>
   </div>
 
-  <!-- Sequencer -->
+  <!-- Sequencer rows -->
   <div class="sequencer" id="sequencer">
-    <div class="steps-row" id="steps-row"></div>
-    <div class="steps-row" id="notes-row"></div>
+    <div id="seq-rows" style="display:flex;flex-direction:column;gap:10px;width:100%"></div>
+    <div class="hint" id="hint"></div>
   </div>
-
-  <div class="hint" id="hint">Tap a step to select, then tap a key to assign a note</div>
 
   <!-- Transport -->
   <div class="transport">
     <div class="bpm-group">
       <span class="bpm-label">BPM</span>
-      <input type="range" id="bpm-range" min="60" max="200" value="120" step="1">
-      <span id="bpm-display">120</span>
+      <input type="range" id="bpm-range" min="60" max="200" value="128" step="1">
+      <span id="bpm-display">128</span>
     </div>
     <div class="transport-btns">
       <button class="random-btn" id="random-btn">⚄ RND</button>
@@ -493,7 +549,6 @@ ref: synth
 // ─── Note utilities ────────────────────────────────────────────────────────
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const NOTE_IDS   = ['C','Cs','D','Ds','E','F','Fs','G','Gs','A','As','B'];
-const C_MAJOR    = [60,62,64,65,67,69,71,72]; // C4–C5
 
 function midiToFreq(midi) {
   return 440 * Math.pow(2, (midi - 69) / 12);
@@ -504,9 +559,11 @@ function midiToName(midi) {
 function midiToId(midi) {
   return NOTE_IDS[midi % 12] + Math.floor(midi / 12 - 1);
 }
-// Map pitch class (0=C … 11=B) to the same palette used on piano keys
-const PITCH_COLORS = ['#ff4757','#cc2233','#ff6b35','#cc4410','#ffd32a',
-                      '#2ed573','#1aaa50','#1e90ff','#0060cc','#7c3aed','#5020bb','#ff6b81'];
+
+const PITCH_COLORS = [
+  '#ff4757','#cc2233','#ff6b35','#cc4410','#ffd32a',
+  '#2ed573','#1aaa50','#1e90ff','#0060cc','#7c3aed','#5020bb','#ff6b81'
+];
 function noteColor(midi) { return PITCH_COLORS[midi % 12]; }
 
 // ─── Synth ─────────────────────────────────────────────────────────────────
@@ -518,9 +575,9 @@ class Synth {
     this.delayFeedback = null;
     this.delayWet = null;
     this.waveform = 'sawtooth';
-    this.filterFreq = 2000;
-    this.release = 0.3;
-    this.delayOn = false;
+    this.filterFreq = 3000;
+    this.release = 0.4;
+    this.delayOn = true;
     this.glideOn = false;
     this.lastMidi = null;
   }
@@ -532,13 +589,12 @@ class Synth {
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.value = 0.65;
 
-    // Delay chain
     this.delayNode = this.ctx.createDelay(1.0);
     this.delayNode.delayTime.value = 0.25;
     this.delayFeedback = this.ctx.createGain();
     this.delayFeedback.gain.value = 0.35;
     this.delayWet = this.ctx.createGain();
-    this.delayWet.gain.value = 0;
+    this.delayWet.gain.value = 0.45; // delay on by default
 
     this.delayNode.connect(this.delayFeedback);
     this.delayFeedback.connect(this.delayNode);
@@ -556,7 +612,7 @@ class Synth {
     this.resume();
 
     const now = this.ctx.currentTime;
-    const dur = stepDur ? stepDur * 0.75 : 0.25;
+    const dur = stepDur || 0.25;
     const freq = midiToFreq(midi);
 
     const osc = this.ctx.createOscillator();
@@ -577,7 +633,7 @@ class Synth {
     filter.frequency.value = this.filterFreq;
     filter.Q.value = 3;
 
-    const rel = Math.min(this.release, dur);
+    const rel = Math.min(this.release, dur * 0.5);
     env.gain.setValueAtTime(0.001, now);
     env.gain.exponentialRampToValueAtTime(0.55, now + 0.01);
     const hold = Math.max(0.01, dur - rel);
@@ -590,7 +646,7 @@ class Synth {
     if (this.delayOn) env.connect(this.delayNode);
 
     osc.start(now);
-    osc.stop(now + dur + 0.02);
+    osc.stop(now + dur + 0.05);
   }
 
   setDelay(on) {
@@ -599,64 +655,121 @@ class Synth {
   }
 }
 
+// ─── Default song data ("Aurora" — A minor pentatonic, 128 BPM) ───────────
+function makeDefaultRows() {
+  // Quarter notes: A4, C5, G4, E5 (all active, extend on)
+  const quarterNotes = [69, 72, 67, 76];
+  const quarterRow = {
+    label: '1/4', division: 4,
+    btnClass: 'step-btn-lg', barClass: 'extend-bar-lg',
+    steps: quarterNotes.map(midi => ({ active: true, midi, extend: true }))
+  };
+
+  // 8th notes
+  const eighthData = [
+    { midi: 69, active: true  }, // A4
+    { midi: 72, active: true  }, // C5
+    { midi: 76, active: true  }, // E5
+    { midi: 74, active: false }, // D5
+    { midi: 72, active: true  }, // C5
+    { midi: 69, active: true  }, // A4
+    { midi: 67, active: true  }, // G4
+    { midi: 76, active: true  }, // E5
+  ];
+  const eighthRow = {
+    label: '1/8', division: 2,
+    btnClass: 'step-btn-md', barClass: 'extend-bar-md',
+    steps: eighthData.map(d => ({ ...d, extend: false }))
+  };
+
+  // 16th notes
+  const sixteenthData = [
+    { midi: 76, active: true  }, // E5
+    { midi: 74, active: false }, // D5
+    { midi: 76, active: true  }, // E5
+    { midi: 72, active: true  }, // C5
+    { midi: 69, active: true  }, // A4
+    { midi: 72, active: true  }, // C5
+    { midi: 74, active: true  }, // D5
+    { midi: 76, active: false }, // E5
+    { midi: 74, active: true  }, // D5
+    { midi: 72, active: true  }, // C5
+    { midi: 69, active: true  }, // A4
+    { midi: 67, active: true  }, // G4
+    { midi: 69, active: true  }, // A4
+    { midi: 72, active: true  }, // C5
+    { midi: 74, active: false }, // D5
+    { midi: 76, active: true  }, // E5
+  ];
+  const sixteenthRow = {
+    label: '1/16', division: 1,
+    btnClass: 'step-btn-sm', barClass: 'extend-bar-sm',
+    steps: sixteenthData.map(d => ({ ...d, extend: false }))
+  };
+
+  return [quarterRow, eighthRow, sixteenthRow];
+}
+
 // ─── Sequencer ────────────────────────────────────────────────────────────
 class Sequencer {
   constructor(synth) {
     this.synth = synth;
-    this.steps = Array.from({length: 8}, (_, i) => ({
-      active: true,
-      midi: C_MAJOR[i]
-    }));
-    this.bpm = 120;
-    this.currentStep = -1;
+    this.rows = makeDefaultRows();
+    this.bpm = 128;
+    this.tickCount = 0;
+    this.rowCurrentStep = [-1, -1, -1];
     this.playing = false;
     this._timeout = null;
-    this.selectedStep = null;
+    this.selectedStep = null; // { rowIndex, stepIndex } | null
     this.onStepChange = null;
   }
 
-  stepMs() { return (60 / this.bpm) * 1000; }
+  sixteenthMs() { return (60 / this.bpm) * 1000 / 4; }
 
   start() {
     this.playing = true;
-    this.currentStep = -1;
+    this.tickCount = 0;
+    this.rowCurrentStep = [-1, -1, -1];
     this._tick();
   }
 
   stop() {
     this.playing = false;
     clearTimeout(this._timeout);
-    this.currentStep = -1;
-    this.onStepChange && this.onStepChange(-1);
+    this.tickCount = 0;
+    this.rowCurrentStep = [-1, -1, -1];
+    this.onStepChange && this.onStepChange([-1, -1, -1]);
   }
 
   _tick() {
     if (!this.playing) return;
-    this.currentStep = (this.currentStep + 1) % 8;
-    const step = this.steps[this.currentStep];
-    if (step.active) this.synth.play(step.midi, this.stepMs() / 1000);
-    this.onStepChange && this.onStepChange(this.currentStep);
-    this._timeout = setTimeout(() => this._tick(), this.stepMs());
+    // tickCount starts at 0; advance before playing so step 0 plays on first tick
+    this.rows.forEach((row, ri) => {
+      if (this.tickCount % row.division === 0) {
+        const idx = Math.floor(this.tickCount / row.division) % row.steps.length;
+        this.rowCurrentStep[ri] = idx;
+        const step = row.steps[idx];
+        if (step.active) {
+          const stepDur = (this.sixteenthMs() * row.division) / 1000;
+          const noteDur = stepDur * (step.extend ? 0.95 : 0.75);
+          this.synth.play(step.midi, noteDur);
+        }
+      }
+    });
+    this.onStepChange && this.onStepChange([...this.rowCurrentStep]);
+    this.tickCount++;
+    this._timeout = setTimeout(() => this._tick(), this.sixteenthMs());
   }
 
   randomize() {
-    const scale = [60,62,64,65,67,69,71,72,74,76,77,79];
-    this.steps.forEach(s => {
-      s.active = Math.random() > 0.25;
-      s.midi = scale[Math.floor(Math.random() * scale.length)];
+    const scale = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76];
+    this.rows.forEach(row => {
+      row.steps.forEach(s => {
+        s.active = Math.random() > 0.25;
+        s.midi = scale[Math.floor(Math.random() * scale.length)];
+        s.extend = false;
+      });
     });
-  }
-
-  selectStep(i) {
-    this.selectedStep = (this.selectedStep === i) ? null : i;
-  }
-
-  assignNote(midi) {
-    if (this.selectedStep !== null) {
-      this.steps[this.selectedStep].midi = midi;
-      return true;
-    }
-    return false;
   }
 }
 
@@ -664,81 +777,136 @@ class Sequencer {
 const synth = new Synth();
 const seq   = new Sequencer(synth);
 
-// Build steps
-const stepsRow = document.getElementById('steps-row');
-const notesRow = document.getElementById('notes-row');
+function buildRows() {
+  const container = document.getElementById('seq-rows');
+  container.innerHTML = '';
 
-function buildSteps() {
-  stepsRow.innerHTML = '';
-  seq.steps.forEach((step, i) => {
-    const wrap = document.createElement('div');
-    wrap.style.display = 'flex';
-    wrap.style.flexDirection = 'column';
-    wrap.style.alignItems = 'center';
-    wrap.style.gap = '3px';
+  seq.rows.forEach((row, ri) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'seq-row';
 
-    const btn = document.createElement('button');
-    btn.className = 'step-btn';
-    btn.dataset.index = i;
-    const c = noteColor(step.midi);
-    btn.style.background = c;
-    btn.style.color = c;
-    if (!step.active) btn.classList.add('off');
-    if (seq.selectedStep === i) btn.classList.add('selected');
-    btn.textContent = i + 1;
+    const labelEl = document.createElement('div');
+    labelEl.className = 'row-label';
+    labelEl.textContent = row.label;
+    rowEl.appendChild(labelEl);
 
-    // pointerdown for immediate selection (no 300ms click delay on mobile)
-    let pressTimer;
-    btn.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); // prevent subsequent click event
-      const idx = parseInt(btn.dataset.index);
+    const stepsContainer = document.createElement('div');
+    stepsContainer.className = 'steps-container';
 
-      // Toggle selection in-place (no DOM rebuild)
-      if (seq.selectedStep === idx) {
-        seq.selectedStep = null;
-        btn.classList.remove('selected');
-      } else {
-        document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('selected'));
-        seq.selectedStep = idx;
-        btn.classList.add('selected');
+    row.steps.forEach((step, si) => {
+      // Insert group spacer every 4 steps for 16th row
+      if (row.division === 1 && si > 0 && si % 4 === 0) {
+        const spacer = document.createElement('div');
+        spacer.className = 'group-gap';
+        stepsContainer.appendChild(spacer);
       }
-      updateHint();
 
-      // Long press → toggle active state
-      pressTimer = setTimeout(() => {
-        seq.steps[idx].active = !seq.steps[idx].active;
-        btn.classList.toggle('off', !seq.steps[idx].active);
-      }, 500);
+      const wrap = document.createElement('div');
+      wrap.className = 'step-wrap';
+
+      // Button
+      const btn = document.createElement('button');
+      btn.className = `step-btn ${row.btnClass}`;
+      btn.dataset.row = ri;
+      btn.dataset.step = si;
+      const c = noteColor(step.midi);
+      btn.style.background = c;
+      btn.style.color = c;
+      if (!step.active) btn.classList.add('off');
+      const sel = seq.selectedStep;
+      if (sel && sel.rowIndex === ri && sel.stepIndex === si) btn.classList.add('selected');
+      btn.textContent = si + 1;
+
+      // Note label (hidden for xs to save space)
+      const noteLabel = document.createElement('div');
+      noteLabel.className = 'step-note';
+      noteLabel.dataset.row = ri;
+      noteLabel.dataset.step = si;
+      noteLabel.textContent = row.btnClass === 'step-btn-sm' ? '' : midiToName(step.midi);
+
+      // Extend bar
+      const extBar = document.createElement('div');
+      extBar.className = `extend-bar ${row.barClass} ${step.extend ? 'on' : 'off'}`;
+      extBar.dataset.row = ri;
+      extBar.dataset.step = si;
+      extBar.style.background = step.extend ? c : '';
+      extBar.title = 'Tap to toggle extend';
+
+      // --- Gesture handling for button ---
+      let pressTimer;
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        const rIdx = parseInt(btn.dataset.row);
+        const sIdx = parseInt(btn.dataset.step);
+
+        // Toggle selection
+        const cur = seq.selectedStep;
+        if (cur && cur.rowIndex === rIdx && cur.stepIndex === sIdx) {
+          seq.selectedStep = null;
+          btn.classList.remove('selected');
+        } else {
+          document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('selected'));
+          seq.selectedStep = { rowIndex: rIdx, stepIndex: sIdx };
+          btn.classList.add('selected');
+        }
+        updateHint();
+
+        // Long press → toggle active
+        pressTimer = setTimeout(() => {
+          seq.rows[rIdx].steps[sIdx].active = !seq.rows[rIdx].steps[sIdx].active;
+          btn.classList.toggle('off', !seq.rows[rIdx].steps[sIdx].active);
+        }, 500);
+      });
+      btn.addEventListener('pointerup',     () => clearTimeout(pressTimer));
+      btn.addEventListener('pointercancel', () => clearTimeout(pressTimer));
+
+      // --- Extend bar tap ---
+      extBar.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rIdx = parseInt(extBar.dataset.row);
+        const sIdx = parseInt(extBar.dataset.step);
+        const s = seq.rows[rIdx].steps[sIdx];
+        s.extend = !s.extend;
+        const btnColor = noteColor(s.midi);
+        extBar.classList.toggle('on', s.extend);
+        extBar.classList.toggle('off', !s.extend);
+        extBar.style.background = s.extend ? btnColor : '';
+      });
+
+      wrap.appendChild(btn);
+      wrap.appendChild(noteLabel);
+      wrap.appendChild(extBar);
+      stepsContainer.appendChild(wrap);
     });
-    btn.addEventListener('pointerup', () => clearTimeout(pressTimer));
-    btn.addEventListener('pointercancel', () => clearTimeout(pressTimer));
 
-    const noteLabel = document.createElement('div');
-    noteLabel.className = 'step-note';
-    noteLabel.textContent = midiToName(step.midi);
-
-    wrap.appendChild(btn);
-    wrap.appendChild(noteLabel);
-    stepsRow.appendChild(wrap);
+    rowEl.appendChild(stepsContainer);
+    container.appendChild(rowEl);
   });
 }
 
 function updateHint() {
   const hint = document.getElementById('hint');
-  if (seq.selectedStep !== null) {
-    hint.innerHTML = `Step <span>${seq.selectedStep + 1}</span> selected — tap a key to set its note`;
+  const sel = seq.selectedStep;
+  if (sel !== null) {
+    const rowLabel = seq.rows[sel.rowIndex].label;
+    hint.innerHTML = `Row <span>${rowLabel}</span> step <span>${sel.stepIndex + 1}</span> — tap a key to assign note`;
   } else {
-    hint.innerHTML = 'Tap a step to select · Long press to toggle on/off';
+    hint.innerHTML = 'Tap step to select · Long-press to toggle · Tap bar to extend';
   }
 }
 
-seq.onStepChange = (current) => {
-  document.querySelectorAll('.step-btn').forEach((btn, i) => {
-    btn.classList.toggle('current', i === current);
+// Step change callback
+seq.onStepChange = (currentSteps) => {
+  seq.rows.forEach((row, ri) => {
+    row.steps.forEach((_, si) => {
+      const btn = document.querySelector(`.step-btn[data-row="${ri}"][data-step="${si}"]`);
+      if (btn) btn.classList.toggle('current', si === currentSteps[ri]);
+    });
   });
 };
 
-// Build piano
+// ─── Piano ─────────────────────────────────────────────────────────────────
 const PIANO_KEYS = [
   {midi:60,id:'C4',  white:true,  label:'C4'},
   {midi:61,id:'Cs4', white:false, label:''},
@@ -770,16 +938,26 @@ function buildPiano() {
 
     const playKey = () => {
       synth.play(k.midi);
-      if (seq.selectedStep !== null) {
-        seq.steps[seq.selectedStep].midi = k.midi;
-        // Update note label and button color in-place (no DOM rebuild)
-        const labels = document.querySelectorAll('.step-note');
-        if (labels[seq.selectedStep]) labels[seq.selectedStep].textContent = midiToName(k.midi);
-        const btns = document.querySelectorAll('.step-btn');
-        if (btns[seq.selectedStep]) {
+      const sel = seq.selectedStep;
+      if (sel !== null) {
+        const step = seq.rows[sel.rowIndex].steps[sel.stepIndex];
+        step.midi = k.midi;
+        // Update note label in DOM
+        const label = document.querySelector(`.step-note[data-row="${sel.rowIndex}"][data-step="${sel.stepIndex}"]`);
+        if (label && seq.rows[sel.rowIndex].btnClass !== 'step-btn-sm') {
+          label.textContent = midiToName(k.midi);
+        }
+        // Update button color
+        const btn = document.querySelector(`.step-btn[data-row="${sel.rowIndex}"][data-step="${sel.stepIndex}"]`);
+        if (btn) {
           const c = noteColor(k.midi);
-          btns[seq.selectedStep].style.background = c;
-          btns[seq.selectedStep].style.color = c;
+          btn.style.background = c;
+          btn.style.color = c;
+        }
+        // Update extend bar color if on
+        const extBar = document.querySelector(`.extend-bar[data-row="${sel.rowIndex}"][data-step="${sel.stepIndex}"]`);
+        if (extBar && step.extend) {
+          extBar.style.background = noteColor(k.midi);
         }
         updateHint();
       }
@@ -796,7 +974,7 @@ function buildPiano() {
   });
 }
 
-// Controls
+// ─── Controls ──────────────────────────────────────────────────────────────
 document.querySelectorAll('.wave-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.wave-btn').forEach(b => b.classList.remove('active'));
@@ -853,11 +1031,11 @@ playBtn.addEventListener('click', () => {
 
 document.getElementById('random-btn').addEventListener('click', () => {
   seq.randomize();
-  buildSteps();
+  buildRows();
   updateHint();
 });
 
-// PWA install
+// ─── PWA ───────────────────────────────────────────────────────────────────
 let installPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -874,13 +1052,12 @@ document.getElementById('install-btn').addEventListener('click', async () => {
   }
 });
 
-// Service worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/synth/sw.js', { scope: '/synth/' });
 }
 
-// Init
-buildSteps();
+// ─── Init ──────────────────────────────────────────────────────────────────
+buildRows();
 buildPiano();
 updateHint();
 </script>
