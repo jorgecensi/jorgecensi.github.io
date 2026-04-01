@@ -44,11 +44,14 @@ jobs:
             echo "false"
           }
 
-          echo "binary=$(check 'binary-sw.js binary.js binary.html binary-manifest.json')" >> "${GITHUB_OUTPUT}"
-          echo "binary_ptbr=$(check 'pt-BR/binary-sw.js pt-BR/binary.html binary.js binary-pt-BR-manifest.json')" >> "${GITHUB_OUTPUT}"
-          echo "flappy=$(check 'flappy-sw.js flappy.html flappyBird.js flappy-manifest.json')" >> "${GITHUB_OUTPUT}"
-          echo "crossfit=$(check 'crossfit-sw.js crossfit-timer.html manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "binary=$(check 'binary/sw.js binary/binary.js binary/index.html binary/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "binary_ptbr=$(check 'pt-BR/binary/sw.js pt-BR/binary/index.html binary/binary.js binary/manifest-pt-BR.json')" >> "${GITHUB_OUTPUT}"
+          echo "flappy=$(check 'flappy/sw.js flappy/index.html flappy/flappyBird.js flappy/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "crossfit=$(check 'crossfit-timer/sw.js crossfit-timer/index.html crossfit-timer/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "curator=$(check 'curator/sw.js curator/index.html curator/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "drum_machine=$(check 'drum-machine/sw.js drum-machine/index.html drum-machine/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "f1=$(check 'f1-championship/sw.js f1-championship/index.html f1-championship/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "synth=$(check 'synth/sw.js synth/index.html synth/manifest.json')" >> "${GITHUB_OUTPUT}"
 
       - name: Update PWA version constants
         run: |
@@ -65,6 +68,9 @@ jobs:
               "flappy":       "${{ steps.changed.outputs.flappy }}" == "true",
               "crossfit":     "${{ steps.changed.outputs.crossfit }}" == "true",
               "curator":      "${{ steps.changed.outputs.curator }}" == "true",
+              "drum_machine": "${{ steps.changed.outputs.drum_machine }}" == "true",
+              "f1":           "${{ steps.changed.outputs.f1 }}" == "true",
+              "synth":        "${{ steps.changed.outputs.synth }}" == "true",
           }
 
           # On tag/dispatch, bump everything; on push to main, only bump changed PWAs
@@ -72,24 +78,30 @@ jobs:
 
           repo = pathlib.Path(".")
 
-          # Files with separate CACHE_VERSION + SW_VERSION constants (flappy, crossfit)
+          # Map: relative_path -> (const_name, version)
           versioned_files = {}
-          if bump_all or changed["flappy"]:
-              versioned_files["flappy-sw.js"] = ("CACHE_VERSION", version)
-              versioned_files["flappy.html"] = ("SW_VERSION", version)
-          if bump_all or changed["crossfit"]:
-              versioned_files["crossfit-sw.js"] = ("CACHE_VERSION", version)
-              versioned_files["crossfit-timer.html"] = ("SW_VERSION", version)
 
-          # Files with only CACHE_VERSION (binary, curator)
+          if bump_all or changed["flappy"]:
+              versioned_files["flappy/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["flappy/index.html"] = ("SW_VERSION", version)
+          if bump_all or changed["crossfit"]:
+              versioned_files["crossfit-timer/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["crossfit-timer/index.html"] = ("SW_VERSION", version)
           if bump_all or changed["binary"]:
-              versioned_files["binary-sw.js"] = ("CACHE_VERSION", version)
-              versioned_files["binary.js"] = ("APP_VERSION", version)
+              versioned_files["binary/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["binary/binary.js"] = ("APP_VERSION", version)
           if bump_all or changed["binary_ptbr"]:
-              versioned_files["pt-BR/binary-sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["pt-BR/binary/sw.js"] = ("CACHE_VERSION", version)
           if bump_all or changed["curator"]:
               versioned_files["curator/sw.js"] = ("CACHE_VERSION", version)
               versioned_files["curator/index.html"] = ("APP_VERSION", version)
+          if bump_all or changed["drum_machine"]:
+              versioned_files["drum-machine/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["drum-machine/index.html"] = ("SW_VERSION", version)
+          if bump_all or changed["f1"]:
+              versioned_files["f1-championship/sw.js"] = ("CACHE_VERSION", version)
+          if bump_all or changed["synth"]:
+              versioned_files["synth/sw.js"] = ("CACHE_VERSION", version)
 
           for relative_path, (const_name, ver) in versioned_files.items():
               path = repo / relative_path
@@ -113,14 +125,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
-            binary-sw.js \
-            binary.js \
-            pt-BR/binary-sw.js \
-            crossfit-sw.js \
-            flappy-sw.js \
+            binary/sw.js \
+            binary/binary.js \
+            pt-BR/binary/sw.js \
+            crossfit-timer/sw.js \
+            crossfit-timer/index.html \
+            flappy/sw.js \
+            flappy/index.html \
             curator/sw.js \
             curator/index.html \
-            crossfit-timer.html \
-            flappy.html
+            drum-machine/sw.js \
+            drum-machine/index.html \
+            f1-championship/sw.js \
+            synth/sw.js
           git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }} [skip ci]"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"
