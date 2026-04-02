@@ -351,6 +351,38 @@ ref: synth
       font-weight: 700;
     }
 
+    /* Row mute strip (below sequencer, above hint) */
+    .row-mutes {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      justify-content: stretch;
+      align-items: center;
+      padding: 6px 0 2px;
+      flex-shrink: 0;
+    }
+    .row-mute-btn {
+      flex: 1;
+      min-width: 0;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 6px;
+      padding: 8px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .row-mute-btn.muted {
+      background: rgba(255, 71, 87, 0.2);
+      border-color: #ff4757;
+      color: #ff8a94;
+    }
+    .row-mute-btn:active { transform: scale(0.97); }
+
     /* ─── Transport ───────────────────────────────────── */
     .transport {
       display: flex;
@@ -544,6 +576,7 @@ ref: synth
   <!-- Sequencer rows -->
   <div class="sequencer" id="sequencer">
     <div id="seq-rows" style="display:flex;flex-direction:column;gap:18px;width:100%"></div>
+    <div class="row-mutes" id="row-mutes" aria-label="Mute rows"></div>
     <div class="hint" id="hint"></div>
   </div>
 
@@ -740,6 +773,7 @@ class Sequencer {
     this.bpm = 128;
     this.tickCount = 0;
     this.rowCurrentStep = [-1, -1, -1];
+    this.rowMuted = [false, false, false];
     this.playing = false;
     this._timeout = null;
     this.selectedStep = null; // { rowIndex, stepIndex } | null
@@ -771,7 +805,7 @@ class Sequencer {
         this.rowCurrentStep[ri] = idx;
         const step = row.steps[idx];
         // Skip chained steps — covered by the previous note's extended duration
-        if (!step.chain && step.active) {
+        if (!step.chain && step.active && !this.rowMuted[ri]) {
           // Count consecutive chained steps ahead to extend note duration
           let chainLen = 1;
           for (let k = 1; k < row.steps.length; k++) {
@@ -807,6 +841,22 @@ const seq   = new Sequencer(synth);
 
 // ─── Drag-to-chain state ───────────────────────────────────────────────────
 const dragState = { active: false, rowIndex: null, fromStep: null, chainingOn: null };
+let dragMoved = false;
+
+function copyStepMidiFromTo(ri, fromSi, toSi) {
+  if (fromSi === toSi) return;
+  const row = seq.rows[ri];
+  const srcMidi = row.steps[fromSi].midi;
+  row.steps[toSi].midi = srcMidi;
+  const btn = document.querySelector(`.step-btn[data-row="${ri}"][data-step="${toSi}"]`);
+  const label = document.querySelector(`.step-note[data-row="${ri}"][data-step="${toSi}"]`);
+  const c = noteColor(srcMidi);
+  if (btn) {
+    btn.style.background = c;
+    btn.style.color = c;
+  }
+  if (label) label.textContent = midiToName(srcMidi);
+}
 
 function applyChainVisual(btn, step) {
   btn.classList.toggle('chained', !!step.chain);
@@ -845,13 +895,13 @@ document.addEventListener('pointermove', (e) => {
   const sIdx = parseInt(target.dataset.step);
   if (rIdx !== dragState.rowIndex) return;
   if (sIdx === dragState.fromStep) return;
-  didDrag = true;
+  dragMoved = true;
+  copyStepMidiFromTo(rIdx, dragState.fromStep, sIdx);
   setStepChain(rIdx, sIdx, dragState.chainingOn);
 });
 
 document.addEventListener('pointerup', () => {
   dragState.active = false;
-  didDrag = false;
 });
 
 function buildRows() {
@@ -900,7 +950,6 @@ function buildRows() {
         noteLabel.textContent = row.btnClass === 'step-btn-sm' ? '' : midiToName(step.midi);
 
         let pressTimer;
-        let didDrag = false;
         btn.addEventListener('pointerdown', (e) => {
           e.preventDefault();
           // Release implicit capture so pointermove can reach other elements
@@ -908,7 +957,7 @@ function buildRows() {
           const rIdx = parseInt(btn.dataset.row);
           const sIdx = parseInt(btn.dataset.step);
 
-          didDrag = false;
+          dragMoved = false;
           dragState.active = true;
           dragState.rowIndex = rIdx;
           dragState.fromStep = sIdx;
@@ -928,7 +977,7 @@ function buildRows() {
           const rIdx = parseInt(btn.dataset.row);
           const sIdx = parseInt(btn.dataset.step);
           // No drag: toggle selection for note assignment
-          if (!didDrag && dragState.active && sIdx === dragState.fromStep) {
+          if (!dragMoved && dragState.active && sIdx === dragState.fromStep) {
             const cur = seq.selectedStep;
             if (cur && cur.rowIndex === rIdx && cur.stepIndex === sIdx) {
               seq.selectedStep = null;
@@ -955,6 +1004,25 @@ function buildRows() {
   });
 }
 
+function buildRowMutes() {
+  const el = document.getElementById('row-mutes');
+  el.innerHTML = '';
+  ['1/4', '1/8', '1/16'].forEach((label, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'row-mute-btn';
+    btn.textContent = label;
+    btn.classList.toggle('muted', seq.rowMuted[i]);
+    btn.title = seq.rowMuted[i] ? 'Unmute row' : 'Mute row (audio only)';
+    btn.addEventListener('click', () => {
+      seq.rowMuted[i] = !seq.rowMuted[i];
+      btn.classList.toggle('muted', seq.rowMuted[i]);
+      btn.title = seq.rowMuted[i] ? 'Unmute row' : 'Mute row (audio only)';
+    });
+    el.appendChild(btn);
+  });
+}
+
 function updateHint() {
   const hint = document.getElementById('hint');
   const sel = seq.selectedStep;
@@ -962,7 +1030,7 @@ function updateHint() {
     const rowLabel = seq.rows[sel.rowIndex].label;
     hint.innerHTML = `Row <span>${rowLabel}</span> step <span>${sel.stepIndex + 1}</span> — tap a key to assign note`;
   } else {
-    hint.innerHTML = 'Tap to select · Long-press to toggle · Drag across steps to chain ⛓';
+    hint.innerHTML = 'Tap to select · Long-press to toggle · Drag across steps to chain ⛓ · Drag copies pitch';
   }
 }
 
@@ -1171,6 +1239,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ─── Init ──────────────────────────────────────────────────────────────────
+buildRowMutes();
 buildRows();
 buildPiano();
 updateHint();
