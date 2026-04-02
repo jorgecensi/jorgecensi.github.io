@@ -83,19 +83,25 @@ ref: synth
     /* ─── Controls panel ──────────────────────────────── */
     .controls {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 10px 14px;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 10px;
       background: var(--panel2);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
-      align-items: center;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 6px;
+      width: 100%;
     }
 
     .ctrl-group {
       display: flex;
       flex-direction: column;
       gap: 3px;
+      flex: 1;
     }
     .ctrl-label {
       font-size: 9px;
@@ -105,19 +111,21 @@ ref: synth
       color: var(--text-dim);
     }
 
-    /* Wave selector */
+    /* Wave selector — buttons fill group width */
     .wave-btns {
       display: flex;
-      gap: 3px;
+      gap: 4px;
     }
     .wave-btn {
+      flex: 1;
       background: var(--panel);
       border: 1px solid var(--border);
       color: var(--text-dim);
-      border-radius: 5px;
-      padding: 4px 7px;
-      font-size: 10px;
-      font-weight: 600;
+      border-radius: 6px;
+      padding: 0;
+      height: 36px;
+      font-size: 11px;
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.15s;
     }
@@ -132,49 +140,52 @@ ref: synth
       display: flex;
       align-items: center;
       gap: 6px;
+      height: 36px;
     }
     input[type=range] {
       -webkit-appearance: none;
       appearance: none;
-      width: 70px;
-      height: 4px;
+      flex: 1;
+      height: 6px;
       background: var(--border);
-      border-radius: 2px;
+      border-radius: 3px;
       outline: none;
       cursor: pointer;
     }
     input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
       background: var(--accent);
       cursor: pointer;
     }
     input[type=range]::-moz-range-thumb {
-      width: 14px;
-      height: 14px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
       background: var(--accent);
       border: none;
       cursor: pointer;
     }
     .ctrl-value {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-dim);
-      min-width: 24px;
+      min-width: 26px;
       text-align: right;
     }
 
     /* Toggle buttons */
     .toggle-btn {
+      flex: 1;
       background: var(--panel);
       border: 1px solid var(--border);
       color: var(--text-dim);
-      border-radius: 5px;
-      padding: 5px 9px;
-      font-size: 10px;
-      font-weight: 600;
+      border-radius: 6px;
+      padding: 0;
+      height: 36px;
+      font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       cursor: pointer;
@@ -222,11 +233,10 @@ ref: synth
       align-items: flex-start;
       gap: 4px;
       flex-wrap: nowrap;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      flex: 1;
+      min-width: 0;
       padding-bottom: 2px;
     }
-    .steps-container::-webkit-scrollbar { display: none; }
 
     /* Group spacer for 16th note grouping */
     .group-gap {
@@ -234,13 +244,15 @@ ref: synth
       flex-shrink: 0;
     }
 
-    /* Step wrapper: button + note label + extend bar */
+    /* Step wrapper: button + note label */
     .step-wrap {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       gap: 2px;
-      flex-shrink: 0;
+      flex: 1;
+      min-width: 0;
+      position: relative;
     }
 
     /* Step buttons — base */
@@ -258,23 +270,29 @@ ref: synth
       user-select: none;
       -webkit-user-select: none;
     }
-    /* Quarter (1/4) — 40px */
+    /* Quarter (1/4) — flex fill, square */
     .step-btn-lg {
-      width: 40px;
-      height: 40px;
-      font-size: 11px;
+      flex: 1;
+      aspect-ratio: 1;
+      min-width: 0;
+      height: auto;
+      font-size: 13px;
     }
-    /* 8th (1/8) — 28px */
+    /* 8th (1/8) — flex fill */
     .step-btn-md {
-      width: 28px;
-      height: 28px;
-      font-size: 9px;
+      flex: 1;
+      aspect-ratio: 1;
+      min-width: 0;
+      height: auto;
+      font-size: 10px;
     }
-    /* 16th (1/16) — 20px */
+    /* 16th (1/16) — flex fill */
     .step-btn-sm {
-      width: 20px;
-      height: 20px;
-      font-size: 7px;
+      flex: 1;
+      aspect-ratio: 1;
+      min-width: 0;
+      height: auto;
+      font-size: 8px;
     }
 
     .step-btn.off {
@@ -288,6 +306,27 @@ ref: synth
     .step-btn.selected {
       border-color: #fff;
     }
+    /* Chained step: slightly transparent with chain icon overlay */
+    .step-btn.chained {
+      opacity: 0.7;
+    }
+    /* Chain connector line between chained step and the one before */
+    .chain-connector {
+      position: absolute;
+      top: 30%;
+      left: -4px;
+      width: 4px;
+      height: 40%;
+      background: rgba(255,255,255,0.4);
+      border-radius: 1px;
+      pointer-events: none;
+      z-index: 3;
+    }
+    /* Chain icon inside chained button */
+    .chain-icon {
+      font-size: 0.85em;
+      pointer-events: none;
+    }
 
     .step-note {
       font-size: 7px;
@@ -296,26 +335,6 @@ ref: synth
       font-weight: 600;
       line-height: 1;
     }
-
-    /* Extend bar */
-    .extend-bar {
-      border-radius: 2px;
-      background: var(--border);
-      cursor: pointer;
-      transition: background 0.15s, opacity 0.15s;
-      height: 3px;
-    }
-    .extend-bar.on {
-      /* color set inline to match step color */
-      opacity: 1;
-    }
-    .extend-bar.off {
-      opacity: 0.35;
-    }
-    /* widths match button widths */
-    .extend-bar-lg { width: 40px; }
-    .extend-bar-md { width: 28px; }
-    .extend-bar-sm { width: 20px; }
 
     /* ─── Note select hint ────────────────────────────── */
     .hint {
@@ -484,44 +503,47 @@ ref: synth
 
   <!-- Controls -->
   <div class="controls">
-    <div class="ctrl-group">
-      <div class="ctrl-label">Wave</div>
-      <div class="wave-btns">
-        <button class="wave-btn active" data-wave="sawtooth">SAW</button>
-        <button class="wave-btn" data-wave="square">SQR</button>
-        <button class="wave-btn" data-wave="triangle">TRI</button>
-        <button class="wave-btn" data-wave="sine">SIN</button>
+    <!-- Row 1: Wave + Fx -->
+    <div class="controls-row">
+      <div class="ctrl-group" style="flex:2">
+        <div class="ctrl-label">Wave</div>
+        <div class="wave-btns">
+          <button class="wave-btn active" data-wave="sawtooth">SAW</button>
+          <button class="wave-btn" data-wave="square">SQR</button>
+          <button class="wave-btn" data-wave="triangle">TRI</button>
+          <button class="wave-btn" data-wave="sine">SIN</button>
+        </div>
+      </div>
+      <div class="ctrl-group" style="flex:1">
+        <div class="ctrl-label">Fx</div>
+        <div class="wave-btns">
+          <button class="toggle-btn active" id="delay-btn">DLY</button>
+          <button class="toggle-btn" id="glide-btn">GLD</button>
+        </div>
       </div>
     </div>
-
-    <div class="ctrl-group">
-      <div class="ctrl-label">Filter</div>
-      <div class="ctrl-slider">
-        <input type="range" id="filter-range" min="80" max="8000" value="3000" step="10">
-        <span class="ctrl-value" id="filter-val">3k</span>
+    <!-- Row 2: Filter + Release -->
+    <div class="controls-row">
+      <div class="ctrl-group">
+        <div class="ctrl-label">Filter</div>
+        <div class="ctrl-slider">
+          <input type="range" id="filter-range" min="80" max="8000" value="3000" step="10">
+          <span class="ctrl-value" id="filter-val">3k</span>
+        </div>
       </div>
-    </div>
-
-    <div class="ctrl-group">
-      <div class="ctrl-label">Release</div>
-      <div class="ctrl-slider">
-        <input type="range" id="release-range" min="0.05" max="2" value="0.4" step="0.05">
-        <span class="ctrl-value" id="release-val">.4</span>
-      </div>
-    </div>
-
-    <div class="ctrl-group">
-      <div class="ctrl-label">Fx</div>
-      <div class="wave-btns">
-        <button class="toggle-btn active" id="delay-btn">DLY</button>
-        <button class="toggle-btn" id="glide-btn">GLD</button>
+      <div class="ctrl-group">
+        <div class="ctrl-label">Release</div>
+        <div class="ctrl-slider">
+          <input type="range" id="release-range" min="0.05" max="2" value="0.4" step="0.05">
+          <span class="ctrl-value" id="release-val">.4</span>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Sequencer rows -->
   <div class="sequencer" id="sequencer">
-    <div id="seq-rows" style="display:flex;flex-direction:column;gap:10px;width:100%"></div>
+    <div id="seq-rows" style="display:flex;flex-direction:column;gap:18px;width:100%"></div>
     <div class="hint" id="hint"></div>
   </div>
 
@@ -662,7 +684,7 @@ function makeDefaultRows() {
   const quarterRow = {
     label: '1/4', division: 4,
     btnClass: 'step-btn-lg', barClass: 'extend-bar-lg',
-    steps: quarterNotes.map(midi => ({ active: true, midi, extend: true }))
+    steps: quarterNotes.map(midi => ({ active: true, midi, chain: false }))
   };
 
   // 8th notes
@@ -679,7 +701,7 @@ function makeDefaultRows() {
   const eighthRow = {
     label: '1/8', division: 2,
     btnClass: 'step-btn-md', barClass: 'extend-bar-md',
-    steps: eighthData.map(d => ({ ...d, extend: false }))
+    steps: eighthData.map(d => ({ ...d, chain: false }))
   };
 
   // 16th notes
@@ -704,7 +726,7 @@ function makeDefaultRows() {
   const sixteenthRow = {
     label: '1/16', division: 1,
     btnClass: 'step-btn-sm', barClass: 'extend-bar-sm',
-    steps: sixteenthData.map(d => ({ ...d, extend: false }))
+    steps: sixteenthData.map(d => ({ ...d, chain: false }))
   };
 
   return [quarterRow, eighthRow, sixteenthRow];
@@ -743,16 +765,22 @@ class Sequencer {
 
   _tick() {
     if (!this.playing) return;
-    // tickCount starts at 0; advance before playing so step 0 plays on first tick
     this.rows.forEach((row, ri) => {
       if (this.tickCount % row.division === 0) {
         const idx = Math.floor(this.tickCount / row.division) % row.steps.length;
         this.rowCurrentStep[ri] = idx;
         const step = row.steps[idx];
-        if (step.active) {
+        // Skip chained steps — covered by the previous note's extended duration
+        if (!step.chain && step.active) {
+          // Count consecutive chained steps ahead to extend note duration
+          let chainLen = 1;
+          for (let k = 1; k < row.steps.length; k++) {
+            const nextIdx = (idx + k) % row.steps.length;
+            if (row.steps[nextIdx].chain) chainLen++;
+            else break;
+          }
           const stepDur = (this.sixteenthMs() * row.division) / 1000;
-          const noteDur = stepDur * (step.extend ? 0.95 : 0.75);
-          this.synth.play(step.midi, noteDur);
+          this.synth.play(step.midi, stepDur * chainLen * 0.98);
         }
       }
     });
@@ -767,7 +795,7 @@ class Sequencer {
       row.steps.forEach(s => {
         s.active = Math.random() > 0.25;
         s.midi = scale[Math.floor(Math.random() * scale.length)];
-        s.extend = false;
+        s.chain = false;
       });
     });
   }
@@ -777,111 +805,153 @@ class Sequencer {
 const synth = new Synth();
 const seq   = new Sequencer(synth);
 
+// ─── Drag-to-chain state ───────────────────────────────────────────────────
+const dragState = { active: false, rowIndex: null, fromStep: null, chainingOn: null };
+
+function applyChainVisual(btn, step) {
+  btn.classList.toggle('chained', !!step.chain);
+  // Show chain icon or step number
+  if (step.chain) {
+    btn.innerHTML = '<span class="chain-icon">⛓</span>';
+  } else {
+    btn.textContent = parseInt(btn.dataset.step) + 1;
+  }
+  // Chain connector line (left edge of chained step)
+  let connector = btn.parentElement.querySelector('.chain-connector');
+  if (step.chain) {
+    if (!connector) {
+      connector = document.createElement('div');
+      connector.className = 'chain-connector';
+      btn.parentElement.appendChild(connector);
+    }
+  } else {
+    connector?.remove();
+  }
+}
+
+function setStepChain(ri, si, value) {
+  const step = seq.rows[ri].steps[si];
+  step.chain = value;
+  const btn = document.querySelector(`.step-btn[data-row="${ri}"][data-step="${si}"]`);
+  if (btn) applyChainVisual(btn, step);
+}
+
+document.addEventListener('pointermove', (e) => {
+  if (!dragState.active) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const target = el?.closest?.('.step-btn');
+  if (!target) return;
+  const rIdx = parseInt(target.dataset.row);
+  const sIdx = parseInt(target.dataset.step);
+  if (rIdx !== dragState.rowIndex) return;
+  if (sIdx === dragState.fromStep) return;
+  didDrag = true;
+  setStepChain(rIdx, sIdx, dragState.chainingOn);
+});
+
+document.addEventListener('pointerup', () => {
+  dragState.active = false;
+  didDrag = false;
+});
+
 function buildRows() {
   const container = document.getElementById('seq-rows');
   container.innerHTML = '';
 
   seq.rows.forEach((row, ri) => {
-    const rowEl = document.createElement('div');
-    rowEl.className = 'seq-row';
+    // 1/16 row: split into two visual halves (steps 0–7 and 8–15)
+    const halves = row.division === 1
+      ? [[0, 7], [8, row.steps.length - 1]]
+      : [[0, row.steps.length - 1]];
 
-    const labelEl = document.createElement('div');
-    labelEl.className = 'row-label';
-    labelEl.textContent = row.label;
-    rowEl.appendChild(labelEl);
+    halves.forEach(([from, to], halfIdx) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'seq-row';
 
-    const stepsContainer = document.createElement('div');
-    stepsContainer.className = 'steps-container';
+      const labelEl = document.createElement('div');
+      labelEl.className = 'row-label';
+      labelEl.textContent = halfIdx === 0 ? row.label : '';
+      rowEl.appendChild(labelEl);
 
-    row.steps.forEach((step, si) => {
-      // Insert group spacer every 4 steps for 16th row
-      if (row.division === 1 && si > 0 && si % 4 === 0) {
-        const spacer = document.createElement('div');
-        spacer.className = 'group-gap';
-        stepsContainer.appendChild(spacer);
+      const stepsContainer = document.createElement('div');
+      stepsContainer.className = 'steps-container';
+
+      for (let si = from; si <= to; si++) {
+        const step = row.steps[si];
+
+        const wrap = document.createElement('div');
+        wrap.className = 'step-wrap';
+
+        const btn = document.createElement('button');
+        btn.className = `step-btn ${row.btnClass}`;
+        btn.dataset.row = ri;
+        btn.dataset.step = si;
+        const c = noteColor(step.midi);
+        btn.style.background = c;
+        btn.style.color = c;
+        if (!step.active) btn.classList.add('off');
+        const sel = seq.selectedStep;
+        if (sel && sel.rowIndex === ri && sel.stepIndex === si) btn.classList.add('selected');
+
+        const noteLabel = document.createElement('div');
+        noteLabel.className = 'step-note';
+        noteLabel.dataset.row = ri;
+        noteLabel.dataset.step = si;
+        noteLabel.textContent = row.btnClass === 'step-btn-sm' ? '' : midiToName(step.midi);
+
+        let pressTimer;
+        let didDrag = false;
+        btn.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          // Release implicit capture so pointermove can reach other elements
+          btn.releasePointerCapture(e.pointerId);
+          const rIdx = parseInt(btn.dataset.row);
+          const sIdx = parseInt(btn.dataset.step);
+
+          didDrag = false;
+          dragState.active = true;
+          dragState.rowIndex = rIdx;
+          dragState.fromStep = sIdx;
+          // Toggle mode: if next step is chained, dragging will unchain; otherwise chain
+          const nextSi = (sIdx + 1) % seq.rows[rIdx].steps.length;
+          dragState.chainingOn = !seq.rows[rIdx].steps[nextSi].chain;
+
+          pressTimer = setTimeout(() => {
+            // Long press: toggle active
+            seq.rows[rIdx].steps[sIdx].active = !seq.rows[rIdx].steps[sIdx].active;
+            btn.classList.toggle('off', !seq.rows[rIdx].steps[sIdx].active);
+          }, 500);
+        });
+
+        btn.addEventListener('pointerup', (e) => {
+          clearTimeout(pressTimer);
+          const rIdx = parseInt(btn.dataset.row);
+          const sIdx = parseInt(btn.dataset.step);
+          // No drag: toggle selection for note assignment
+          if (!didDrag && dragState.active && sIdx === dragState.fromStep) {
+            const cur = seq.selectedStep;
+            if (cur && cur.rowIndex === rIdx && cur.stepIndex === sIdx) {
+              seq.selectedStep = null;
+              btn.classList.remove('selected');
+            } else {
+              document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('selected'));
+              seq.selectedStep = { rowIndex: rIdx, stepIndex: sIdx };
+              btn.classList.add('selected');
+            }
+            updateHint();
+          }
+        });
+        btn.addEventListener('pointercancel', () => clearTimeout(pressTimer));
+
+        wrap.appendChild(btn);
+        wrap.appendChild(noteLabel);
+        stepsContainer.appendChild(wrap);
+        applyChainVisual(btn, step); // after append so btn.parentElement is valid
       }
 
-      const wrap = document.createElement('div');
-      wrap.className = 'step-wrap';
-
-      // Button
-      const btn = document.createElement('button');
-      btn.className = `step-btn ${row.btnClass}`;
-      btn.dataset.row = ri;
-      btn.dataset.step = si;
-      const c = noteColor(step.midi);
-      btn.style.background = c;
-      btn.style.color = c;
-      if (!step.active) btn.classList.add('off');
-      const sel = seq.selectedStep;
-      if (sel && sel.rowIndex === ri && sel.stepIndex === si) btn.classList.add('selected');
-      btn.textContent = si + 1;
-
-      // Note label (hidden for xs to save space)
-      const noteLabel = document.createElement('div');
-      noteLabel.className = 'step-note';
-      noteLabel.dataset.row = ri;
-      noteLabel.dataset.step = si;
-      noteLabel.textContent = row.btnClass === 'step-btn-sm' ? '' : midiToName(step.midi);
-
-      // Extend bar
-      const extBar = document.createElement('div');
-      extBar.className = `extend-bar ${row.barClass} ${step.extend ? 'on' : 'off'}`;
-      extBar.dataset.row = ri;
-      extBar.dataset.step = si;
-      extBar.style.background = step.extend ? c : '';
-      extBar.title = 'Tap to toggle extend';
-
-      // --- Gesture handling for button ---
-      let pressTimer;
-      btn.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        const rIdx = parseInt(btn.dataset.row);
-        const sIdx = parseInt(btn.dataset.step);
-
-        // Toggle selection
-        const cur = seq.selectedStep;
-        if (cur && cur.rowIndex === rIdx && cur.stepIndex === sIdx) {
-          seq.selectedStep = null;
-          btn.classList.remove('selected');
-        } else {
-          document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('selected'));
-          seq.selectedStep = { rowIndex: rIdx, stepIndex: sIdx };
-          btn.classList.add('selected');
-        }
-        updateHint();
-
-        // Long press → toggle active
-        pressTimer = setTimeout(() => {
-          seq.rows[rIdx].steps[sIdx].active = !seq.rows[rIdx].steps[sIdx].active;
-          btn.classList.toggle('off', !seq.rows[rIdx].steps[sIdx].active);
-        }, 500);
-      });
-      btn.addEventListener('pointerup',     () => clearTimeout(pressTimer));
-      btn.addEventListener('pointercancel', () => clearTimeout(pressTimer));
-
-      // --- Extend bar tap ---
-      extBar.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const rIdx = parseInt(extBar.dataset.row);
-        const sIdx = parseInt(extBar.dataset.step);
-        const s = seq.rows[rIdx].steps[sIdx];
-        s.extend = !s.extend;
-        const btnColor = noteColor(s.midi);
-        extBar.classList.toggle('on', s.extend);
-        extBar.classList.toggle('off', !s.extend);
-        extBar.style.background = s.extend ? btnColor : '';
-      });
-
-      wrap.appendChild(btn);
-      wrap.appendChild(noteLabel);
-      wrap.appendChild(extBar);
-      stepsContainer.appendChild(wrap);
+      rowEl.appendChild(stepsContainer);
+      container.appendChild(rowEl);
     });
-
-    rowEl.appendChild(stepsContainer);
-    container.appendChild(rowEl);
   });
 }
 
@@ -892,7 +962,7 @@ function updateHint() {
     const rowLabel = seq.rows[sel.rowIndex].label;
     hint.innerHTML = `Row <span>${rowLabel}</span> step <span>${sel.stepIndex + 1}</span> — tap a key to assign note`;
   } else {
-    hint.innerHTML = 'Tap step to select · Long-press to toggle · Tap bar to extend';
+    hint.innerHTML = 'Tap to select · Long-press to toggle · Drag across steps to chain ⛓';
   }
 }
 
@@ -953,11 +1023,6 @@ function buildPiano() {
           const c = noteColor(k.midi);
           btn.style.background = c;
           btn.style.color = c;
-        }
-        // Update extend bar color if on
-        const extBar = document.querySelector(`.extend-bar[data-row="${sel.rowIndex}"][data-step="${sel.stepIndex}"]`);
-        if (extBar && step.extend) {
-          extBar.style.background = noteColor(k.midi);
         }
         updateHint();
       }
