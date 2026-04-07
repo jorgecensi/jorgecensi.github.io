@@ -351,6 +351,26 @@ permalink: /drum-machine/
         }
         #rec-clear-btn:active { color: var(--text); }
 
+        /* ── BPM Detect button ───────────────────────────── */
+        #detect-bpm-btn {
+            background: none;
+            border: 1px solid var(--surface3);
+            border-radius: 8px;
+            color: var(--text-dim);
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            cursor: pointer;
+            letter-spacing: 0.04em;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #detect-bpm-btn:active { background: var(--surface2); }
+        #detect-bpm-btn.detecting {
+            border-color: #FF4757;
+            color: #FF4757;
+            animation: rec-pulse 0.8s ease-in-out infinite;
+        }
+
         /* ── Landscape layout (phones rotated) ───────────── */
         @media (orientation: landscape) and (max-height: 500px) {
             #app {
@@ -386,6 +406,7 @@ permalink: /drum-machine/
     <div id="header">
         <h1>Drum Machine</h1>
         <span id="tempo-display">♩ 140 · swing 15%</span>
+        <button id="detect-bpm-btn" title="Detect BPM from mic">🎙</button>
     </div>
 
     <!-- Sample selectors -->
@@ -1415,6 +1436,201 @@ buildStepsSVG();
 renderSteps();
 animLoop();
 updateClapRecordUI();
+
+// ─── BPM Detector ────────────────────────────────────────────────────────────
+const BPMDetector = (() => {
+    let micStream = null;
+    let micSource = null;
+    let bpmAnalyser = null;
+    let detecting = false;
+    let rafId = null;
+    let detectionInterval = null;
+
+    // Rolling spectral-flux buffer at a true 100 Hz via setInterval
+    // (requestAnimationFrame only fires at ~60 Hz, which shifts all lag
+    //  calculations and makes common tempos like 120-140 BPM undetectable)
+    const SAMPLE_HZ       = 100;
+    const BUF_SIZE        = SAMPLE_HZ * 10; // 10 seconds
+    const energyBuf       = new Float32Array(BUF_SIZE);
+    let   writeIdx        = 0;
+    let   filled          = 0;
+    let   collectStartTime = 0; // wall-clock time when collection started
+
+    const fftData      = new Float32Array(1024); // half of fftSize 2048
+    const prevSpectrum = new Float32Array(1024); // previous frame magnitudes
+    const voteBuffer   = [];                     // last 8 BPM candidates
+
+    function start() {
+        if (detecting) { stop(); return; }
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+            .then(stream => {
+                initAudio();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                micStream   = stream;
+                micSource   = audioCtx.createMediaStreamSource(stream);
+                bpmAnalyser = audioCtx.createAnalyser();
+                bpmAnalyser.fftSize = 2048;
+                micSource.connect(bpmAnalyser);
+                detecting = true;
+                energyBuf.fill(0);
+                prevSpectrum.fill(0);
+                voteBuffer.length = 0;
+                writeIdx = filled = 0;
+                collectStartTime = performance.now();
+                // Use setInterval instead of rAF to guarantee actual 100 Hz.
+                // rAF fires at ~60 Hz which makes minLag wrong and misses
+                // common tempos (120–140 BPM) entirely.
+                rafId = setInterval(collect, 10);
+                detectionInterval = setInterval(analyse, 2500);
+                renderBtn();
+            })
+            .catch(() => {});
+    }
+
+    function stop() {
+        detecting = false;
+        clearInterval(rafId);
+        clearInterval(detectionInterval);
+        if (micSource) { micSource.disconnect(); micSource = null; }
+        if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+        bpmAnalyser = null;
+        renderBtn();
+    }
+
+    function collect() {
+        if (!bpmAnalyser) return;
+        bpmAnalyser.getFloatFrequencyData(fftData);
+        // Multi-band spectral flux: low (kick/bass), mid (snare body), high (snare crack/hi-hat).
+        // Weighted sum so hi-hat 16th notes don't overwhelm the kick-beat signal.
+        const binHz   = audioCtx.sampleRate / 2048;
+        const lowBin  = Math.floor(400  / binHz); // ~18
+        const midBin  = Math.floor(1600 / binHz); // ~74
+        const highBin = Math.floor(5500 / binHz); // ~256
+        let flux = 0;
+        for (let i = 1; i <= lowBin; i++) {
+            const m = Math.pow(10, fftData[i] / 20);
+            flux += Math.max(0, m - prevSpectrum[i]) * 1.0;
+            prevSpectrum[i] = m;
+        }
+        for (let i = lowBin + 1; i <= midBin; i++) {
+            const m = Math.pow(10, fftData[i] / 20);
+            flux += Math.max(0, m - prevSpectrum[i]) * 0.7;
+            prevSpectrum[i] = m;
+        }
+        for (let i = midBin + 1; i <= highBin; i++) {
+            const m = Math.pow(10, fftData[i] / 20);
+            flux += Math.max(0, m - prevSpectrum[i]) * 0.5;
+            prevSpectrum[i] = m;
+        }
+        energyBuf[writeIdx % BUF_SIZE] = flux;
+        writeIdx++;
+        filled = Math.min(filled + 1, BUF_SIZE);
+    }
+
+    function analyse() {
+        if (filled < SAMPLE_HZ * 4) return; // need ≥4 s of data
+        const n = filled;
+        const buf = new Float32Array(n);
+        const base = writeIdx - n;
+        for (let i = 0; i < n; i++) buf[i] = energyBuf[(base + i + BUF_SIZE) % BUF_SIZE];
+
+        let max = 0;
+        for (let i = 0; i < n; i++) if (buf[i] > max) max = buf[i];
+        if (max < 1e-10) return;
+        for (let i = 0; i < n; i++) buf[i] /= max;
+
+        // Measure true collection rate from wall clock to correct for setInterval drift
+        const elapsedSec = (performance.now() - collectStartTime) / 1000;
+        const actualHz = elapsedSec > 0.5 ? writeIdx / elapsedSec : SAMPLE_HZ;
+
+        // NACF over lags for 60–180 BPM at measured actual rate
+        const minLag = Math.floor(actualHz * 60 / 180);
+        const maxLag = Math.ceil(actualHz * 60 / 60);
+        const corrValues = new Float32Array(maxLag - minLag + 1);
+
+        // Prefix sum of squares for efficient normalized autocorrelation
+        const sq = new Float32Array(n + 1);
+        for (let i = 0; i < n; i++) sq[i + 1] = sq[i] + buf[i] * buf[i];
+
+        let bestLag = -1, bestCorr = -Infinity;
+        for (let lag = minLag; lag <= maxLag; lag++) {
+            const m = n - lag;
+            let cross = 0;
+            for (let i = 0; i < m; i++) cross += buf[i] * buf[i + lag];
+            const e1 = sq[m];
+            const e2 = sq[n] - sq[lag];
+            const denom = Math.sqrt(e1 * e2);
+            const corr = denom > 1e-12 ? cross / denom : 0;
+            corrValues[lag - minLag] = corr;
+            if (corr > bestCorr) { bestCorr = corr; bestLag = lag; }
+        }
+        if (bestLag < 1) return;
+
+        // Parabolic interpolation for sub-sample lag precision
+        let refinedLag = bestLag;
+        if (bestLag > minLag && bestLag < maxLag) {
+            const y1 = corrValues[bestLag - 1 - minLag];
+            const y2 = corrValues[bestLag     - minLag];
+            const y3 = corrValues[bestLag + 1 - minLag];
+            const d = 2 * (2 * y2 - y1 - y3);
+            if (Math.abs(d) > 1e-6) refinedLag = bestLag + (y3 - y1) / d;
+        }
+
+        // Octave disambiguation: if half-lag has similar correlation, double the BPM
+        const halfLagInt = Math.round(refinedLag / 2);
+        if (halfLagInt >= minLag && halfLagInt <= maxLag) {
+            const halfCorr = corrValues[halfLagInt - minLag] ?? 0;
+            if (bestCorr > 1e-6 && halfCorr / bestCorr > 0.5) {
+                refinedLag = refinedLag / 2;
+            }
+        }
+
+        const candidate = Math.max(60, Math.min(200, Math.round(60 * actualHz / refinedLag)));
+
+        // Vote buffer: 8 readings; apply weighted average of cluster when ≥5 agree within ±4 BPM
+        voteBuffer.push(candidate);
+        if (voteBuffer.length > 8) voteBuffer.shift();
+        if (voteBuffer.length >= 5) {
+            const sorted = [...voteBuffer].sort((a, b) => a - b);
+            const median = sorted[Math.floor(sorted.length / 2)];
+            const cluster = sorted.filter(v => Math.abs(v - median) <= 4);
+            if (cluster.length >= 5) {
+                // Weight by position in voteBuffer (more recent = higher index = higher weight)
+                let weightSum = 0, weightedTotal = 0;
+                cluster.forEach(v => {
+                    const idx = voteBuffer.indexOf(v) + 1;
+                    weightSum += idx;
+                    weightedTotal += v * idx;
+                });
+                applyBpm(Math.round(weightedTotal / weightSum));
+            }
+        }
+    }
+
+    function applyBpm(detected) {
+        bpm = detected;
+        bpmSlider.value = bpm;
+        bpmValueEl.textContent = bpm;
+        updateTempoDisplay();
+        saveState();
+        const btn = document.getElementById('detect-bpm-btn');
+        if (btn) {
+            btn.textContent = `♩${bpm}`;
+            setTimeout(() => { if (btn && detecting) btn.textContent = '⏹'; }, 1200);
+        }
+    }
+
+    function renderBtn() {
+        const btn = document.getElementById('detect-bpm-btn');
+        if (!btn) return;
+        btn.classList.toggle('detecting', detecting);
+        btn.textContent = detecting ? '⏹' : '🎙';
+    }
+
+    return { start };
+})();
+
+document.getElementById('detect-bpm-btn').addEventListener('click', () => BPMDetector.start());
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
