@@ -351,7 +351,25 @@ permalink: /drum-machine/
         }
         #rec-clear-btn:active { color: var(--text); }
 
-        /* ── BPM Detect button ───────────────────────────── */
+        /* ── Sync + BPM Detect buttons ──────────────────── */
+        #sync-beat-btn {
+            background: none;
+            border: 1px solid var(--surface3);
+            border-radius: 8px;
+            color: var(--text-dim);
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            cursor: pointer;
+            letter-spacing: 0.04em;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #sync-beat-btn:active { background: var(--surface2); }
+        #sync-beat-btn.synced {
+            border-color: #2ED573;
+            color: #2ED573;
+        }
+
         #detect-bpm-btn {
             background: none;
             border: 1px solid var(--surface3);
@@ -369,6 +387,23 @@ permalink: /drum-machine/
             border-color: #FF4757;
             color: #FF4757;
             animation: rec-pulse 0.8s ease-in-out infinite;
+        }
+
+        /* ── Beat dot ────────────────────────────────────── */
+        #beat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--surface3);
+            flex-shrink: 0;
+            opacity: 0;
+            transition: background 0.06s, box-shadow 0.06s, opacity 0.2s;
+        }
+        #beat-dot.detecting { opacity: 1; }
+        #beat-dot.flash {
+            background: #FF4757;
+            box-shadow: 0 0 8px #FF4757;
+            transition: none; /* instant on */
         }
 
         /* ── Landscape layout (phones rotated) ───────────── */
@@ -406,7 +441,9 @@ permalink: /drum-machine/
     <div id="header">
         <h1>Drum Machine</h1>
         <span id="tempo-display">♩ 140 · swing 15%</span>
+        <button id="sync-beat-btn" title="Tap on the downbeat to sync">SYNC</button>
         <button id="detect-bpm-btn" title="Detect BPM from mic">🎙</button>
+        <span id="beat-dot"></span>
     </div>
 
     <!-- Sample selectors -->
@@ -1460,6 +1497,11 @@ const BPMDetector = (() => {
     const prevSpectrum = new Float32Array(1024); // previous frame magnitudes
     const voteBuffer   = [];                     // last 8 BPM candidates
 
+    // Onset detection for beat-dot flash
+    let beatDot        = null;
+    let fluxEma        = 0;   // exponential moving average of flux
+    let lastFlashTime  = 0;   // ms, debounce
+
     function start() {
         if (detecting) { stop(); return; }
         navigator.mediaDevices.getUserMedia({ audio: true, video: false })
@@ -1477,6 +1519,9 @@ const BPMDetector = (() => {
                 voteBuffer.length = 0;
                 writeIdx = filled = 0;
                 collectStartTime = performance.now();
+                beatDot = document.getElementById('beat-dot');
+                fluxEma = 0;
+                lastFlashTime = 0;
                 // Use setInterval instead of rAF to guarantee actual 100 Hz.
                 // rAF fires at ~60 Hz which makes minLag wrong and misses
                 // common tempos (120–140 BPM) entirely.
@@ -1494,6 +1539,7 @@ const BPMDetector = (() => {
         if (micSource) { micSource.disconnect(); micSource = null; }
         if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
         bpmAnalyser = null;
+        if (beatDot) { beatDot.classList.remove('flash', 'detecting'); }
         renderBtn();
     }
 
@@ -1525,6 +1571,20 @@ const BPMDetector = (() => {
         energyBuf[writeIdx % BUF_SIZE] = flux;
         writeIdx++;
         filled = Math.min(filled + 1, BUF_SIZE);
+
+        // Beat-dot: flash on onset (flux spike above adaptive threshold)
+        fluxEma = 0.85 * fluxEma + 0.15 * flux;
+        const now = performance.now();
+        const minInterval = bpm > 0 ? (60000 / bpm) * 0.5 : 200;
+        if (flux > fluxEma * 2.5 && fluxEma > 1e-8 && (now - lastFlashTime) > minInterval) {
+            lastFlashTime = now;
+            if (beatDot) {
+                beatDot.classList.remove('flash');
+                void beatDot.offsetWidth; // force reflow to restart transition
+                beatDot.classList.add('flash');
+                setTimeout(() => beatDot && beatDot.classList.remove('flash'), 100);
+            }
+        }
     }
 
     function analyse() {
@@ -1625,12 +1685,29 @@ const BPMDetector = (() => {
         if (!btn) return;
         btn.classList.toggle('detecting', detecting);
         btn.textContent = detecting ? '⏹' : '🎙';
+        if (beatDot) beatDot.classList.toggle('detecting', detecting);
     }
 
     return { start };
 })();
 
 document.getElementById('detect-bpm-btn').addEventListener('click', () => BPMDetector.start());
+
+document.getElementById('sync-beat-btn').addEventListener('click', () => {
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!isPlaying) {
+        startPlayback();
+    } else {
+        // Let pre-scheduled audio drain, then restart from step 0
+        currentStep  = 0;
+        nextStepTime = audioCtx.currentTime + SCHED_AHEAD + 0.01;
+    }
+    // Brief visual confirmation
+    const btn = document.getElementById('sync-beat-btn');
+    btn.classList.add('synced');
+    setTimeout(() => btn.classList.remove('synced'), 600);
+});
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
