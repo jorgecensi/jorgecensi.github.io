@@ -1,0 +1,622 @@
+---
+layout: null
+permalink: /tuner/
+---
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tuner">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="description" content="Real-time guitar and ukulele tuner with autocorrelation pitch detection. Works offline.">
+    <title>Guitar &amp; Ukulele Tuner</title>
+    <link rel="manifest" href="/tuner/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/tuner-icon-192.png">
+    <link rel="apple-touch-icon" href="/img/tuner-icon-192.png">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:       #1a1a2e;
+            --surface:  #16213e;
+            --surface2: #0f3460;
+            --text:     #e0e0ff;
+            --text-dim: #5a5a8a;
+            --in-tune:  #00d4aa;
+            --sharp:    #ff6b6b;
+            --flat:     #ffd166;
+            --needle:   #ffffff;
+        }
+
+        html, body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overscroll-behavior: none;
+        }
+
+        /* ── Permission screen ─────────────────────────────────── */
+        #permission-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100dvh;
+            gap: 20px;
+            padding: 32px 24px;
+            text-align: center;
+        }
+
+        #permission-screen .mic-icon {
+            font-size: 72px;
+            line-height: 1;
+        }
+
+        #permission-screen h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        #permission-screen p {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            max-width: 280px;
+        }
+
+        #start-btn {
+            margin-top: 8px;
+            padding: 14px 40px;
+            background: var(--in-tune);
+            color: var(--bg);
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.1s;
+        }
+
+        #start-btn:active { transform: scale(0.96); opacity: 0.85; }
+
+        #error-msg {
+            display: none;
+            color: var(--sharp);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        /* ── Tuner screen ──────────────────────────────────────── */
+        #tuner-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100dvh;
+            padding: 20px 16px 24px;
+            gap: 0;
+        }
+
+        /* Instrument toggle */
+        .instrument-toggle {
+            display: flex;
+            gap: 8px;
+            background: var(--surface);
+            border-radius: 50px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+
+        .instrument-toggle button {
+            padding: 8px 22px;
+            border: none;
+            border-radius: 50px;
+            background: transparent;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .instrument-toggle button.active {
+            background: var(--surface2);
+            color: var(--text);
+        }
+
+        /* Note display */
+        .note-display {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        #note-name {
+            font-size: 88px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            font-variant-numeric: tabular-nums;
+            min-width: 1ch;
+            text-align: center;
+            transition: color 0.15s;
+        }
+
+        #note-octave {
+            font-size: 44px;
+            font-weight: 400;
+            color: var(--text-dim);
+            line-height: 1;
+            align-self: flex-end;
+            margin-bottom: 6px;
+        }
+
+        #cents-display {
+            font-size: 1rem;
+            font-weight: 600;
+            height: 1.4em;
+            letter-spacing: 0.02em;
+            margin-bottom: 16px;
+            transition: color 0.15s;
+            color: var(--text-dim);
+        }
+
+        /* SVG meter */
+        #tuner-meter {
+            width: 100%;
+            max-width: 320px;
+            margin-bottom: 20px;
+        }
+
+        /* String buttons */
+        .strings-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        .strings-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .string-btn {
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 2px solid var(--surface2);
+            background: var(--surface);
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s, background 0.15s;
+            min-width: 46px;
+            text-align: center;
+        }
+
+        .string-btn.nearest {
+            border-color: var(--in-tune);
+            color: var(--in-tune);
+            background: rgba(0, 212, 170, 0.1);
+        }
+
+        .string-btn.pinned {
+            border-color: var(--flat);
+            color: var(--flat);
+            background: rgba(255, 209, 102, 0.1);
+        }
+
+        /* Status */
+        #status {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            letter-spacing: 0.04em;
+        }
+
+        /* Update banner */
+        #update-banner {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            border: 1px solid var(--in-tune);
+            border-radius: 12px;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            gap: 12px;
+            align-items: center;
+            z-index: 100;
+            white-space: nowrap;
+            color: var(--text);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+        }
+
+        #update-banner.show { display: flex; }
+
+        #update-btn {
+            background: var(--in-tune);
+            color: var(--bg);
+            border: none;
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Permission screen -->
+    <div id="permission-screen">
+        <div class="mic-icon">🎸</div>
+        <h1>Guitar &amp; Ukulele Tuner</h1>
+        <p>Tune your guitar or ukulele in real time — accurate to within a cent.</p>
+        <button id="start-btn">Enable Microphone</button>
+        <div id="error-msg"></div>
+    </div>
+
+    <!-- Tuner screen -->
+    <div id="tuner-screen">
+        <div class="instrument-toggle">
+            <button id="btn-guitar" class="active">🎸 Guitar</button>
+            <button id="btn-ukulele">🪕 Ukulele</button>
+        </div>
+
+        <div class="note-display">
+            <div id="note-name">—</div>
+            <div id="note-octave"></div>
+        </div>
+        <div id="cents-display"></div>
+
+        <!-- SVG tuning meter -->
+        <svg id="tuner-meter" viewBox="0 0 300 165" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <!-- Background arc -->
+            <path d="M 25,150 A 125,125 0 0 1 275,150"
+                  fill="none" stroke="#2a2a4a" stroke-width="14" stroke-linecap="round"/>
+
+            <!-- Flat zone (left, red) -->
+            <path d="M 25,150 A 125,125 0 0 1 59,62"
+                  fill="none" stroke="rgba(255,107,107,0.35)" stroke-width="14" stroke-linecap="round"/>
+
+            <!-- Sharp zone (right, red) -->
+            <path d="M 241,62 A 125,125 0 0 1 275,150"
+                  fill="none" stroke="rgba(255,107,107,0.35)" stroke-width="14" stroke-linecap="round"/>
+
+            <!-- In-tune zone (center, teal) -->
+            <path d="M 138,25.6 A 125,125 0 0 1 162,25.6"
+                  fill="none" stroke="rgba(0,212,170,0.6)" stroke-width="14" stroke-linecap="round"/>
+
+            <!-- Tick marks -->
+            <line x1="150" y1="20" x2="150" y2="30" stroke="#3a3a5a" stroke-width="2"/>
+            <line x1="59"  y1="62" x2="65"  y2="70" stroke="#3a3a5a" stroke-width="2"/>
+            <line x1="241" y1="62" x2="235" y2="70" stroke="#3a3a5a" stroke-width="2"/>
+
+            <!-- Needle -->
+            <line id="needle" x1="150" y1="150" x2="150" y2="32"
+                  stroke="white" stroke-width="2.5" stroke-linecap="round"
+                  transform="rotate(0,150,150)"/>
+
+            <!-- Pivot dot -->
+            <circle id="pivot-dot" cx="150" cy="150" r="7" fill="#00d4aa"/>
+
+            <!-- Labels -->
+            <text x="16"  y="165" fill="#ff6b6b" font-size="11" font-family="sans-serif" text-anchor="middle">FLAT</text>
+            <text x="284" y="165" fill="#ff6b6b" font-size="11" font-family="sans-serif" text-anchor="middle">SHARP</text>
+            <text x="150" y="16"  fill="#00d4aa" font-size="10" font-family="sans-serif" text-anchor="middle">IN TUNE</text>
+        </svg>
+
+        <div class="strings-label">Strings</div>
+        <div id="strings-row" class="strings-row"></div>
+
+        <div id="status">Listening...</div>
+    </div>
+
+    <!-- Update banner -->
+    <div id="update-banner">
+        <span>Update available</span>
+        <button id="update-btn">Reload</button>
+    </div>
+
+    <script>
+        // ─── Constants ────────────────────────────────────────────────────────────
+        const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+        const INSTRUMENTS = {
+            guitar:  { label: 'Guitar',  strings: ['E2','A2','D3','G3','B3','E4'], midi: [40,45,50,55,59,64] },
+            ukulele: { label: 'Ukulele', strings: ['G4','C4','E4','A4'],           midi: [67,60,64,69] }
+        };
+
+        // ─── State ────────────────────────────────────────────────────────────────
+        let audioCtx = null;
+        let analyser = null;
+        let micStream = null;
+        let rafId = null;
+        let currentInstrument = 'guitar';
+        let pinnedStringIdx = null;  // null = auto-detect nearest
+        let smoothCents = 0;
+        let lastMidi = null;
+        let silenceFrames = 0;
+
+        const FFT_SIZE = 2048;
+        const timeBuf = new Float32Array(FFT_SIZE);
+
+        // ─── Pitch detection ─────────────────────────────────────────────────────
+        function detectPitch(buf, sampleRate) {
+            const SIZE = buf.length;
+
+            // 1. RMS silence gate
+            let rms = 0;
+            for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+            rms = Math.sqrt(rms / SIZE);
+            if (rms < 0.01) return null;
+
+            // 2. Autocorrelation over the guitar/ukulele lag range (70–1500 Hz)
+            const minLag = Math.floor(sampleRate / 1500);
+            const maxLag = Math.ceil(sampleRate / 70);
+
+            const corr = new Float32Array(maxLag);
+            for (let lag = minLag; lag < maxLag; lag++) {
+                let c = 0;
+                const len = SIZE - lag;
+                for (let i = 0; i < len; i++) c += buf[i] * buf[i + lag];
+                corr[lag] = c;
+            }
+
+            // 3. Find first local minimum after the zero-lag peak
+            let firstMin = minLag;
+            for (let i = minLag + 1; i < maxLag - 1; i++) {
+                if (corr[i] <= corr[i - 1] && corr[i] <= corr[i + 1]) {
+                    firstMin = i;
+                    break;
+                }
+            }
+
+            // 4. Find highest peak after first minimum
+            let bestLag = -1;
+            let bestCorr = -Infinity;
+            for (let i = firstMin; i < maxLag; i++) {
+                if (corr[i] > bestCorr) {
+                    bestCorr = corr[i];
+                    bestLag = i;
+                }
+            }
+
+            if (bestLag === -1 || bestCorr <= 0) return null;
+
+            // 5. Parabolic interpolation for sub-sample precision
+            const y1 = bestLag > 0 ? corr[bestLag - 1] : corr[bestLag];
+            const y2 = corr[bestLag];
+            const y3 = bestLag < maxLag - 1 ? corr[bestLag + 1] : corr[bestLag];
+            const denom = y1 - 2 * y2 + y3;
+            const refinedLag = denom !== 0
+                ? bestLag + 0.5 * (y1 - y3) / (y1 - 2 * y2 + y3)
+                : bestLag;
+
+            return sampleRate / refinedLag;
+        }
+
+        // ─── Note helpers ─────────────────────────────────────────────────────────
+        function freqToMidi(freq) {
+            return 69 + 12 * Math.log2(freq / 440);
+        }
+
+        function midiToNoteName(midiRound) {
+            const pc = ((midiRound % 12) + 12) % 12;
+            const octave = Math.floor(midiRound / 12) - 1;
+            return { name: NOTE_NAMES[pc], octave };
+        }
+
+        function nearestStringIdx(midiRound) {
+            const targets = INSTRUMENTS[currentInstrument].midi;
+            let best = 0;
+            let bestDist = Infinity;
+            targets.forEach((m, i) => {
+                const d = Math.abs(midiRound - m);
+                if (d < bestDist) { bestDist = d; best = i; }
+            });
+            return best;
+        }
+
+        // ─── UI ───────────────────────────────────────────────────────────────────
+        const needle    = document.getElementById('needle');
+        const pivotDot  = document.getElementById('pivot-dot');
+        const noteName  = document.getElementById('note-name');
+        const noteOct   = document.getElementById('note-octave');
+        const centsDisp = document.getElementById('cents-display');
+        const statusEl  = document.getElementById('status');
+        const stringsRow = document.getElementById('strings-row');
+
+        function colorForCents(absCents) {
+            if (absCents <= 5)  return 'var(--in-tune)';
+            if (absCents <= 25) return 'var(--flat)';
+            return 'var(--sharp)';
+        }
+
+        function updateNeedle(cents) {
+            const rotDeg = Math.max(-90, Math.min(90, cents * 1.8));
+            needle.setAttribute('transform', `rotate(${rotDeg.toFixed(2)},150,150)`);
+            const col = colorForCents(Math.abs(cents));
+            needle.setAttribute('stroke', col === 'var(--in-tune)' ? '#00d4aa' :
+                                           col === 'var(--flat)'   ? '#ffd166' : '#ff6b6b');
+            pivotDot.setAttribute('fill', needle.getAttribute('stroke'));
+        }
+
+        function updateUI(midiRound, cents) {
+            const { name, octave } = midiToNoteName(midiRound);
+            noteName.textContent = name;
+            noteOct.textContent  = octave;
+
+            const absCents = Math.abs(cents);
+            const sign = cents >= 0 ? '+' : '';
+            centsDisp.textContent = `${sign}${cents.toFixed(0)}¢`;
+            centsDisp.style.color = colorForCents(absCents);
+            noteName.style.color  = colorForCents(absCents);
+
+            // smooth needle
+            smoothCents = smoothCents * 0.7 + cents * 0.3;
+            updateNeedle(smoothCents);
+
+            // string highlighting
+            const nearest = pinnedStringIdx !== null ? pinnedStringIdx : nearestStringIdx(midiRound);
+            document.querySelectorAll('.string-btn').forEach((btn, i) => {
+                btn.classList.toggle('nearest', i === nearest && pinnedStringIdx === null);
+                btn.classList.toggle('pinned',  i === pinnedStringIdx);
+            });
+
+            statusEl.textContent = 'Listening...';
+        }
+
+        function showSilence() {
+            silenceFrames++;
+            if (silenceFrames < 15) return; // small debounce
+            noteName.textContent = '—';
+            noteOct.textContent  = '';
+            centsDisp.textContent = '';
+            noteName.style.color = 'var(--text-dim)';
+            smoothCents = smoothCents * 0.85; // drift back to center
+            updateNeedle(smoothCents);
+            document.querySelectorAll('.string-btn').forEach(btn => {
+                btn.classList.remove('nearest');
+            });
+            statusEl.textContent = 'Play a string...';
+        }
+
+        function buildStrings() {
+            stringsRow.innerHTML = '';
+            INSTRUMENTS[currentInstrument].strings.forEach((s, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'string-btn';
+                btn.textContent = s;
+                btn.addEventListener('click', () => {
+                    if (pinnedStringIdx === i) {
+                        pinnedStringIdx = null;
+                    } else {
+                        pinnedStringIdx = i;
+                    }
+                    document.querySelectorAll('.string-btn').forEach((b, j) => {
+                        b.classList.toggle('pinned', j === pinnedStringIdx);
+                        b.classList.remove('nearest');
+                    });
+                });
+                stringsRow.appendChild(btn);
+            });
+        }
+
+        // ─── Detection loop ───────────────────────────────────────────────────────
+        function loop() {
+            analyser.getFloatTimeDomainData(timeBuf);
+            const freq = detectPitch(timeBuf, audioCtx.sampleRate);
+
+            if (freq !== null && freq > 60 && freq < 1600) {
+                silenceFrames = 0;
+                const midiFloat = freqToMidi(freq);
+                const midiRound = Math.round(midiFloat);
+                const cents = (midiFloat - midiRound) * 100;
+                updateUI(midiRound, cents);
+            } else {
+                showSilence();
+            }
+
+            rafId = requestAnimationFrame(loop);
+        }
+
+        // ─── Mic start ────────────────────────────────────────────────────────────
+        document.getElementById('start-btn').addEventListener('click', async () => {
+            const errorEl = document.getElementById('error-msg');
+            errorEl.style.display = 'none';
+
+            try {
+                // Create AudioContext inside click handler (required on iOS)
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                const source = audioCtx.createMediaStreamSource(micStream);
+
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = FFT_SIZE;
+                analyser.smoothingTimeConstant = 0;
+                source.connect(analyser);
+
+                document.getElementById('permission-screen').style.display = 'none';
+                document.getElementById('tuner-screen').style.display = 'flex';
+
+                buildStrings();
+                rafId = requestAnimationFrame(loop);
+            } catch (err) {
+                if (audioCtx) { audioCtx.close(); audioCtx = null; }
+                errorEl.style.display = 'block';
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorEl.textContent = 'Microphone access denied. Please allow it in browser settings.';
+                } else {
+                    errorEl.textContent = 'Could not access microphone. Please try again.';
+                }
+            }
+        });
+
+        // ─── Instrument toggle ────────────────────────────────────────────────────
+        document.getElementById('btn-guitar').addEventListener('click', () => {
+            currentInstrument = 'guitar';
+            pinnedStringIdx = null;
+            document.getElementById('btn-guitar').classList.add('active');
+            document.getElementById('btn-ukulele').classList.remove('active');
+            buildStrings();
+        });
+
+        document.getElementById('btn-ukulele').addEventListener('click', () => {
+            currentInstrument = 'ukulele';
+            pinnedStringIdx = null;
+            document.getElementById('btn-guitar').classList.remove('active');
+            document.getElementById('btn-ukulele').classList.add('active');
+            buildStrings();
+        });
+
+        // ─── Service worker ───────────────────────────────────────────────────────
+        const SW_VERSION = 'dev';
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register(
+                `/tuner/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
+                { scope: '/tuner/' }
+            ).then((reg) => {
+                reg.addEventListener('updatefound', () => {
+                    const w = reg.installing;
+                    w.addEventListener('statechange', () => {
+                        if (w.state === 'installed' && navigator.serviceWorker.controller) {
+                            document.getElementById('update-banner').classList.add('show');
+                        }
+                    });
+                });
+            }).catch(() => {});
+
+            document.getElementById('update-btn').addEventListener('click', () => {
+                navigator.serviceWorker.getRegistration('/tuner/').then((reg) => {
+                    if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                });
+                window.location.reload();
+            });
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+        }
+    </script>
+
+</body>
+</html>

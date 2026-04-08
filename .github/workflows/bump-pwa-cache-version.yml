@@ -52,6 +52,7 @@ jobs:
           echo "drum_machine=$(check 'drum-machine/sw.js drum-machine/index.html drum-machine/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "f1=$(check 'f1-championship/sw.js f1-championship/index.html f1-championship/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "synth=$(check 'synth/sw.js synth/index.html synth/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "tuner=$(check 'tuner/sw.js tuner/index.html tuner/manifest.json')" >> "${GITHUB_OUTPUT}"
 
       - name: Update PWA version constants
         run: |
@@ -71,6 +72,7 @@ jobs:
               "drum_machine": "${{ steps.changed.outputs.drum_machine }}" == "true",
               "f1":           "${{ steps.changed.outputs.f1 }}" == "true",
               "synth":        "${{ steps.changed.outputs.synth }}" == "true",
+              "tuner":        "${{ steps.changed.outputs.tuner }}" == "true",
           }
 
           # On tag/dispatch, bump everything; on push to main, only bump changed PWAs
@@ -102,6 +104,9 @@ jobs:
               versioned_files["f1-championship/sw.js"] = ("CACHE_VERSION", version)
           if bump_all or changed["synth"]:
               versioned_files["synth/sw.js"] = ("CACHE_VERSION", version)
+          if bump_all or changed["tuner"]:
+              versioned_files["tuner/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["tuner/index.html"] = ("SW_VERSION", version)
 
           for relative_path, (const_name, ver) in versioned_files.items():
               path = repo / relative_path
@@ -137,6 +142,8 @@ jobs:
             drum-machine/sw.js \
             drum-machine/index.html \
             f1-championship/sw.js \
-            synth/sw.js
+            synth/sw.js \
+            tuner/sw.js \
+            tuner/index.html
           git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }} [skip ci]"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"
