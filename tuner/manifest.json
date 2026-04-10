@@ -6,8 +6,8 @@
   "start_url": "/tuner/",
   "scope": "/tuner/",
   "display": "standalone",
-  "background_color": "#1a1a2e",
-  "theme_color": "#1a1a2e",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
   "orientation": "portrait-primary",
   "icons": [
     {

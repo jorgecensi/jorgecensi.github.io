@@ -11,8 +11,8 @@ permalink: /tuner/
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tuner">
-    <meta name="theme-color" content="#1a1a2e">
-    <meta name="description" content="Real-time guitar and ukulele tuner with autocorrelation pitch detection. Works offline.">
+    <meta name="theme-color" content="#0a0a1a">
+    <meta name="description" content="Real-time guitar and ukulele tuner with pitch detection. Works offline.">
     <title>Guitar &amp; Ukulele Tuner</title>
     <link rel="manifest" href="/tuner/manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="/img/tuner-icon-192.png">
@@ -22,227 +22,369 @@ permalink: /tuner/
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg:       #1a1a2e;
-            --surface:  #16213e;
-            --surface2: #0f3460;
-            --text:     #e0e0ff;
-            --text-dim: #5a5a8a;
+            --bg:       #0a0a1a;
+            --surface:  #101026;
+            --card:     #14143a;
+            --border:   rgba(255,255,255,0.06);
+            --text:     #e4e4ff;
+            --text-dim: #36366a;
             --in-tune:  #00d4aa;
             --sharp:    #ff6b6b;
             --flat:     #ffd166;
-            --needle:   #ffffff;
         }
 
         html, body {
             height: 100%;
-            background: var(--bg);
+            background: radial-gradient(ellipse at 50% 30%, #111128 0%, #0a0a1a 100%);
             color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
 
-        /* ── Permission screen ─────────────────────────────────── */
+        /* In-tune background glow */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 40%, rgba(0,212,170,0.07) 0%, transparent 65%);
+            opacity: 0;
+            transition: opacity 0.7s ease;
+            pointer-events: none;
+        }
+        body.in-tune::before { opacity: 1; }
+
+        /* ── Permission screen ───────────────────────────────────────── */
         #permission-screen {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100dvh;
-            gap: 20px;
-            padding: 32px 24px;
+            padding: 40px 32px;
             text-align: center;
+            gap: 0;
         }
 
-        #permission-screen .mic-icon {
+        .perm-icon {
             font-size: 72px;
             line-height: 1;
+            margin-bottom: 28px;
+            animation: float 3.5s ease-in-out infinite;
         }
 
-        #permission-screen h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-12px); }
         }
 
-        #permission-screen p {
+        .perm-title {
+            font-size: 1.65rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+            margin-bottom: 14px;
+        }
+
+        .perm-desc {
+            font-size: 0.93rem;
+            line-height: 1.65;
             color: var(--text-dim);
-            font-size: 0.95rem;
-            line-height: 1.5;
-            max-width: 280px;
+            max-width: 250px;
+            margin-bottom: 36px;
         }
 
         #start-btn {
-            margin-top: 8px;
-            padding: 14px 40px;
+            padding: 15px 44px;
             background: var(--in-tune);
-            color: var(--bg);
+            color: #0a0a1a;
             border: none;
             border-radius: 50px;
             font-size: 1rem;
-            font-weight: 700;
+            font-weight: 800;
             cursor: pointer;
-            transition: transform 0.1s, opacity 0.1s;
+            letter-spacing: 0.01em;
+            animation: btnGlow 2.8s ease-in-out infinite;
+            transition: transform 0.1s;
         }
 
-        #start-btn:active { transform: scale(0.96); opacity: 0.85; }
+        @keyframes btnGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0,212,170,0.45); }
+            50% { box-shadow: 0 0 0 18px rgba(0,212,170,0); }
+        }
+
+        #start-btn:active { transform: scale(0.95); }
 
         #error-msg {
             display: none;
             color: var(--sharp);
             font-size: 0.85rem;
-            margin-top: 4px;
+            margin-top: 18px;
+            max-width: 260px;
+            line-height: 1.5;
         }
 
-        /* ── Tuner screen ──────────────────────────────────────── */
+        /* ── Tuner screen ────────────────────────────────────────────── */
         #tuner-screen {
             display: none;
             flex-direction: column;
             align-items: center;
             min-height: 100dvh;
-            padding: 20px 16px 24px;
-            gap: 0;
+            padding: max(env(safe-area-inset-top, 8px), 8px) 16px max(env(safe-area-inset-bottom, 16px), 16px);
         }
 
-        /* Instrument toggle */
+        /* ── Instrument toggle ───────────────────────────────────────── */
         .instrument-toggle {
+            position: relative;
             display: flex;
-            gap: 8px;
+            gap: 0;
             background: var(--surface);
             border-radius: 50px;
             padding: 4px;
-            margin-bottom: 24px;
+            margin-top: 16px;
+            margin-bottom: 20px;
         }
 
+        .toggle-slider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            height: calc(100% - 8px);
+            border-radius: 50px;
+            background: var(--card);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+            transition: transform 0.25s cubic-bezier(0.4,0,0.2,1),
+                        width 0.25s cubic-bezier(0.4,0,0.2,1);
+            z-index: 0;
+        }
+
+        .toggle-slider.instant { transition: none !important; }
+
         .instrument-toggle button {
-            padding: 8px 22px;
+            position: relative;
+            z-index: 1;
+            padding: 8px 20px;
             border: none;
             border-radius: 50px;
             background: transparent;
             color: var(--text-dim);
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-size: 0.88rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: background 0.2s, color 0.2s;
+            transition: color 0.2s;
+            white-space: nowrap;
+            letter-spacing: 0.01em;
         }
 
-        .instrument-toggle button.active {
-            background: var(--surface2);
-            color: var(--text);
-        }
+        .instrument-toggle button.active { color: var(--text); }
 
-        /* Note display */
-        .note-display {
+        /* ── Note zone ───────────────────────────────────────────────── */
+        .note-zone {
             display: flex;
-            align-items: baseline;
-            gap: 6px;
-            margin-bottom: 4px;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+
+        .note-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            line-height: 1;
+            margin-bottom: 8px;
         }
 
         #note-name {
-            font-size: 88px;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: -0.04em;
+            font-size: 96px;
+            font-weight: 900;
+            letter-spacing: -0.05em;
             font-variant-numeric: tabular-nums;
-            min-width: 1ch;
-            text-align: center;
-            transition: color 0.15s;
+            line-height: 0.9;
+            color: var(--text-dim);
+            transition: color 0.25s ease;
         }
 
         #note-octave {
             font-size: 44px;
-            font-weight: 400;
+            font-weight: 300;
             color: var(--text-dim);
-            line-height: 1;
-            align-self: flex-end;
-            margin-bottom: 6px;
+            padding-bottom: 8px;
+            transition: color 0.25s ease;
+        }
+
+        /* State-driven note colors */
+        .note-zone.has-signal #note-name  { color: var(--text); }
+        .note-zone.has-signal #note-octave { color: rgba(228,228,255,0.45); }
+        .note-zone.in-tune #note-name    { color: var(--in-tune); }
+        .note-zone.in-tune #note-octave  { color: var(--in-tune); }
+
+        #freq-display {
+            font-size: 0.88rem;
+            color: var(--text-dim);
+            letter-spacing: 0.04em;
+            min-height: 1.4em;
+            font-variant-numeric: tabular-nums;
+            transition: color 0.2s;
         }
 
         #cents-display {
-            font-size: 1rem;
-            font-weight: 600;
-            height: 1.4em;
-            letter-spacing: 0.02em;
-            margin-bottom: 16px;
-            transition: color 0.15s;
+            font-size: 0.9rem;
+            font-weight: 700;
+            min-height: 1.6em;
             color: var(--text-dim);
+            letter-spacing: 0.04em;
+            font-variant-numeric: tabular-nums;
+            transition: color 0.15s;
+            margin-top: 4px;
         }
 
-        /* SVG meter */
+        /* ── SVG meter ───────────────────────────────────────────────── */
         #tuner-meter {
             width: 100%;
             max-width: 320px;
-            margin-bottom: 20px;
+            margin: 4px 0 8px;
         }
 
-        /* String buttons */
+        /* Needle: JS drives transform, no CSS transition to avoid double-smoothing */
+        #needle-g {
+            transform-box: view-box;
+            transform-origin: 160px 175px;
+            will-change: transform;
+        }
+
+        /* In-tune arc zone */
+        .arc-in-tune {
+            stroke-opacity: 0.4;
+            transition: stroke-opacity 0.45s ease, filter 0.45s ease;
+        }
+        body.in-tune .arc-in-tune {
+            stroke-opacity: 1;
+            filter: drop-shadow(0 0 9px rgba(0,212,170,0.75));
+        }
+
+        /* Pivot dot */
+        #pivot-dot {
+            transition: filter 0.35s ease;
+        }
+        body.in-tune #pivot-dot {
+            filter: drop-shadow(0 0 7px rgba(0,212,170,0.9));
+        }
+
+        /* Ripple circles */
+        .ripple {
+            transform-box: fill-box;
+            transform-origin: center;
+            opacity: 0;
+        }
+        body.in-tune #ripple1 { animation: rippleOut 1.9s ease-out infinite; }
+        body.in-tune #ripple2 { animation: rippleOut 1.9s ease-out 0.95s infinite; }
+
+        @keyframes rippleOut {
+            0%   { transform: scale(1);   opacity: 0.65; }
+            100% { transform: scale(4.5); opacity: 0; }
+        }
+
+        /* ── Strings ─────────────────────────────────────────────────── */
+        .strings-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 320px;
+        }
+
         .strings-label {
-            font-size: 0.7rem;
+            font-size: 0.62rem;
             text-transform: uppercase;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.16em;
             color: var(--text-dim);
             margin-bottom: 10px;
         }
 
         .strings-row {
             display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+            gap: 6px;
             justify-content: center;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
+            /* No flex-wrap: fixed row is cleaner and prevents reflow */
         }
 
         .string-btn {
-            padding: 8px 14px;
-            border-radius: 10px;
-            border: 2px solid var(--surface2);
+            min-width: 48px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1.5px solid var(--border);
             background: var(--surface);
             color: var(--text-dim);
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 700;
             cursor: pointer;
             transition: border-color 0.15s, color 0.15s, background 0.15s;
-            min-width: 46px;
             text-align: center;
+            letter-spacing: 0.02em;
         }
 
         .string-btn.nearest {
-            border-color: var(--in-tune);
+            border-color: rgba(0,212,170,0.45);
             color: var(--in-tune);
-            background: rgba(0, 212, 170, 0.1);
+            background: rgba(0,212,170,0.07);
         }
 
         .string-btn.pinned {
-            border-color: var(--flat);
+            border-color: rgba(255,209,102,0.6);
             color: var(--flat);
-            background: rgba(255, 209, 102, 0.1);
+            background: rgba(255,209,102,0.08);
         }
 
-        /* Status */
+        /* ── Status ──────────────────────────────────────────────────── */
         #status {
-            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.74rem;
             color: var(--text-dim);
-            letter-spacing: 0.04em;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
         }
 
-        /* Update banner */
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--text-dim);
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+
+        body.listening .status-dot {
+            background: var(--in-tune);
+            animation: dotPulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+
+        /* ── Update banner ───────────────────────────────────────────── */
         #update-banner {
             display: none;
             position: fixed;
-            bottom: 20px;
+            bottom: max(env(safe-area-inset-bottom, 20px), 20px);
             left: 50%;
             transform: translateX(-50%);
-            background: var(--surface);
+            background: var(--card);
             border: 1px solid var(--in-tune);
-            border-radius: 12px;
-            padding: 10px 16px;
+            border-radius: 14px;
+            padding: 10px 18px;
             font-size: 0.85rem;
             gap: 12px;
             align-items: center;
             z-index: 100;
             white-space: nowrap;
             color: var(--text);
-            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
         }
 
         #update-banner.show { display: flex; }
@@ -251,8 +393,8 @@ permalink: /tuner/
             background: var(--in-tune);
             color: var(--bg);
             border: none;
-            border-radius: 6px;
-            padding: 4px 12px;
+            border-radius: 8px;
+            padding: 5px 14px;
             font-size: 0.85rem;
             font-weight: 700;
             cursor: pointer;
@@ -264,9 +406,9 @@ permalink: /tuner/
 
     <!-- Permission screen -->
     <div id="permission-screen">
-        <div class="mic-icon">🎸</div>
-        <h1>Guitar &amp; Ukulele Tuner</h1>
-        <p>Tune your guitar or ukulele in real time — accurate to within a cent.</p>
+        <div class="perm-icon">🎸</div>
+        <h1 class="perm-title">Guitar &amp; Ukulele<br>Tuner</h1>
+        <p class="perm-desc">Real-time pitch detection — accurate to within a cent. Works offline.</p>
         <button id="start-btn">Enable Microphone</button>
         <div id="error-msg"></div>
     </div>
@@ -274,57 +416,78 @@ permalink: /tuner/
     <!-- Tuner screen -->
     <div id="tuner-screen">
         <div class="instrument-toggle">
+            <div class="toggle-slider instant" id="toggle-slider"></div>
             <button id="btn-guitar" class="active">🎸 Guitar</button>
             <button id="btn-ukulele">🪕 Ukulele</button>
         </div>
 
-        <div class="note-display">
-            <div id="note-name">—</div>
-            <div id="note-octave"></div>
+        <div class="note-zone" id="note-zone">
+            <div class="note-row">
+                <div id="note-name">—</div>
+                <div id="note-octave"></div>
+            </div>
+            <div id="freq-display"></div>
+            <div id="cents-display"></div>
         </div>
-        <div id="cents-display"></div>
 
-        <!-- SVG tuning meter -->
-        <svg id="tuner-meter" viewBox="0 0 300 165" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <!-- Background arc -->
-            <path d="M 25,150 A 125,125 0 0 1 275,150"
-                  fill="none" stroke="#2a2a4a" stroke-width="14" stroke-linecap="round"/>
+        <!-- SVG tuning meter — full semicircle, center (160,175), R=140 -->
+        <svg id="tuner-meter" viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 
-            <!-- Flat zone (left, red) -->
-            <path d="M 25,150 A 125,125 0 0 1 59,62"
-                  fill="none" stroke="rgba(255,107,107,0.35)" stroke-width="14" stroke-linecap="round"/>
+            <!-- Background track -->
+            <path d="M 20,175 A 140,140 0 0 1 300,175"
+                  fill="none" stroke="#161635" stroke-width="22" stroke-linecap="round"/>
 
-            <!-- Sharp zone (right, red) -->
-            <path d="M 241,62 A 125,125 0 0 1 275,150"
-                  fill="none" stroke="rgba(255,107,107,0.35)" stroke-width="14" stroke-linecap="round"/>
+            <!-- Flat zone: −90° → −45° (left 45°) -->
+            <path d="M 20,175 A 140,140 0 0 1 61,76"
+                  fill="none" stroke="rgba(255,107,107,0.20)" stroke-width="22" stroke-linecap="round"/>
 
-            <!-- In-tune zone (center, teal) -->
-            <path d="M 138,25.6 A 125,125 0 0 1 162,25.6"
-                  fill="none" stroke="rgba(0,212,170,0.6)" stroke-width="14" stroke-linecap="round"/>
+            <!-- Sharp zone: +45° → +90° (right 45°) -->
+            <path d="M 259,76 A 140,140 0 0 1 300,175"
+                  fill="none" stroke="rgba(255,107,107,0.20)" stroke-width="22" stroke-linecap="round"/>
 
-            <!-- Tick marks -->
-            <line x1="150" y1="20" x2="150" y2="30" stroke="#3a3a5a" stroke-width="2"/>
-            <line x1="59"  y1="62" x2="65"  y2="70" stroke="#3a3a5a" stroke-width="2"/>
-            <line x1="241" y1="62" x2="235" y2="70" stroke="#3a3a5a" stroke-width="2"/>
+            <!-- In-tune zone: ±10° (≈ ±5.6 ¢) -->
+            <path class="arc-in-tune"
+                  d="M 135.7,37.1 A 140,140 0 0 1 184.3,37.1"
+                  fill="none" stroke="#00d4aa" stroke-width="22" stroke-linecap="round"/>
 
-            <!-- Needle -->
-            <line id="needle" x1="150" y1="150" x2="150" y2="32"
-                  stroke="white" stroke-width="2.5" stroke-linecap="round"
-                  transform="rotate(0,150,150)"/>
+            <!-- Tick marks injected by JS -->
+            <g id="ticks"></g>
 
-            <!-- Pivot dot -->
-            <circle id="pivot-dot" cx="150" cy="150" r="7" fill="#00d4aa"/>
+            <!-- Ripple circles (shown when in-tune) -->
+            <circle id="ripple1" class="ripple" cx="160" cy="175" r="11"
+                    fill="none" stroke="#00d4aa" stroke-width="2.5"/>
+            <circle id="ripple2" class="ripple" cx="160" cy="175" r="11"
+                    fill="none" stroke="#00d4aa" stroke-width="2.5"/>
+
+            <!-- Needle (rotates around center 160,175) -->
+            <g id="needle-g">
+                <line id="needle-line" x1="160" y1="175" x2="160" y2="38"
+                      stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                <circle id="needle-tip" cx="160" cy="41" r="4" fill="white"/>
+            </g>
+
+            <!-- Pivot -->
+            <circle id="pivot-dot" cx="160" cy="175" r="8" fill="#00d4aa"/>
+            <circle cx="160" cy="175" r="3.5" fill="#0a0a1a"/>
 
             <!-- Labels -->
-            <text x="16"  y="165" fill="#ff6b6b" font-size="11" font-family="sans-serif" text-anchor="middle">FLAT</text>
-            <text x="284" y="165" fill="#ff6b6b" font-size="11" font-family="sans-serif" text-anchor="middle">SHARP</text>
-            <text x="150" y="16"  fill="#00d4aa" font-size="10" font-family="sans-serif" text-anchor="middle">IN TUNE</text>
+            <text x="12"  y="189" fill="rgba(255,107,107,0.55)"
+                  font-size="10" font-family="system-ui" font-weight="700" text-anchor="start">FLAT</text>
+            <text x="308" y="189" fill="rgba(255,107,107,0.55)"
+                  font-size="10" font-family="system-ui" font-weight="700" text-anchor="end">SHARP</text>
+            <text x="160" y="19"  fill="rgba(0,212,170,0.65)"
+                  font-size="9.5" font-family="system-ui" font-weight="700" text-anchor="middle">IN TUNE</text>
         </svg>
 
-        <div class="strings-label">Strings</div>
-        <div id="strings-row" class="strings-row"></div>
+        <div class="strings-section">
+            <div class="strings-label">Strings</div>
+            <div id="strings-row" class="strings-row"></div>
+        </div>
 
-        <div id="status">Listening...</div>
+        <div id="status">
+            <div class="status-dot"></div>
+            <span id="status-text">Play a string...</span>
+        </div>
     </div>
 
     <!-- Update banner -->
@@ -338,180 +501,215 @@ permalink: /tuner/
         const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 
         const INSTRUMENTS = {
-            guitar:  { label: 'Guitar',  strings: ['E2','A2','D3','G3','B3','E4'], midi: [40,45,50,55,59,64] },
-            ukulele: { label: 'Ukulele', strings: ['G4','C4','E4','A4'],           midi: [67,60,64,69] }
+            guitar:  { strings: ['E2','A2','D3','G3','B3','E4'], midi: [40,45,50,55,59,64] },
+            ukulele: { strings: ['G4','C4','E4','A4'],           midi: [67,60,64,69] }
         };
 
-        // ─── State ────────────────────────────────────────────────────────────────
-        let audioCtx = null;
-        let analyser = null;
-        let micStream = null;
-        let rafId = null;
-        let currentInstrument = 'guitar';
-        let pinnedStringIdx = null;  // null = auto-detect nearest
-        let smoothCents = 0;
-        let lastMidi = null;
-        let silenceFrames = 0;
-
         const FFT_SIZE = 2048;
+
+        // ─── State ────────────────────────────────────────────────────────────────
+        let audioCtx = null, analyser = null, micStream = null, rafId = null;
+        let currentInstrument = 'guitar';
+        let pinnedStringIdx = null;
+        let smoothCents = 0, smoothFreq = 0;
+        let silenceFrames = 0, inTuneFrames = 0;
+        let wasInTune = false;
         const timeBuf = new Float32Array(FFT_SIZE);
 
         // ─── Pitch detection ─────────────────────────────────────────────────────
         function detectPitch(buf, sampleRate) {
-            const SIZE = buf.length;
-
-            // 1. RMS silence gate
             let rms = 0;
-            for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
-            rms = Math.sqrt(rms / SIZE);
-            if (rms < 0.01) return null;
+            for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+            if (Math.sqrt(rms / buf.length) < 0.01) return null;
 
-            // 2. Autocorrelation over the guitar/ukulele lag range (70–1500 Hz)
             const minLag = Math.floor(sampleRate / 1500);
             const maxLag = Math.ceil(sampleRate / 70);
-
             const corr = new Float32Array(maxLag);
+
             for (let lag = minLag; lag < maxLag; lag++) {
                 let c = 0;
-                const len = SIZE - lag;
+                const len = buf.length - lag;
                 for (let i = 0; i < len; i++) c += buf[i] * buf[i + lag];
                 corr[lag] = c;
             }
 
-            // 3. Find first local minimum after the zero-lag peak
             let firstMin = minLag;
             for (let i = minLag + 1; i < maxLag - 1; i++) {
-                if (corr[i] <= corr[i - 1] && corr[i] <= corr[i + 1]) {
-                    firstMin = i;
-                    break;
-                }
+                if (corr[i] <= corr[i - 1] && corr[i] <= corr[i + 1]) { firstMin = i; break; }
             }
 
-            // 4. Find highest peak after first minimum
-            let bestLag = -1;
-            let bestCorr = -Infinity;
+            let bestLag = -1, bestCorr = -Infinity;
             for (let i = firstMin; i < maxLag; i++) {
-                if (corr[i] > bestCorr) {
-                    bestCorr = corr[i];
-                    bestLag = i;
-                }
+                if (corr[i] > bestCorr) { bestCorr = corr[i]; bestLag = i; }
             }
+            if (bestLag < 0 || bestCorr <= 0) return null;
 
-            if (bestLag === -1 || bestCorr <= 0) return null;
-
-            // 5. Parabolic interpolation for sub-sample precision
-            const y1 = bestLag > 0 ? corr[bestLag - 1] : corr[bestLag];
+            // Parabolic interpolation for sub-sample accuracy
+            const y1 = corr[bestLag > 0 ? bestLag - 1 : bestLag];
             const y2 = corr[bestLag];
-            const y3 = bestLag < maxLag - 1 ? corr[bestLag + 1] : corr[bestLag];
-            const denom = y1 - 2 * y2 + y3;
-            const refinedLag = denom !== 0
-                ? bestLag + 0.5 * (y1 - y3) / (y1 - 2 * y2 + y3)
-                : bestLag;
-
-            return sampleRate / refinedLag;
+            const y3 = corr[bestLag < maxLag - 1 ? bestLag + 1 : bestLag];
+            const d = y1 - 2 * y2 + y3;
+            const refined = d !== 0 ? bestLag + 0.5 * (y1 - y3) / d : bestLag;
+            return sampleRate / refined;
         }
 
         // ─── Note helpers ─────────────────────────────────────────────────────────
-        function freqToMidi(freq) {
-            return 69 + 12 * Math.log2(freq / 440);
+        const freqToMidi = f => 69 + 12 * Math.log2(f / 440);
+
+        function midiToNote(m) {
+            return { name: NOTE_NAMES[((m % 12) + 12) % 12], octave: Math.floor(m / 12) - 1 };
         }
 
-        function midiToNoteName(midiRound) {
-            const pc = ((midiRound % 12) + 12) % 12;
-            const octave = Math.floor(midiRound / 12) - 1;
-            return { name: NOTE_NAMES[pc], octave };
+        function nearestString(midiRound) {
+            const mids = INSTRUMENTS[currentInstrument].midi;
+            return mids.reduce((best, m, i) =>
+                Math.abs(midiRound - m) < Math.abs(midiRound - mids[best]) ? i : best, 0);
         }
 
-        function nearestStringIdx(midiRound) {
-            const targets = INSTRUMENTS[currentInstrument].midi;
-            let best = 0;
-            let bestDist = Infinity;
-            targets.forEach((m, i) => {
-                const d = Math.abs(midiRound - m);
-                if (d < bestDist) { bestDist = d; best = i; }
-            });
-            return best;
+        function centsColor(abs) {
+            if (abs <= 5)  return '#00d4aa';
+            if (abs <= 20) return '#ffd166';
+            return '#ff6b6b';
         }
 
-        // ─── UI ───────────────────────────────────────────────────────────────────
-        const needle    = document.getElementById('needle');
-        const pivotDot  = document.getElementById('pivot-dot');
-        const noteName  = document.getElementById('note-name');
-        const noteOct   = document.getElementById('note-octave');
-        const centsDisp = document.getElementById('cents-display');
-        const statusEl  = document.getElementById('status');
+        // ─── DOM refs ─────────────────────────────────────────────────────────────
+        const noteZone   = document.getElementById('note-zone');
+        const noteNameEl = document.getElementById('note-name');
+        const noteOctEl  = document.getElementById('note-octave');
+        const freqEl     = document.getElementById('freq-display');
+        const centsEl    = document.getElementById('cents-display');
+        const statusText = document.getElementById('status-text');
         const stringsRow = document.getElementById('strings-row');
+        const needleG    = document.getElementById('needle-g');
+        const needleLine = document.getElementById('needle-line');
+        const needleTip  = document.getElementById('needle-tip');
 
-        function colorForCents(absCents) {
-            if (absCents <= 5)  return 'var(--in-tune)';
-            if (absCents <= 25) return 'var(--flat)';
-            return 'var(--sharp)';
+        // ─── Build tick marks ─────────────────────────────────────────────────────
+        (function buildTicks() {
+            const ns = 'http://www.w3.org/2000/svg';
+            const g  = document.getElementById('ticks');
+            // Tick parameters: R_tip is just outside the track outer edge (R+11=151),
+            // R_base goes through the track to create a "notch" effect.
+            for (let c = -50; c <= 50; c += 10) {
+                const θ   = c * 1.8 * Math.PI / 180;
+                const sin = Math.sin(θ), cos = Math.cos(θ);
+                const isCenter = c === 0;
+                const isMajor  = Math.abs(c) % 20 === 0 || isCenter;
+                const R1 = 153;
+                const R2 = isCenter ? 118 : (isMajor ? 133 : 142);
+
+                const ln = document.createElementNS(ns, 'line');
+                ln.setAttribute('x1', (160 + R1 * sin).toFixed(1));
+                ln.setAttribute('y1', (175 - R1 * cos).toFixed(1));
+                ln.setAttribute('x2', (160 + R2 * sin).toFixed(1));
+                ln.setAttribute('y2', (175 - R2 * cos).toFixed(1));
+                ln.setAttribute('stroke', isCenter ? 'rgba(0,212,170,0.7)' : 'rgba(255,255,255,0.18)');
+                ln.setAttribute('stroke-width', isCenter ? '2.5' : (isMajor ? '2' : '1.5'));
+                ln.setAttribute('stroke-linecap', 'round');
+                g.appendChild(ln);
+            }
+        })();
+
+        // ─── Toggle slider ────────────────────────────────────────────────────────
+        function updateSlider(btn, instant) {
+            const slider = document.getElementById('toggle-slider');
+            if (instant) slider.classList.add('instant');
+            slider.style.width     = btn.offsetWidth + 'px';
+            slider.style.transform = `translateX(${btn.offsetLeft - 4}px)`;
+            if (instant) requestAnimationFrame(() => slider.classList.remove('instant'));
         }
 
-        function updateNeedle(cents) {
-            const rotDeg = Math.max(-90, Math.min(90, cents * 1.8));
-            needle.setAttribute('transform', `rotate(${rotDeg.toFixed(2)},150,150)`);
-            const col = colorForCents(Math.abs(cents));
-            needle.setAttribute('stroke', col === 'var(--in-tune)' ? '#00d4aa' :
-                                           col === 'var(--flat)'   ? '#ffd166' : '#ff6b6b');
-            pivotDot.setAttribute('fill', needle.getAttribute('stroke'));
+        // ─── Needle ───────────────────────────────────────────────────────────────
+        function setNeedle(cents) {
+            const rot = Math.max(-90, Math.min(90, cents * 1.8));
+            needleG.style.transform = `rotate(${rot.toFixed(2)}deg)`;
+            const col = centsColor(Math.abs(cents));
+            needleLine.setAttribute('stroke', col);
+            needleTip.setAttribute('fill', col);
         }
 
-        function updateUI(midiRound, cents) {
-            const { name, octave } = midiToNoteName(midiRound);
-            noteName.textContent = name;
-            noteOct.textContent  = octave;
+        // ─── In-tune effect ───────────────────────────────────────────────────────
+        function setInTune(active) {
+            if (active === wasInTune) return;
+            wasInTune = active;
+            noteZone.classList.toggle('in-tune', active);
+            document.body.classList.toggle('in-tune', active);
+            if (active && navigator.vibrate) navigator.vibrate([15, 30, 15]);
+        }
 
-            const absCents = Math.abs(cents);
+        // ─── UI update ────────────────────────────────────────────────────────────
+        function updateUI(midiRound, cents, freq) {
+            const { name, octave } = midiToNote(midiRound);
+            noteNameEl.textContent = name;
+            noteOctEl.textContent  = octave;
+
+            smoothFreq = smoothFreq ? smoothFreq * 0.6 + freq * 0.4 : freq;
+            freqEl.textContent = smoothFreq.toFixed(1) + ' Hz';
+
+            const abs  = Math.abs(cents);
             const sign = cents >= 0 ? '+' : '';
-            centsDisp.textContent = `${sign}${cents.toFixed(0)}¢`;
-            centsDisp.style.color = colorForCents(absCents);
-            noteName.style.color  = colorForCents(absCents);
+            centsEl.textContent = `${sign}${cents.toFixed(0)} ¢`;
+            centsEl.style.color = centsColor(abs);
 
-            // smooth needle
-            smoothCents = smoothCents * 0.7 + cents * 0.3;
-            updateNeedle(smoothCents);
+            // JS-smoothed needle (avoids double-smoothing with CSS transition)
+            smoothCents = smoothCents * 0.68 + cents * 0.32;
+            setNeedle(smoothCents);
 
-            // string highlighting
-            const nearest = pinnedStringIdx !== null ? pinnedStringIdx : nearestStringIdx(midiRound);
-            document.querySelectorAll('.string-btn').forEach((btn, i) => {
-                btn.classList.toggle('nearest', i === nearest && pinnedStringIdx === null);
-                btn.classList.toggle('pinned',  i === pinnedStringIdx);
+            // String highlight
+            const nearest = pinnedStringIdx ?? nearestString(midiRound);
+            document.querySelectorAll('.string-btn').forEach((b, i) => {
+                b.classList.toggle('nearest', i === nearest && pinnedStringIdx === null);
+                b.classList.toggle('pinned',  i === pinnedStringIdx);
             });
 
-            statusEl.textContent = 'Listening...';
+            // In-tune debounce: 8 frames to enter, ~3 frames to exit
+            if (abs <= 5) {
+                inTuneFrames = Math.min(inTuneFrames + 1, 12);
+                if (inTuneFrames >= 8) setInTune(true);
+            } else {
+                inTuneFrames = Math.max(inTuneFrames - 3, 0);
+                if (inTuneFrames === 0) setInTune(false);
+            }
+
+            noteZone.classList.add('has-signal');
+            noteZone.classList.remove('silent');
+            statusText.textContent = 'Listening...';
+            document.body.classList.add('listening');
         }
 
         function showSilence() {
             silenceFrames++;
-            if (silenceFrames < 15) return; // small debounce
-            noteName.textContent = '—';
-            noteOct.textContent  = '';
-            centsDisp.textContent = '';
-            noteName.style.color = 'var(--text-dim)';
-            smoothCents = smoothCents * 0.85; // drift back to center
-            updateNeedle(smoothCents);
-            document.querySelectorAll('.string-btn').forEach(btn => {
-                btn.classList.remove('nearest');
-            });
-            statusEl.textContent = 'Play a string...';
+            if (silenceFrames < 20) return;  // debounce transient gaps
+
+            noteNameEl.textContent = '—';
+            noteOctEl.textContent  = '';
+            freqEl.textContent     = '';
+            centsEl.textContent    = '';
+            centsEl.style.color    = '';
+            smoothCents *= 0.9;
+            setNeedle(smoothCents);
+            inTuneFrames = 0;
+            setInTune(false);
+            noteZone.classList.remove('has-signal');
+            noteZone.classList.add('silent');
+            document.querySelectorAll('.string-btn').forEach(b => b.classList.remove('nearest'));
+            statusText.textContent = 'Play a string...';
+            document.body.classList.remove('listening');
+            smoothFreq = 0;
         }
 
+        // ─── String buttons ───────────────────────────────────────────────────────
         function buildStrings() {
             stringsRow.innerHTML = '';
             INSTRUMENTS[currentInstrument].strings.forEach((s, i) => {
                 const btn = document.createElement('button');
-                btn.className = 'string-btn';
+                btn.className   = 'string-btn';
                 btn.textContent = s;
                 btn.addEventListener('click', () => {
-                    if (pinnedStringIdx === i) {
-                        pinnedStringIdx = null;
-                    } else {
-                        pinnedStringIdx = i;
-                    }
+                    pinnedStringIdx = pinnedStringIdx === i ? null : i;
                     document.querySelectorAll('.string-btn').forEach((b, j) => {
                         b.classList.toggle('pinned', j === pinnedStringIdx);
-                        b.classList.remove('nearest');
+                        if (j !== pinnedStringIdx) b.classList.remove('nearest');
                     });
                 });
                 stringsRow.appendChild(btn);
@@ -525,10 +723,9 @@ permalink: /tuner/
 
             if (freq !== null && freq > 60 && freq < 1600) {
                 silenceFrames = 0;
-                const midiFloat = freqToMidi(freq);
-                const midiRound = Math.round(midiFloat);
-                const cents = (midiFloat - midiRound) * 100;
-                updateUI(midiRound, cents);
+                const mf = freqToMidi(freq);
+                const mr = Math.round(mf);
+                updateUI(mr, (mf - mr) * 100, freq);
             } else {
                 showSilence();
             }
@@ -538,17 +735,20 @@ permalink: /tuner/
 
         // ─── Mic start ────────────────────────────────────────────────────────────
         document.getElementById('start-btn').addEventListener('click', async () => {
-            const errorEl = document.getElementById('error-msg');
-            errorEl.style.display = 'none';
+            const errEl = document.getElementById('error-msg');
+            errEl.style.display = 'none';
 
             try {
-                // Create AudioContext inside click handler (required on iOS)
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') await audioCtx.resume();
 
-                micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                const source = audioCtx.createMediaStreamSource(micStream);
+                // Disable processing for cleaner pitch detection
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+                    video: false
+                });
 
+                const source = audioCtx.createMediaStreamSource(micStream);
                 analyser = audioCtx.createAnalyser();
                 analyser.fftSize = FFT_SIZE;
                 analyser.smoothingTimeConstant = 0;
@@ -557,35 +757,36 @@ permalink: /tuner/
                 document.getElementById('permission-screen').style.display = 'none';
                 document.getElementById('tuner-screen').style.display = 'flex';
 
+                // Keep screen on while tuning
+                if ('wakeLock' in navigator) {
+                    navigator.wakeLock.request('screen').catch(() => {});
+                }
+
                 buildStrings();
+                updateSlider(document.getElementById('btn-guitar'), true);
                 rafId = requestAnimationFrame(loop);
+
             } catch (err) {
                 if (audioCtx) { audioCtx.close(); audioCtx = null; }
-                errorEl.style.display = 'block';
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    errorEl.textContent = 'Microphone access denied. Please allow it in browser settings.';
-                } else {
-                    errorEl.textContent = 'Could not access microphone. Please try again.';
-                }
+                errEl.style.display = 'block';
+                errEl.textContent = (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+                    ? 'Microphone access denied. Please allow it in browser settings.'
+                    : 'Could not access microphone. Please try again.';
             }
         });
 
         // ─── Instrument toggle ────────────────────────────────────────────────────
-        document.getElementById('btn-guitar').addEventListener('click', () => {
-            currentInstrument = 'guitar';
-            pinnedStringIdx = null;
-            document.getElementById('btn-guitar').classList.add('active');
-            document.getElementById('btn-ukulele').classList.remove('active');
+        function switchInstrument(id) {
+            currentInstrument = id;
+            pinnedStringIdx   = null;
+            document.getElementById('btn-guitar').classList.toggle('active', id === 'guitar');
+            document.getElementById('btn-ukulele').classList.toggle('active', id === 'ukulele');
+            updateSlider(document.getElementById(`btn-${id}`), false);
             buildStrings();
-        });
+        }
 
-        document.getElementById('btn-ukulele').addEventListener('click', () => {
-            currentInstrument = 'ukulele';
-            pinnedStringIdx = null;
-            document.getElementById('btn-guitar').classList.remove('active');
-            document.getElementById('btn-ukulele').classList.add('active');
-            buildStrings();
-        });
+        document.getElementById('btn-guitar').addEventListener('click', () => switchInstrument('guitar'));
+        document.getElementById('btn-ukulele').addEventListener('click', () => switchInstrument('ukulele'));
 
         // ─── Service worker ───────────────────────────────────────────────────────
         const SW_VERSION = 'dev';
@@ -594,7 +795,7 @@ permalink: /tuner/
             navigator.serviceWorker.register(
                 `/tuner/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
                 { scope: '/tuner/' }
-            ).then((reg) => {
+            ).then(reg => {
                 reg.addEventListener('updatefound', () => {
                     const w = reg.installing;
                     w.addEventListener('statechange', () => {
@@ -606,15 +807,13 @@ permalink: /tuner/
             }).catch(() => {});
 
             document.getElementById('update-btn').addEventListener('click', () => {
-                navigator.serviceWorker.getRegistration('/tuner/').then((reg) => {
-                    if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                navigator.serviceWorker.getRegistration('/tuner/').then(reg => {
+                    if (reg?.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
                 });
                 window.location.reload();
             });
 
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
-            });
+            navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
         }
     </script>
 
