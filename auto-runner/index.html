@@ -1,0 +1,572 @@
+---
+permalink: /auto-runner/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2d2b55">
+  <meta name="description" content="2-player co-op auto-runner — tap your side to jump!">
+  <title>Auto Runner</title>
+  <link rel="manifest" href="/auto-runner/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Auto Runner">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #1a1833;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    canvas { display: block; image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const SW_VERSION = '2604130000';
+    if ('serviceWorker' in navigator) {
+      let refreshed = false;
+      function askUpdate(reg) {
+        if (document.getElementById('sw-banner')) return;
+        const b = document.createElement('div');
+        b.id = 'sw-banner';
+        b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a1833;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;font-size:14px;border-top:2px solid #7c78ff';
+        b.innerHTML = '<span>Update available.</span><button style="background:#7c78ff;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold">Refresh</button>';
+        b.querySelector('button').onclick = () => reg.waiting && reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        document.body.appendChild(b);
+      }
+      window.addEventListener('load', async () => {
+        try {
+          const reg = await navigator.serviceWorker.register(`/auto-runner/sw.js?v=${SW_VERSION}`, { scope: '/auto-runner/' });
+          if (reg.waiting) askUpdate(reg);
+          reg.addEventListener('updatefound', () => {
+            const w = reg.installing;
+            w && w.addEventListener('statechange', () => {
+              if (w.state === 'installed' && navigator.serviceWorker.controller) askUpdate(reg);
+            });
+          });
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshed) return; refreshed = true; location.reload();
+          });
+          window.addEventListener('focus', () => reg.update());
+          setInterval(() => reg.update(), 3600000);
+        } catch (e) { console.warn('SW failed', e); }
+      });
+    }
+  </script>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Constants ──────────────────────────────────────────────
+    const GW = 800, GH = 320;          // game world size
+    const FLOOR_Y = 258;               // top of ground surface
+    const GRAVITY = 0.58;
+    const JUMP_V = -13.5;
+    const P_SIZE = 38;                 // player square side
+    const BASE_SPEED = 4.5;
+    const ACCEL = 0.0005;              // speed increase per frame
+
+    const COLORS = ['#e84040', '#3a8eff'];
+    const EYE_COL = '#ffffff';
+    const LABEL = ['P1', 'P2'];
+
+    // ── Canvas / Scale ─────────────────────────────────────────
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let scale = 1;
+
+    function resize() {
+      scale = Math.min(window.innerWidth / GW, window.innerHeight / GH);
+      canvas.width  = GW;
+      canvas.height = GH;
+      canvas.style.width  = Math.floor(GW * scale) + 'px';
+      canvas.style.height = Math.floor(GH * scale) + 'px';
+    }
+
+    // ── State ──────────────────────────────────────────────────
+    let state;          // 'waiting' | 'playing' | 'gameover'
+    let frame, score, bestScore, speed, goTimer, flashAlpha;
+    let obstacles, nextObstacleGap;
+    let stars, groundX;
+
+    bestScore = parseInt(localStorage.getItem('ar-best') || '0', 10);
+
+    // ── Players ────────────────────────────────────────────────
+    let players;
+
+    function makePlayers() {
+      return [
+        { x: 120, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
+          rot: 0, bob: 0, color: COLORS[0], dead: false },
+        { x: 168, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
+          rot: 0, bob: 0, color: COLORS[1], dead: false },
+      ];
+    }
+
+    // ── Initialise / Reset ─────────────────────────────────────
+    function init() {
+      state = 'waiting';
+      frame = 0; score = 0; speed = BASE_SPEED;
+      goTimer = 0; flashAlpha = 0;
+      obstacles = [];
+      nextObstacleGap = 320;
+      groundX = 0;
+      players = makePlayers();
+      stars = Array.from({ length: 55 }, () => ({
+        x: Math.random() * GW,
+        y: Math.random() * (FLOOR_Y - 20),
+        r: Math.random() * 1.4 + 0.3,
+        a: Math.random() * 0.5 + 0.35,
+      }));
+    }
+
+    function startGame() {
+      state = 'playing';
+      frame = 0; score = 0; speed = BASE_SPEED;
+      obstacles = [];
+      nextObstacleGap = 320;
+      players.forEach(p => {
+        p.y = FLOOR_Y - P_SIZE; p.vy = 0;
+        p.grounded = true; p.rot = 0; p.dead = false;
+      });
+    }
+
+    function restart() {
+      startGame();
+    }
+
+    // ── Jump ───────────────────────────────────────────────────
+    function doJump(idx) {
+      if (state === 'gameover') {
+        if (goTimer > 55) restart();
+        return;
+      }
+      if (state === 'waiting') startGame();
+      const p = players[idx];
+      if (!p.dead && p.grounded) {
+        p.vy = JUMP_V;
+        p.grounded = false;
+      }
+    }
+
+    // ── Obstacle helpers ───────────────────────────────────────
+    const T = 32; // tile size
+
+    function spawnObstacle() {
+      const roll = Math.random();
+      let type;
+      if (roll < 0.30)      type = 'block1';
+      else if (roll < 0.55) type = 'block2';
+      else if (roll < 0.75) type = 'spike1';
+      else                  type = 'spike2';
+
+      const wide  = (type === 'block2' || type === 'spike2') ? T * 2 : T;
+      const spike = type === 'spike1' || type === 'spike2';
+      obstacles.push({ x: GW + 10, w: wide, h: T, spike });
+    }
+
+    // ── AABB collision with slight shrink ─────────────────────
+    function collides(p, o) {
+      const pad = 5;
+      const px = p.x + pad, py = p.y + pad;
+      const pw = P_SIZE - pad * 2, ph = P_SIZE - pad * 2;
+
+      // Block body
+      if (px < o.x + o.w && px + pw > o.x &&
+          py < FLOOR_Y    && py + ph > FLOOR_Y - o.h) return true;
+
+      // Spike triangles (rough hit — each 16-wide spike)
+      if (o.spike) {
+        const spikeH = 18;
+        const num = Math.floor(o.w / 16);
+        for (let i = 0; i < num; i++) {
+          const sx = o.x + i * 16, sy = FLOOR_Y - o.h - spikeH;
+          if (px + pw > sx && px < sx + 16 &&
+              py + ph > sy && py < FLOOR_Y - o.h) {
+            const cx = px + pw / 2;
+            const tipX = sx + 8;
+            const t = (py + ph - sy) / spikeH;
+            if (Math.abs(cx - tipX) < 8 * t) return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    // ── Update ─────────────────────────────────────────────────
+    function update() {
+      if (state === 'waiting') {
+        players.forEach(p => { p.bob = Math.sin(Date.now() / 300) * 3; });
+        return;
+      }
+
+      if (state === 'gameover') {
+        goTimer++;
+        flashAlpha = Math.max(0, flashAlpha - 0.04);
+        return;
+      }
+
+      // playing
+      frame++;
+      speed = BASE_SPEED + frame * ACCEL;
+      score = Math.floor(frame * speed / 8);
+
+      // Scroll ground
+      groundX = (groundX - speed + GW) % GW;
+
+      // Spawn obstacles
+      const lastX = obstacles.length
+        ? obstacles[obstacles.length - 1].x + obstacles[obstacles.length - 1].w
+        : 0;
+      if (frame > 80 && GW - lastX >= nextObstacleGap) {
+        spawnObstacle();
+        nextObstacleGap = Math.max(220, 330 - frame * 0.06) + Math.random() * 80;
+      }
+
+      // Move obstacles
+      obstacles.forEach(o => { o.x -= speed; });
+      obstacles = obstacles.filter(o => o.x + o.w > -10);
+
+      // Players
+      players.forEach((p, i) => {
+        if (p.dead) return;
+        p.vy += GRAVITY;
+        p.y  += p.vy;
+        p.bob = 0;
+
+        if (p.y >= FLOOR_Y - P_SIZE) {
+          p.y = FLOOR_Y - P_SIZE;
+          p.vy = 0;
+          p.grounded = true;
+          // Snap rotation
+          p.rot *= 0.7;
+          if (Math.abs(p.rot) < 0.05) p.rot = 0;
+        } else {
+          p.grounded = false;
+          p.rot -= 0.12; // spin while airborne
+        }
+
+        // Collision check
+        for (const o of obstacles) {
+          if (collides(p, o)) {
+            gameOver();
+            return;
+          }
+        }
+      });
+    }
+
+    function gameOver() {
+      if (state === 'gameover') return;
+      state = 'gameover';
+      goTimer = 0;
+      flashAlpha = 0.85;
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('ar-best', bestScore);
+      }
+    }
+
+    // ── Draw helpers ───────────────────────────────────────────
+    function rr(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawRobot(p) {
+      const cx = p.x + P_SIZE / 2;
+      const cy = p.y + P_SIZE / 2 + (p.bob || 0);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(p.rot);
+
+      const h = P_SIZE, hh = h / 2;
+      const alpha = p.dead ? 0.35 : 1;
+      ctx.globalAlpha = alpha;
+
+      // Body
+      ctx.fillStyle = p.color;
+      rr(-hh, -hh, h, h, 6);
+      ctx.fill();
+
+      // Inner screen panel
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      rr(-hh + 5, -hh + 5, h - 10, h - 10, 3);
+      ctx.fill();
+
+      // Screen glare
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      rr(-hh + 5, -hh + 5, h - 10, (h - 10) * 0.45, 3);
+      ctx.fill();
+
+      // Eyes (two white squares)
+      ctx.fillStyle = EYE_COL;
+      ctx.fillRect(-hh + 8, -hh + 10, 8, 8);
+      ctx.fillRect(hh - 16, -hh + 10, 8, 8);
+
+      // Pupils
+      ctx.fillStyle = '#1a1833';
+      ctx.fillRect(-hh + 10, -hh + 12, 4, 4);
+      ctx.fillRect(hh - 14, -hh + 12, 4, 4);
+
+      // Mouth dots (3 small squares)
+      const mc = p.dead ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.75)';
+      ctx.fillStyle = mc;
+      for (let i = 0; i < 3; i++) {
+        ctx.fillRect(-hh + 8 + i * 7, hh - 14, 4, 4);
+      }
+
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    function drawObstacle(o) {
+      const oy = FLOOR_Y - o.h;
+      ctx.shadowColor = 'rgba(255,255,255,0.6)';
+      ctx.shadowBlur = 10;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(o.x, oy, o.w, o.h);
+
+      // Inner grid lines
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(50,50,80,0.25)';
+      ctx.lineWidth = 1;
+      for (let gx = o.x + T; gx < o.x + o.w; gx += T) {
+        ctx.beginPath(); ctx.moveTo(gx, oy); ctx.lineTo(gx, oy + o.h); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(o.x, oy + o.h * 0.5); ctx.lineTo(o.x + o.w, oy + o.h * 0.5); ctx.stroke();
+
+      if (o.spike) {
+        const num = Math.floor(o.w / 16);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(255,255,255,0.5)';
+        ctx.shadowBlur = 8;
+        for (let i = 0; i < num; i++) {
+          const sx = o.x + i * 16;
+          ctx.beginPath();
+          ctx.moveTo(sx, oy);
+          ctx.lineTo(sx + 8, oy - 18);
+          ctx.lineTo(sx + 16, oy);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // ── Render ─────────────────────────────────────────────────
+    function render() {
+      // Background
+      ctx.fillStyle = '#2d2b55';
+      ctx.fillRect(0, 0, GW, GH);
+
+      // Stars
+      stars.forEach(s => {
+        ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // Ground surface
+      ctx.fillStyle = '#3a3870';
+      ctx.fillRect(0, FLOOR_Y, GW, GH - FLOOR_Y);
+
+      // Glow line
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = 'rgba(200,200,255,0.5)';
+      ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.moveTo(0, FLOOR_Y); ctx.lineTo(GW, FLOOR_Y); ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Ground grid ticks
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 1;
+      const tileW = 32;
+      const gx0 = ((groundX % tileW) + tileW) % tileW;
+      for (let x = gx0; x < GW; x += tileW) {
+        ctx.beginPath(); ctx.moveTo(x, FLOOR_Y); ctx.lineTo(x, FLOOR_Y + 8); ctx.stroke();
+      }
+
+      // Obstacles
+      obstacles.forEach(drawObstacle);
+
+      // Players
+      players.forEach(drawRobot);
+
+      // Touch zone hints (first 2.5s of playing)
+      if (state === 'playing' && frame < 150) {
+        const a = Math.min(1, (150 - frame) / 80) * 0.10;
+        ctx.fillStyle = `rgba(232,64,64,${a})`;
+        ctx.fillRect(0, 0, GW / 2, GH);
+        ctx.fillStyle = `rgba(58,142,255,${a})`;
+        ctx.fillRect(GW / 2, 0, GW / 2, GH);
+
+        // Zone labels near bottom
+        ctx.globalAlpha = Math.min(1, (150 - frame) / 80) * 0.55;
+        ctx.font = 'bold 13px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = COLORS[0];
+        ctx.fillText('◀  P1', GW * 0.25, GH - 28);
+        ctx.fillStyle = COLORS[1];
+        ctx.fillText('P2  ▶', GW * 0.75, GH - 28);
+        ctx.globalAlpha = 1;
+      }
+
+      // HUD
+      drawHUD();
+
+      // Flash overlay
+      if (flashAlpha > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
+        ctx.fillRect(0, 0, GW, GH);
+      }
+    }
+
+    function drawHUD() {
+      // Score
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = 'bold 20px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(score + 'm', 14, 28);
+
+      if (bestScore > 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.font = '12px monospace';
+        ctx.fillText('best ' + bestScore + 'm', 14, 46);
+      }
+
+      // Player indicator dots
+      const dotY = GH - 13;
+      const gap = 22;
+      const startX = GW / 2 - gap / 2;
+      players.forEach((p, i) => {
+        const dx = startX + i * gap;
+        ctx.beginPath(); ctx.arc(dx, dotY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = p.dead ? '#333' : p.color;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      if (state === 'waiting') {
+        // Semi-overlay
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fillRect(0, 0, GW, GH);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 38px monospace';
+        ctx.shadowColor = 'rgba(124,120,255,0.8)';
+        ctx.shadowBlur = 18;
+        ctx.fillText('AUTO RUNNER', GW / 2, GH / 2 - 34);
+        ctx.shadowBlur = 0;
+
+        ctx.font = '14px monospace';
+        ctx.fillStyle = COLORS[0];
+        ctx.fillText('◀  TAP LEFT  (A)', GW * 0.28, GH / 2 + 8);
+        ctx.fillStyle = COLORS[1];
+        ctx.fillText('TAP RIGHT  ▶  (D)', GW * 0.72, GH / 2 + 8);
+
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 450);
+        ctx.fillStyle = `rgba(255,255,255,${0.45 + pulse * 0.35})`;
+        ctx.font = '12px monospace';
+        ctx.fillText('2 players — jump together, survive together', GW / 2, GH / 2 + 32);
+      }
+
+      if (state === 'gameover') {
+        ctx.fillStyle = 'rgba(10,8,30,0.62)';
+        ctx.fillRect(0, 0, GW, GH);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ff4c4c';
+        ctx.font = 'bold 38px monospace';
+        ctx.shadowColor = 'rgba(255,50,50,0.7)';
+        ctx.shadowBlur = 16;
+        ctx.fillText('GAME OVER', GW / 2, GH / 2 - 28);
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 22px monospace';
+        ctx.fillText(score + 'm', GW / 2, GH / 2 + 8);
+
+        if (score > 0 && score >= bestScore) {
+          ctx.fillStyle = '#ffd700';
+          ctx.font = 'bold 13px monospace';
+          ctx.fillText('✦ NEW BEST! ✦', GW / 2, GH / 2 + 28);
+        }
+
+        if (goTimer > 55) {
+          const blink = Math.floor(goTimer / 14) % 2 === 0;
+          ctx.fillStyle = `rgba(255,255,255,${blink ? 0.9 : 0.35})`;
+          ctx.font = '13px monospace';
+          ctx.fillText('tap or press key to play again', GW / 2, GH / 2 + 52);
+        }
+
+        if (goTimer > 160) restart();
+      }
+    }
+
+    // ── Game Loop ──────────────────────────────────────────────
+    function loop() {
+      update();
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    // ── Input ──────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      const k = e.key.toLowerCase();
+      if (k === 'a' || k === 'arrowleft')  { e.preventDefault(); doJump(0); }
+      if (k === 'd' || k === 'arrowright' || k === ' ') { e.preventDefault(); doJump(1); }
+    });
+
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        const rect = canvas.getBoundingClientRect();
+        const tx = (t.clientX - rect.left) / scale;
+        doJump(tx < GW / 2 ? 0 : 1);
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('mousedown', e => {
+      const rect = canvas.getBoundingClientRect();
+      doJump((e.clientX - rect.left) / scale < GW / 2 ? 0 : 1);
+    });
+
+    window.addEventListener('resize', resize);
+
+    // ── Boot ───────────────────────────────────────────────────
+    resize();
+    init();
+    loop();
+
+  })();
+  </script>
+</body>
+</html>
