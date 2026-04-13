@@ -1,0 +1,25 @@
+{
+  "id": "/auto-runner/",
+  "name": "Auto Runner",
+  "short_name": "Auto Runner",
+  "description": "2-player co-op auto-runner — tap your side to jump, survive together!",
+  "start_url": "/auto-runner/",
+  "scope": "/auto-runner/",
+  "display": "standalone",
+  "background_color": "#2d2b55",
+  "theme_color": "#2d2b55",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/img/favicon.ico",
+      "sizes": "16x16 32x32",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "lang": "en-US",
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
