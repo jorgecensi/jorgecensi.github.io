@@ -755,7 +755,7 @@ const FX_ACTIVE   = { repeat:'rgba(255,71,87,0.55)',    filter:'rgba(46,213,115,
                        random:'rgba(255,165,2,0.55)',    distortion:'rgba(91,138,255,0.55)' };
 const FX_DIM      = { repeat:'rgba(255,71,87,0.1)',      filter:'rgba(46,213,115,0.1)',
                        random:'rgba(255,165,2,0.1)',      distortion:'rgba(91,138,255,0.1)' };
-const NODE_R      = 13;
+const NODE_R      = 16;
 const LOOKAHEAD   = 25.0;   // ms
 const SCHED_AHEAD = 0.1;    // s
 const FILTER_LEVELS = [
@@ -1062,14 +1062,10 @@ function scheduleStep(step, baseTime) {
             for (let i = 0; i < mult; i++) triggerVoice(v, time + i * subDur);
             continue;
         }
-        const fire = fx.random ? (Math.random() > 0.5) : grid[v][step];
+        const gridStep = fx.repeat ? 0 : step;
+        const fire = fx.random ? (Math.random() > 0.5) : grid[v][gridStep];
         if (!fire) continue;
-        if (fx.repeat) {
-            triggerVoice(v, time);
-            triggerVoice(v, time + dur / 2);
-        } else {
-            triggerVoice(v, time);
-        }
+        triggerVoice(v, time);
     }
 }
 
@@ -1142,7 +1138,7 @@ function buildStepsSVG() {
             const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             hit.setAttribute('cx', pos.x);
             hit.setAttribute('cy', pos.y);
-            hit.setAttribute('r', 24);
+            hit.setAttribute('r', 26);
             hit.setAttribute('fill', 'transparent');
 
             group.appendChild(hit);
@@ -1211,7 +1207,7 @@ function toggleStep(voice, step) {
     initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     grid[voice][step] = !grid[voice][step];
-    if (grid[voice][step]) { triggerVoice(voice, audioCtx.currentTime); navigator.vibrate && navigator.vibrate(10); }
+    if (grid[voice][step]) { navigator.vibrate && navigator.vibrate(10); }
     renderSteps();
     saveState();
 }
