@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2604161217';
+const CACHE_VERSION = '2604161237';
 const CACHE_NAME = `drum-machine-${CACHE_VERSION}`;
 const OFFLINE_URL = '/drum-machine/';
 const PRECACHE_URLS = [
