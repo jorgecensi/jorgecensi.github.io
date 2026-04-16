@@ -25,7 +25,7 @@ permalink: /drum-machine/
             --surface2: #242424;
             --surface3: #2e2e2e;
             --text: #f0f0f0;
-            --text-dim: #555;
+            --text-dim: #444;
             --text-mid: #888;
             --kick:      #FF4757;
             --snare:     #FFA502;
@@ -35,6 +35,11 @@ permalink: /drum-machine/
             --snare-dim: rgba(255,165,2,0.18);
             --hihat-dim: rgba(46,213,115,0.18);
             --clap-dim:  rgba(162,155,254,0.18);
+            --glow-kick:  0 0 12px rgba(255,71,87,0.6);
+            --glow-snare: 0 0 12px rgba(255,165,2,0.6);
+            --glow-hihat: 0 0 12px rgba(46,213,115,0.6);
+            --glow-clap:  0 0 12px rgba(162,155,254,0.6);
+            --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
         }
 
         html, body {
@@ -46,7 +51,7 @@ permalink: /drum-machine/
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            touch-action: manipulation;
+            touch-action: none;
         }
 
         #app {
@@ -54,16 +59,16 @@ permalink: /drum-machine/
             flex-direction: column;
             align-items: center;
             justify-content: space-evenly;
-            gap: 8px;
+            gap: 12px;
             height: 100%;
             width: 100%;
-            max-width: 520px;
+            max-width: 540px;
             margin: 0 auto;
             padding:
-                max(env(safe-area-inset-top, 0px), 10px)
-                max(env(safe-area-inset-right, 0px), 14px)
-                max(env(safe-area-inset-bottom, 0px), 10px)
-                max(env(safe-area-inset-left, 0px), 14px);
+                max(env(safe-area-inset-top, 0px), 15px)
+                max(env(safe-area-inset-right, 0px), 20px)
+                max(env(safe-area-inset-bottom, 0px), 15px)
+                max(env(safe-area-inset-left, 0px), 20px);
         }
 
         /* ── Header ─────────────────────────────────────── */
@@ -72,30 +77,35 @@ permalink: /drum-machine/
             align-items: center;
             justify-content: space-between;
             width: 100%;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--surface2);
         }
         #header h1 {
-            font-size: 0.7rem;
-            font-weight: 700;
-            letter-spacing: 0.25em;
+            font-size: 0.65rem;
+            font-weight: 900;
+            letter-spacing: 0.3em;
             text-transform: uppercase;
-            color: var(--text-dim);
+            color: var(--text-mid);
         }
         #tempo-display {
-            font-size: 0.7rem;
-            color: var(--text-mid);
-            letter-spacing: 0.08em;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            color: var(--text);
+            letter-spacing: 0.02em;
             cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 8px;
-            transition: background 0.1s;
+            padding: 6px 10px;
+            background: var(--surface);
+            border-radius: 6px;
+            border: 1px solid var(--surface3);
+            transition: all 0.1s;
             -webkit-tap-highlight-color: transparent;
         }
-        #tempo-display:active { background: var(--surface2); }
+        #tempo-display:active { background: var(--surface2); transform: translateY(1px); }
 
         /* ── Sample selectors ────────────────────────────── */
         #sample-row {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             width: 100%;
         }
         .sample-btn {
@@ -104,37 +114,34 @@ permalink: /drum-machine/
             flex-direction: column;
             align-items: center;
             gap: 2px;
-            padding: 10px 6px;
+            padding: 12px 6px;
             background: var(--surface);
             border: 1.5px solid var(--surface3);
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
+            transition: all 0.1s;
             -webkit-tap-highlight-color: transparent;
         }
-        .sample-btn:active { transform: scale(0.95); }
+        .sample-btn:active { transform: scale(0.96); background: var(--surface2); }
         .sample-btn[data-voice="0"] { border-color: var(--kick-dim); }
         .sample-btn[data-voice="1"] { border-color: var(--snare-dim); }
         .sample-btn[data-voice="2"] { border-color: var(--hihat-dim); }
         .sample-btn[data-voice="3"] { border-color: var(--clap-dim); }
-        .sample-btn[data-voice="0"]:active { border-color: var(--kick); }
-        .sample-btn[data-voice="1"]:active { border-color: var(--snare); }
-        .sample-btn[data-voice="2"]:active { border-color: var(--hihat); }
-        .sample-btn[data-voice="3"]:active { border-color: var(--clap); }
-        .sample-voice { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; }
+        .sample-voice { font-family: var(--mono); font-size: 0.8rem; font-weight: 800; }
         .sample-btn[data-voice="0"] .sample-voice { color: var(--kick); }
         .sample-btn[data-voice="1"] .sample-voice { color: var(--snare); }
         .sample-btn[data-voice="2"] .sample-voice { color: var(--hihat); }
         .sample-btn[data-voice="3"] .sample-voice { color: var(--clap); }
-        .sample-name  { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; color: var(--text); }
-        .sample-hint  { font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.05em; }
+        .sample-name  { font-size: 0.7rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+        .sample-hint  { font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
 
         /* ── Sequencer ───────────────────────────────────── */
         #sequencer-wrap {
             position: relative;
-            width: min(92vw, 440px);
+            width: min(92vw, 460px);
             aspect-ratio: 460 / 380;
             flex-shrink: 0;
+            margin: 5px 0;
         }
         #sequencer-svg {
             width: 100%;
@@ -142,7 +149,8 @@ permalink: /drum-machine/
             overflow: visible;
             touch-action: none;
         }
-        .step-node, .voice-pad, .effect-btn { cursor: pointer; }
+        .step-node, .voice-pad, .effect-btn { cursor: pointer; transition: transform 0.1s; }
+        .step-node:active, .voice-pad:active { transform: scale(1.1); }
 
         /* ── Roll indicator ──────────────────────────────── */
         #roll-indicator {
@@ -222,60 +230,68 @@ permalink: /drum-machine/
         .slider-row {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             width: 100%;
+            padding: 4px 0;
         }
         .slider-label {
+            font-family: var(--mono);
             font-size: 0.6rem;
-            letter-spacing: 0.14em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: var(--text-dim);
-            min-width: 36px;
+            color: var(--text-mid);
+            min-width: 44px;
         }
         input[type=range] {
             -webkit-appearance: none;
             appearance: none;
             flex: 1;
-            height: 5px;
-            background: var(--surface3);
+            height: 4px;
+            background: var(--surface2);
             border-radius: 2px;
             outline: none;
             cursor: pointer;
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 20px; height: 20px;
-            border-radius: 50%;
-            background: var(--text);
+            width: 14px; height: 26px;
+            border-radius: 3px;
+            background: #e0e0e0;
             cursor: pointer;
-            box-shadow: 0 0 6px rgba(255,255,255,0.2);
+            border: 1px solid #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8);
+            position: relative;
         }
-        input[type=range]::-moz-range-thumb {
-            width: 20px; height: 20px;
-            border: none; border-radius: 50%;
-            background: var(--text); cursor: pointer;
+        input[type=range]::-webkit-slider-thumb::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 0; right: 0;
+            height: 2px; background: #333;
+            transform: translateY(-50%);
         }
         .slider-value {
-            font-size: 0.8rem; font-weight: 700;
-            min-width: 38px; text-align: right;
+            font-family: var(--mono);
+            font-size: 0.85rem; font-weight: 700;
+            min-width: 42px; text-align: right;
+            color: var(--text);
         }
 
         /* ── BPM step buttons ────────────────────────────── */
         .bpm-step-btn {
-            background: var(--surface2);
+            background: var(--surface);
             border: 1px solid var(--surface3);
-            border-radius: 8px;
+            border-radius: 6px;
             color: var(--text);
-            font-size: 1.2rem;
-            width: 38px;
-            height: 38px;
+            font-size: 1.1rem;
+            width: 32px;
+            height: 32px;
             cursor: pointer;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             -webkit-tap-highlight-color: transparent;
-            line-height: 1;
+            transition: all 0.1s;
         }
         .bpm-step-btn:active { background: var(--surface3); }
 
@@ -365,12 +381,15 @@ permalink: /drum-machine/
         }
 
         /* ── Effect button active pulse ──────────────────── */
-        @keyframes fx-pulse {
-            0%, 100% { stroke-width: 1.5; }
-            50%       { stroke-width: 3; }
+        @keyframes fx-active-glow {
+            0%, 100% { filter: drop-shadow(0 0 5px currentColor); opacity: 0.8; }
+            50%       { filter: drop-shadow(0 0 15px currentColor); opacity: 1; }
+        }
+        .effect-btn.active {
+            animation: fx-active-glow 1s ease-in-out infinite;
         }
         .effect-btn.active circle {
-            animation: fx-pulse 0.8s ease-in-out infinite;
+            stroke-width: 3;
         }
 
         /* ── Clap recording panel ───────────────────────── */
@@ -1116,9 +1135,27 @@ function stepPos(voice, step) {
     return { x: CX + RING_RX * Math.cos(angle), y: CY + RING_RY * Math.sin(angle) };
 }
 
+let isDraggingSteps = false;
+let dragStepValue = false;
+let dragTouchedNodes = new Set();
+
 function buildStepsSVG() {
     const g = document.getElementById('steps-group');
     g.innerHTML = '';
+    const svg = document.getElementById('sequencer-svg');
+
+    // Drag-to-paint handlers
+    svg.addEventListener('pointerdown', e => {
+        if (e.target.closest('.step-node')) {
+            isDraggingSteps = true;
+            dragTouchedNodes.clear();
+        }
+    });
+    window.addEventListener('pointerup', () => {
+        isDraggingSteps = false;
+        dragTouchedNodes.clear();
+    });
+
     for (let v = 0; v < VOICES; v++) {
         for (let s = 0; s < STEPS; s++) {
             const pos   = stepPos(v, s);
@@ -1145,8 +1182,19 @@ function buildStepsSVG() {
             group.appendChild(circle);
             g.appendChild(group);
 
-            group.addEventListener('click', () => toggleStep(v, s));
-            group.addEventListener('touchend', e => { e.preventDefault(); toggleStep(v, s); });
+            const handleToggle = (e) => {
+                if (e.type === 'pointerdown') {
+                    dragStepValue = !grid[v][s];
+                    toggleStep(v, s, dragStepValue);
+                    dragTouchedNodes.add(`${v}-${s}`);
+                } else if (isDraggingSteps && !dragTouchedNodes.has(`${v}-${s}`)) {
+                    toggleStep(v, s, dragStepValue);
+                    dragTouchedNodes.add(`${v}-${s}`);
+                }
+            };
+
+            group.addEventListener('pointerdown', handleToggle);
+            group.addEventListener('pointerenter', handleToggle);
         }
     }
 }
@@ -1166,10 +1214,13 @@ function renderSteps() {
 
         if (playing) {
             c.setAttribute('r', NODE_R + 3);
-            c.setAttribute('filter', `drop-shadow(0 0 7px ${COLORS[v]})`);
+            c.setAttribute('filter', `drop-shadow(0 0 10px ${COLORS[v]})`);
+            c.setAttribute('stroke', '#fff');
+            c.setAttribute('stroke-width', '2');
         } else {
             c.setAttribute('r', NODE_R);
-            c.setAttribute('filter', 'none');
+            c.setAttribute('filter', active ? `drop-shadow(0 0 6px ${COLORS[v]})` : 'none');
+            c.setAttribute('stroke', 'none');
         }
     });
 }
@@ -1184,11 +1235,12 @@ function updatePlayhead() {
         const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         ring.setAttribute('cx', pos.x);
         ring.setAttribute('cy', pos.y);
-        ring.setAttribute('r',  NODE_R + 7);
+        ring.setAttribute('r',  NODE_R + 10);
         ring.setAttribute('fill', 'none');
         ring.setAttribute('stroke', COLORS[v]);
-        ring.setAttribute('stroke-width', '1.5');
-        ring.setAttribute('opacity', '0.45');
+        ring.setAttribute('stroke-width', '2');
+        ring.setAttribute('opacity', '0.6');
+        ring.setAttribute('filter', `drop-shadow(0 0 5px ${COLORS[v]})`);
         g.appendChild(ring);
     }
 }
@@ -1203,11 +1255,18 @@ function animLoop() {
 }
 
 // ─── Step toggle ──────────────────────────────────────────────────────────────
-function toggleStep(voice, step) {
+function toggleStep(voice, step, forceValue = null) {
     initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    grid[voice][step] = !grid[voice][step];
-    if (grid[voice][step]) { navigator.vibrate && navigator.vibrate(10); }
+    const newValue = (forceValue !== null) ? forceValue : !grid[voice][step];
+    if (grid[voice][step] === newValue) return;
+    grid[voice][step] = newValue;
+
+    if (grid[voice][step]) {
+        navigator.vibrate && navigator.vibrate(12);
+    } else {
+        navigator.vibrate && navigator.vibrate(5);
+    }
     renderSteps();
     saveState();
 }
@@ -1841,6 +1900,68 @@ if ('serviceWorker' in navigator) {
     });
 
     navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+}
+
+// ─── Keyboard Support ─────────────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+    if (e.repeat) return;
+    const key = e.key.toLowerCase();
+
+    // Play/Stop
+    if (key === ' ') { e.preventDefault(); togglePlay(); }
+
+    // Voice pads (1-4)
+    if (key === '1') triggerKeyVoice(0);
+    if (key === '2') triggerKeyVoice(1);
+    if (key === '3') triggerKeyVoice(2);
+    if (key === '4') triggerKeyVoice(3);
+
+    // FX buttons (Q, W, A, S)
+    if (key === 'q') triggerKeyFX('distortion', true);
+    if (key === 'w') triggerKeyFX('repeat', true);
+    if (key === 'a') triggerKeyFX('filter', true);
+    if (key === 's') triggerKeyFX('random', true);
+
+    // BPM Nudge (Arrow Left/Right)
+    if (key === 'arrowleft')  { e.preventDefault(); nudgeBPM(-1); }
+    if (key === 'arrowright') { e.preventDefault(); nudgeBPM(1); }
+});
+
+window.addEventListener('keyup', e => {
+    const key = e.key.toLowerCase();
+    if (key === 'q') triggerKeyFX('distortion', false);
+    if (key === 'w') triggerKeyFX('repeat', false);
+    if (key === 'a') triggerKeyFX('filter', false);
+    if (key === 's') triggerKeyFX('random', false);
+});
+
+function triggerKeyVoice(v) {
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    triggerVoice(v, audioCtx.currentTime);
+    const poly = document.getElementById(`pad-poly-${v}`);
+    if (poly) {
+        poly.setAttribute('fill', COLORS[v]);
+        setTimeout(() => poly.setAttribute('fill', PAD_FILL[v]), 100);
+    }
+}
+
+function triggerKeyFX(name, on) {
+    const btn = document.querySelector(`.effect-btn[data-fx="${name}"]`);
+    if (!btn) return;
+    if (on) {
+        btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    } else {
+        btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    }
+}
+
+function nudgeBPM(delta) {
+    bpm = Math.max(60, Math.min(200, bpm + delta));
+    bpmSlider.value = bpm;
+    bpmValueEl.textContent = bpm;
+    updateTempoDisplay();
+    saveState();
 }
 
 })();
