@@ -1818,7 +1818,7 @@ document.getElementById('sync-beat-btn').addEventListener('click', () => {
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2604161237';
+    const SW_VERSION = '2604161304';
     navigator.serviceWorker.register(
         `/drum-machine/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
         { scope: '/drum-machine/' }
