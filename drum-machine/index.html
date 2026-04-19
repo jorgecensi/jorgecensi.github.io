@@ -933,10 +933,14 @@ function playClap(time, pitch) {
         src.buffer = recordedClapBuffer;
         src.playbackRate.value = semitonesToRate(pitch);
         const g = audioCtx.createGain();
+        const dur = recordedClapBuffer.duration;
         g.gain.setValueAtTime(0.9, time);
+        g.gain.setValueAtTime(0.9, time + Math.max(0, dur - 0.02));
+        g.gain.linearRampToValueAtTime(0, time + dur);
         src.connect(g); g.connect(masterGain);
         src.start(time);
-        src.stop(time + recordedClapBuffer.duration + 0.01);
+        src.stop(time + dur + 0.01);
+        src.onended = () => { src.disconnect(); g.disconnect(); };
         return;
     }
     const r = semitonesToRate(pitch);
@@ -1267,7 +1271,7 @@ document.querySelectorAll('.voice-pad').forEach(pad => {
         startY = e.clientY;
         voiceHeld[v] = true;
         voiceHoldLevel[v] = -1;
-        triggerVoice(v, audioCtx.currentTime);
+        triggerVoice(v, audioCtx.currentTime + 0.01);
         poly.setAttribute('fill', COLORS[v]);
         showRollIndicator(-1);
     });
@@ -1446,7 +1450,7 @@ document.querySelectorAll('.sample-btn').forEach(btn => {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         selectedSamples[v] = (selectedSamples[v] + 1) % SAMPLE_BANKS[v].length;
         document.getElementById(`sample-name-${v}`).textContent = SAMPLE_BANKS[v][selectedSamples[v]].name;
-        triggerVoice(v, audioCtx.currentTime);
+        triggerVoice(v, audioCtx.currentTime + 0.01);
         if (v === 3) updateClapRecordUI();
         saveState();
     });
@@ -1886,7 +1890,7 @@ window.addEventListener('keyup', e => {
 function triggerKeyVoice(v) {
     initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    triggerVoice(v, audioCtx.currentTime);
+    triggerVoice(v, audioCtx.currentTime + 0.01);
     const poly = document.getElementById(`pad-poly-${v}`);
     if (poly) {
         poly.setAttribute('fill', COLORS[v]);
