@@ -426,6 +426,78 @@ permalink: /drum-machine/
         }
         #rec-clear-btn:active { color: var(--text); }
 
+        /* ── Undo/Redo buttons ──────────────────────────── */
+        .hist-btn {
+            background: none;
+            border: 1px solid var(--surface3);
+            border-radius: 8px;
+            color: var(--text-dim);
+            font-size: 1rem;
+            line-height: 1;
+            padding: 5px 9px;
+            cursor: pointer;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hist-btn:active { background: var(--surface2); }
+        .hist-btn:disabled { opacity: 0.35; cursor: default; }
+
+        /* ── Pattern slots ──────────────────────────────── */
+        #slot-row {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+            justify-content: center;
+        }
+        .slot-btn {
+            flex: 1;
+            max-width: 64px;
+            background: var(--surface);
+            border: 1.5px solid var(--surface3);
+            border-radius: 8px;
+            color: var(--text-mid);
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            padding: 7px 0;
+            cursor: pointer;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .slot-btn:active { transform: scale(0.96); }
+        .slot-btn.empty { opacity: 0.45; }
+        .slot-btn.active {
+            background: var(--surface3);
+            color: var(--text);
+            border-color: var(--text-mid);
+        }
+
+        /* ── Focus rings ────────────────────────────────── */
+        button:focus-visible,
+        .sample-btn:focus-visible,
+        #tempo-display:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 2px;
+        }
+        .step-node:focus-visible .step-vis,
+        .voice-pad:focus-visible polygon,
+        .effect-btn:focus-visible circle {
+            stroke: #fff;
+            stroke-width: 3;
+        }
+
+        /* ── Screen-reader-only ─────────────────────────── */
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
         /* ── Sync + BPM Detect buttons ──────────────────── */
         #sync-beat-btn {
             background: none;
@@ -515,33 +587,43 @@ permalink: /drum-machine/
     <!-- Header -->
     <div id="header">
         <h1>Drum Machine</h1>
-        <span id="tempo-display">♩ 140 · swing 15%</span>
-        <button id="sync-beat-btn" title="Tap on the downbeat to sync">SYNC</button>
-        <button id="detect-bpm-btn" title="Detect BPM from mic">🎙</button>
-        <span id="beat-dot"></span>
+        <span id="tempo-display" role="button" tabindex="0" aria-label="Tap tempo. Current tempo: 140 BPM, 15 percent swing">♩ 140 · swing 15%</span>
+        <button id="undo-btn" class="hist-btn" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+        <button id="redo-btn" class="hist-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button>
+        <button id="sync-beat-btn" title="Tap on the downbeat to sync" aria-label="Sync to downbeat">SYNC</button>
+        <button id="detect-bpm-btn" title="Detect BPM from mic" aria-label="Detect BPM from microphone">🎙</button>
+        <span id="beat-dot" aria-hidden="true"></span>
+    </div>
+
+    <!-- Pattern slots -->
+    <div id="slot-row" role="group" aria-label="Pattern slots">
+        <button class="slot-btn active" data-slot="A" aria-label="Pattern slot A (active)" aria-pressed="true">A</button>
+        <button class="slot-btn empty" data-slot="B" aria-label="Pattern slot B (empty)" aria-pressed="false">B</button>
+        <button class="slot-btn empty" data-slot="C" aria-label="Pattern slot C (empty)" aria-pressed="false">C</button>
+        <button class="slot-btn empty" data-slot="D" aria-label="Pattern slot D (empty)" aria-pressed="false">D</button>
     </div>
 
     <!-- Sample selectors -->
-    <div id="sample-row">
-        <button class="sample-btn" data-voice="0">
-            <span class="sample-voice">K</span>
+    <div id="sample-row" role="group" aria-label="Voice sample selectors">
+        <button class="sample-btn" data-voice="0" aria-label="Kick sample: KICK, tap to swap">
+            <span class="sample-voice" aria-hidden="true">K</span>
             <span class="sample-name" id="sample-name-0">KICK</span>
-            <span class="sample-hint">tap to swap</span>
+            <span class="sample-hint" aria-hidden="true">tap to swap</span>
         </button>
-        <button class="sample-btn" data-voice="1">
-            <span class="sample-voice">S</span>
+        <button class="sample-btn" data-voice="1" aria-label="Snare sample: SNARE, tap to swap">
+            <span class="sample-voice" aria-hidden="true">S</span>
             <span class="sample-name" id="sample-name-1">SNARE</span>
-            <span class="sample-hint">tap to swap</span>
+            <span class="sample-hint" aria-hidden="true">tap to swap</span>
         </button>
-        <button class="sample-btn" data-voice="2">
-            <span class="sample-voice">H</span>
+        <button class="sample-btn" data-voice="2" aria-label="Hi-hat sample: CHH, tap to swap">
+            <span class="sample-voice" aria-hidden="true">H</span>
             <span class="sample-name" id="sample-name-2">CHH</span>
-            <span class="sample-hint">tap to swap</span>
+            <span class="sample-hint" aria-hidden="true">tap to swap</span>
         </button>
-        <button class="sample-btn" data-voice="3">
-            <span class="sample-voice">C</span>
+        <button class="sample-btn" data-voice="3" aria-label="Clap sample: CLAP, tap to swap">
+            <span class="sample-voice" aria-hidden="true">C</span>
             <span class="sample-name" id="sample-name-3">CLAP</span>
-            <span class="sample-hint">tap to swap</span>
+            <span class="sample-hint" aria-hidden="true">tap to swap</span>
         </button>
     </div>
 
@@ -562,17 +644,7 @@ permalink: /drum-machine/
             </defs>
 
             <!-- Ring track -->
-            <ellipse cx="260" cy="220" rx="220" ry="185" fill="none" stroke="#181818" stroke-width="24"/>
-
-            <!-- Voice arc backgrounds (centered on clusters) -->
-            <!-- Kick  top -->
-            <path d="M 120 70 A 220 185 0 0 1 400 70" fill="none" stroke="rgba(255,71,87,0.08)" stroke-width="24"/>
-            <!-- Snare right -->
-            <path d="M 440 120 A 220 185 0 0 1 440 320" fill="none" stroke="rgba(255,165,2,0.08)" stroke-width="24"/>
-            <!-- HiHat bottom -->
-            <path d="M 400 370 A 220 185 0 0 1 120 370" fill="none" stroke="rgba(46,213,115,0.08)" stroke-width="24"/>
-            <!-- Clap  left -->
-            <path d="M 80 320 A 220 185 0 0 1 80 120" fill="none" stroke="rgba(162,155,254,0.08)" stroke-width="24"/>
+            <ellipse cx="260" cy="220" rx="240" ry="200" fill="none" stroke="#181818" stroke-width="24"/>
 
             <!-- Step nodes — built by JS -->
             <g id="steps-group"></g>
@@ -587,49 +659,49 @@ permalink: /drum-machine/
             <text x="195" y="221" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="800" letter-spacing="0.1em" fill="rgba(162,155,254,0.4)">CLAP</text>
 
             <!-- ── Voice pads ── -->
-            <g class="voice-pad" data-voice="0">
+            <g class="voice-pad" data-voice="0" role="button" tabindex="0" aria-label="Kick voice pad, hold to roll">
                 <circle cx="260" cy="95" r="32" fill="transparent"/>
                 <polygon points="260,78 278,95 260,112 242,95" fill="rgba(255,71,87,0.18)" stroke="#FF4757" stroke-width="1.5" id="pad-poly-0"/>
                 <text x="260" y="96" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="900" fill="#FF4757" pointer-events="none">K</text>
             </g>
-            <g class="voice-pad" data-voice="1">
+            <g class="voice-pad" data-voice="1" role="button" tabindex="0" aria-label="Snare voice pad, hold to roll">
                 <circle cx="395" cy="220" r="32" fill="transparent"/>
                 <polygon points="395,203 413,220 395,237 377,220" fill="rgba(255,165,2,0.18)" stroke="#FFA502" stroke-width="1.5" id="pad-poly-1"/>
                 <text x="395" y="221" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="900" fill="#FFA502" pointer-events="none">S</text>
             </g>
-            <g class="voice-pad" data-voice="2">
+            <g class="voice-pad" data-voice="2" role="button" tabindex="0" aria-label="Hi-hat voice pad, hold to roll">
                 <circle cx="260" cy="345" r="32" fill="transparent"/>
                 <polygon points="260,328 278,345 260,362 242,345" fill="rgba(46,213,115,0.18)" stroke="#2ED573" stroke-width="1.5" id="pad-poly-2"/>
                 <text x="260" y="346" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="900" fill="#2ED573" pointer-events="none">H</text>
             </g>
-            <g class="voice-pad" data-voice="3">
+            <g class="voice-pad" data-voice="3" role="button" tabindex="0" aria-label="Clap voice pad, hold to roll">
                 <circle cx="125" cy="220" r="32" fill="transparent"/>
                 <polygon points="125,203 143,220 125,237 107,220" fill="rgba(162,155,254,0.18)" stroke="#A29BFE" stroke-width="1.5" id="pad-poly-3"/>
                 <text x="125" y="221" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="900" fill="#A29BFE" pointer-events="none">C</text>
             </g>
 
             <!-- ── Effect buttons ── -->
-            <g class="effect-btn" data-fx="repeat">
+            <g class="effect-btn" data-fx="repeat" role="button" tabindex="0" aria-label="Repeat effect, hold to activate" aria-pressed="false">
                 <circle cx="330" cy="155" r="26" fill="rgba(255,71,87,0.1)" stroke="#FF4757" stroke-width="1.5" id="fx-c-repeat"/>
                 <text x="330" y="156" text-anchor="middle" dominant-baseline="middle" font-size="7" font-weight="800" fill="#FF4757" pointer-events="none">REPEAT</text>
             </g>
-            <g class="effect-btn" data-fx="random">
+            <g class="effect-btn" data-fx="random" role="button" tabindex="0" aria-label="Random effect, hold to activate" aria-pressed="false">
                 <circle cx="330" cy="285" r="26" fill="rgba(255,165,2,0.1)" stroke="#FFA502" stroke-width="1.5" id="fx-c-random"/>
                 <text x="330" y="286" text-anchor="middle" dominant-baseline="middle" font-size="7" font-weight="800" fill="#FFA502" pointer-events="none">RANDOM</text>
             </g>
-            <g class="effect-btn" data-fx="filter">
+            <g class="effect-btn" data-fx="filter" role="button" tabindex="0" aria-label="Filter effect, hold and drag to sweep" aria-pressed="false">
                 <circle cx="190" cy="285" r="26" fill="rgba(46,213,115,0.1)" stroke="#2ED573" stroke-width="1.5" id="fx-c-filter"/>
                 <text x="190" y="286" text-anchor="middle" dominant-baseline="middle" font-size="7" font-weight="800" fill="#2ED573" pointer-events="none">FILTER</text>
             </g>
-            <g class="effect-btn" data-fx="distortion">
+            <g class="effect-btn" data-fx="distortion" role="button" tabindex="0" aria-label="Distortion effect, hold to activate" aria-pressed="false">
                 <circle cx="190" cy="155" r="26" fill="rgba(91,138,255,0.1)" stroke="#5B8AFF" stroke-width="1.5" id="fx-c-distortion"/>
                 <text x="190" y="156" text-anchor="middle" dominant-baseline="middle" font-size="7" font-weight="800" fill="#5B8AFF" pointer-events="none">DISTORT</text>
             </g>
 
             <!-- Center play button -->
             <circle cx="260" cy="220" r="32" fill="#141414" stroke="#252525" stroke-width="1.5" id="play-bg"/>
-            <text id="play-icon" x="260" y="221" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="#f0f0f0" style="cursor:pointer">▶</text>
-            <circle cx="260" cy="220" r="32" fill="transparent" id="play-hit" style="cursor:pointer"/>
+            <text id="play-icon" x="260" y="221" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="#f0f0f0" style="cursor:pointer" aria-hidden="true">▶</text>
+            <circle cx="260" cy="220" r="32" fill="transparent" id="play-hit" style="cursor:pointer" role="button" tabindex="0" aria-label="Play or stop"/>
 
             <!-- DATO badge -->
             <text x="260" y="241" text-anchor="middle" font-size="5.5" fill="#282828" font-weight="900" letter-spacing="0.22em" font-family="monospace">DATO</text>
@@ -699,6 +771,8 @@ permalink: /drum-machine/
 
 <div id="fx-toast">Hold effect buttons to activate</div>
 
+<div id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
 <div id="update-banner">
     <span>Update available</span>
     <button id="update-btn">Reload</button>
@@ -712,7 +786,7 @@ permalink: /drum-machine/
 const STEPS   = 8;
 const VOICES  = 4;
 const CX = 260, CY = 220;
-const RING_RX = 220, RING_RY = 185;
+const RING_RX = 240, RING_RY = 200;
 const COLORS      = ['#FF4757', '#FFA502', '#2ED573', '#A29BFE'];
 const COLORS_DIM  = ['rgba(255,71,87,0.15)','rgba(255,165,2,0.15)',
                      'rgba(46,213,115,0.15)','rgba(162,155,254,0.15)'];
@@ -722,7 +796,7 @@ const FX_ACTIVE   = { repeat:'rgba(255,71,87,0.55)',    filter:'rgba(46,213,115,
                        random:'rgba(255,165,2,0.55)',    distortion:'rgba(91,138,255,0.55)' };
 const FX_DIM      = { repeat:'rgba(255,71,87,0.1)',      filter:'rgba(46,213,115,0.1)',
                        random:'rgba(255,165,2,0.1)',      distortion:'rgba(91,138,255,0.1)' };
-const NODE_R      = 16;
+const NODE_R      = 13;
 const LOOKAHEAD   = 25.0;   // ms
 const SCHED_AHEAD = 0.1;    // s
 const FILTER_LEVELS = [
@@ -738,7 +812,7 @@ const FILTER_LEVELS = [
 ];
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let grid           = Array.from({length: VOICES}, () => Array(STEPS).fill(false));
+let grid           = Array.from({length: VOICES}, () => Array(STEPS).fill(0));
 let pitches        = [0, 0, 0, 0];
 let selectedSamples = [0, 0, 0, 0];
 let bpm            = 140;
@@ -763,10 +837,216 @@ let recordChunks        = [];
 let recCountdownTimer   = null;
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
+const SLOT_NAMES = ['A', 'B', 'C', 'D'];
+let activeSlot = 'A';
+let slotData = { A: null, B: null, C: null, D: null };
+
+function captureSlotState() {
+    return {
+        grid: cloneGrid(grid),
+        bpm, swing,
+        pitches: pitches.slice(),
+        selectedSamples: selectedSamples.slice()
+    };
+}
+
 function saveState() {
     try {
-        localStorage.setItem('dm_state', JSON.stringify({ grid, bpm, swing, pitches, selectedSamples }));
+        slotData[activeSlot] = captureSlotState();
+        localStorage.setItem('dm_slots', JSON.stringify({ active: activeSlot, slots: slotData }));
     } catch(e) {}
+}
+
+function migrateLegacyState() {
+    // New format: dm_slots. Legacy: dm_state. Migrate if needed.
+    const slotsRaw = localStorage.getItem('dm_slots');
+    if (slotsRaw) {
+        try {
+            const parsed = JSON.parse(slotsRaw);
+            if (parsed && parsed.slots) {
+                slotData = Object.assign({ A: null, B: null, C: null, D: null }, parsed.slots);
+                activeSlot = SLOT_NAMES.includes(parsed.active) ? parsed.active : 'A';
+                return slotData[activeSlot];
+            }
+        } catch(e) {}
+    }
+    const legacyRaw = localStorage.getItem('dm_state');
+    if (legacyRaw) {
+        try {
+            const legacy = JSON.parse(legacyRaw);
+            if (legacy && legacy.grid) {
+                legacy.grid = legacy.grid.map(row => row.map(c => typeof c === 'boolean' ? (c ? 1 : 0) : (c | 0)));
+                slotData.A = legacy;
+                activeSlot = 'A';
+                try { localStorage.removeItem('dm_state'); } catch(e) {}
+                return legacy;
+            }
+        } catch(e) {}
+    }
+    return null;
+}
+
+function applySlotState(s) {
+    if (s.grid)            grid = s.grid.map(row => row.map(c => typeof c === 'boolean' ? (c ? 1 : 0) : (c | 0)));
+    if (s.bpm != null)     { bpm = s.bpm; bpmSlider.value = bpm; bpmValueEl.textContent = bpm; }
+    if (s.swing != null)   { swing = s.swing; swingSlider.value = Math.round(swing * 100); swingValueEl.textContent = Math.round(swing * 100) + '%'; }
+    if (s.pitches)         { pitches = s.pitches.slice(); document.querySelectorAll('.pitch-slider').forEach(el => { el.value = pitches[+el.dataset.voice]; }); }
+    if (s.selectedSamples) {
+        selectedSamples = s.selectedSamples.slice();
+        const voiceLabels = ['Kick', 'Snare', 'Hi-hat', 'Clap'];
+        selectedSamples.forEach((idx, v) => {
+            const name = SAMPLE_BANKS[v][idx].name;
+            document.getElementById(`sample-name-${v}`).textContent = name;
+            const sBtn = document.querySelector(`.sample-btn[data-voice="${v}"]`);
+            if (sBtn) sBtn.setAttribute('aria-label', `${voiceLabels[v]} sample: ${name}, tap to swap`);
+        });
+    }
+    updateTempoDisplay();
+    renderSteps();
+    updateClapRecordUI();
+}
+
+function switchSlot(name) {
+    if (!SLOT_NAMES.includes(name) || name === activeSlot) return;
+    // Auto-save current slot before switch
+    slotData[activeSlot] = captureSlotState();
+    const target = slotData[name];
+    activeSlot = name;
+    if (target) {
+        applySlotState(target);
+    } else {
+        // Empty slot — keep current state, mark as newly populated
+        slotData[name] = captureSlotState();
+    }
+    try { localStorage.setItem('dm_slots', JSON.stringify({ active: activeSlot, slots: slotData })); } catch(e) {}
+    renderSlotButtons();
+    pushHistory();
+    announce(`Switched to slot ${name}`);
+}
+
+function clearSlot(name) {
+    if (!SLOT_NAMES.includes(name)) return;
+    slotData[name] = null;
+    if (name === activeSlot) {
+        grid = Array.from({length: VOICES}, () => Array(STEPS).fill(0));
+        loadDefault();
+        bpmSlider.value = bpm;
+        bpmValueEl.textContent = bpm;
+        swingSlider.value = Math.round(swing * 100);
+        swingValueEl.textContent = Math.round(swing * 100) + '%';
+        updateTempoDisplay();
+        renderSteps();
+        slotData[name] = captureSlotState();
+        pushHistory();
+    }
+    try { localStorage.setItem('dm_slots', JSON.stringify({ active: activeSlot, slots: slotData })); } catch(e) {}
+    renderSlotButtons();
+    announce(`Slot ${name} cleared`);
+    showToast(`Slot ${name} cleared`);
+}
+
+function renderSlotButtons() {
+    document.querySelectorAll('.slot-btn').forEach(btn => {
+        const n = btn.dataset.slot;
+        const isActive = n === activeSlot;
+        const isEmpty  = !slotData[n];
+        btn.classList.toggle('active', isActive);
+        btn.classList.toggle('empty', isEmpty && !isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        btn.setAttribute('aria-label',
+            `Pattern slot ${n}${isActive ? ' (active)' : isEmpty ? ' (empty)' : ''}`);
+    });
+}
+
+function showToast(msg) {
+    const t = document.getElementById('fx-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.remove('show');
+    void t.offsetWidth;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ─── Undo/Redo history ────────────────────────────────────────────────────────
+const HISTORY_MAX = 50;
+let history = [];
+let historyIdx = -1;
+let dragHistoryPending = false;
+
+function cloneGrid(g) { return g.map(row => row.slice()); }
+
+function pushHistory() {
+    if (historyIdx < history.length - 1) history.length = historyIdx + 1;
+    history.push(cloneGrid(grid));
+    if (history.length > HISTORY_MAX) history.shift();
+    historyIdx = history.length - 1;
+    updateHistoryButtons();
+}
+
+function pushHistoryDebounced() {
+    if (dragHistoryPending) return; // flushed on pointerup
+    pushHistory();
+}
+
+function beginDragHistory() { dragHistoryPending = true; }
+function flushDragHistory() {
+    if (!dragHistoryPending) return;
+    dragHistoryPending = false;
+    const top = history[historyIdx];
+    if (top && gridsEqual(top, grid)) return; // no-op drag
+    pushHistory();
+}
+
+function gridsEqual(a, b) {
+    for (let v = 0; v < a.length; v++)
+        for (let s = 0; s < a[v].length; s++)
+            if (a[v][s] !== b[v][s]) return false;
+    return true;
+}
+
+function undo() {
+    if (historyIdx <= 0) return;
+    historyIdx--;
+    grid = cloneGrid(history[historyIdx]);
+    renderSteps();
+    saveState();
+    updateHistoryButtons();
+    announce('Undid last change');
+}
+
+function redo() {
+    if (historyIdx >= history.length - 1) return;
+    historyIdx++;
+    grid = cloneGrid(history[historyIdx]);
+    renderSteps();
+    saveState();
+    updateHistoryButtons();
+    announce('Redid change');
+}
+
+function updateHistoryButtons() {
+    const u = document.getElementById('undo-btn');
+    const r = document.getElementById('redo-btn');
+    if (u) u.disabled = historyIdx <= 0;
+    if (r) r.disabled = historyIdx >= history.length - 1;
+}
+
+// ─── Screen-reader announce ───────────────────────────────────────────────────
+let lastAnnounce = 0;
+let announceTimer = null;
+function announce(msg, throttleMs = 0) {
+    const el = document.getElementById('sr-live');
+    if (!el) return;
+    const now = Date.now();
+    if (throttleMs && now - lastAnnounce < throttleMs) {
+        clearTimeout(announceTimer);
+        announceTimer = setTimeout(() => announce(msg), throttleMs - (now - lastAnnounce));
+        return;
+    }
+    lastAnnounce = now;
+    el.textContent = '';
+    el.textContent = msg;
 }
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
@@ -806,102 +1086,102 @@ function makeDistCurve(amount) {
 function semitonesToRate(s) { return Math.pow(2, s / 12); }
 
 // ─── Synthesis ────────────────────────────────────────────────────────────────
-function playKick(time, pitch) {
+function playKick(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(150 * r, time);
     osc.frequency.exponentialRampToValueAtTime(0.001, time + 0.5);
     g.gain.setValueAtTime(1.0, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
-    osc.connect(g); g.connect(masterGain); osc.start(time); osc.stop(time + 0.5);
+    osc.connect(g); g.connect(dest); osc.start(time); osc.stop(time + 0.5);
 }
-function play808(time, pitch) {
+function play808(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(80 * r, time);
     osc.frequency.exponentialRampToValueAtTime(20 * r, time + 1.0);
     g.gain.setValueAtTime(1.4, time); g.gain.exponentialRampToValueAtTime(0.001, time + 1.0);
-    osc.connect(g); g.connect(masterGain); osc.start(time); osc.stop(time + 1.0);
+    osc.connect(g); g.connect(dest); osc.start(time); osc.stop(time + 1.0);
 }
-function playPunch(time, pitch) {
+function playPunch(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(240 * r, time);
     osc.frequency.exponentialRampToValueAtTime(40 * r, time + 0.15);
     g.gain.setValueAtTime(1.6, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
-    osc.connect(g); g.connect(masterGain); osc.start(time); osc.stop(time + 0.15);
+    osc.connect(g); g.connect(dest); osc.start(time); osc.stop(time + 0.15);
 }
-function playSub(time, pitch) {
+function playSub(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(55 * r, time);
     osc.frequency.exponentialRampToValueAtTime(18 * r, time + 0.9);
     g.gain.setValueAtTime(1.3, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.9);
-    osc.connect(g); g.connect(masterGain); osc.start(time); osc.stop(time + 0.9);
+    osc.connect(g); g.connect(dest); osc.start(time); osc.stop(time + 0.9);
 }
-function playSnare(time, pitch) {
+function playSnare(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const nb = noiseBuffer(0.2), ns = audioCtx.createBufferSource(); ns.buffer = nb;
     const bpf = audioCtx.createBiquadFilter(); bpf.type = 'bandpass';
     bpf.frequency.value = 1000 * r; bpf.Q.value = 0.5;
     const ng = audioCtx.createGain();
     ng.gain.setValueAtTime(1.0, time); ng.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
-    ns.connect(bpf); bpf.connect(ng); ng.connect(masterGain); ns.start(time); ns.stop(time + 0.2);
+    ns.connect(bpf); bpf.connect(ng); ng.connect(dest); ns.start(time); ns.stop(time + 0.2);
     const osc = audioCtx.createOscillator(); osc.type = 'triangle';
     osc.frequency.value = 185 * r;
     const og = audioCtx.createGain();
     og.gain.setValueAtTime(0.6, time); og.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
-    osc.connect(og); og.connect(masterGain); osc.start(time); osc.stop(time + 0.1);
+    osc.connect(og); og.connect(dest); osc.start(time); osc.stop(time + 0.1);
 }
-function playRim(time, pitch) {
+function playRim(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const nb = noiseBuffer(0.05), src = audioCtx.createBufferSource(); src.buffer = nb;
     const bpf = audioCtx.createBiquadFilter(); bpf.type = 'bandpass';
     bpf.frequency.value = 2800 * r; bpf.Q.value = 3;
     const g = audioCtx.createGain();
     g.gain.setValueAtTime(2.0, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-    src.connect(bpf); bpf.connect(g); g.connect(masterGain); src.start(time); src.stop(time + 0.05);
+    src.connect(bpf); bpf.connect(g); g.connect(dest); src.start(time); src.stop(time + 0.05);
 }
-function playTom(time, pitch) {
+function playTom(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(180 * r, time);
     osc.frequency.exponentialRampToValueAtTime(60 * r, time + 0.35);
     g.gain.setValueAtTime(1.1, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
-    osc.connect(g); g.connect(masterGain); osc.start(time); osc.stop(time + 0.35);
+    osc.connect(g); g.connect(dest); osc.start(time); osc.stop(time + 0.35);
 }
-function playStick(time, pitch) {
+function playStick(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const nb = noiseBuffer(0.018), src = audioCtx.createBufferSource(); src.buffer = nb;
     const hpf = audioCtx.createBiquadFilter(); hpf.type = 'highpass';
     hpf.frequency.value = 4500 * r;
     const g = audioCtx.createGain();
     g.gain.setValueAtTime(2.2, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.018);
-    src.connect(hpf); hpf.connect(g); g.connect(masterGain); src.start(time); src.stop(time + 0.018);
+    src.connect(hpf); hpf.connect(g); g.connect(dest); src.start(time); src.stop(time + 0.018);
 }
-function playClosedHH(time, pitch) {
+function playClosedHH(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const nb = noiseBuffer(0.08), src = audioCtx.createBufferSource(); src.buffer = nb;
     const hpf = audioCtx.createBiquadFilter(); hpf.type = 'highpass';
     hpf.frequency.value = 7000 * r;
     const g = audioCtx.createGain();
     g.gain.setValueAtTime(0.6, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.07);
-    src.connect(hpf); hpf.connect(g); g.connect(masterGain); src.start(time); src.stop(time + 0.08);
+    src.connect(hpf); hpf.connect(g); g.connect(dest); src.start(time); src.stop(time + 0.08);
 }
-function playOpenHH(time, pitch) {
+function playOpenHH(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const nb = noiseBuffer(0.5), src = audioCtx.createBufferSource(); src.buffer = nb;
     const hpf = audioCtx.createBiquadFilter(); hpf.type = 'highpass';
     hpf.frequency.value = 6000 * r;
     const g = audioCtx.createGain();
     g.gain.setValueAtTime(0.45, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.45);
-    src.connect(hpf); hpf.connect(g); g.connect(masterGain); src.start(time); src.stop(time + 0.5);
+    src.connect(hpf); hpf.connect(g); g.connect(dest); src.start(time); src.stop(time + 0.5);
 }
-function playCrash(time, pitch) {
+function playCrash(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     [1, 1.34, 1.78, 2.4, 3.1].forEach((ratio, i) => {
         const nb = noiseBuffer(1.8), src = audioCtx.createBufferSource(); src.buffer = nb;
@@ -910,11 +1190,11 @@ function playCrash(time, pitch) {
         const g = audioCtx.createGain();
         g.gain.setValueAtTime(0.2 / (i + 1), time);
         g.gain.exponentialRampToValueAtTime(0.001, time + 1.8);
-        src.connect(bpf); bpf.connect(g); g.connect(masterGain);
+        src.connect(bpf); bpf.connect(g); g.connect(dest);
         src.start(time); src.stop(time + 1.8);
     });
 }
-function playShaker(time, pitch) {
+function playShaker(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     for (let i = 0; i < 10; i++) {
         const t = time + i * 0.009;
@@ -923,18 +1203,18 @@ function playShaker(time, pitch) {
         hpf.frequency.value = 9000 * r;
         const g = audioCtx.createGain();
         g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.009);
-        src.connect(hpf); hpf.connect(g); g.connect(masterGain);
+        src.connect(hpf); hpf.connect(g); g.connect(dest);
         src.start(t); src.stop(t + 0.009);
     }
 }
-function playClap(time, pitch) {
+function playClap(time, pitch, dest = masterGain) {
     if (recordedClapBuffer) {
         const src = audioCtx.createBufferSource();
         src.buffer = recordedClapBuffer;
         src.playbackRate.value = semitonesToRate(pitch);
         const g = audioCtx.createGain();
         g.gain.setValueAtTime(0.9, time);
-        src.connect(g); g.connect(masterGain);
+        src.connect(g); g.connect(dest);
         src.start(time);
         src.stop(time + recordedClapBuffer.duration + 0.01);
         return;
@@ -948,10 +1228,10 @@ function playClap(time, pitch) {
         const g = audioCtx.createGain();
         g.gain.setValueAtTime(b === 0 ? 0.55 : 0.35, t);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-        src.connect(bpf); bpf.connect(g); g.connect(masterGain); src.start(t); src.stop(t + 0.12);
+        src.connect(bpf); bpf.connect(g); g.connect(dest); src.start(t); src.stop(t + 0.12);
     }
 }
-function playCowbell(time, pitch) {
+function playCowbell(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     [562, 845].forEach(freq => {
         const osc = audioCtx.createOscillator(); osc.type = 'square';
@@ -960,19 +1240,19 @@ function playCowbell(time, pitch) {
         bpf.frequency.value = freq * r; bpf.Q.value = 6;
         const g = audioCtx.createGain();
         g.gain.setValueAtTime(0.35, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
-        osc.connect(bpf); bpf.connect(g); g.connect(masterGain); osc.start(time); osc.stop(time + 0.5);
+        osc.connect(bpf); bpf.connect(g); g.connect(dest); osc.start(time); osc.stop(time + 0.5);
     });
 }
-function playConga(time, pitch) {
+function playConga(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(310 * r, time);
     osc.frequency.exponentialRampToValueAtTime(160 * r, time + 0.2);
     g.gain.setValueAtTime(1.1, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
-    osc.connect(g); g.connect(masterGain); osc.start(time); osc.stop(time + 0.22);
+    osc.connect(g); g.connect(dest); osc.start(time); osc.stop(time + 0.22);
 }
-function playWoodblock(time, pitch) {
+function playWoodblock(time, pitch, dest = masterGain) {
     const r = semitonesToRate(pitch);
     const osc = audioCtx.createOscillator(); osc.type = 'square';
     osc.frequency.value = 820 * r;
@@ -980,7 +1260,7 @@ function playWoodblock(time, pitch) {
     bpf.frequency.value = 820 * r; bpf.Q.value = 10;
     const g = audioCtx.createGain();
     g.gain.setValueAtTime(0.9, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.075);
-    osc.connect(bpf); bpf.connect(g); g.connect(masterGain); osc.start(time); osc.stop(time + 0.075);
+    osc.connect(bpf); bpf.connect(g); g.connect(dest); osc.start(time); osc.stop(time + 0.075);
 }
 
 function noiseBuffer(dur) {
@@ -1003,8 +1283,8 @@ const SAMPLE_BANKS = [
      { name:'CONGA',play:playConga  }, { name:'WOOD', play:playWoodblock }],
 ];
 
-function triggerVoice(voice, time) {
-    SAMPLE_BANKS[voice][selectedSamples[voice]].play(time, pitches[voice]);
+function triggerVoice(voice, time, vel = 1) {
+    SAMPLE_BANKS[voice][selectedSamples[voice]].play(time, pitches[voice], masterGain);
 }
 
 // ─── Sequencer ────────────────────────────────────────────────────────────────
@@ -1030,9 +1310,9 @@ function scheduleStep(step, baseTime) {
             continue;
         }
         const gridStep = fx.repeat ? 0 : step;
-        const fire = fx.random ? (Math.random() > 0.5) : grid[v][gridStep];
-        if (!fire) continue;
-        triggerVoice(v, time);
+        const vel = fx.random ? (Math.random() > 0.5 ? 1 : 0) : grid[v][gridStep];
+        if (!vel) continue;
+        triggerVoice(v, time, vel);
     }
 }
 
@@ -1073,19 +1353,26 @@ function togglePlay() { navigator.vibrate && navigator.vibrate(10); isPlaying ? 
 function updatePlayIcon() {
     document.getElementById('play-icon').textContent = isPlaying ? '■' : '▶';
     document.getElementById('play-bg').style.fill = isPlaying ? '#222' : '#141414';
+    const hit = document.getElementById('play-hit');
+    if (hit) hit.setAttribute('aria-label', isPlaying ? 'Stop playback' : 'Play pattern');
 }
 
 // ─── SVG ──────────────────────────────────────────────────────────────────────
 function stepPos(voice, step) {
     // Voice centers: V0=top(-90°), V1=right(0°), V2=bottom(90°), V3=left(180°)
     const CENTER = [-Math.PI / 2, 0, Math.PI / 2, Math.PI][voice];
-    const angle  = CENTER + (step - 3.5) * (13 * Math.PI / 180); // Increased spacing to 13°
+    const angle  = CENTER + (step - 3.5) * (11 * Math.PI / 180); // Step spacing: 11° per step
     return { x: CX + RING_RX * Math.cos(angle), y: CY + RING_RY * Math.sin(angle) };
 }
 
 let isDraggingSteps = false;
-let dragStepValue = false;
+let dragStepValue = 0;      // 0 (off) or 1 (on)
 let dragTouchedNodes = new Set();
+let longPressTimer = null;
+
+function cancelLongPress() {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+}
 
 function buildStepsSVG() {
     const g = document.getElementById('steps-group');
@@ -1102,13 +1389,19 @@ function buildStepsSVG() {
     window.addEventListener('pointerup', () => {
         isDraggingSteps = false;
         dragTouchedNodes.clear();
+        cancelLongPress();
+        flushDragHistory();
     });
 
+    const VOICE_NAMES = ['Kick', 'Snare', 'Hi-hat', 'Clap'];
     for (let v = 0; v < VOICES; v++) {
         for (let s = 0; s < STEPS; s++) {
             const pos   = stepPos(v, s);
             const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             group.setAttribute('class', 'step-node');
+            group.setAttribute('role', 'button');
+            group.setAttribute('aria-label', `${VOICE_NAMES[v]} step ${s + 1}`);
+            group.setAttribute('aria-pressed', 'false');
             group.dataset.voice = v;
             group.dataset.step  = s;
 
@@ -1123,7 +1416,7 @@ function buildStepsSVG() {
             const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             hit.setAttribute('cx', pos.x);
             hit.setAttribute('cy', pos.y);
-            hit.setAttribute('r', 26);
+            hit.setAttribute('r', 22);
             hit.setAttribute('fill', 'transparent');
 
             group.appendChild(hit);
@@ -1132,17 +1425,25 @@ function buildStepsSVG() {
 
             const handleToggle = (e) => {
                 if (e.type === 'pointerdown') {
-                    dragStepValue = !grid[v][s];
-                    toggleStep(v, s, dragStepValue);
+                    beginDragHistory();
+                    toggleStep(v, s, { skipHistory: true });
+                    dragStepValue = grid[v][s] > 0 ? 1 : 0;
                     dragTouchedNodes.add(`${v}-${s}`);
                 } else if (isDraggingSteps && !dragTouchedNodes.has(`${v}-${s}`)) {
-                    toggleStep(v, s, dragStepValue);
+                    toggleStep(v, s, { forceValue: dragStepValue, skipHistory: true });
                     dragTouchedNodes.add(`${v}-${s}`);
                 }
             };
 
             group.addEventListener('pointerdown', handleToggle);
             group.addEventListener('pointerenter', handleToggle);
+
+            group.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleStep(v, s);
+                }
+            });
         }
     }
 }
@@ -1154,11 +1455,13 @@ function renderSteps() {
         const v = +node.dataset.voice;
         const s = +node.dataset.step;
         const c = node.querySelector('.step-vis');
-        const active  = grid[v][s];
+        const on = grid[v][s] > 0;
         const playing = s === visualStep;
 
-        c.setAttribute('fill', active ? COLORS[v] : COLORS_DIM[v]);
-        c.setAttribute('opacity', active ? '1' : '0.6');
+        c.setAttribute('fill', on ? COLORS[v] : COLORS_DIM[v]);
+        c.setAttribute('opacity', on ? '1' : '0.6');
+
+        node.setAttribute('aria-pressed', on ? 'true' : 'false');
 
         if (playing) {
             c.setAttribute('r', NODE_R + 3);
@@ -1167,7 +1470,7 @@ function renderSteps() {
             c.setAttribute('stroke-width', '2');
         } else {
             c.setAttribute('r', NODE_R);
-            c.setAttribute('filter', active ? `drop-shadow(0 0 6px ${COLORS[v]})` : 'none');
+            c.setAttribute('filter', on ? `drop-shadow(0 0 6px ${COLORS[v]})` : 'none');
             c.setAttribute('stroke', 'none');
         }
     });
@@ -1203,20 +1506,19 @@ function animLoop() {
 }
 
 // ─── Step toggle ──────────────────────────────────────────────────────────────
-function toggleStep(voice, step, forceValue = null) {
+function toggleStep(voice, step, opts = {}) {
     initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    const newValue = (forceValue !== null) ? forceValue : !grid[voice][step];
-    if (grid[voice][step] === newValue) return;
+    const current = grid[voice][step];
+    let newValue;
+    if (opts.forceValue !== undefined) newValue = opts.forceValue;
+    else                               newValue = (current + 1) % 2;
+    if (current === newValue) return;
     grid[voice][step] = newValue;
-
-    if (grid[voice][step]) {
-        navigator.vibrate && navigator.vibrate(12);
-    } else {
-        navigator.vibrate && navigator.vibrate(5);
-    }
+    navigator.vibrate && navigator.vibrate(newValue === 1 ? 12 : 5);
     renderSteps();
     saveState();
+    if (!opts.skipHistory) pushHistoryDebounced();
 }
 
 // ─── Effects ──────────────────────────────────────────────────────────────────
@@ -1295,6 +1597,13 @@ document.querySelectorAll('.voice-pad').forEach(pad => {
     pad.addEventListener('pointerup', stopRoll);
     pad.addEventListener('pointercancel', stopRoll);
     pad.addEventListener('pointerleave', stopRoll);
+
+    pad.addEventListener('keydown', e => {
+        if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
+            e.preventDefault();
+            triggerKeyVoice(v);
+        }
+    });
 });
 
 // ─── Effect buttons ───────────────────────────────────────────────────────────
@@ -1336,6 +1645,7 @@ document.querySelectorAll('.effect-btn').forEach(btn => {
         circle.setAttribute('fill', FX_ACTIVE[name]);
         circle.setAttribute('stroke-width', '2.5');
         btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
         applyEffect(name, true);
     }
     function handleMove(e) {
@@ -1373,6 +1683,7 @@ document.querySelectorAll('.effect-btn').forEach(btn => {
         circle.setAttribute('fill', FX_DIM[name]);
         circle.setAttribute('stroke-width', '1.5');
         btn.classList.remove('active');
+        btn.setAttribute('aria-pressed', 'false');
         applyEffect(name, false);
         if (!fxToastShown && holdDuration < 300) {
             fxToastShown = true;
@@ -1389,11 +1700,28 @@ document.querySelectorAll('.effect-btn').forEach(btn => {
     btn.addEventListener('pointerup',   deactivate);
     btn.addEventListener('pointerleave',deactivate);
     btn.addEventListener('pointercancel', deactivate);
+
+    // Keyboard: hold-to-activate via keydown/keyup on focused FX button
+    btn.addEventListener('keydown', e => {
+        if ((e.key === 'Enter' || e.key === ' ') && !e.repeat && !fx[name]) {
+            e.preventDefault();
+            activate({ preventDefault: () => {}, pointerId: -1, clientY: 0 });
+        }
+    });
+    btn.addEventListener('keyup', e => {
+        if ((e.key === 'Enter' || e.key === ' ') && fx[name]) {
+            e.preventDefault();
+            deactivate();
+        }
+    });
 });
 
 // ─── Controls wiring ──────────────────────────────────────────────────────────
 document.getElementById('play-hit').addEventListener('click', togglePlay);
 document.getElementById('play-icon').addEventListener('click', togglePlay);
+document.getElementById('play-hit').addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePlay(); }
+});
 
 const bpmSlider    = document.getElementById('bpm-slider');
 const bpmValueEl   = document.getElementById('bpm-value');
@@ -1401,6 +1729,9 @@ const tempoDisplay = document.getElementById('tempo-display');
 
 function updateTempoDisplay() {
     tempoDisplay.textContent = `♩ ${bpm} · swing ${Math.round(swing * 100)}%`;
+    tempoDisplay.setAttribute('aria-label',
+        `Tap tempo. Current tempo: ${bpm} BPM, ${Math.round(swing * 100)} percent swing`);
+    announce(`${bpm} BPM`, 300);
 }
 
 bpmSlider.addEventListener('input', () => {
@@ -1445,11 +1776,44 @@ document.querySelectorAll('.sample-btn').forEach(btn => {
         initAudio();
         if (audioCtx.state === 'suspended') audioCtx.resume();
         selectedSamples[v] = (selectedSamples[v] + 1) % SAMPLE_BANKS[v].length;
-        document.getElementById(`sample-name-${v}`).textContent = SAMPLE_BANKS[v][selectedSamples[v]].name;
+        const newName = SAMPLE_BANKS[v][selectedSamples[v]].name;
+        document.getElementById(`sample-name-${v}`).textContent = newName;
+        const voiceLabel = ['Kick', 'Snare', 'Hi-hat', 'Clap'][v];
+        btn.setAttribute('aria-label', `${voiceLabel} sample: ${newName}, tap to swap`);
         triggerVoice(v, audioCtx.currentTime);
         if (v === 3) updateClapRecordUI();
         saveState();
+        announce(`${voiceLabel}: ${newName}`);
     });
+});
+
+// ─── Undo/Redo wiring ─────────────────────────────────────────────────────────
+document.getElementById('undo-btn').addEventListener('click', undo);
+document.getElementById('redo-btn').addEventListener('click', redo);
+
+// ─── Slot wiring ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.slot-btn').forEach(btn => {
+    const name = btn.dataset.slot;
+    let longPressTimer = null;
+    let longPressFired = false;
+
+    btn.addEventListener('pointerdown', e => {
+        longPressFired = false;
+        clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(() => {
+            longPressFired = true;
+            clearSlot(name);
+            navigator.vibrate && navigator.vibrate([20, 40, 20]);
+        }, 600);
+    });
+    const cancelLP = () => { clearTimeout(longPressTimer); longPressTimer = null; };
+    btn.addEventListener('pointerup', e => {
+        cancelLP();
+        if (longPressFired) { longPressFired = false; return; }
+        switchSlot(name);
+    });
+    btn.addEventListener('pointercancel', cancelLP);
+    btn.addEventListener('pointerleave', cancelLP);
 });
 
 // ─── Tap tempo ────────────────────────────────────────────────────────────────
@@ -1558,14 +1922,10 @@ recClearBtn.addEventListener('click', () => {
 // ─── Default pattern ──────────────────────────────────────────────────────────
 function loadDefault() {
     bpm = 140; swing = 0.15;
-    // Kick: beat 1, syncopated "a" of beat 1, beat 2
-    grid[0][0] = true; grid[0][3] = true; grid[0][4] = true;
-    // Snare: half-time on beat 2 only (punchy, trap feel)
-    grid[1][4] = true;
-    // HiHat: all 16ths — dense trap hat roll
-    grid[2].fill(true);
-    // Clap: layers with snare on beat 2, ghost clap on "and" of beat 2
-    grid[3][4] = true; grid[3][6] = true;
+    grid[0][0] = 1; grid[0][3] = 1; grid[0][4] = 1;
+    grid[1][4] = 1;
+    grid[2].fill(1);
+    grid[3][4] = 1; grid[3][6] = 1;
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -1573,20 +1933,23 @@ buildStepsSVG();
 
 (function loadState() {
     try {
-        const s = JSON.parse(localStorage.getItem('dm_state') || 'null');
-        if (!s) { loadDefault(); return; }
-        if (s.grid)            grid = s.grid;
-        if (s.bpm != null)     { bpm = s.bpm; bpmSlider.value = bpm; bpmValueEl.textContent = bpm; }
-        if (s.swing != null)   { swing = s.swing; swingSlider.value = Math.round(swing * 100); swingValueEl.textContent = Math.round(swing * 100) + '%'; }
-        if (s.pitches)         { pitches = s.pitches; document.querySelectorAll('.pitch-slider').forEach(el => { el.value = pitches[+el.dataset.voice]; }); }
-        if (s.selectedSamples) { selectedSamples = s.selectedSamples; selectedSamples.forEach((idx, v) => { document.getElementById(`sample-name-${v}`).textContent = SAMPLE_BANKS[v][idx].name; }); }
-        updateTempoDisplay();
-    } catch(e) { loadDefault(); }
+        const state = migrateLegacyState();
+        if (state) {
+            applySlotState(state);
+        } else {
+            loadDefault();
+            updateTempoDisplay();
+            slotData[activeSlot] = captureSlotState();
+            try { localStorage.setItem('dm_slots', JSON.stringify({ active: activeSlot, slots: slotData })); } catch(e) {}
+        }
+    } catch(e) { loadDefault(); updateTempoDisplay(); }
+    renderSlotButtons();
 })();
 
 renderSteps();
 animLoop();
 updateClapRecordUI();
+pushHistory();  // baseline entry so first undo no-ops cleanly
 
 // ─── BPM Detector ────────────────────────────────────────────────────────────
 const BPMDetector = (() => {
@@ -1825,7 +2188,7 @@ document.getElementById('sync-beat-btn').addEventListener('click', () => {
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2604161445';
+    const SW_VERSION = '2604181530';
     navigator.serviceWorker.register(
         `/drum-machine/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
         { scope: '/drum-machine/' }
@@ -1852,8 +2215,22 @@ if ('serviceWorker' in navigator) {
 
 // ─── Keyboard Support ─────────────────────────────────────────────────────────
 window.addEventListener('keydown', e => {
-    if (e.repeat) return;
+    if (e.target.matches('input, textarea, [contenteditable]')) return;
     const key = e.key.toLowerCase();
+
+    // Undo / Redo (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y)
+    if ((e.metaKey || e.ctrlKey) && key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+        return;
+    }
+    if ((e.metaKey || e.ctrlKey) && key === 'y') {
+        e.preventDefault();
+        redo();
+        return;
+    }
+
+    if (e.repeat) return;
 
     // Play/Stop
     if (key === ' ') { e.preventDefault(); togglePlay(); }
