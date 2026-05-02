@@ -34,7 +34,7 @@ permalink: /auto-runner/
   <canvas id="canvas"></canvas>
 
   <script>
-    const SW_VERSION = '2604131346';
+    const SW_VERSION = '2604191341';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function askUpdate(reg) {
@@ -110,9 +110,9 @@ permalink: /auto-runner/
     function makePlayers() {
       return [
         { x: 120, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[0], dead: false },
+          rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null },
         { x: 168, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[1], dead: false },
+          rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null },
       ];
     }
 
@@ -140,7 +140,7 @@ permalink: /auto-runner/
       nextObstacleGap = 320;
       players.forEach(p => {
         p.y = FLOOR_Y - P_SIZE; p.vy = 0;
-        p.grounded = true; p.rot = 0; p.dead = false;
+        p.grounded = true; p.rot = 0; p.dead = false; p.onPlatform = null;
       });
     }
 
@@ -159,6 +159,7 @@ permalink: /auto-runner/
       if (!p.dead && p.grounded) {
         p.vy = JUMP_V;
         p.grounded = false;
+        p.onPlatform = null;
       }
     }
 
@@ -168,14 +169,22 @@ permalink: /auto-runner/
     function spawnObstacle() {
       const roll = Math.random();
       let type;
-      if (roll < 0.30)      type = 'block1';
-      else if (roll < 0.55) type = 'block2';
-      else if (roll < 0.75) type = 'spike1';
-      else                  type = 'spike2';
+      if (frame > 200 && roll < 0.22)    type = 'platform';
+      else if (roll < 0.30)              type = 'block1';
+      else if (roll < 0.55)              type = 'block2';
+      else if (roll < 0.75)              type = 'spike1';
+      else                               type = 'spike2';
 
-      const wide  = (type === 'block2' || type === 'spike2') ? T * 2 : T;
-      const spike = type === 'spike1' || type === 'spike2';
-      obstacles.push({ x: GW + 10, w: wide, h: T, spike });
+      let wide, spike = false, platform = false, h = T;
+      if (type === 'platform') {
+        wide = T * 2 + (Math.random() < 0.5 ? T : 0); // 64 or 96px wide
+        h = 50;
+        platform = true;
+      } else {
+        wide  = (type === 'block2' || type === 'spike2') ? T * 2 : T;
+        spike = type === 'spike1' || type === 'spike2';
+      }
+      obstacles.push({ x: GW + 10, w: wide, h, spike, platform });
     }
 
     // ── AABB collision with slight shrink ─────────────────────
@@ -247,20 +256,54 @@ permalink: /auto-runner/
         p.y  += p.vy;
         p.bob = 0;
 
+        // Floor snap
         if (p.y >= FLOOR_Y - P_SIZE) {
           p.y = FLOOR_Y - P_SIZE;
           p.vy = 0;
           p.grounded = true;
-          // Snap rotation
+          p.onPlatform = null;
+        } else {
+          p.grounded = false;
+        }
+
+        // Platform support — keeps player riding a platform they landed on
+        if (p.onPlatform) {
+          const o = p.onPlatform;
+          if (p.x + P_SIZE > o.x && p.x < o.x + o.w && p.vy >= 0) {
+            p.y = FLOOR_Y - o.h - P_SIZE;
+            p.vy = 0;
+            p.grounded = true;
+          } else {
+            p.onPlatform = null;
+          }
+        }
+
+        // Check if player lands on a platform (only while falling)
+        if (!p.grounded && p.vy > 0) {
+          for (const o of obstacles) {
+            if (!o.platform) continue;
+            const topY = FLOOR_Y - o.h;
+            if (p.x + P_SIZE > o.x && p.x < o.x + o.w && p.y + P_SIZE >= topY) {
+              p.y = topY - P_SIZE;
+              p.vy = 0;
+              p.grounded = true;
+              p.onPlatform = o;
+              break;
+            }
+          }
+        }
+
+        // Rotation
+        if (p.grounded) {
           p.rot *= 0.7;
           if (Math.abs(p.rot) < 0.05) p.rot = 0;
         } else {
-          p.grounded = false;
           p.rot -= 0.12; // spin while airborne
         }
 
-        // Collision check
+        // Collision check (skip the platform the player is currently riding)
         for (const o of obstacles) {
+          if (o === p.onPlatform) continue;
           if (collides(p, o)) {
             gameOver();
             return;
@@ -342,7 +385,44 @@ permalink: /auto-runner/
       ctx.restore();
     }
 
+    function drawPlatform(o) {
+      const topY = FLOOR_Y - o.h;
+
+      // Glow
+      ctx.shadowColor = 'rgba(255,210,60,0.8)';
+      ctx.shadowBlur = 14;
+
+      // Bright top cap
+      ctx.fillStyle = '#ffe066';
+      ctx.fillRect(o.x, topY, o.w, 6);
+
+      // Body upper half
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#c8962a';
+      ctx.fillRect(o.x, topY + 6, o.w, o.h * 0.45);
+
+      // Darker lower half
+      ctx.fillStyle = '#a07020';
+      ctx.fillRect(o.x, topY + o.h * 0.5, o.w, o.h * 0.5);
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(60,30,0,0.3)';
+      ctx.lineWidth = 1;
+      for (let gx = o.x + T; gx < o.x + o.w; gx += T) {
+        ctx.beginPath(); ctx.moveTo(gx, topY); ctx.lineTo(gx, FLOOR_Y); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(o.x, topY + o.h * 0.5); ctx.lineTo(o.x + o.w, topY + o.h * 0.5); ctx.stroke();
+
+      // Arrow hint above platform
+      ctx.fillStyle = 'rgba(255,230,80,0.9)';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('↑  ↑', o.x + o.w / 2, topY - 6);
+      ctx.textAlign = 'left';
+    }
+
     function drawObstacle(o) {
+      if (o.platform) { drawPlatform(o); return; }
       const oy = FLOOR_Y - o.h;
       ctx.shadowColor = 'rgba(255,255,255,0.6)';
       ctx.shadowBlur = 10;
