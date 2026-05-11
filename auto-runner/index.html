@@ -34,7 +34,7 @@ permalink: /auto-runner/
   <canvas id="canvas"></canvas>
 
   <script>
-    const SW_VERSION = '2605020540';
+    const SW_VERSION = '2605110001';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function askUpdate(reg) {
@@ -168,27 +168,55 @@ permalink: /auto-runner/
 
     function spawnObstacle() {
       const roll = Math.random();
-      let type;
-      if (frame > 200 && roll < 0.22)    type = 'platform';
-      else if (roll < 0.30)              type = 'block1';
-      else if (roll < 0.55)              type = 'block2';
-      else if (roll < 0.75)              type = 'spike1';
-      else                               type = 'spike2';
+      // floating platform pairs unlock at frame 400 and ramp up to 28% chance
+      const floatChance = frame > 400 ? Math.min(0.28, 0.06 + (frame - 400) / 7000) : 0;
+      if (roll < floatChance) { spawnFloatPair(); return; }
 
-      let wide, spike = false, platform = false, h = T;
-      if (type === 'platform') {
-        wide = T * 2 + (Math.random() < 0.5 ? T : 0); // 64 or 96px wide
-        h = 50;
-        platform = true;
-      } else {
-        wide  = (type === 'block2' || type === 'spike2') ? T * 2 : T;
-        spike = type === 'spike1' || type === 'spike2';
+      const r2 = Math.random();
+      let type;
+      if (r2 < 0.25)       type = 'block1';
+      else if (r2 < 0.50)  type = 'block2';
+      else if (r2 < 0.72)  type = 'spike1';
+      else                  type = 'spike2';
+
+      const wide  = (type === 'block2' || type === 'spike2') ? T * 2 : T;
+      const spike = type === 'spike1' || type === 'spike2';
+      obstacles.push({ x: GW + 10, w: wide, h: T, spike, isFloat: false });
+    }
+
+    function spawnFloatPair() {
+      const progress = Math.min(1, (frame - 400) / 5000);
+
+      // ground obstacle — the trigger to jump
+      const spike = Math.random() < 0.45;
+      const gw = spike ? T : T * 2;
+      obstacles.push({ x: GW + 10, w: gw, h: T, spike, isFloat: false, pairTrigger: true });
+
+      // optional second ground obstacle underneath / just after the platform
+      if (progress > 0.35 && Math.random() < 0.55) {
+        const x2 = GW + 10 + gw + 28 + Math.round(Math.random() * T);
+        obstacles.push({ x: x2, w: T, h: T, spike: true, isFloat: false });
       }
-      obstacles.push({ x: GW + 10, w: wide, h, spike, platform });
+
+      // floating platform — progressively higher and shorter
+      const floatY = Math.round(158 - progress * 38);  // 158 → 120
+      const platW  = Math.round(124 - progress * 44);   // 124 → 80
+      const xOff   = 138 + Math.round(Math.random() * 30);  // 138–168
+
+      obstacles.push({
+        x: GW + 10 + xOff,
+        w: platW,
+        h: 10,
+        spike: false,
+        isFloat: true,
+        floatY,
+        glowPhase: Math.random() * Math.PI * 2,
+      });
     }
 
     // ── AABB collision with slight shrink ─────────────────────
     function collides(p, o) {
+      if (o.isFloat) return false;  // floating platforms: only land on top
       const pad = 5;
       const px = p.x + pad, py = p.y + pad;
       const pw = P_SIZE - pad * 2, ph = P_SIZE - pad * 2;
@@ -269,8 +297,9 @@ permalink: /auto-runner/
         // Platform support — keeps player riding a platform they landed on
         if (p.onPlatform) {
           const o = p.onPlatform;
+          const topY = o.isFloat ? o.floatY : FLOOR_Y - o.h;
           if (p.x + P_SIZE > o.x && p.x < o.x + o.w && p.vy >= 0) {
-            p.y = FLOOR_Y - o.h - P_SIZE;
+            p.y = topY - P_SIZE;
             p.vy = 0;
             p.grounded = true;
           } else {
@@ -278,12 +307,15 @@ permalink: /auto-runner/
           }
         }
 
-        // Check if player lands on a platform (only while falling)
+        // Check if player lands on a floating platform (only while falling)
         if (!p.grounded && p.vy > 0) {
           for (const o of obstacles) {
-            if (!o.platform) continue;
-            const topY = FLOOR_Y - o.h;
-            if (p.x + P_SIZE > o.x && p.x < o.x + o.w && p.y + P_SIZE >= topY) {
+            if (!o.isFloat) continue;
+            const topY = o.floatY;
+            // player bottom must cross platform top while player top is still above it
+            const margin = Math.ceil(p.vy) + 2;
+            if (p.x + P_SIZE > o.x + 3 && p.x < o.x + o.w - 3 &&
+                p.y + P_SIZE >= topY && p.y < topY + margin) {
               p.y = topY - P_SIZE;
               p.vy = 0;
               p.grounded = true;
@@ -386,43 +418,67 @@ permalink: /auto-runner/
     }
 
     function drawPlatform(o) {
+      if (o.isFloat) { drawFloatPlatform(o); return; }
+      // legacy ground platform (unused by spawn but kept for safety)
       const topY = FLOOR_Y - o.h;
-
-      // Glow
-      ctx.shadowColor = 'rgba(255,210,60,0.8)';
-      ctx.shadowBlur = 14;
-
-      // Bright top cap
       ctx.fillStyle = '#ffe066';
       ctx.fillRect(o.x, topY, o.w, 6);
-
-      // Body upper half
-      ctx.shadowBlur = 0;
       ctx.fillStyle = '#c8962a';
-      ctx.fillRect(o.x, topY + 6, o.w, o.h * 0.45);
+      ctx.fillRect(o.x, topY + 6, o.w, o.h - 6);
+    }
 
-      // Darker lower half
-      ctx.fillStyle = '#a07020';
-      ctx.fillRect(o.x, topY + o.h * 0.5, o.w, o.h * 0.5);
+    function drawFloatPlatform(o) {
+      const y = o.floatY;
+      const pulse = 0.7 + 0.3 * Math.sin((frame * 0.06) + (o.glowPhase || 0));
 
-      // Grid lines
-      ctx.strokeStyle = 'rgba(60,30,0,0.3)';
+      // Dashed energy tethers to the floor
+      ctx.save();
+      ctx.strokeStyle = `rgba(80,200,255,${0.18 * pulse})`;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 8]);
+      const step = Math.max(28, Math.floor(o.w / 3));
+      for (let gx = o.x + step * 0.5; gx < o.x + o.w; gx += step) {
+        ctx.beginPath(); ctx.moveTo(gx, y + o.h); ctx.lineTo(gx, FLOOR_Y); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Glow halo under platform
+      ctx.shadowColor = `rgba(80,210,255,${0.85 * pulse})`;
+      ctx.shadowBlur = 18;
+
+      // Top surface (bright cyan strip)
+      ctx.fillStyle = '#a0eeff';
+      ctx.fillRect(o.x, y, o.w, 4);
+
+      // Platform body
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#1e4f6a';
+      ctx.fillRect(o.x, y + 4, o.w, o.h - 4);
+
+      // Underside energy strip
+      ctx.fillStyle = `rgba(80,200,255,${0.55 * pulse})`;
+      ctx.fillRect(o.x, y + o.h - 3, o.w, 3);
+
+      // Subtle panel dividers
+      ctx.strokeStyle = 'rgba(0,150,200,0.3)';
       ctx.lineWidth = 1;
       for (let gx = o.x + T; gx < o.x + o.w; gx += T) {
-        ctx.beginPath(); ctx.moveTo(gx, topY); ctx.lineTo(gx, FLOOR_Y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx, y + o.h); ctx.stroke();
       }
-      ctx.beginPath(); ctx.moveTo(o.x, topY + o.h * 0.5); ctx.lineTo(o.x + o.w, topY + o.h * 0.5); ctx.stroke();
 
-      // Arrow hint above platform
-      ctx.fillStyle = 'rgba(255,230,80,0.9)';
-      ctx.font = 'bold 11px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('↑  ↑', o.x + o.w / 2, topY - 6);
-      ctx.textAlign = 'left';
+      // Jump hint arrow (only while platform is still far enough to react)
+      if (o.x > 220) {
+        ctx.fillStyle = `rgba(160,238,255,${Math.min(1, (o.x - 220) / 120) * 0.85})`;
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('↑', o.x + o.w / 2, y - 6);
+        ctx.textAlign = 'left';
+      }
     }
 
     function drawObstacle(o) {
-      if (o.platform) { drawPlatform(o); return; }
+      if (o.isFloat) { drawPlatform(o); return; }
       const oy = FLOOR_Y - o.h;
       ctx.shadowColor = 'rgba(255,255,255,0.6)';
       ctx.shadowBlur = 10;
@@ -454,6 +510,17 @@ permalink: /auto-runner/
           ctx.fill();
         }
         ctx.shadowBlur = 0;
+      }
+
+      // Upward arrow hint on obstacles paired with a floating platform
+      if (o.pairTrigger && o.x > 80 && o.x < 420) {
+        const fade = Math.min(1, (o.x - 80) / 120);
+        const bob = Math.sin(frame * 0.18) * 2;
+        ctx.fillStyle = `rgba(160,238,255,${fade * 0.9})`;
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('↑', o.x + o.w / 2, oy - 8 + bob);
+        ctx.textAlign = 'left';
       }
     }
 
