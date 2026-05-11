@@ -34,7 +34,7 @@ permalink: /auto-runner/
   <canvas id="canvas"></canvas>
 
   <script>
-    const SW_VERSION = '2605111142';
+    const SW_VERSION = '2605111600';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function askUpdate(reg) {
@@ -101,6 +101,7 @@ permalink: /auto-runner/
     let frame, score, bestScore, speed, goTimer, flashAlpha;
     let obstacles, nextObstacleGap;
     let stars, groundX;
+    let reviveStars, reviveStarCooldown;
 
     bestScore = parseInt(localStorage.getItem('ar-best') || '0', 10);
 
@@ -110,9 +111,9 @@ permalink: /auto-runner/
     function makePlayers() {
       return [
         { x: 120, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null },
+          rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null, invincible: 0 },
         { x: 168, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null },
+          rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null, invincible: 0 },
       ];
     }
 
@@ -124,6 +125,8 @@ permalink: /auto-runner/
       obstacles = [];
       nextObstacleGap = 320;
       groundX = 0;
+      reviveStars = [];
+      reviveStarCooldown = 0;
       players = makePlayers();
       stars = Array.from({ length: 55 }, () => ({
         x: Math.random() * GW,
@@ -138,9 +141,12 @@ permalink: /auto-runner/
       frame = 0; score = 0; speed = BASE_SPEED;
       obstacles = [];
       nextObstacleGap = 320;
+      reviveStars = [];
+      reviveStarCooldown = 0;
       players.forEach(p => {
         p.y = FLOOR_Y - P_SIZE; p.vy = 0;
-        p.grounded = true; p.rot = 0; p.dead = false; p.onPlatform = null;
+        p.grounded = true; p.rot = 0; p.dead = false;
+        p.onPlatform = null; p.invincible = 0;
       });
     }
 
@@ -198,10 +204,10 @@ permalink: /auto-runner/
         obstacles.push({ x: x2, w: T, h: T, spike: true, isFloat: false });
       }
 
-      // floating platform — progressively higher and shorter
+      // floating platform — longer so it spans over multiple obstacles
       const floatY = Math.round(158 - progress * 38);  // 158 → 120
-      const platW  = Math.round(124 - progress * 44);   // 124 → 80
-      const xOff   = 138 + Math.round(Math.random() * 30);  // 138–168
+      const platW  = Math.round(220 - progress * 70);  // 220 → 150 (was 124 → 80)
+      const xOff   = 60 + Math.round(Math.random() * 40);  // 60–100 (was 138–168)
 
       obstacles.push({
         x: GW + 10 + xOff,
@@ -243,6 +249,30 @@ permalink: /auto-runner/
       return false;
     }
 
+    // ── Kill / Revive ──────────────────────────────────────────
+    function killPlayer(idx) {
+      const p = players[idx];
+      if (p.dead) return;
+      p.dead = true;
+      p.onPlatform = null;
+      flashAlpha = Math.max(flashAlpha, 0.55);
+      if (players.every(pl => pl.dead)) {
+        gameOver();
+        return;
+      }
+      // Survive! Schedule a revive star for the alive player to catch
+      reviveStarCooldown = 90;
+    }
+
+    function spawnReviveStar() {
+      reviveStars.push({
+        x: GW + 40,
+        y: 145 + Math.random() * 35,
+        r: 16,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+
     // ── Update ─────────────────────────────────────────────────
     function update() {
       if (state === 'waiting') {
@@ -260,6 +290,7 @@ permalink: /auto-runner/
       frame++;
       speed = BASE_SPEED + frame * ACCEL;
       score = Math.floor(frame * speed / 8);
+      flashAlpha = Math.max(0, flashAlpha - 0.03);
 
       // Scroll ground
       groundX = (groundX - speed + GW) % GW;
@@ -277,9 +308,36 @@ permalink: /auto-runner/
       obstacles.forEach(o => { o.x -= speed; });
       obstacles = obstacles.filter(o => o.x + o.w > -10);
 
+      // Move revive stars
+      reviveStars.forEach(s => { s.x -= speed; });
+      reviveStars = reviveStars.filter(s => {
+        if (s.x + s.r < -20) {
+          reviveStarCooldown = 80; // respawn soon
+          return false;
+        }
+        return true;
+      });
+
+      // Spawn a revive star if someone is dead and someone is alive
+      const hasDead  = players.some(p => p.dead);
+      const hasAlive = players.some(p => !p.dead);
+      if (hasDead && hasAlive && reviveStars.length === 0) {
+        if (reviveStarCooldown > 0) reviveStarCooldown--;
+        else spawnReviveStar();
+      }
+
       // Players
       players.forEach((p, i) => {
-        if (p.dead) return;
+        if (p.dead) {
+          // Ghost: still falls to ground, no collision, no platform landing
+          p.vy += GRAVITY;
+          p.y  += p.vy;
+          if (p.y >= FLOOR_Y - P_SIZE) { p.y = FLOOR_Y - P_SIZE; p.vy = 0; }
+          return;
+        }
+
+        if (p.invincible > 0) p.invincible--;
+
         p.vy += GRAVITY;
         p.y  += p.vy;
         p.bob = 0;
@@ -312,7 +370,6 @@ permalink: /auto-runner/
           for (const o of obstacles) {
             if (!o.isFloat) continue;
             const topY = o.floatY;
-            // player bottom must cross platform top while player top is still above it
             const margin = Math.ceil(p.vy) + 2;
             if (p.x + P_SIZE > o.x + 3 && p.x < o.x + o.w - 3 &&
                 p.y + P_SIZE >= topY && p.y < topY + margin) {
@@ -333,13 +390,36 @@ permalink: /auto-runner/
           p.rot -= 0.12; // spin while airborne
         }
 
-        // Collision check (skip the platform the player is currently riding)
-        for (const o of obstacles) {
-          if (o === p.onPlatform) continue;
-          if (collides(p, o)) {
-            gameOver();
-            return;
+        // Collision check — skip the platform the player rides, skip if invincible
+        if (p.invincible <= 0) {
+          for (const o of obstacles) {
+            if (o === p.onPlatform) continue;
+            if (collides(p, o)) { killPlayer(i); return; }
           }
+        }
+
+        // Collect revive star
+        if (reviveStars.length > 0) {
+          const cx = p.x + P_SIZE / 2;
+          const cy = p.y + P_SIZE / 2;
+          reviveStars = reviveStars.filter(s => {
+            const dx = cx - s.x, dy = cy - s.y;
+            if (dx * dx + dy * dy < (s.r + P_SIZE / 2 - 4) * (s.r + P_SIZE / 2 - 4)) {
+              players.forEach(dp => {
+                if (dp.dead) {
+                  dp.dead = false;
+                  dp.y = FLOOR_Y - P_SIZE;
+                  dp.vy = -10;
+                  dp.grounded = false;
+                  dp.onPlatform = null;
+                  dp.invincible = 120; // ~2s of invincibility after revive
+                }
+              });
+              flashAlpha = Math.max(flashAlpha, 0.4);
+              return false;
+            }
+            return true;
+          });
         }
       });
     }
@@ -378,7 +458,8 @@ permalink: /auto-runner/
       ctx.rotate(p.rot);
 
       const h = P_SIZE, hh = h / 2;
-      const alpha = p.dead ? 0.35 : 1;
+      const blink = p.invincible > 0 && Math.floor(p.invincible / 5) % 2 === 0;
+      const alpha = p.dead ? 0.28 : (blink ? 0.35 : 1);
       ctx.globalAlpha = alpha;
 
       // Body
@@ -524,6 +605,50 @@ permalink: /auto-runner/
       }
     }
 
+    function drawReviveStar(s) {
+      const pulse = 0.7 + 0.3 * Math.sin((frame * 0.1) + s.phase);
+      ctx.save();
+      ctx.translate(s.x, s.y);
+
+      // Glow halo
+      ctx.shadowColor = `rgba(255,220,50,${0.9 * pulse})`;
+      ctx.shadowBlur = 22;
+
+      // 5-pointed star shape
+      ctx.fillStyle = `rgba(255,230,60,1)`;
+      ctx.beginPath();
+      const spikes = 5, outerR = s.r, innerR = s.r * 0.42;
+      for (let i = 0; i < spikes * 2; i++) {
+        const angle = (i * Math.PI / spikes) - Math.PI / 2;
+        const rv = i % 2 === 0 ? outerR : innerR;
+        const fx = Math.cos(angle) * rv;
+        const fy = Math.sin(angle) * rv;
+        i === 0 ? ctx.moveTo(fx, fy) : ctx.lineTo(fx, fy);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Revive cross symbol
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fillRect(-2, -6, 4, 12);
+      ctx.fillRect(-6, -2, 12, 4);
+
+      // Colored ring matching the dead player
+      const deadIdx = players.findIndex(p => p.dead);
+      if (deadIdx >= 0) {
+        ctx.strokeStyle = COLORS[deadIdx];
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.7 * pulse;
+        ctx.beginPath();
+        ctx.arc(0, 0, s.r + 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.restore();
+    }
+
     // ── Render ─────────────────────────────────────────────────
     function render() {
       // Background
@@ -559,6 +684,9 @@ permalink: /auto-runner/
 
       // Obstacles
       obstacles.forEach(drawObstacle);
+
+      // Revive stars
+      reviveStars.forEach(drawReviveStar);
 
       // Players
       players.forEach(drawRobot);
@@ -617,7 +745,26 @@ permalink: /auto-runner/
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
         ctx.lineWidth = 1;
         ctx.stroke();
+        if (p.dead) {
+          ctx.fillStyle = 'rgba(255,80,80,0.85)';
+          ctx.font = 'bold 8px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('✕', dx, dotY + 3);
+        }
       });
+
+      // Revive hint — blinks while a revive star is on screen
+      if (state === 'playing' && reviveStars.length > 0) {
+        const blink = Math.floor(frame / 18) % 2 === 0;
+        const deadIdx = players.findIndex(p => p.dead);
+        if (deadIdx >= 0 && blink) {
+          ctx.fillStyle = '#ffd700';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText('★ CATCH STAR → REVIVE ' + LABEL[deadIdx], GW - 14, 28);
+        }
+        ctx.textAlign = 'left';
+      }
 
       if (state === 'waiting') {
         // Semi-overlay
