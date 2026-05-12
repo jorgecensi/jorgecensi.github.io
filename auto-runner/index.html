@@ -13,7 +13,8 @@ permalink: /auto-runner/
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Auto Runner">
-  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/png" sizes="192x192" href="/auto-runner/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/auto-runner/icons/icon-192.png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -34,7 +35,7 @@ permalink: /auto-runner/
   <canvas id="canvas"></canvas>
 
   <script>
-    const SW_VERSION = '2605111213';
+    const SW_VERSION = '2605120001';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function askUpdate(reg) {

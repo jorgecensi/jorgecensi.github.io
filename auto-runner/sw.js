@@ -1,10 +1,12 @@
-const CACHE_VERSION = '2605111213';
+const CACHE_VERSION = '2605120001';
 const CACHE_NAME = `auto-runner-${CACHE_VERSION}`;
 const OFFLINE_URL = '/auto-runner/';
 const PRECACHE_URLS = [
   '/auto-runner/',
   '/auto-runner/manifest.json',
-  '/img/favicon.ico'
+  '/auto-runner/icons/icon.svg',
+  '/auto-runner/icons/icon-192.png',
+  '/auto-runner/icons/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
