@@ -1,0 +1,955 @@
+---
+layout: null
+title: Music Theory
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Music Theory">
+  <meta name="description" content="Learn music theory interactively — scales, chords, and intervals on a piano keyboard.">
+  <link rel="manifest" href="/music-theory/manifest.json">
+  <link rel="apple-touch-icon" href="/img/music-theory-icon-192.png">
+  <link rel="icon" href="/img/music-theory-icon-192.png" type="image/png">
+  <title>Music Theory</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a1a;
+      --surface:   #0f0f23;
+      --panel:     #13132a;
+      --panel2:    #1a1a35;
+      --border:    rgba(255,255,255,0.07);
+      --border2:   rgba(255,255,255,0.12);
+      --text:      #e2e8f0;
+      --text-dim:  #6b7280;
+      --accent:    #f59e0b;
+      --accent-dim: rgba(245,158,11,0.18);
+      --accent-glow: rgba(245,158,11,0.35);
+      --green:     #10b981;
+      --green-dim: rgba(16,185,129,0.18);
+      --safe-top:    env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left, 0px);
+      --safe-right:  env(safe-area-inset-right, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+      padding-left: var(--safe-left);
+      padding-right: var(--safe-right);
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 8px;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .header-icon { font-size: 20px; line-height: 1; }
+
+    #install-btn {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #install-btn.visible { display: flex; }
+    #install-btn:hover { background: var(--accent-glow); }
+
+    /* ── Mode Tabs ── */
+    .mode-tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 9px 0;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.15s, border-bottom 0.15s;
+      border-bottom: 2px solid transparent;
+      letter-spacing: 0.2px;
+    }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    /* ── Controls Panel ── */
+    #controls-panel {
+      flex-shrink: 0;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .panel { display: none; padding: 12px 16px 14px; }
+    .panel.active { display: block; }
+
+    .ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ctrl-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+      min-width: 38px;
+    }
+
+    /* Root note picker (12 pill buttons) */
+    .note-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .note-btn {
+      width: 30px;
+      height: 26px;
+      background: var(--panel2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: -0.3px;
+    }
+    .note-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+    .note-btn:hover:not(.active) {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    select {
+      background: var(--panel2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 5px 10px;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 26px;
+      min-width: 160px;
+    }
+    select:focus { outline: none; border-color: var(--accent); }
+
+    .info-row {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .formula-display {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      font-family: 'SF Mono', 'Consolas', monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .notes-display {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: 'SF Mono', 'Consolas', monospace;
+      letter-spacing: 1px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .play-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      letter-spacing: 0.2px;
+    }
+    .play-btn:hover { background: var(--accent-glow); }
+    .play-btn.secondary {
+      background: transparent;
+      color: var(--text-dim);
+      border-color: var(--border2);
+    }
+    .play-btn.secondary:hover { background: var(--panel2); color: var(--text); }
+
+    /* Intervals panel */
+    .interval-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      gap: 4px;
+      text-align: center;
+    }
+
+    .interval-name {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      line-height: 1;
+      min-height: 30px;
+    }
+
+    .interval-detail {
+      font-size: 13px;
+      color: var(--text-dim);
+      font-family: 'SF Mono', 'Consolas', monospace;
+    }
+
+    .interval-hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    /* ── Keyboard ── */
+    .keyboard-wrap {
+      flex: 1;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg);
+      cursor: grab;
+    }
+    .keyboard-wrap:active { cursor: grabbing; }
+
+    .keyboard {
+      position: relative;
+      display: flex;
+      height: 150px;
+      flex-shrink: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .key-white {
+      position: relative;
+      width: 40px;
+      height: 150px;
+      background: #f0ebe0;
+      border: 1px solid #8a8070;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      cursor: pointer;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 7px;
+      gap: 2px;
+      transition: background 0.07s, transform 0.07s;
+      touch-action: none;
+    }
+    .key-white:not(:first-child) { margin-left: 1px; }
+
+    .key-black {
+      position: absolute;
+      width: 26px;
+      height: 92px;
+      background: #1a1632;
+      border-radius: 0 0 6px 6px;
+      cursor: pointer;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 6px;
+      gap: 2px;
+      transition: background 0.07s, transform 0.07s;
+      touch-action: none;
+      top: 0;
+    }
+
+    .key-white:active, .key-white.pressed {
+      background: rgba(245,158,11,0.5) !important;
+      transform: scaleY(0.97);
+      transform-origin: top center;
+    }
+    .key-black:active, .key-black.pressed {
+      background: #f59e0b !important;
+      transform: scaleY(0.96);
+      transform-origin: top center;
+    }
+
+    /* Scale / chord highlights */
+    .key-white.in-scale  { background: rgba(245,158,11,0.30); }
+    .key-black.in-scale  { background: rgba(245,158,11,0.65); }
+    .key-white.is-root   { background: #f59e0b; }
+    .key-black.is-root   { background: #d97706; }
+
+    /* Interval markers */
+    .key-white.iv-a  { background: var(--green); }
+    .key-black.iv-a  { background: #059669; }
+    .key-white.iv-b  { background: #f59e0b; }
+    .key-black.iv-b  { background: #d97706; }
+
+    /* Note label on key */
+    .key-note {
+      font-size: 9px;
+      font-weight: 700;
+      pointer-events: none;
+      line-height: 1;
+    }
+    .key-white .key-note { color: rgba(0,0,0,0.40); }
+    .key-black .key-note { color: rgba(255,255,255,0.55); }
+
+    .key-white.in-scale .key-note, .key-white.is-root .key-note { color: rgba(0,0,0,0.65); }
+    .key-black.in-scale .key-note, .key-black.is-root .key-note { color: rgba(0,0,0,0.7); }
+
+    .key-octave {
+      font-size: 8px;
+      color: rgba(0,0,0,0.25);
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    /* ── Update banner ── */
+    #update-banner {
+      position: fixed;
+      bottom: max(16px, var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--panel2);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      transition: transform 0.3s ease;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    #update-banner.visible { transform: translateX(-50%) translateY(0); }
+    #update-btn {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 7px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-title">
+      <span class="header-icon">🎹</span>
+      Music Theory
+    </div>
+    <button id="install-btn" aria-label="Install app">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
+      Install
+    </button>
+  </header>
+
+  <!-- Mode Tabs -->
+  <nav class="mode-tabs" role="tablist" aria-label="Learning mode">
+    <button class="tab active" data-mode="scales" role="tab" aria-selected="true">Scales</button>
+    <button class="tab" data-mode="chords" role="tab" aria-selected="false">Chords</button>
+    <button class="tab" data-mode="intervals" role="tab" aria-selected="false">Intervals</button>
+  </nav>
+
+  <!-- Controls -->
+  <section id="controls-panel" aria-live="polite">
+
+    <!-- SCALES -->
+    <div id="panel-scales" class="panel active" role="tabpanel">
+      <div class="ctrl-row">
+        <span class="ctrl-label">Root</span>
+        <div class="note-picker" id="scale-root-picker"></div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Scale</span>
+        <select id="scale-type-select" aria-label="Scale type"></select>
+      </div>
+      <div class="info-row">
+        <div class="formula-display" id="scale-formula"></div>
+        <div class="notes-display" id="scale-notes"></div>
+      </div>
+      <div class="btn-row">
+        <button class="play-btn" id="scale-play-btn" aria-label="Play scale">▶ Play Scale</button>
+      </div>
+    </div>
+
+    <!-- CHORDS -->
+    <div id="panel-chords" class="panel" role="tabpanel">
+      <div class="ctrl-row">
+        <span class="ctrl-label">Root</span>
+        <div class="note-picker" id="chord-root-picker"></div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Chord</span>
+        <select id="chord-type-select" aria-label="Chord type"></select>
+      </div>
+      <div class="info-row">
+        <div class="formula-display" id="chord-formula"></div>
+        <div class="notes-display" id="chord-notes"></div>
+      </div>
+      <div class="btn-row">
+        <button class="play-btn" id="chord-play-btn" aria-label="Play chord">▶ Play Chord</button>
+        <button class="play-btn secondary" id="chord-arp-btn" aria-label="Arpeggiate chord">↑ Arpeggiate</button>
+      </div>
+    </div>
+
+    <!-- INTERVALS -->
+    <div id="panel-intervals" class="panel" role="tabpanel">
+      <div class="interval-card">
+        <div class="interval-name" id="interval-name">—</div>
+        <div class="interval-detail" id="interval-detail"></div>
+      </div>
+      <p class="interval-hint">Tap any two keys to identify the interval between them.</p>
+    </div>
+
+  </section>
+
+  <!-- Piano Keyboard -->
+  <div class="keyboard-wrap" id="keyboard-wrap" aria-label="Piano keyboard">
+    <div class="keyboard" id="keyboard" role="group" aria-label="Piano keys"></div>
+  </div>
+
+  <!-- Update Banner -->
+  <div id="update-banner" role="status" aria-live="polite">
+    <span>Update available</span>
+    <button id="update-btn">Reload</button>
+  </div>
+
+  <script>
+    // ── Data ──────────────────────────────────────────────────────────────────
+
+    const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+    const SCALES = {
+      'Major':            { intervals: [0,2,4,5,7,9,11],    formula: 'W – W – H – W – W – W – H' },
+      'Natural Minor':    { intervals: [0,2,3,5,7,8,10],    formula: 'W – H – W – W – H – W – W' },
+      'Harmonic Minor':   { intervals: [0,2,3,5,7,8,11],    formula: 'W – H – W – W – H – A2 – H' },
+      'Melodic Minor':    { intervals: [0,2,3,5,7,9,11],    formula: 'W – H – W – W – W – W – H' },
+      'Pentatonic Major': { intervals: [0,2,4,7,9],         formula: 'W – W – m3 – W – m3' },
+      'Pentatonic Minor': { intervals: [0,3,5,7,10],        formula: 'm3 – W – W – m3 – W' },
+      'Blues':            { intervals: [0,3,5,6,7,10],      formula: 'm3 – W – H – H – m3 – W' },
+      'Dorian':           { intervals: [0,2,3,5,7,9,10],    formula: 'W – H – W – W – W – H – W' },
+      'Phrygian':         { intervals: [0,1,3,5,7,8,10],    formula: 'H – W – W – W – H – W – W' },
+      'Lydian':           { intervals: [0,2,4,6,7,9,11],    formula: 'W – W – W – H – W – W – H' },
+      'Mixolydian':       { intervals: [0,2,4,5,7,9,10],    formula: 'W – W – H – W – W – H – W' },
+      'Locrian':          { intervals: [0,1,3,5,6,8,10],    formula: 'H – W – W – H – W – W – W' },
+      'Whole Tone':       { intervals: [0,2,4,6,8,10],      formula: 'W – W – W – W – W – W' },
+      'Diminished':       { intervals: [0,1,3,4,6,7,9,10],  formula: 'H – W – H – W – H – W – H – W' },
+    };
+
+    const CHORDS = {
+      'Major':            { intervals: [0,4,7],     formula: 'Root – M3 – P5',      symbol: '' },
+      'Minor':            { intervals: [0,3,7],     formula: 'Root – m3 – P5',      symbol: 'm' },
+      'Diminished':       { intervals: [0,3,6],     formula: 'Root – m3 – d5',      symbol: '°' },
+      'Augmented':        { intervals: [0,4,8],     formula: 'Root – M3 – A5',      symbol: '+' },
+      'Sus2':             { intervals: [0,2,7],     formula: 'Root – M2 – P5',      symbol: 'sus2' },
+      'Sus4':             { intervals: [0,5,7],     formula: 'Root – P4 – P5',      symbol: 'sus4' },
+      'Major 7th':        { intervals: [0,4,7,11],  formula: 'Root – M3 – P5 – M7', symbol: 'maj7' },
+      'Dominant 7th':     { intervals: [0,4,7,10],  formula: 'Root – M3 – P5 – m7', symbol: '7' },
+      'Minor 7th':        { intervals: [0,3,7,10],  formula: 'Root – m3 – P5 – m7', symbol: 'm7' },
+      'Half-Dim 7th':     { intervals: [0,3,6,10],  formula: 'Root – m3 – d5 – m7', symbol: 'ø7' },
+      'Diminished 7th':   { intervals: [0,3,6,9],   formula: 'Root – m3 – d5 – d7', symbol: '°7' },
+      'Major 6th':        { intervals: [0,4,7,9],   formula: 'Root – M3 – P5 – M6', symbol: '6' },
+      'Minor 6th':        { intervals: [0,3,7,9],   formula: 'Root – m3 – P5 – M6', symbol: 'm6' },
+    };
+
+    const INTERVAL_NAMES = [
+      'Unison','Minor 2nd','Major 2nd','Minor 3rd','Major 3rd',
+      'Perfect 4th','Tritone','Perfect 5th','Minor 6th','Major 6th',
+      'Minor 7th','Major 7th','Octave',
+    ];
+
+    const WHITE_PCS = [0,2,4,5,7,9,11];
+    const MIDI_START = 48; // C3
+    const MIDI_END   = 72; // C5
+    const WHITE_W    = 41; // px per white key (width + 1px gap)
+
+    // ── State ─────────────────────────────────────────────────────────────────
+
+    const state = {
+      mode: 'scales',
+      scaleRoot: 0,
+      scaleType: 'Major',
+      chordRoot: 0,
+      chordType: 'Major',
+      ivNotes: [],        // up to 2 midi values for intervals mode
+    };
+
+    // ── Audio ─────────────────────────────────────────────────────────────────
+
+    let audioCtx = null;
+    let masterGain = null;
+
+    function initAudio() {
+      if (audioCtx) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return;
+      }
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.6;
+      masterGain.connect(audioCtx.destination);
+    }
+
+    function midiToFreq(midi) {
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function playNote(midi, when = 0, duration = 0.85) {
+      initAudio();
+      const freq = midiToFreq(midi);
+      const now = audioCtx.currentTime + when;
+
+      // Stack 3 sine harmonics for a piano-like timbre
+      [[1, 1.0], [2, 0.22], [4, 0.07]].forEach(([harmonic, gain]) => {
+        const osc = audioCtx.createOscillator();
+        const env = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq * harmonic;
+
+        env.gain.setValueAtTime(0, now);
+        env.gain.linearRampToValueAtTime(gain, now + 0.006);
+        env.gain.exponentialRampToValueAtTime(gain * 0.28, now + 0.09);
+        env.gain.setValueAtTime(gain * 0.28, now + duration - 0.12);
+        env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+        osc.connect(env);
+        env.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + duration + 0.05);
+      });
+    }
+
+    function playChord(midiNotes) {
+      initAudio();
+      midiNotes.forEach(m => playNote(m, 0, 1.1));
+    }
+
+    function playArpeggiated(midiNotes, step = 0.14) {
+      initAudio();
+      midiNotes.forEach((m, i) => playNote(m, i * step, 0.8));
+    }
+
+    function playScaleSequence(midiNotes) {
+      initAudio();
+      const step = 0.22;
+      midiNotes.forEach((m, i) => playNote(m, i * step, step * 0.85));
+    }
+
+    // ── Keyboard ──────────────────────────────────────────────────────────────
+
+    function buildKeyboard() {
+      const kb = document.getElementById('keyboard');
+      kb.innerHTML = '';
+      let whiteCount = 0;
+
+      for (let midi = MIDI_START; midi <= MIDI_END; midi++) {
+        const pc = midi % 12;
+        const octave = Math.floor(midi / 12) - 1;
+        const isWhite = WHITE_PCS.includes(pc);
+
+        const el = document.createElement('div');
+        el.dataset.midi = midi;
+        el.dataset.pc = pc;
+
+        const noteLabel = document.createElement('span');
+        noteLabel.className = 'key-note';
+        noteLabel.textContent = NOTE_NAMES[pc];
+
+        if (isWhite) {
+          el.className = 'key key-white';
+          el.setAttribute('aria-label', `${NOTE_NAMES[pc]}${octave}`);
+
+          if (pc === 0) {
+            const octLabel = document.createElement('span');
+            octLabel.className = 'key-octave';
+            octLabel.textContent = octave;
+            el.appendChild(noteLabel);
+            el.appendChild(octLabel);
+          } else {
+            el.appendChild(noteLabel);
+          }
+          whiteCount++;
+        } else {
+          el.className = 'key key-black';
+          el.setAttribute('aria-label', `${NOTE_NAMES[pc]}${octave}`);
+          // Position: center over the gap between the preceding and following white keys
+          // Preceding white key index (0-based) = whiteCount - 1
+          const leftPx = (whiteCount - 1) * WHITE_W + WHITE_W - 14;
+          el.style.left = leftPx + 'px';
+          el.appendChild(noteLabel);
+        }
+
+        el.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          onKeyDown(midi, el);
+        });
+
+        kb.appendChild(el);
+      }
+
+      // Set keyboard total width
+      kb.style.width = (whiteCount * WHITE_W - 1) + 'px';
+    }
+
+    function onKeyDown(midi, el) {
+      playNote(midi);
+      el.classList.add('pressed');
+      setTimeout(() => el.classList.remove('pressed'), 180);
+
+      if (state.mode === 'intervals') {
+        state.ivNotes.push(midi);
+        if (state.ivNotes.length > 2) state.ivNotes = [midi];
+        updateHighlight();
+        updateIntervalDisplay();
+      }
+    }
+
+    // ── Highlight ─────────────────────────────────────────────────────────────
+
+    function clearHighlight() {
+      document.querySelectorAll('.key').forEach(k => {
+        k.classList.remove('in-scale','is-root','iv-a','iv-b');
+      });
+    }
+
+    function updateHighlight() {
+      clearHighlight();
+
+      if (state.mode === 'scales') {
+        const def = SCALES[state.scaleType];
+        const pcSet = new Set(def.intervals.map(i => (state.scaleRoot + i) % 12));
+        document.querySelectorAll('.key').forEach(k => {
+          const pc = parseInt(k.dataset.pc);
+          if (pc === state.scaleRoot)  k.classList.add('is-root');
+          else if (pcSet.has(pc))      k.classList.add('in-scale');
+        });
+
+      } else if (state.mode === 'chords') {
+        const def = CHORDS[state.chordType];
+        const pcSet = new Set(def.intervals.map(i => (state.chordRoot + i) % 12));
+        document.querySelectorAll('.key').forEach(k => {
+          const pc = parseInt(k.dataset.pc);
+          if (pc === state.chordRoot) k.classList.add('is-root');
+          else if (pcSet.has(pc))    k.classList.add('in-scale');
+        });
+
+      } else if (state.mode === 'intervals') {
+        state.ivNotes.forEach((midi, i) => {
+          const el = document.querySelector(`.key[data-midi="${midi}"]`);
+          if (el) el.classList.add(i === 0 ? 'iv-a' : 'iv-b');
+        });
+      }
+    }
+
+    // ── Info Display ──────────────────────────────────────────────────────────
+
+    function getScaleMidis(root, intervals) {
+      // Find the root midi in middle of keyboard range, then build ascending
+      let rootMidi = MIDI_START + ((root - (MIDI_START % 12) + 12) % 12);
+      if (rootMidi < MIDI_START) rootMidi += 12;
+      return intervals.map(i => rootMidi + i);
+    }
+
+    function getChordMidis(root, intervals) {
+      let rootMidi = MIDI_START + ((root - (MIDI_START % 12) + 12) % 12);
+      if (rootMidi < MIDI_START) rootMidi += 12;
+      return intervals.map(i => rootMidi + i);
+    }
+
+    function updateScaleDisplay() {
+      const def = SCALES[state.scaleType];
+      const noteNames = def.intervals.map(i => NOTE_NAMES[(state.scaleRoot + i) % 12]);
+      document.getElementById('scale-formula').textContent = def.formula;
+      document.getElementById('scale-notes').textContent = noteNames.join('  ');
+    }
+
+    function updateChordDisplay() {
+      const def = CHORDS[state.chordType];
+      const root = NOTE_NAMES[state.chordRoot];
+      const noteNames = def.intervals.map(i => NOTE_NAMES[(state.chordRoot + i) % 12]);
+      document.getElementById('chord-formula').textContent = def.formula;
+      document.getElementById('chord-notes').textContent =
+        `${root}${def.symbol}: ` + noteNames.join('  ');
+    }
+
+    function updateIntervalDisplay() {
+      if (state.ivNotes.length < 2) {
+        document.getElementById('interval-name').textContent = '—';
+        document.getElementById('interval-detail').textContent = '';
+        return;
+      }
+      const diff = Math.abs(state.ivNotes[1] - state.ivNotes[0]);
+      const clamp = Math.min(diff, 12);
+      const name = INTERVAL_NAMES[clamp] || `${diff} semitones`;
+      document.getElementById('interval-name').textContent = name;
+      document.getElementById('interval-detail').textContent =
+        diff === 0 ? 'Same note' : `${diff} semitone${diff !== 1 ? 's' : ''}`;
+    }
+
+    function scrollToRoot(rootPc) {
+      // Find first key with this pitch class
+      const keys = document.querySelectorAll('.key-white');
+      for (const k of keys) {
+        if (parseInt(k.dataset.pc) === rootPc) {
+          const wrap = document.getElementById('keyboard-wrap');
+          const target = k.offsetLeft - wrap.clientWidth / 2 + 20;
+          wrap.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+          break;
+        }
+      }
+    }
+
+    // ── Pickers ───────────────────────────────────────────────────────────────
+
+    function buildPicker(containerId, stateKey, onChange) {
+      const container = document.getElementById(containerId);
+      NOTE_NAMES.forEach((name, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'note-btn' + (i === state[stateKey] ? ' active' : '');
+        btn.textContent = name;
+        btn.dataset.idx = i;
+        btn.addEventListener('click', () => {
+          container.querySelectorAll('.note-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state[stateKey] = i;
+          onChange();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    function setPickerValue(containerId, value) {
+      const container = document.getElementById(containerId);
+      container.querySelectorAll('.note-btn').forEach(b => {
+        b.classList.toggle('active', parseInt(b.dataset.idx) === value);
+      });
+    }
+
+    function buildSelect(selectId, options, onChange) {
+      const sel = document.getElementById(selectId);
+      Object.keys(options).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => {
+        onChange(sel.value);
+      });
+    }
+
+    // ── Mode Switching ────────────────────────────────────────────────────────
+
+    function switchMode(mode) {
+      state.mode = mode;
+      state.ivNotes = [];
+
+      document.querySelectorAll('.tab').forEach(t => {
+        const active = t.dataset.mode === mode;
+        t.classList.toggle('active', active);
+        t.setAttribute('aria-selected', active);
+      });
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(`panel-${mode}`).classList.add('active');
+
+      updateHighlight();
+      if (mode === 'intervals') updateIntervalDisplay();
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+
+    function init() {
+      buildKeyboard();
+
+      // Scale picker + select
+      buildPicker('scale-root-picker', 'scaleRoot', () => {
+        updateHighlight();
+        updateScaleDisplay();
+        scrollToRoot(state.scaleRoot);
+      });
+      buildSelect('scale-type-select', SCALES, (val) => {
+        state.scaleType = val;
+        updateHighlight();
+        updateScaleDisplay();
+      });
+
+      // Chord picker + select
+      buildPicker('chord-root-picker', 'chordRoot', () => {
+        updateHighlight();
+        updateChordDisplay();
+        scrollToRoot(state.chordRoot);
+      });
+      buildSelect('chord-type-select', CHORDS, (val) => {
+        state.chordType = val;
+        updateHighlight();
+        updateChordDisplay();
+      });
+
+      // Play buttons
+      document.getElementById('scale-play-btn').addEventListener('click', () => {
+        const def = SCALES[state.scaleType];
+        playScaleSequence(getScaleMidis(state.scaleRoot, def.intervals));
+      });
+      document.getElementById('chord-play-btn').addEventListener('click', () => {
+        const def = CHORDS[state.chordType];
+        playChord(getChordMidis(state.chordRoot, def.intervals));
+      });
+      document.getElementById('chord-arp-btn').addEventListener('click', () => {
+        const def = CHORDS[state.chordType];
+        playArpeggiated(getChordMidis(state.chordRoot, def.intervals));
+      });
+
+      // Mode tabs
+      document.querySelectorAll('.tab').forEach(t => {
+        t.addEventListener('click', () => switchMode(t.dataset.mode));
+      });
+
+      // Initial display
+      updateHighlight();
+      updateScaleDisplay();
+      updateChordDisplay();
+
+      // Install prompt
+      let installPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        installPrompt = e;
+        document.getElementById('install-btn').classList.add('visible');
+      });
+      document.getElementById('install-btn').addEventListener('click', async () => {
+        if (!installPrompt) return;
+        installPrompt.prompt();
+        const { outcome } = await installPrompt.userChoice;
+        if (outcome === 'accepted') {
+          document.getElementById('install-btn').classList.remove('visible');
+          installPrompt = null;
+        }
+      });
+
+      // Service Worker
+      if ('serviceWorker' in navigator) {
+        const SW_VERSION = '2505250000';
+        navigator.serviceWorker.register(
+          `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
+          { scope: '/music-theory/' }
+        ).then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                document.getElementById('update-banner').classList.add('visible');
+              }
+            });
+          });
+        });
+        document.getElementById('update-btn').addEventListener('click', () => {
+          navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg && reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+          });
+          window.location.reload();
+        });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

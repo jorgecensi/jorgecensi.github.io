@@ -1,0 +1,28 @@
+{
+  "id": "/music-theory/",
+  "name": "Music Theory",
+  "short_name": "Music Theory",
+  "description": "Learn music theory interactively — scales, chords, and intervals on a piano keyboard. Works offline.",
+  "start_url": "/music-theory/",
+  "scope": "/music-theory/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/img/music-theory-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/music-theory-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["music", "education"],
+  "lang": "en-US"
+}
