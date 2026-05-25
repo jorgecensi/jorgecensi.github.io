@@ -998,7 +998,8 @@ title: Music Theory
 
     function generateChordQuestion() {
       const lvl = QUIZ_LEVELS[state.quizLevel];
-      const root = Math.floor(Math.random() * 12);
+      const rootPool = state.quizLevel === 1 ? [0,2,4,5,7,9,11] : [...Array(12).keys()];
+      const root = rootPool[Math.floor(Math.random() * rootPool.length)];
       const type = lvl.chordPool[Math.floor(Math.random() * lvl.chordPool.length)];
       let rootMidi = lvl.midiMin + ((root - (lvl.midiMin % 12) + 12) % 12);
       if (rootMidi > lvl.midiMax - 11) rootMidi -= 12;
