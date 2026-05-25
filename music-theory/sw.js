@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2605250030';
+const CACHE_VERSION = '2605250621';
 const CACHE_NAME = `music-theory-${CACHE_VERSION}`;
 const OFFLINE_URL = '/music-theory/';
 const PRECACHE_URLS = [
