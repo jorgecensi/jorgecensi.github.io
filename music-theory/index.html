@@ -15,6 +15,7 @@ title: Music Theory
   <link rel="manifest" href="/music-theory/manifest.json">
   <link rel="apple-touch-icon" href="/img/music-theory-icon-192.png">
   <link rel="icon" href="/img/music-theory-icon-192.png" type="image/png">
+  <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
   <title>Music Theory</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -301,6 +302,33 @@ title: Music Theory
       padding: 12px 16px;
       background: var(--bg);
       cursor: grab;
+      position: relative;
+    }
+
+    .keyboard-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: var(--bg);
+      z-index: 10;
+      font-size: 13px;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+    .keyboard-loading.hidden { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
     }
     .keyboard-wrap:active { cursor: grabbing; }
 
@@ -504,6 +532,10 @@ title: Music Theory
 
   <!-- Piano Keyboard -->
   <div class="keyboard-wrap" id="keyboard-wrap" aria-label="Piano keyboard">
+    <div class="keyboard-loading" id="keyboard-loading">
+      <div class="loading-spinner"></div>
+      <span>Loading piano samples…</span>
+    </div>
     <div class="keyboard" id="keyboard" role="group" aria-label="Piano keys"></div>
   </div>
 
@@ -573,65 +605,59 @@ title: Music Theory
       ivNotes: [],        // up to 2 midi values for intervals mode
     };
 
-    // ── Audio ─────────────────────────────────────────────────────────────────
+    // ── Audio (Tone.js Salamander piano) ──────────────────────────────────────
 
-    let audioCtx = null;
-    let masterGain = null;
+    let samplerReady = false;
 
-    function initAudio() {
-      if (audioCtx) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        return;
-      }
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      masterGain = audioCtx.createGain();
-      masterGain.gain.value = 0.6;
-      masterGain.connect(audioCtx.destination);
+    const sampler = new Tone.Sampler({
+      urls: {
+        'A0':'A0.mp3',  'C1':'C1.mp3',  'D#1':'Ds1.mp3', 'F#1':'Fs1.mp3',
+        'A1':'A1.mp3',  'C2':'C2.mp3',  'D#2':'Ds2.mp3', 'F#2':'Fs2.mp3',
+        'A2':'A2.mp3',  'C3':'C3.mp3',  'D#3':'Ds3.mp3', 'F#3':'Fs3.mp3',
+        'A3':'A3.mp3',  'C4':'C4.mp3',  'D#4':'Ds4.mp3', 'F#4':'Fs4.mp3',
+        'A4':'A4.mp3',  'C5':'C5.mp3',  'D#5':'Ds5.mp3', 'F#5':'Fs5.mp3',
+        'A5':'A5.mp3',  'C6':'C6.mp3',  'D#6':'Ds6.mp3', 'F#6':'Fs6.mp3',
+        'A6':'A6.mp3',  'C7':'C7.mp3',  'D#7':'Ds7.mp3', 'F#7':'Fs7.mp3',
+        'A7':'A7.mp3',  'C8':'C8.mp3',
+      },
+      release: 1.2,
+      baseUrl: 'https://tonejs.github.io/audio/salamander/',
+      onload: () => {
+        samplerReady = true;
+        document.getElementById('keyboard-loading').classList.add('hidden');
+      },
+    }).toDestination();
+
+    function midiToNoteName(midi) {
+      return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
     }
 
-    function midiToFreq(midi) {
-      return 440 * Math.pow(2, (midi - 69) / 12);
+    async function playNote(midi) {
+      if (!samplerReady) return;
+      await Tone.start();
+      sampler.triggerAttackRelease(midiToNoteName(midi), '8n');
     }
 
-    function playNote(midi, when = 0, duration = 0.85) {
-      initAudio();
-      const freq = midiToFreq(midi);
-      const now = audioCtx.currentTime + when;
-
-      // Stack 3 sine harmonics for a piano-like timbre
-      [[1, 1.0], [2, 0.22], [4, 0.07]].forEach(([harmonic, gain]) => {
-        const osc = audioCtx.createOscillator();
-        const env = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = freq * harmonic;
-
-        env.gain.setValueAtTime(0, now);
-        env.gain.linearRampToValueAtTime(gain, now + 0.006);
-        env.gain.exponentialRampToValueAtTime(gain * 0.28, now + 0.09);
-        env.gain.setValueAtTime(gain * 0.28, now + duration - 0.12);
-        env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-        osc.connect(env);
-        env.connect(masterGain);
-        osc.start(now);
-        osc.stop(now + duration + 0.05);
-      });
+    async function playChord(midiNotes) {
+      if (!samplerReady) return;
+      await Tone.start();
+      const now = Tone.now();
+      midiNotes.forEach(m => sampler.triggerAttackRelease(midiToNoteName(m), '2n', now));
     }
 
-    function playChord(midiNotes) {
-      initAudio();
-      midiNotes.forEach(m => playNote(m, 0, 1.1));
+    async function playArpeggiated(midiNotes, step = 0.13) {
+      if (!samplerReady) return;
+      await Tone.start();
+      const now = Tone.now();
+      midiNotes.forEach((m, i) => sampler.triggerAttackRelease(midiToNoteName(m), '4n', now + i * step));
     }
 
-    function playArpeggiated(midiNotes, step = 0.14) {
-      initAudio();
-      midiNotes.forEach((m, i) => playNote(m, i * step, 0.8));
-    }
-
-    function playScaleSequence(midiNotes) {
-      initAudio();
+    async function playScaleSequence(midiNotes) {
+      if (!samplerReady) return;
+      await Tone.start();
+      const now = Tone.now();
       const step = 0.22;
-      midiNotes.forEach((m, i) => playNote(m, i * step, step * 0.85));
+      midiNotes.forEach((m, i) => sampler.triggerAttackRelease(midiToNoteName(m), '8n', now + i * step));
     }
 
     // ── Keyboard ──────────────────────────────────────────────────────────────
