@@ -558,8 +558,8 @@ title: Music Theory
     ];
 
     const WHITE_PCS = [0,2,4,5,7,9,11];
-    const MIDI_START = 48; // C3
-    const MIDI_END   = 72; // C5
+    const MIDI_START = 12;  // C0
+    const MIDI_END   = 108; // C8
     const WHITE_W    = 41; // px per white key (width + 1px gap)
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -742,16 +742,15 @@ title: Music Theory
 
     // ── Info Display ──────────────────────────────────────────────────────────
 
+    const PLAYBACK_BASE = 48; // C3 — comfortable mid-range octave for playback
+
     function getScaleMidis(root, intervals) {
-      // Find the root midi in middle of keyboard range, then build ascending
-      let rootMidi = MIDI_START + ((root - (MIDI_START % 12) + 12) % 12);
-      if (rootMidi < MIDI_START) rootMidi += 12;
+      let rootMidi = PLAYBACK_BASE + ((root - (PLAYBACK_BASE % 12) + 12) % 12);
       return intervals.map(i => rootMidi + i);
     }
 
     function getChordMidis(root, intervals) {
-      let rootMidi = MIDI_START + ((root - (MIDI_START % 12) + 12) % 12);
-      if (rootMidi < MIDI_START) rootMidi += 12;
+      let rootMidi = PLAYBACK_BASE + ((root - (PLAYBACK_BASE % 12) + 12) % 12);
       return intervals.map(i => rootMidi + i);
     }
 
@@ -903,10 +902,11 @@ title: Music Theory
         t.addEventListener('click', () => switchMode(t.dataset.mode));
       });
 
-      // Initial display
+      // Initial display — scroll to middle C (C4)
       updateHighlight();
       updateScaleDisplay();
       updateChordDisplay();
+      requestAnimationFrame(() => scrollToRoot(0)); // C — lands on C4 area
 
       // Install prompt
       let installPrompt = null;
