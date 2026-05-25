@@ -902,6 +902,7 @@ title: Music Theory
         updateHighlight();
         updateChordDisplay();
         scrollToRoot(state.chordRoot);
+        playChord(getChordMidis(state.chordRoot, CHORDS[state.chordType].intervals));
       });
       buildSelect('chord-type-select', CHORDS, (val) => {
         state.chordType = val;
