@@ -451,6 +451,15 @@ title: Music Theory
 
     .quiz-card { display: flex; flex-direction: column; gap: 10px; }
 
+    .quiz-label {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      text-align: center;
+      letter-spacing: -0.3px;
+      min-height: 24px;
+    }
+
     .quiz-top-row { display: flex; gap: 8px; align-items: center; }
 
     .quiz-options {
@@ -616,6 +625,7 @@ title: Music Theory
         <div class="quiz-score" id="quiz-score">— / —</div>
       </div>
       <div class="quiz-card">
+        <div class="quiz-label" id="quiz-label"></div>
         <div class="quiz-top-row">
           <button class="play-btn" id="quiz-play-btn">🔊 Play</button>
           <button class="play-btn secondary" id="quiz-next-btn" style="visibility:hidden">Next →</button>
@@ -993,7 +1003,29 @@ title: Music Theory
       let rootMidi = lvl.midiMin + ((root - (lvl.midiMin % 12) + 12) % 12);
       if (rootMidi > lvl.midiMax - 11) rootMidi -= 12;
       const midis = CHORDS[type].intervals.map(i => rootMidi + i);
-      return { midis, answer: type };
+      const noteNames = midis.map(m => NOTE_NAMES[m % 12]);
+      if (state.quizLevel === 1) {
+        // Level 1: reveal the chord name, quiz on which notes it contains
+        return { midis, answer: noteNames.join(' – '), label: `${NOTE_NAMES[root]} ${type}` };
+      }
+      // Level 2+: play blind, identify chord type by ear
+      return { midis, answer: type, label: null };
+    }
+
+    function generateNoteSetOptions(correctNotes) {
+      const correct = correctNotes.join(' – ');
+      const opts = [correct];
+      while (opts.length < 4) {
+        const wrong = [...correctNotes];
+        const idx = Math.floor(Math.random() * wrong.length);
+        let alt, tries = 0;
+        do { alt = NOTE_NAMES[Math.floor(Math.random() * 12)]; tries++; }
+        while ((wrong.includes(alt) || alt === correctNotes[idx]) && tries < 30);
+        wrong[idx] = alt;
+        const str = wrong.join(' – ');
+        if (!opts.includes(str)) opts.push(str);
+      }
+      return shuffle(opts);
     }
 
     function generateNoteQuestion() {
@@ -1028,9 +1060,19 @@ title: Music Theory
       state.quizQuestion = state.quizType === 'chords'
         ? generateChordQuestion()
         : generateNoteQuestion();
-      const lvl = QUIZ_LEVELS[state.quizLevel];
-      const pool = state.quizType === 'chords' ? lvl.chordPool : lvl.notePool;
-      state.quizOptions = generateOptions(state.quizQuestion.answer, pool);
+
+      // Option generation depends on quiz mode and level
+      if (state.quizType === 'chords' && state.quizLevel === 1) {
+        state.quizOptions = generateNoteSetOptions(state.quizQuestion.answer.split(' – '));
+      } else {
+        const lvl = QUIZ_LEVELS[state.quizLevel];
+        const pool = state.quizType === 'chords' ? lvl.chordPool : lvl.notePool;
+        state.quizOptions = generateOptions(state.quizQuestion.answer, pool);
+      }
+
+      // Show chord name label for level-1 chord quiz, hide otherwise
+      const labelEl = document.getElementById('quiz-label');
+      labelEl.textContent = state.quizQuestion.label || '';
 
       renderQuizOptions();
       clearHighlight();
