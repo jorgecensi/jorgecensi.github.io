@@ -258,6 +258,22 @@ title: Music Theory
     }
     .play-btn.secondary:hover { background: var(--panel2); color: var(--text); }
 
+    /* Song chord chips */
+    .song-chord-chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .song-chord-chip {
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--accent);
+      background: transparent;
+      color: var(--fg);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.15s, color 0.15s;
+    }
+    .song-chord-chip:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+    .song-chord-chip.active { background: var(--accent); color: #fff; }
+
     /* Intervals panel */
     .interval-card {
       display: flex;
@@ -588,6 +604,16 @@ title: Music Theory
     <!-- CHORDS -->
     <div id="panel-chords" class="panel" role="tabpanel">
       <div class="ctrl-row">
+        <span class="ctrl-label">Song</span>
+        <select id="song-select" aria-label="Select song">
+          <option value="">— none —</option>
+        </select>
+      </div>
+      <div class="ctrl-row" id="song-chords-row" style="display:none">
+        <span class="ctrl-label">Chords</span>
+        <div class="song-chord-chips" id="song-chord-chips"></div>
+      </div>
+      <div class="ctrl-row">
         <span class="ctrl-label">Root</span>
         <div class="note-picker" id="chord-root-picker"></div>
       </div>
@@ -693,6 +719,15 @@ title: Music Theory
       'Minor 6th':        { intervals: [0,3,7,9],   formula: 'Root – m3 – P5 – M6', symbol: 'm6' },
     };
 
+    const SONGS = {
+      'The Scientist – Coldplay': [
+        { root: 2,  type: 'Minor', label: 'Dm' },
+        { root: 10, type: 'Major', label: 'B♭' },
+        { root: 5,  type: 'Major', label: 'F'  },
+        { root: 0,  type: 'Major', label: 'C'  },
+      ],
+    };
+
     const INTERVAL_NAMES = [
       'Unison','Minor 2nd','Major 2nd','Minor 3rd','Major 3rd',
       'Perfect 4th','Tritone','Perfect 5th','Minor 6th','Major 6th',
@@ -718,6 +753,8 @@ title: Music Theory
       scaleType: 'Major',
       chordRoot: 0,
       chordType: 'Major',
+      songName: '',
+      activeSongChord: -1,
       ivNotes: [],        // up to 2 midi values for intervals mode
       quizType:     'chords',
       quizQuestion: null,
@@ -918,6 +955,47 @@ title: Music Theory
       document.getElementById('chord-formula').textContent = def.formula;
       document.getElementById('chord-notes').textContent =
         `${root}${def.symbol}: ` + noteNames.join('  ');
+    }
+
+    function buildSongSelect() {
+      const sel = document.getElementById('song-select');
+      Object.keys(SONGS).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => {
+        state.songName = sel.value;
+        state.activeSongChord = -1;
+        renderSongChordChips();
+      });
+    }
+
+    function renderSongChordChips() {
+      const row = document.getElementById('song-chords-row');
+      const container = document.getElementById('song-chord-chips');
+      container.innerHTML = '';
+      if (!state.songName) { row.style.display = 'none'; return; }
+      row.style.display = '';
+      SONGS[state.songName].forEach((chord, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'song-chord-chip' + (idx === state.activeSongChord ? ' active' : '');
+        btn.textContent = chord.label;
+        btn.addEventListener('click', () => {
+          state.chordRoot = chord.root;
+          state.chordType = chord.type;
+          state.activeSongChord = idx;
+          setPickerValue('chord-root-picker', chord.root);
+          document.getElementById('chord-type-select').value = chord.type;
+          updateChordDisplay();
+          updateHighlight();
+          scrollToRoot(chord.root);
+          playChord(getChordMidis(chord.root, CHORDS[chord.type].intervals));
+          renderSongChordChips();
+        });
+        container.appendChild(btn);
+      });
     }
 
     function updateIntervalDisplay() {
@@ -1176,6 +1254,7 @@ title: Music Theory
         updateHighlight();
         updateChordDisplay();
       });
+      buildSongSelect();
 
       // Play buttons
       document.getElementById('scale-play-btn').addEventListener('click', () => {
