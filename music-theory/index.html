@@ -359,7 +359,7 @@ title: Music Theory
 
     .key-white {
       position: relative;
-      width: 52px;
+      width: 60px;
       height: 180px;
       background: #f0ebe0;
       border: 1px solid #8a8070;
@@ -380,8 +380,8 @@ title: Music Theory
 
     .key-black {
       position: absolute;
-      width: 32px;
-      height: 112px;
+      width: 38px;
+      height: 88px;
       background: #1a1632;
       border-radius: 0 0 6px 6px;
       cursor: pointer;
@@ -804,7 +804,7 @@ title: Music Theory
     const WHITE_PCS = [0,2,4,5,7,9,11];
     const MIDI_START = 36;  // C2
     const MIDI_END   = 108; // C8
-    const WHITE_W    = 53; // px per white key (width + 1px gap)
+    const WHITE_W    = 61; // px per white key (width + 1px gap)
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -939,7 +939,7 @@ title: Music Theory
           el.setAttribute('aria-label', `${NOTE_NAMES[pc]}${octave}`);
           // Position: center over the gap between the preceding and following white keys
           // Preceding white key index (0-based) = whiteCount - 1
-          const leftPx = (whiteCount - 1) * WHITE_W + WHITE_W - 17;
+          const leftPx = (whiteCount - 1) * WHITE_W + WHITE_W - 19;
           el.style.left = leftPx + 'px';
           el.appendChild(noteLabel);
         }
