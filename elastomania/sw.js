@@ -3,6 +3,7 @@ const CACHE_NAME = `elastomania-${CACHE_VERSION}`;
 const OFFLINE_URL = '/elastomania/';
 const PRECACHE_URLS = [
   '/elastomania/',
+  '/elastomania/matter.min.js',
   '/elastomania/manifest.json',
   '/img/elastomania-icon-192.png',
   '/img/elastomania-icon-512.png',
