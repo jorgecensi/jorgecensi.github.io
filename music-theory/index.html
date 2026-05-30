@@ -859,6 +859,25 @@ title: Music Theory
       sampler.triggerAttackRelease(midiToNoteName(midi), '8n');
     }
 
+    const heldNotes = new Set();
+
+    async function startNote(midi) {
+      if (!samplerReady) return;
+      await Tone.start();
+      if (!heldNotes.has(midi)) {
+        heldNotes.add(midi);
+        sampler.triggerAttack(midiToNoteName(midi));
+      }
+    }
+
+    function stopNote(midi) {
+      if (!samplerReady) return;
+      if (heldNotes.has(midi)) {
+        heldNotes.delete(midi);
+        sampler.triggerRelease(midiToNoteName(midi));
+      }
+    }
+
     async function playChord(midiNotes) {
       if (!samplerReady) return;
       await Tone.start();
@@ -927,8 +946,11 @@ title: Music Theory
 
         el.addEventListener('pointerdown', (e) => {
           e.preventDefault();
-          onKeyDown(midi, el);
+          el.setPointerCapture(e.pointerId);
+          onKeyPress(midi, el);
         });
+        el.addEventListener('pointerup', () => onKeyRelease(midi, el));
+        el.addEventListener('pointercancel', () => onKeyRelease(midi, el));
 
         kb.appendChild(el);
       }
@@ -937,11 +959,10 @@ title: Music Theory
       kb.style.width = (whiteCount * WHITE_W - 1) + 'px';
     }
 
-    function onKeyDown(midi, el) {
+    function onKeyPress(midi, el) {
       if (state.mode === 'quiz') return;
-      playNote(midi);
+      startNote(midi);
       el.classList.add('pressed');
-      setTimeout(() => el.classList.remove('pressed'), 180);
 
       if (state.mode === 'intervals') {
         state.ivNotes.push(midi);
@@ -949,6 +970,11 @@ title: Music Theory
         updateHighlight();
         updateIntervalDisplay();
       }
+    }
+
+    function onKeyRelease(midi, el) {
+      stopNote(midi);
+      el.classList.remove('pressed');
     }
 
     // ── Highlight ─────────────────────────────────────────────────────────────
