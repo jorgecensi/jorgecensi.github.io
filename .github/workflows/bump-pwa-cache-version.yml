@@ -55,6 +55,7 @@ jobs:
           echo "tuner=$(check 'tuner/sw.js tuner/index.html tuner/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "auto_runner=$(check 'auto-runner/sw.js auto-runner/index.html auto-runner/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "music_theory=$(check 'music-theory/sw.js music-theory/index.html music-theory/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "elastomania=$(check 'elastomania/sw.js elastomania/index.html elastomania/manifest.json')" >> "${GITHUB_OUTPUT}"
 
       - name: Update PWA version constants
         run: |
@@ -77,6 +78,7 @@ jobs:
               "tuner":        "${{ steps.changed.outputs.tuner }}" == "true",
               "auto_runner":  "${{ steps.changed.outputs.auto_runner }}" == "true",
               "music_theory": "${{ steps.changed.outputs.music_theory }}" == "true",
+              "elastomania":  "${{ steps.changed.outputs.elastomania }}" == "true",
           }
 
           # On tag/dispatch, bump everything; on push to main, only bump changed PWAs
@@ -117,6 +119,9 @@ jobs:
           if bump_all or changed["music_theory"]:
               versioned_files["music-theory/sw.js"] = ("CACHE_VERSION", version)
               versioned_files["music-theory/index.html"] = ("SW_VERSION", version)
+          if bump_all or changed["elastomania"]:
+              versioned_files["elastomania/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["elastomania/index.html"] = ("SW_VERSION", version)
 
           for relative_path, (const_name, ver) in versioned_files.items():
               path = repo / relative_path
@@ -158,6 +163,8 @@ jobs:
             auto-runner/sw.js \
             auto-runner/index.html \
             music-theory/sw.js \
-            music-theory/index.html
+            music-theory/index.html \
+            elastomania/sw.js \
+            elastomania/index.html
           git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }} [skip ci]"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"
