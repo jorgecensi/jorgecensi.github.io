@@ -414,6 +414,16 @@ title: Music Theory
     .key-white.is-root   { background: #f59e0b; }
     .key-black.is-root   { background: #d97706; }
 
+    /* Quiz keyboard-input states */
+    .key-white.quiz-sel     { background: rgba(59,130,246,0.35); }
+    .key-black.quiz-sel     { background: #3b82f6; }
+    .key-white.quiz-correct { background: rgba(16,185,129,0.45); }
+    .key-black.quiz-correct { background: #10b981; }
+    .key-white.quiz-wrong   { background: rgba(239,68,68,0.40); }
+    .key-black.quiz-wrong   { background: #ef4444; }
+    .key-white.quiz-sel .key-note, .key-white.quiz-correct .key-note,
+    .key-white.quiz-wrong .key-note { color: rgba(0,0,0,0.65); }
+
     /* Interval markers */
     .key-white.iv-a  { background: var(--green); }
     .key-black.iv-a  { background: #059669; }
@@ -479,9 +489,12 @@ title: Music Theory
     .quiz-top-row { display: flex; gap: 8px; align-items: center; }
 
     .quiz-options {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      min-height: 20px;
+      letter-spacing: 0.3px;
     }
 
     .quiz-opt-btn {
@@ -646,6 +659,7 @@ title: Music Theory
         <span class="ctrl-label">Train</span>
         <div class="quiz-type-btns">
           <button class="quiz-type-btn active" data-type="chords">Chords</button>
+          <button class="quiz-type-btn" data-type="scales">Scales</button>
           <button class="quiz-type-btn" data-type="notes">Notes</button>
         </div>
         <div class="quiz-score" id="quiz-score">— / —</div>
@@ -796,9 +810,9 @@ title: Music Theory
     ];
 
     const QUIZ_LEVELS = {
-      1: { notePool: ['C','D','E','F','G','A','B'], chordPool: ['Major','Minor'],                                           midiMin: 60, midiMax: 71 },
-      2: { notePool: NOTE_NAMES,                    chordPool: ['Major','Minor','Dominant 7th','Major 7th','Minor 7th'],    midiMin: 48, midiMax: 72 },
-      3: { notePool: NOTE_NAMES,                    chordPool: Object.keys(CHORDS),                                        midiMin: 36, midiMax: 84 },
+      1: { notePool: ['C','D','E','F','G','A','B'], chordPool: ['Major','Minor'],                                           scalePool: ['Major','Natural Minor'],                                              midiMin: 60, midiMax: 71 },
+      2: { notePool: NOTE_NAMES,                    chordPool: ['Major','Minor','Dominant 7th','Major 7th','Minor 7th'],    scalePool: ['Major','Natural Minor','Dorian','Mixolydian','Pentatonic Major'],     midiMin: 48, midiMax: 72 },
+      3: { notePool: NOTE_NAMES,                    chordPool: Object.keys(CHORDS),                                        scalePool: Object.keys(SCALES),                                                    midiMin: 36, midiMax: 84 },
     };
 
     const WHITE_PCS = [0,2,4,5,7,9,11];
@@ -819,7 +833,8 @@ title: Music Theory
       ivNotes: [],        // up to 2 midi values for intervals mode
       quizType:     'chords',
       quizQuestion: null,
-      quizOptions:  [],
+      quizPlayed:   new Set(),  // pitch classes the player has struck this round
+      quizRequired: 0,          // distinct notes needed to complete the answer
       quizAnswered: false,
       quizScore:    { correct: 0, total: 0 },
       quizLevel:    1,
@@ -960,9 +975,13 @@ title: Music Theory
     }
 
     function onKeyPress(midi, el) {
-      if (state.mode === 'quiz') return;
       startNote(midi);
       el.classList.add('pressed');
+
+      if (state.mode === 'quiz') {
+        registerQuizKey(midi);
+        return;
+      }
 
       if (state.mode === 'intervals') {
         state.ivNotes.push(midi);
@@ -981,7 +1000,7 @@ title: Music Theory
 
     function clearHighlight() {
       document.querySelectorAll('.key').forEach(k => {
-        k.classList.remove('in-scale','is-root','iv-a','iv-b');
+        k.classList.remove('in-scale','is-root','iv-a','iv-b','quiz-sel','quiz-correct','quiz-wrong');
       });
     }
 
@@ -1161,6 +1180,10 @@ title: Music Theory
       return arr;
     }
 
+    // Each quiz question is answered by PLAYING the notes on the piano.
+    // A question carries the set of pitch classes the player must produce
+    // (`answerPcs`), the human-readable name, and the reference midis to play.
+
     function generateChordQuestion() {
       const lvl = QUIZ_LEVELS[state.quizLevel];
       const rootPool = state.quizLevel === 1 ? [0,2,4,5,7,9,11] : [...Array(12).keys()];
@@ -1169,29 +1192,29 @@ title: Music Theory
       let rootMidi = lvl.midiMin + ((root - (lvl.midiMin % 12) + 12) % 12);
       if (rootMidi > lvl.midiMax - 11) rootMidi -= 12;
       const midis = CHORDS[type].intervals.map(i => rootMidi + i);
-      const noteNames = midis.map(m => NOTE_NAMES[m % 12]);
-      if (state.quizLevel === 1) {
-        // Level 1: reveal the chord name, quiz on which notes it contains
-        return { midis, answer: noteNames.join(' – '), label: `${NOTE_NAMES[root]} ${type}` };
-      }
-      // Level 2+: play blind, identify chord type by ear
-      return { midis, answer: type, label: null };
+      return {
+        midis,
+        answerPcs: new Set(midis.map(m => m % 12)),
+        answerName: `${NOTE_NAMES[root]} ${type}`,
+        rootPc: root,
+      };
     }
 
-    function generateNoteSetOptions(correctNotes) {
-      const correct = correctNotes.join(' – ');
-      const opts = [correct];
-      while (opts.length < 4) {
-        const wrong = [...correctNotes];
-        const idx = Math.floor(Math.random() * wrong.length);
-        let alt, tries = 0;
-        do { alt = NOTE_NAMES[Math.floor(Math.random() * 12)]; tries++; }
-        while ((wrong.includes(alt) || alt === correctNotes[idx]) && tries < 30);
-        wrong[idx] = alt;
-        const str = wrong.join(' – ');
-        if (!opts.includes(str)) opts.push(str);
-      }
-      return shuffle(opts);
+    function generateScaleQuestion() {
+      const lvl = QUIZ_LEVELS[state.quizLevel];
+      const rootPool = state.quizLevel === 1 ? [0,2,4,5,7,9,11] : [...Array(12).keys()];
+      const root = rootPool[Math.floor(Math.random() * rootPool.length)];
+      const type = lvl.scalePool[Math.floor(Math.random() * lvl.scalePool.length)];
+      let rootMidi = lvl.midiMin + ((root - (lvl.midiMin % 12) + 12) % 12);
+      const span = SCALES[type].intervals[SCALES[type].intervals.length - 1];
+      if (rootMidi + span > lvl.midiMax) rootMidi -= 12;
+      const midis = SCALES[type].intervals.map(i => rootMidi + i);
+      return {
+        midis,
+        answerPcs: new Set(midis.map(m => m % 12)),
+        answerName: `${NOTE_NAMES[root]} ${type} scale`,
+        rootPc: root,
+      };
     }
 
     function generateNoteQuestion() {
@@ -1200,73 +1223,95 @@ title: Music Theory
       do {
         midi = lvl.midiMin + Math.floor(Math.random() * (lvl.midiMax - lvl.midiMin + 1));
       } while (!lvl.notePool.includes(NOTE_NAMES[midi % 12]));
-      return { midis: [midi], answer: NOTE_NAMES[midi % 12] };
+      return {
+        midis: [midi],
+        answerPcs: new Set([midi % 12]),
+        answerName: NOTE_NAMES[midi % 12],
+        rootPc: midi % 12,
+      };
     }
 
-    function generateOptions(answer, pool) {
-      const wrong = shuffle(pool.filter(o => o !== answer));
-      return shuffle([answer, ...wrong.slice(0, 3)]);
+    function playQuizPrompt() {
+      const q = state.quizQuestion;
+      if (!q) return;
+      if (state.quizType === 'chords')      playChord(q.midis);
+      else if (state.quizType === 'scales') playScaleSequence(q.midis);
+      else                                  playNote(q.midis[0]);
     }
 
-    function renderQuizOptions() {
-      const container = document.getElementById('quiz-options');
-      container.innerHTML = '';
-      state.quizOptions.forEach(opt => {
-        const btn = document.createElement('button');
-        btn.className = 'quiz-opt-btn';
-        btn.textContent = opt;
-        btn.dataset.option = opt;
-        btn.addEventListener('click', () => handleQuizAnswer(opt));
-        container.appendChild(btn);
-      });
+    function updateQuizProgress() {
+      const el = document.getElementById('quiz-options');
+      if (!state.quizQuestion || state.quizAnswered) { el.textContent = ''; return; }
+      const need = state.quizRequired;
+      const played = [...state.quizPlayed].map(pc => NOTE_NAMES[pc]);
+      el.textContent = played.length === 0
+        ? `🎹 Play ${need} note${need > 1 ? 's' : ''} on the piano below`
+        : `${played.join(' – ')}  (${played.length} / ${need})`;
     }
 
     function startQuizRound() {
       state.quizAnswered = false;
-      state.quizQuestion = state.quizType === 'chords'
-        ? generateChordQuestion()
+      state.quizPlayed = new Set();
+      state.quizQuestion =
+          state.quizType === 'chords' ? generateChordQuestion()
+        : state.quizType === 'scales' ? generateScaleQuestion()
         : generateNoteQuestion();
+      state.quizRequired = state.quizQuestion.answerPcs.size;
 
-      // Option generation depends on quiz mode and level
-      if (state.quizType === 'chords' && state.quizLevel === 1) {
-        state.quizOptions = generateNoteSetOptions(state.quizQuestion.answer.split(' – '));
-      } else {
-        const lvl = QUIZ_LEVELS[state.quizLevel];
-        const pool = state.quizType === 'chords' ? lvl.chordPool : lvl.notePool;
-        state.quizOptions = generateOptions(state.quizQuestion.answer, pool);
-      }
+      // Level 1 reveals the name (build it on the keyboard); higher levels
+      // play it blind and ask the player to reproduce what they hear.
+      const showName = state.quizLevel === 1;
+      document.getElementById('quiz-label').textContent =
+        showName ? `Play: ${state.quizQuestion.answerName}` : 'Play what you hear';
 
-      // Show chord name label for level-1 chord quiz, hide otherwise
-      const labelEl = document.getElementById('quiz-label');
-      labelEl.textContent = state.quizQuestion.label || '';
-
-      renderQuizOptions();
       clearHighlight();
-      document.getElementById('quiz-feedback').textContent = '';
-      document.getElementById('quiz-feedback').className = 'quiz-feedback';
+      updateQuizProgress();
+      const fb = document.getElementById('quiz-feedback');
+      fb.textContent = '';
+      fb.className = 'quiz-feedback';
       document.getElementById('quiz-next-btn').style.visibility = 'hidden';
 
-      if (state.quizType === 'chords') playChord(state.quizQuestion.midis);
-      else playNote(state.quizQuestion.midis[0]);
+      playQuizPrompt();
     }
 
-    function handleQuizAnswer(chosen) {
-      if (state.quizAnswered) return;
+    // Called from onKeyPress while in quiz mode: record the pitch class the
+    // player struck and auto-check once enough distinct notes are down.
+    function registerQuizKey(midi) {
+      if (state.quizAnswered || !state.quizQuestion) return;
+      const pc = midi % 12;
+      if (state.quizPlayed.has(pc)) return;
+      state.quizPlayed.add(pc);
+      document.querySelectorAll(`.key[data-pc="${pc}"]`).forEach(k => k.classList.add('quiz-sel'));
+      updateQuizProgress();
+      if (state.quizPlayed.size >= state.quizRequired) checkQuizAnswer();
+    }
+
+    function checkQuizAnswer() {
       state.quizAnswered = true;
       state.quizScore.total++;
-      const correct = chosen === state.quizQuestion.answer;
+      const expected = state.quizQuestion.answerPcs;
+      const played = state.quizPlayed;
+      const correct = played.size === expected.size && [...expected].every(pc => played.has(pc));
       if (correct) { state.quizScore.correct++; state.quizStreak++; }
       else { state.quizStreak = 0; }
 
-      document.querySelectorAll('.quiz-opt-btn').forEach(btn => {
-        btn.disabled = true;
-        if (btn.dataset.option === state.quizQuestion.answer) btn.classList.add('correct');
-        else if (btn.dataset.option === chosen) btn.classList.add('wrong');
+      // Recolour the keys: green = right note played, red = wrong note played,
+      // amber = a correct note the player missed.
+      document.querySelectorAll('.key').forEach(k => {
+        const pc = parseInt(k.dataset.pc);
+        k.classList.remove('quiz-sel');
+        if (expected.has(pc) && played.has(pc)) k.classList.add('quiz-correct');
+        else if (played.has(pc))                k.classList.add('quiz-wrong');
+        else if (expected.has(pc))              k.classList.add('in-scale');
       });
 
       const fb = document.getElementById('quiz-feedback');
-      fb.textContent = correct ? '✓ Correct!' : `✗ It was "${state.quizQuestion.answer}"`;
+      fb.textContent = correct ? '✓ Correct!' : `✗ It was ${state.quizQuestion.answerName}`;
       fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
+
+      // Always reveal the name once answered.
+      document.getElementById('quiz-label').textContent = state.quizQuestion.answerName;
+      document.getElementById('quiz-options').textContent = '';
 
       const { correct: c, total: t } = state.quizScore;
       document.getElementById('quiz-score').textContent = `${c} / ${t}`;
@@ -1280,17 +1325,7 @@ title: Music Theory
         setTimeout(() => el.classList.remove('visible'), 2500);
       }
 
-      highlightQuizAnswer();
       document.getElementById('quiz-next-btn').style.visibility = 'visible';
-    }
-
-    function highlightQuizAnswer() {
-      clearHighlight();
-      if (!state.quizQuestion) return;
-      state.quizQuestion.midis.forEach((midi, i) => {
-        const el = document.querySelector(`.key[data-midi="${midi}"]`);
-        if (el) el.classList.add(i === 0 ? 'is-root' : 'in-scale');
-      });
     }
 
     // ── Mode Switching ────────────────────────────────────────────────────────
@@ -1377,8 +1412,7 @@ title: Music Theory
       // Quiz play / next buttons
       document.getElementById('quiz-play-btn').addEventListener('click', () => {
         if (!state.quizQuestion) { startQuizRound(); return; }
-        if (state.quizType === 'chords') playChord(state.quizQuestion.midis);
-        else playNote(state.quizQuestion.midis[0]);
+        playQuizPrompt();
       });
       document.getElementById('quiz-next-btn').addEventListener('click', startQuizRound);
 
@@ -1407,7 +1441,7 @@ title: Music Theory
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2605300054';
+        const SW_VERSION = '2606020936';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
