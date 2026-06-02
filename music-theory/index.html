@@ -646,6 +646,7 @@ title: Music Theory
         <span class="ctrl-label">Train</span>
         <div class="quiz-type-btns">
           <button class="quiz-type-btn active" data-type="chords">Chords</button>
+          <button class="quiz-type-btn" data-type="scales">Scales</button>
           <button class="quiz-type-btn" data-type="notes">Notes</button>
         </div>
         <div class="quiz-score" id="quiz-score">— / —</div>
@@ -796,9 +797,9 @@ title: Music Theory
     ];
 
     const QUIZ_LEVELS = {
-      1: { notePool: ['C','D','E','F','G','A','B'], chordPool: ['Major','Minor'],                                           midiMin: 60, midiMax: 71 },
-      2: { notePool: NOTE_NAMES,                    chordPool: ['Major','Minor','Dominant 7th','Major 7th','Minor 7th'],    midiMin: 48, midiMax: 72 },
-      3: { notePool: NOTE_NAMES,                    chordPool: Object.keys(CHORDS),                                        midiMin: 36, midiMax: 84 },
+      1: { notePool: ['C','D','E','F','G','A','B'], chordPool: ['Major','Minor'],                                           scalePool: ['Major','Natural Minor'],                                              midiMin: 60, midiMax: 71 },
+      2: { notePool: NOTE_NAMES,                    chordPool: ['Major','Minor','Dominant 7th','Major 7th','Minor 7th'],    scalePool: ['Major','Natural Minor','Dorian','Mixolydian','Pentatonic Major'],     midiMin: 48, midiMax: 72 },
+      3: { notePool: NOTE_NAMES,                    chordPool: Object.keys(CHORDS),                                        scalePool: Object.keys(SCALES),                                                    midiMin: 36, midiMax: 84 },
     };
 
     const WHITE_PCS = [0,2,4,5,7,9,11];
@@ -1178,6 +1179,23 @@ title: Music Theory
       return { midis, answer: type, label: null };
     }
 
+    function generateScaleQuestion() {
+      const lvl = QUIZ_LEVELS[state.quizLevel];
+      const rootPool = state.quizLevel === 1 ? [0,2,4,5,7,9,11] : [...Array(12).keys()];
+      const root = rootPool[Math.floor(Math.random() * rootPool.length)];
+      const type = lvl.scalePool[Math.floor(Math.random() * lvl.scalePool.length)];
+      let rootMidi = lvl.midiMin + ((root - (lvl.midiMin % 12) + 12) % 12);
+      const span = SCALES[type].intervals[SCALES[type].intervals.length - 1];
+      if (rootMidi + span > lvl.midiMax) rootMidi -= 12;
+      const midis = SCALES[type].intervals.map(i => rootMidi + i);
+      if (state.quizLevel === 1) {
+        // Level 1: reveal the root, identify the scale type by ear
+        return { midis, answer: type, label: `Root: ${NOTE_NAMES[root]}` };
+      }
+      // Level 2+: play blind, identify scale type by ear
+      return { midis, answer: type, label: null };
+    }
+
     function generateNoteSetOptions(correctNotes) {
       const correct = correctNotes.join(' – ');
       const opts = [correct];
@@ -1225,6 +1243,8 @@ title: Music Theory
       state.quizAnswered = false;
       state.quizQuestion = state.quizType === 'chords'
         ? generateChordQuestion()
+        : state.quizType === 'scales'
+        ? generateScaleQuestion()
         : generateNoteQuestion();
 
       // Option generation depends on quiz mode and level
@@ -1232,7 +1252,9 @@ title: Music Theory
         state.quizOptions = generateNoteSetOptions(state.quizQuestion.answer.split(' – '));
       } else {
         const lvl = QUIZ_LEVELS[state.quizLevel];
-        const pool = state.quizType === 'chords' ? lvl.chordPool : lvl.notePool;
+        const pool = state.quizType === 'chords' ? lvl.chordPool
+                   : state.quizType === 'scales' ? lvl.scalePool
+                   : lvl.notePool;
         state.quizOptions = generateOptions(state.quizQuestion.answer, pool);
       }
 
@@ -1247,6 +1269,7 @@ title: Music Theory
       document.getElementById('quiz-next-btn').style.visibility = 'hidden';
 
       if (state.quizType === 'chords') playChord(state.quizQuestion.midis);
+      else if (state.quizType === 'scales') playScaleSequence(state.quizQuestion.midis);
       else playNote(state.quizQuestion.midis[0]);
     }
 
@@ -1378,6 +1401,7 @@ title: Music Theory
       document.getElementById('quiz-play-btn').addEventListener('click', () => {
         if (!state.quizQuestion) { startQuizRound(); return; }
         if (state.quizType === 'chords') playChord(state.quizQuestion.midis);
+        else if (state.quizType === 'scales') playScaleSequence(state.quizQuestion.midis);
         else playNote(state.quizQuestion.midis[0]);
       });
       document.getElementById('quiz-next-btn').addEventListener('click', startQuizRound);
