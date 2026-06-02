@@ -467,6 +467,21 @@ title: Music Theory
     .quiz-type-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
     .quiz-type-btn:hover:not(.active) { color: var(--text); border-color: var(--border2); }
 
+    .quiz-level-btn {
+      margin-left: 10px;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--panel2);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .quiz-level-btn:hover { border-color: var(--accent); color: var(--accent); }
+
     .quiz-score {
       margin-left: auto;
       font-size: 13px;
@@ -662,6 +677,7 @@ title: Music Theory
           <button class="quiz-type-btn" data-type="scales">Scales</button>
           <button class="quiz-type-btn" data-type="notes">Notes</button>
         </div>
+        <button class="quiz-level-btn" id="quiz-level-btn" title="Tap to change difficulty"></button>
         <div class="quiz-score" id="quiz-score">— / —</div>
       </div>
       <div class="quiz-card">
@@ -1339,6 +1355,7 @@ title: Music Theory
       if (state.quizStreak >= 10 && state.quizLevel < 3) {
         state.quizLevel++;
         state.quizStreak = 0;
+        updateQuizLevelBtn();
         const el = document.getElementById('quiz-levelup');
         el.textContent = `Level ${state.quizLevel} unlocked! 🎉`;
         el.classList.add('visible');
@@ -1346,6 +1363,22 @@ title: Music Theory
       }
 
       document.getElementById('quiz-next-btn').style.visibility = 'visible';
+    }
+
+    const QUIZ_LEVEL_NAMES = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' };
+
+    function updateQuizLevelBtn() {
+      document.getElementById('quiz-level-btn').textContent =
+        `Level ${state.quizLevel}: ${QUIZ_LEVEL_NAMES[state.quizLevel]}`;
+    }
+
+    function setQuizLevel(level) {
+      state.quizLevel = level;
+      state.quizStreak = 0;
+      state.quizScore = { correct: 0, total: 0 };
+      document.getElementById('quiz-score').textContent = '— / —';
+      updateQuizLevelBtn();
+      if (state.mode === 'quiz') startQuizRound();
     }
 
     // ── Mode Switching ────────────────────────────────────────────────────────
@@ -1427,6 +1460,12 @@ title: Music Theory
           document.getElementById('quiz-score').textContent = '— / —';
           if (state.mode === 'quiz') startQuizRound();
         });
+      });
+
+      // Quiz difficulty selector — cycles Beginner → Intermediate → Advanced
+      updateQuizLevelBtn();
+      document.getElementById('quiz-level-btn').addEventListener('click', () => {
+        setQuizLevel(state.quizLevel >= 3 ? 1 : state.quizLevel + 1);
       });
 
       // Quiz play / next buttons
