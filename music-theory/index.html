@@ -839,6 +839,7 @@ title: Music Theory
       quizScore:    { correct: 0, total: 0 },
       quizLevel:    1,
       quizStreak:   0,
+      majorScaleRootsDone: new Set(),  // major keys answered correctly — gates other scales
     };
 
     // ── Audio (Tone.js Salamander piano) ──────────────────────────────────────
@@ -1203,8 +1204,21 @@ title: Music Theory
     function generateScaleQuestion() {
       const lvl = QUIZ_LEVELS[state.quizLevel];
       const rootPool = state.quizLevel === 1 ? [0,2,4,5,7,9,11] : [...Array(12).keys()];
-      const root = rootPool[Math.floor(Math.random() * rootPool.length)];
-      const type = lvl.scalePool[Math.floor(Math.random() * lvl.scalePool.length)];
+
+      // Gate non-major scales: only test Major until every major key available
+      // at this level has been answered correctly. While still learning the
+      // majors, prefer keys that haven't been gotten right yet.
+      const majorsMastered = rootPool.every(r => state.majorScaleRootsDone.has(r));
+      const pool = majorsMastered ? lvl.scalePool : ['Major'];
+      let root;
+      if (majorsMastered) {
+        root = rootPool[Math.floor(Math.random() * rootPool.length)];
+      } else {
+        const untested = rootPool.filter(r => !state.majorScaleRootsDone.has(r));
+        root = untested[Math.floor(Math.random() * untested.length)];
+      }
+      const type = pool[Math.floor(Math.random() * pool.length)];
+
       let rootMidi = lvl.midiMin + ((root - (lvl.midiMin % 12) + 12) % 12);
       const span = SCALES[type].intervals[SCALES[type].intervals.length - 1];
       if (rootMidi + span > lvl.midiMax) rootMidi -= 12;
@@ -1214,6 +1228,7 @@ title: Music Theory
         answerPcs: new Set(midis.map(m => m % 12)),
         answerName: `${NOTE_NAMES[root]} ${type} scale`,
         rootPc: root,
+        scaleType: type,
       };
     }
 
@@ -1294,6 +1309,11 @@ title: Music Theory
       const correct = played.size === expected.size && [...expected].every(pc => played.has(pc));
       if (correct) { state.quizScore.correct++; state.quizStreak++; }
       else { state.quizStreak = 0; }
+
+      // Track mastery of each major key — it unlocks the other scales.
+      if (correct && state.quizType === 'scales' && state.quizQuestion.scaleType === 'Major') {
+        state.majorScaleRootsDone.add(state.quizQuestion.rootPc);
+      }
 
       // Recolour the keys: green = right note played, red = wrong note played,
       // amber = a correct note the player missed.
