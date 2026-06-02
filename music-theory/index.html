@@ -319,7 +319,14 @@ title: Music Theory
       background: var(--bg);
       cursor: grab;
       position: relative;
+      /* Custom pointer-driven drag scrolling (see setupKeyboardInteraction) so
+         that swiping across the keys pans to other octaves instead of the
+         browser swallowing the gesture. */
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
+    .keyboard-wrap.dragging { cursor: grabbing; scroll-behavior: auto; }
 
     .keyboard-loading {
       position: absolute;
@@ -448,6 +455,26 @@ title: Music Theory
       color: rgba(0,0,0,0.25);
       pointer-events: none;
       line-height: 1;
+    }
+
+    /* ── Landscape / short viewport: compact the chrome so the white keys
+       still fit. Triggered when vertical space is tight (phones on their
+       side) rather than purely on orientation, so tablets keep full size. */
+    @media (orientation: landscape) and (max-height: 520px) {
+      header { padding: 4px 14px; }
+      .header-title { font-size: 14px; }
+      .header-icon { font-size: 16px; }
+      #install-btn { padding: 3px 9px; font-size: 11px; }
+
+      .tab { padding: 5px 0; font-size: 12px; }
+
+      .panel { padding: 7px 14px 8px; }
+      .ctrl-row { margin-bottom: 7px; gap: 8px; }
+
+      .keyboard-wrap { padding: 6px 14px; }
+      .keyboard { height: 150px; }
+      .key-white { height: 150px; }
+      .key-black { height: 74px; }
     }
 
     /* ── Quiz ── */
@@ -976,14 +1003,9 @@ title: Music Theory
           el.appendChild(noteLabel);
         }
 
-        el.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          el.setPointerCapture(e.pointerId);
-          onKeyPress(midi, el);
-        });
-        el.addEventListener('pointerup', () => onKeyRelease(midi, el));
-        el.addEventListener('pointercancel', () => onKeyRelease(midi, el));
-
+        // Pointer handling is delegated to the keyboard wrapper so that a
+        // horizontal swipe scrolls to other octaves instead of being trapped
+        // by an individual key (see setupKeyboardInteraction).
         kb.appendChild(el);
       }
 
@@ -991,10 +1013,20 @@ title: Music Theory
       kb.style.width = (whiteCount * WHITE_W - 1) + 'px';
     }
 
-    function onKeyPress(midi, el) {
+    // Sound + visual feedback only. Mode-specific selection is deferred to
+    // keySelect() so that a swipe (drag-to-scroll) doesn't register a note.
+    function keyPress(midi, el) {
       startNote(midi);
       el.classList.add('pressed');
+    }
 
+    function keyRelease(midi, el) {
+      stopNote(midi);
+      el.classList.remove('pressed');
+    }
+
+    // Runs only on a genuine tap (not a drag).
+    function keySelect(midi) {
       if (state.mode === 'quiz') {
         registerQuizKey(midi);
         return;
@@ -1008,9 +1040,71 @@ title: Music Theory
       }
     }
 
-    function onKeyRelease(midi, el) {
-      stopNote(midi);
-      el.classList.remove('pressed');
+    // Delegated pointer handling on the keyboard wrapper. A short press plays
+    // (and selects) the key under the finger; dragging horizontally past a
+    // small threshold pans the keyboard to reach other octaves instead.
+    function setupKeyboardInteraction() {
+      const wrap = document.getElementById('keyboard-wrap');
+      const DRAG_THRESHOLD = 8; // px before a press becomes a scroll
+      let pointerId = null;
+      let startX = 0, startScroll = 0;
+      let activeEl = null, activeMidi = null;
+      let dragging = false;
+
+      function endActive() {
+        if (activeEl != null) keyRelease(activeMidi, activeEl);
+        activeEl = null; activeMidi = null;
+      }
+
+      wrap.addEventListener('pointerdown', (e) => {
+        if (pointerId !== null) return;       // ignore extra fingers
+        pointerId  = e.pointerId;
+        startX     = e.clientX;
+        startScroll = wrap.scrollLeft;
+        dragging   = false;
+        e.preventDefault();
+
+        const key = e.target.closest('.key');
+        if (key) {
+          activeEl   = key;
+          activeMidi = parseInt(key.dataset.midi);
+          keyPress(activeMidi, activeEl);
+        }
+      });
+
+      wrap.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== pointerId) return;
+        const dx = e.clientX - startX;
+
+        if (!dragging && Math.abs(dx) > DRAG_THRESHOLD) {
+          dragging = true;
+          wrap.classList.add('dragging');
+          endActive();                        // it was a scroll, not a tap
+          try { wrap.setPointerCapture(pointerId); } catch (_) {}
+        }
+        if (dragging) {
+          wrap.scrollLeft = startScroll - dx;
+          e.preventDefault();
+        }
+      });
+
+      function finish(e) {
+        if (e.pointerId !== pointerId) return;
+        if (activeEl != null && !dragging) {
+          const midi = activeMidi;
+          endActive();
+          keySelect(midi);
+        } else {
+          endActive();
+        }
+        wrap.classList.remove('dragging');
+        try { wrap.releasePointerCapture(pointerId); } catch (_) {}
+        pointerId = null;
+        dragging  = false;
+      }
+
+      wrap.addEventListener('pointerup', finish);
+      wrap.addEventListener('pointercancel', finish);
     }
 
     // ── Highlight ─────────────────────────────────────────────────────────────
@@ -1305,7 +1399,7 @@ title: Music Theory
       playQuizPrompt();
     }
 
-    // Called from onKeyPress while in quiz mode: record the pitch class the
+    // Called from keySelect while in quiz mode: record the pitch class the
     // player struck and auto-check once enough distinct notes are down.
     function registerQuizKey(midi) {
       if (state.quizAnswered || !state.quizQuestion) return;
@@ -1404,6 +1498,7 @@ title: Music Theory
 
     function init() {
       buildKeyboard();
+      setupKeyboardInteraction();
 
       // Scale picker + select
       buildPicker('scale-root-picker', 'scaleRoot', () => {
