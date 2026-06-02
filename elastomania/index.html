@@ -89,7 +89,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2605301156';
+    const SW_VERSION = '2606020938';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -258,7 +258,7 @@ permalink: /elastomania/
         label: 'frontWheel'
       });
 
-      chassis = Bodies.rectangle(SPAWN_X, SPAWN_Y - 12, CHASSIS_W, CHASSIS_H, {
+      chassis = Bodies.rectangle(SPAWN_X, SPAWN_Y - 20, CHASSIS_W, CHASSIS_H, {
         density: 0.005,
         frictionAir: 0.02,
         collisionFilter: { category: 0x0004, mask: 0x0000 },
@@ -268,13 +268,13 @@ permalink: /elastomania/
       const rearConstraint = Constraint.create({
         bodyA: chassis, bodyB: rearWheel,
         pointA: { x: -20, y: 5 }, pointB: { x: 0, y: 0 },
-        stiffness: 0.7, damping: 0.2, length: 18
+        stiffness: 0.9, damping: 0.1, length: 15
       });
 
       const frontConstraint = Constraint.create({
         bodyA: chassis, bodyB: frontWheel,
         pointA: { x: 20, y: 5 }, pointB: { x: 0, y: 0 },
-        stiffness: 0.7, damping: 0.2, length: 18
+        stiffness: 0.9, damping: 0.1, length: 15
       });
 
       const terrainBodies = [];
