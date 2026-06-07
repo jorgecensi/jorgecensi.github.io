@@ -65,6 +65,34 @@ function ccToFlagEmoji(cc){
   return cc.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
 }
 
+// Not every platform renders flag emoji as flags — desktop Windows (Segoe UI
+// Emoji) shows the two-letter country code instead. Detect support once by
+// drawing a flag to a canvas and checking for colour: a real flag glyph has
+// non-grayscale pixels, whereas letter fallbacks are monochrome text. When
+// unsupported we fall back to flag images (those clients are effectively
+// always online, so the offline-PWA concern doesn't apply there).
+let _flagEmojiSupport;
+function supportsFlagEmoji(){
+  if (_flagEmojiSupport !== undefined) return _flagEmojiSupport;
+  _flagEmojiSupport = false;
+  try {
+    const c = document.createElement("canvas");
+    c.width = c.height = 16;
+    const ctx = c.getContext("2d");
+    if (ctx) {
+      ctx.textBaseline = "top";
+      ctx.font = "16px " + EMOJI_FONT;
+      ctx.fillStyle = "#000";
+      ctx.fillText("\u{1F1FA}\u{1F1F8}", 0, 0); // 🇺🇸
+      const d = ctx.getImageData(0, 0, 16, 16).data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i+3] > 0 && (d[i] !== d[i+1] || d[i+1] !== d[i+2])) { _flagEmojiSupport = true; break; }
+      }
+    }
+  } catch (e) { _flagEmojiSupport = false; }
+  return _flagEmojiSupport;
+}
+
 function Flag({ team, size=15, faded=false, style={} }) {
   const cc = team && FLAG[team];
   if (!cc) {
@@ -77,12 +105,25 @@ function Flag({ team, size=15, faded=false, style={} }) {
       }} />
     );
   }
+  if (supportsFlagEmoji()) {
+    return (
+      <span role="img" aria-label={team} style={{
+        display:"inline-block", fontSize:Math.round(size*1.2), lineHeight:1,
+        flexShrink:0, verticalAlign:"middle", opacity: faded ? 0.45 : 1,
+        fontFamily: EMOJI_FONT, ...style
+      }}>{ccToFlagEmoji(cc)}</span>
+    );
+  }
+  // Fallback for platforms that don't render flag emoji (e.g. desktop Windows).
+  const h = Math.round(size * 0.75);
   return (
-    <span role="img" aria-label={team} style={{
-      display:"inline-block", fontSize:Math.round(size*1.2), lineHeight:1,
-      flexShrink:0, verticalAlign:"middle", opacity: faded ? 0.45 : 1,
-      fontFamily: EMOJI_FONT, ...style
-    }}>{ccToFlagEmoji(cc)}</span>
+    <img
+      src={`https://flagcdn.com/w40/${cc}.png`}
+      alt={team}
+      width={size}
+      height={h}
+      style={{display:"inline-block", borderRadius:2, verticalAlign:"middle", flexShrink:0, opacity: faded ? 0.45 : 1, ...style}}
+    />
   );
 }
 
