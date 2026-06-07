@@ -52,10 +52,51 @@ const FLAG = {
   "England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa",
 };
 
+// Country flags are rendered as native emoji rather than from an external image
+// CDN, so they display correctly on phones AND keep working offline (this app is
+// an installable PWA). Regional flags (England/Scotland) use ISO tag sequences.
+const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+function subdivisionFlag(tags){
+  return "\u{1F3F4}" + [...tags].map(c=>String.fromCodePoint(0xE0000 + c.charCodeAt(0))).join("") + "\u{E007F}";
+}
+const FLAG_EMOJI = { "gb-eng": subdivisionFlag("gbeng"), "gb-sct": subdivisionFlag("gbsct") };
+function ccToFlagEmoji(cc){
+  if (FLAG_EMOJI[cc]) return FLAG_EMOJI[cc];
+  return cc.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+}
+
+// Not every platform renders flag emoji as flags — desktop Windows (Segoe UI
+// Emoji) shows the two-letter country code instead. Detect support once by
+// drawing a flag to a canvas and checking for colour: a real flag glyph has
+// non-grayscale pixels, whereas letter fallbacks are monochrome text. When
+// unsupported we fall back to flag images (those clients are effectively
+// always online, so the offline-PWA concern doesn't apply there).
+let _flagEmojiSupport;
+function supportsFlagEmoji(){
+  if (_flagEmojiSupport !== undefined) return _flagEmojiSupport;
+  _flagEmojiSupport = false;
+  try {
+    const c = document.createElement("canvas");
+    c.width = c.height = 16;
+    const ctx = c.getContext("2d");
+    if (ctx) {
+      ctx.textBaseline = "top";
+      ctx.font = "16px " + EMOJI_FONT;
+      ctx.fillStyle = "#000";
+      ctx.fillText("\u{1F1FA}\u{1F1F8}", 0, 0); // 🇺🇸
+      const d = ctx.getImageData(0, 0, 16, 16).data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i+3] > 0 && (d[i] !== d[i+1] || d[i+1] !== d[i+2])) { _flagEmojiSupport = true; break; }
+      }
+    }
+  } catch (e) { _flagEmojiSupport = false; }
+  return _flagEmojiSupport;
+}
+
 function Flag({ team, size=15, faded=false, style={} }) {
   const cc = team && FLAG[team];
-  const h = Math.round(size * 0.75);
   if (!cc) {
+    const h = Math.round(size * 0.75);
     return (
       <span style={{
         display:"inline-block", width:size, height:h, borderRadius:2,
@@ -64,13 +105,24 @@ function Flag({ team, size=15, faded=false, style={} }) {
       }} />
     );
   }
+  if (supportsFlagEmoji()) {
+    return (
+      <span role="img" aria-label={team} style={{
+        display:"inline-block", fontSize:Math.round(size*1.2), lineHeight:1,
+        flexShrink:0, verticalAlign:"middle", opacity: faded ? 0.45 : 1,
+        fontFamily: EMOJI_FONT, ...style
+      }}>{ccToFlagEmoji(cc)}</span>
+    );
+  }
+  // Fallback for platforms that don't render flag emoji (e.g. desktop Windows).
+  const h = Math.round(size * 0.75);
   return (
     <img
       src={`https://flagcdn.com/w40/${cc}.png`}
-      alt=""
+      alt={team}
       width={size}
       height={h}
-      style={{display:"inline-block", borderRadius:2, verticalAlign:"middle", flexShrink:0, ...style}}
+      style={{display:"inline-block", borderRadius:2, verticalAlign:"middle", flexShrink:0, opacity: faded ? 0.45 : 1, ...style}}
     />
   );
 }
@@ -774,8 +826,8 @@ function App(){
               style={{width:isMobile?28:42,height:"auto",display:"block",filter:"drop-shadow(0 0 6px rgba(0,208,132,0.3))"}}
             />
             <div>
-              <div style={{fontSize:isMobile?11:15,fontWeight:900,letterSpacing:isMobile?1:2,textTransform:"uppercase",color:"#fff",lineHeight:1.15}}>World Cup 2026</div>
-              <div style={{fontSize:isMobile?7:8,color:ACCENT,letterSpacing:isMobile?1:2,fontWeight:700}}>USA · CANADA · MEXICO</div>
+              <div style={{fontSize:isMobile?13:15,fontWeight:900,letterSpacing:isMobile?1:2,textTransform:"uppercase",color:"#fff",lineHeight:1.15}}>World Cup 2026</div>
+              <div style={{fontSize:isMobile?9:8,color:ACCENT,letterSpacing:isMobile?1:2,fontWeight:700}}>USA · CANADA · MEXICO</div>
             </div>
           </div>
 
@@ -785,7 +837,7 @@ function App(){
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <currentNav.Icon size={isMobile?18:20} active={true}/>
               <span style={{
-                fontSize:isMobile?11:13,fontWeight:800,letterSpacing:isMobile?1:1.5,
+                fontSize:isMobile?13:13,fontWeight:800,letterSpacing:isMobile?1:1.5,
                 textTransform:"uppercase",color:"#fff",whiteSpace:"nowrap",
               }}>{currentNav.label}</span>
             </div>
@@ -812,14 +864,14 @@ function App(){
 
             {/* Mobile score badge */}
             {isMobile&&totalEntered>0&&(
-              <div style={{background:`${ACCENT}22`,border:`1px solid ${ACCENT}55`,borderRadius:20,padding:"3px 9px",fontSize:10,color:ACCENT,fontWeight:700,flexShrink:0}}>{totalEntered} scored</div>
+              <div style={{background:`${ACCENT}22`,border:`1px solid ${ACCENT}55`,borderRadius:20,padding:"3px 9px",fontSize:12,color:ACCENT,fontWeight:700,flexShrink:0}}>{totalEntered} scored</div>
             )}
           </div>
         </div>
       </div>
 
       {/* MAIN */}
-      <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden"}}>
+      <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden",zoom:isMobile?1.2:1}}>
         {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
         {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile}/>}
@@ -832,7 +884,7 @@ function App(){
           {NAV.map(({v,Icon,label})=>(
             <button key={v} onClick={()=>setView(v)} style={{flex:1,padding:"9px 0 7px",border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <Icon size={22} active={view===v}/>
-              <span style={{fontSize:8,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:view===v?ACCENT:"#555"}}>{label}</span>
+              <span style={{fontSize:10,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:view===v?ACCENT:"#555"}}>{label}</span>
               {view===v&&<span style={{width:18,height:2,background:ACCENT,borderRadius:2,marginTop:1}}/>}
             </button>
           ))}
