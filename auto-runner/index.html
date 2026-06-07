@@ -13,7 +13,8 @@ permalink: /auto-runner/
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Auto Runner">
-  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/png" sizes="192x192" href="/auto-runner/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/auto-runner/icons/icon-192.png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -34,7 +35,7 @@ permalink: /auto-runner/
   <canvas id="canvas"></canvas>
 
   <script>
-    const SW_VERSION = '2604191341';
+    const SW_VERSION = '2605121124';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function askUpdate(reg) {
@@ -101,6 +102,7 @@ permalink: /auto-runner/
     let frame, score, bestScore, speed, goTimer, flashAlpha;
     let obstacles, nextObstacleGap;
     let stars, groundX;
+    let reviveStars, reviveStarCooldown;
 
     bestScore = parseInt(localStorage.getItem('ar-best') || '0', 10);
 
@@ -110,9 +112,9 @@ permalink: /auto-runner/
     function makePlayers() {
       return [
         { x: 120, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null },
+          rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null, invincible: 0 },
         { x: 168, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null },
+          rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null, invincible: 0 },
       ];
     }
 
@@ -124,6 +126,8 @@ permalink: /auto-runner/
       obstacles = [];
       nextObstacleGap = 320;
       groundX = 0;
+      reviveStars = [];
+      reviveStarCooldown = 0;
       players = makePlayers();
       stars = Array.from({ length: 55 }, () => ({
         x: Math.random() * GW,
@@ -138,9 +142,12 @@ permalink: /auto-runner/
       frame = 0; score = 0; speed = BASE_SPEED;
       obstacles = [];
       nextObstacleGap = 320;
+      reviveStars = [];
+      reviveStarCooldown = 0;
       players.forEach(p => {
         p.y = FLOOR_Y - P_SIZE; p.vy = 0;
-        p.grounded = true; p.rot = 0; p.dead = false; p.onPlatform = null;
+        p.grounded = true; p.rot = 0; p.dead = false;
+        p.onPlatform = null; p.invincible = 0;
       });
     }
 
@@ -168,27 +175,55 @@ permalink: /auto-runner/
 
     function spawnObstacle() {
       const roll = Math.random();
-      let type;
-      if (frame > 200 && roll < 0.22)    type = 'platform';
-      else if (roll < 0.30)              type = 'block1';
-      else if (roll < 0.55)              type = 'block2';
-      else if (roll < 0.75)              type = 'spike1';
-      else                               type = 'spike2';
+      // floating platform pairs unlock at frame 400 and ramp up to 28% chance
+      const floatChance = frame > 400 ? Math.min(0.28, 0.06 + (frame - 400) / 7000) : 0;
+      if (roll < floatChance) { spawnFloatPair(); return; }
 
-      let wide, spike = false, platform = false, h = T;
-      if (type === 'platform') {
-        wide = T * 2 + (Math.random() < 0.5 ? T : 0); // 64 or 96px wide
-        h = 50;
-        platform = true;
-      } else {
-        wide  = (type === 'block2' || type === 'spike2') ? T * 2 : T;
-        spike = type === 'spike1' || type === 'spike2';
+      const r2 = Math.random();
+      let type;
+      if (r2 < 0.25)       type = 'block1';
+      else if (r2 < 0.50)  type = 'block2';
+      else if (r2 < 0.72)  type = 'spike1';
+      else                  type = 'spike2';
+
+      const wide  = (type === 'block2' || type === 'spike2') ? T * 2 : T;
+      const spike = type === 'spike1' || type === 'spike2';
+      obstacles.push({ x: GW + 10, w: wide, h: T, spike, isFloat: false });
+    }
+
+    function spawnFloatPair() {
+      const progress = Math.min(1, (frame - 400) / 5000);
+
+      // ground obstacle — the trigger to jump
+      const spike = Math.random() < 0.45;
+      const gw = spike ? T : T * 2;
+      obstacles.push({ x: GW + 10, w: gw, h: T, spike, isFloat: false, pairTrigger: true });
+
+      // optional second ground obstacle underneath / just after the platform
+      if (progress > 0.35 && Math.random() < 0.55) {
+        const x2 = GW + 10 + gw + 28 + Math.round(Math.random() * T);
+        obstacles.push({ x: x2, w: T, h: T, spike: true, isFloat: false });
       }
-      obstacles.push({ x: GW + 10, w: wide, h, spike, platform });
+
+      // floating platform — longer so it spans over multiple obstacles
+      const floatY = Math.round(158 - progress * 38);  // 158 → 120
+      const platW  = Math.round(220 - progress * 70);  // 220 → 150 (was 124 → 80)
+      const xOff   = 60 + Math.round(Math.random() * 40);  // 60–100 (was 138–168)
+
+      obstacles.push({
+        x: GW + 10 + xOff,
+        w: platW,
+        h: 10,
+        spike: false,
+        isFloat: true,
+        floatY,
+        glowPhase: Math.random() * Math.PI * 2,
+      });
     }
 
     // ── AABB collision with slight shrink ─────────────────────
     function collides(p, o) {
+      if (o.isFloat) return false;  // floating platforms: only land on top
       const pad = 5;
       const px = p.x + pad, py = p.y + pad;
       const pw = P_SIZE - pad * 2, ph = P_SIZE - pad * 2;
@@ -215,6 +250,30 @@ permalink: /auto-runner/
       return false;
     }
 
+    // ── Kill / Revive ──────────────────────────────────────────
+    function killPlayer(idx) {
+      const p = players[idx];
+      if (p.dead) return;
+      p.dead = true;
+      p.onPlatform = null;
+      flashAlpha = Math.max(flashAlpha, 0.55);
+      if (players.every(pl => pl.dead)) {
+        gameOver();
+        return;
+      }
+      // Survive! Schedule a revive star for the alive player to catch
+      reviveStarCooldown = 90;
+    }
+
+    function spawnReviveStar() {
+      reviveStars.push({
+        x: GW + 40,
+        y: 145 + Math.random() * 35,
+        r: 16,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+
     // ── Update ─────────────────────────────────────────────────
     function update() {
       if (state === 'waiting') {
@@ -232,6 +291,7 @@ permalink: /auto-runner/
       frame++;
       speed = BASE_SPEED + frame * ACCEL;
       score = Math.floor(frame * speed / 8);
+      flashAlpha = Math.max(0, flashAlpha - 0.03);
 
       // Scroll ground
       groundX = (groundX - speed + GW) % GW;
@@ -249,9 +309,36 @@ permalink: /auto-runner/
       obstacles.forEach(o => { o.x -= speed; });
       obstacles = obstacles.filter(o => o.x + o.w > -10);
 
+      // Move revive stars
+      reviveStars.forEach(s => { s.x -= speed; });
+      reviveStars = reviveStars.filter(s => {
+        if (s.x + s.r < -20) {
+          reviveStarCooldown = 80; // respawn soon
+          return false;
+        }
+        return true;
+      });
+
+      // Spawn a revive star if someone is dead and someone is alive
+      const hasDead  = players.some(p => p.dead);
+      const hasAlive = players.some(p => !p.dead);
+      if (hasDead && hasAlive && reviveStars.length === 0) {
+        if (reviveStarCooldown > 0) reviveStarCooldown--;
+        else spawnReviveStar();
+      }
+
       // Players
       players.forEach((p, i) => {
-        if (p.dead) return;
+        if (p.dead) {
+          // Ghost: still falls to ground, no collision, no platform landing
+          p.vy += GRAVITY;
+          p.y  += p.vy;
+          if (p.y >= FLOOR_Y - P_SIZE) { p.y = FLOOR_Y - P_SIZE; p.vy = 0; }
+          return;
+        }
+
+        if (p.invincible > 0) p.invincible--;
+
         p.vy += GRAVITY;
         p.y  += p.vy;
         p.bob = 0;
@@ -269,8 +356,9 @@ permalink: /auto-runner/
         // Platform support — keeps player riding a platform they landed on
         if (p.onPlatform) {
           const o = p.onPlatform;
+          const topY = o.isFloat ? o.floatY : FLOOR_Y - o.h;
           if (p.x + P_SIZE > o.x && p.x < o.x + o.w && p.vy >= 0) {
-            p.y = FLOOR_Y - o.h - P_SIZE;
+            p.y = topY - P_SIZE;
             p.vy = 0;
             p.grounded = true;
           } else {
@@ -278,12 +366,14 @@ permalink: /auto-runner/
           }
         }
 
-        // Check if player lands on a platform (only while falling)
+        // Check if player lands on a floating platform (only while falling)
         if (!p.grounded && p.vy > 0) {
           for (const o of obstacles) {
-            if (!o.platform) continue;
-            const topY = FLOOR_Y - o.h;
-            if (p.x + P_SIZE > o.x && p.x < o.x + o.w && p.y + P_SIZE >= topY) {
+            if (!o.isFloat) continue;
+            const topY = o.floatY;
+            const margin = Math.ceil(p.vy) + 2;
+            if (p.x + P_SIZE > o.x + 3 && p.x < o.x + o.w - 3 &&
+                p.y + P_SIZE >= topY && p.y < topY + margin) {
               p.y = topY - P_SIZE;
               p.vy = 0;
               p.grounded = true;
@@ -301,13 +391,36 @@ permalink: /auto-runner/
           p.rot -= 0.12; // spin while airborne
         }
 
-        // Collision check (skip the platform the player is currently riding)
-        for (const o of obstacles) {
-          if (o === p.onPlatform) continue;
-          if (collides(p, o)) {
-            gameOver();
-            return;
+        // Collision check — skip the platform the player rides, skip if invincible
+        if (p.invincible <= 0) {
+          for (const o of obstacles) {
+            if (o === p.onPlatform) continue;
+            if (collides(p, o)) { killPlayer(i); return; }
           }
+        }
+
+        // Collect revive star
+        if (reviveStars.length > 0) {
+          const cx = p.x + P_SIZE / 2;
+          const cy = p.y + P_SIZE / 2;
+          reviveStars = reviveStars.filter(s => {
+            const dx = cx - s.x, dy = cy - s.y;
+            if (dx * dx + dy * dy < (s.r + P_SIZE / 2 - 4) * (s.r + P_SIZE / 2 - 4)) {
+              players.forEach(dp => {
+                if (dp.dead) {
+                  dp.dead = false;
+                  dp.y = FLOOR_Y - P_SIZE;
+                  dp.vy = -10;
+                  dp.grounded = false;
+                  dp.onPlatform = null;
+                  dp.invincible = 120; // ~2s of invincibility after revive
+                }
+              });
+              flashAlpha = Math.max(flashAlpha, 0.4);
+              return false;
+            }
+            return true;
+          });
         }
       });
     }
@@ -346,7 +459,8 @@ permalink: /auto-runner/
       ctx.rotate(p.rot);
 
       const h = P_SIZE, hh = h / 2;
-      const alpha = p.dead ? 0.35 : 1;
+      const blink = p.invincible > 0 && Math.floor(p.invincible / 5) % 2 === 0;
+      const alpha = p.dead ? 0.28 : (blink ? 0.35 : 1);
       ctx.globalAlpha = alpha;
 
       // Body
@@ -386,43 +500,67 @@ permalink: /auto-runner/
     }
 
     function drawPlatform(o) {
+      if (o.isFloat) { drawFloatPlatform(o); return; }
+      // legacy ground platform (unused by spawn but kept for safety)
       const topY = FLOOR_Y - o.h;
-
-      // Glow
-      ctx.shadowColor = 'rgba(255,210,60,0.8)';
-      ctx.shadowBlur = 14;
-
-      // Bright top cap
       ctx.fillStyle = '#ffe066';
       ctx.fillRect(o.x, topY, o.w, 6);
-
-      // Body upper half
-      ctx.shadowBlur = 0;
       ctx.fillStyle = '#c8962a';
-      ctx.fillRect(o.x, topY + 6, o.w, o.h * 0.45);
+      ctx.fillRect(o.x, topY + 6, o.w, o.h - 6);
+    }
 
-      // Darker lower half
-      ctx.fillStyle = '#a07020';
-      ctx.fillRect(o.x, topY + o.h * 0.5, o.w, o.h * 0.5);
+    function drawFloatPlatform(o) {
+      const y = o.floatY;
+      const pulse = 0.7 + 0.3 * Math.sin((frame * 0.06) + (o.glowPhase || 0));
 
-      // Grid lines
-      ctx.strokeStyle = 'rgba(60,30,0,0.3)';
+      // Dashed energy tethers to the floor
+      ctx.save();
+      ctx.strokeStyle = `rgba(80,200,255,${0.18 * pulse})`;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 8]);
+      const step = Math.max(28, Math.floor(o.w / 3));
+      for (let gx = o.x + step * 0.5; gx < o.x + o.w; gx += step) {
+        ctx.beginPath(); ctx.moveTo(gx, y + o.h); ctx.lineTo(gx, FLOOR_Y); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Glow halo under platform
+      ctx.shadowColor = `rgba(80,210,255,${0.85 * pulse})`;
+      ctx.shadowBlur = 18;
+
+      // Top surface (bright cyan strip)
+      ctx.fillStyle = '#a0eeff';
+      ctx.fillRect(o.x, y, o.w, 4);
+
+      // Platform body
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#1e4f6a';
+      ctx.fillRect(o.x, y + 4, o.w, o.h - 4);
+
+      // Underside energy strip
+      ctx.fillStyle = `rgba(80,200,255,${0.55 * pulse})`;
+      ctx.fillRect(o.x, y + o.h - 3, o.w, 3);
+
+      // Subtle panel dividers
+      ctx.strokeStyle = 'rgba(0,150,200,0.3)';
       ctx.lineWidth = 1;
       for (let gx = o.x + T; gx < o.x + o.w; gx += T) {
-        ctx.beginPath(); ctx.moveTo(gx, topY); ctx.lineTo(gx, FLOOR_Y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx, y + o.h); ctx.stroke();
       }
-      ctx.beginPath(); ctx.moveTo(o.x, topY + o.h * 0.5); ctx.lineTo(o.x + o.w, topY + o.h * 0.5); ctx.stroke();
 
-      // Arrow hint above platform
-      ctx.fillStyle = 'rgba(255,230,80,0.9)';
-      ctx.font = 'bold 11px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('↑  ↑', o.x + o.w / 2, topY - 6);
-      ctx.textAlign = 'left';
+      // Jump hint arrow (only while platform is still far enough to react)
+      if (o.x > 220) {
+        ctx.fillStyle = `rgba(160,238,255,${Math.min(1, (o.x - 220) / 120) * 0.85})`;
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('↑', o.x + o.w / 2, y - 6);
+        ctx.textAlign = 'left';
+      }
     }
 
     function drawObstacle(o) {
-      if (o.platform) { drawPlatform(o); return; }
+      if (o.isFloat) { drawPlatform(o); return; }
       const oy = FLOOR_Y - o.h;
       ctx.shadowColor = 'rgba(255,255,255,0.6)';
       ctx.shadowBlur = 10;
@@ -455,6 +593,61 @@ permalink: /auto-runner/
         }
         ctx.shadowBlur = 0;
       }
+
+      // Upward arrow hint on obstacles paired with a floating platform
+      if (o.pairTrigger && o.x > 80 && o.x < 420) {
+        const fade = Math.min(1, (o.x - 80) / 120);
+        const bob = Math.sin(frame * 0.18) * 2;
+        ctx.fillStyle = `rgba(160,238,255,${fade * 0.9})`;
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('↑', o.x + o.w / 2, oy - 8 + bob);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    function drawReviveStar(s) {
+      const pulse = 0.7 + 0.3 * Math.sin((frame * 0.1) + s.phase);
+      ctx.save();
+      ctx.translate(s.x, s.y);
+
+      // Glow halo
+      ctx.shadowColor = `rgba(255,220,50,${0.9 * pulse})`;
+      ctx.shadowBlur = 22;
+
+      // 5-pointed star shape
+      ctx.fillStyle = `rgba(255,230,60,1)`;
+      ctx.beginPath();
+      const spikes = 5, outerR = s.r, innerR = s.r * 0.42;
+      for (let i = 0; i < spikes * 2; i++) {
+        const angle = (i * Math.PI / spikes) - Math.PI / 2;
+        const rv = i % 2 === 0 ? outerR : innerR;
+        const fx = Math.cos(angle) * rv;
+        const fy = Math.sin(angle) * rv;
+        i === 0 ? ctx.moveTo(fx, fy) : ctx.lineTo(fx, fy);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Revive cross symbol
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fillRect(-2, -6, 4, 12);
+      ctx.fillRect(-6, -2, 12, 4);
+
+      // Colored ring matching the dead player
+      const deadIdx = players.findIndex(p => p.dead);
+      if (deadIdx >= 0) {
+        ctx.strokeStyle = COLORS[deadIdx];
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.7 * pulse;
+        ctx.beginPath();
+        ctx.arc(0, 0, s.r + 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.restore();
     }
 
     // ── Render ─────────────────────────────────────────────────
@@ -492,6 +685,9 @@ permalink: /auto-runner/
 
       // Obstacles
       obstacles.forEach(drawObstacle);
+
+      // Revive stars
+      reviveStars.forEach(drawReviveStar);
 
       // Players
       players.forEach(drawRobot);
@@ -550,7 +746,26 @@ permalink: /auto-runner/
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
         ctx.lineWidth = 1;
         ctx.stroke();
+        if (p.dead) {
+          ctx.fillStyle = 'rgba(255,80,80,0.85)';
+          ctx.font = 'bold 8px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('✕', dx, dotY + 3);
+        }
       });
+
+      // Revive hint — blinks while a revive star is on screen
+      if (state === 'playing' && reviveStars.length > 0) {
+        const blink = Math.floor(frame / 18) % 2 === 0;
+        const deadIdx = players.findIndex(p => p.dead);
+        if (deadIdx >= 0 && blink) {
+          ctx.fillStyle = '#ffd700';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText('★ CATCH STAR → REVIVE ' + LABEL[deadIdx], GW - 14, 28);
+        }
+        ctx.textAlign = 'left';
+      }
 
       if (state === 'waiting') {
         // Semi-overlay

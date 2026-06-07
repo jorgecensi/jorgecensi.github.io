@@ -1,0 +1,853 @@
+---
+permalink: /elastomania/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1e4d2b">
+  <meta name="description" content="A motorcycle physics game. Collect all apples, reach the flower — without falling off.">
+  <title>Elasto Mania</title>
+  <link rel="manifest" href="/elastomania/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Elastomania">
+  <link rel="apple-touch-icon" href="/img/elastomania-icon-192.png">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <script src="/elastomania/matter.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #0a1f0f;
+      overflow: hidden;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0; left: 0;
+    }
+    #touch-controls {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 110px;
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 20px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .btn-group { display: flex; gap: 12px; align-items: flex-end; }
+    .touch-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.25);
+      color: white;
+      font-size: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: all;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.08s;
+      user-select: none;
+      outline: none;
+    }
+    .touch-btn.pressed { background: rgba(255,255,255,0.32); }
+    #sw-banner {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #1e4d2b; color: #fff; padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 9999; font-size: 14px;
+      border-top: 2px solid #5c9a3a;
+    }
+    #sw-banner button {
+      background: #5c9a3a; color: #fff; border: none;
+      padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="touch-controls">
+    <div class="btn-group">
+      <button class="touch-btn" id="btn-left">←</button>
+      <button class="touch-btn" id="btn-right">→</button>
+    </div>
+    <div class="btn-group">
+      <button class="touch-btn" id="btn-lean-back">↺</button>
+      <button class="touch-btn" id="btn-lean-fwd">↻</button>
+    </div>
+  </div>
+
+  <script>
+    const SW_VERSION = '2606020938';
+    if ('serviceWorker' in navigator) {
+      let refreshed = false;
+      function showBanner(reg) {
+        if (document.getElementById('sw-banner')) return;
+        const b = document.createElement('div');
+        b.id = 'sw-banner';
+        b.innerHTML = '<span>Update available.</span><button>Refresh</button>';
+        b.querySelector('button').onclick = () => reg.waiting && reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        document.body.appendChild(b);
+      }
+      window.addEventListener('load', async () => {
+        try {
+          const reg = await navigator.serviceWorker.register(`/elastomania/sw.js?v=${SW_VERSION}`, { scope: '/elastomania/' });
+          if (reg.waiting) showBanner(reg);
+          reg.addEventListener('updatefound', () => {
+            const w = reg.installing;
+            w && w.addEventListener('statechange', () => {
+              if (w.state === 'installed' && navigator.serviceWorker.controller) showBanner(reg);
+            });
+          });
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshed) return; refreshed = true; location.reload();
+          });
+          window.addEventListener('focus', () => reg.update());
+          setInterval(() => reg.update(), 3600000);
+        } catch (e) { console.warn('SW failed', e); }
+      });
+    }
+  </script>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ── roundRect polyfill for older Safari/Chrome ─────────────
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        this.beginPath();
+        this.moveTo(x + r, y);
+        this.lineTo(x + w - r, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r);
+        this.lineTo(x + w, y + h - r);
+        this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        this.lineTo(x + r, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r);
+        this.lineTo(x, y + r);
+        this.quadraticCurveTo(x, y, x + r, y);
+        this.closePath();
+      };
+    }
+
+    // ── Matter.js destructure ──────────────────────────────────
+    const { Engine, Bodies, Body, Composite, Constraint } = Matter;
+
+    // ── Constants ──────────────────────────────────────────────
+    const WORLD_W = 2800;
+    const WORLD_H = 700;
+    const WHEEL_R = 15;
+    const CHASSIS_W = 55;
+    const CHASSIS_H = 10;
+    const SPAWN_X = 80;
+    const SPAWN_Y = 400;
+
+    const TERRAIN = [
+      [0,420],[100,420],[160,415],[230,390],[300,360],[370,370],
+      [430,400],[480,408],[540,370],[610,330],[670,308],[720,330],
+      [780,370],[840,400],[900,370],[950,320],[1000,270],[1050,248],
+      [1100,258],[1160,285],[1220,330],[1280,382],[1340,400],
+      [1400,380],[1460,340],[1520,300],[1560,270],[1600,258],
+      [1650,280],[1710,320],[1780,370],[1840,400],[1920,410],
+      [2000,400],[2060,370],[2120,328],[2180,298],[2240,278],
+      [2300,292],[2360,322],[2420,360],[2480,392],[2540,402],
+      [2600,408],[2660,408],[2750,420],[2800,420]
+    ];
+
+    const APPLES_DATA = [
+      { x: 670,  y: 278 },
+      { x: 1050, y: 222 },
+      { x: 1600, y: 232 },
+      { x: 1920, y: 382 },
+      { x: 2240, y: 252 }
+    ];
+
+    const FLOWER_DATA = { x: 2600, y: 378 };
+
+    // ── Canvas ─────────────────────────────────────────────────
+    const canvas = document.getElementById('canvas');
+    const ctx    = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // ── Physics engine ─────────────────────────────────────────
+    const engine = Engine.create();
+    engine.gravity.y = 1.8;
+    const world = engine.world;
+
+    // ── Game state ─────────────────────────────────────────────
+    let state = 'start'; // 'start' | 'playing' | 'dead' | 'win'
+    let rearWheel, frontWheel, chassis;
+    let apples = [];
+    let camera  = { x: 0, y: 0 };
+    let keys    = {};
+    let touch   = { left: false, right: false, leanFwd: false, leanBack: false };
+    let startTime   = 0;
+    let elapsedTime = 0;
+    let deadTimer   = 0;
+    let lastTs      = 0;
+
+    // ── Terrain helper ─────────────────────────────────────────
+    function getTerrainY(worldX) {
+      if (worldX <= TERRAIN[0][0])               return TERRAIN[0][1];
+      if (worldX >= TERRAIN[TERRAIN.length-1][0]) return TERRAIN[TERRAIN.length-1][1];
+      for (let i = 0; i < TERRAIN.length - 1; i++) {
+        const x1 = TERRAIN[i][0], y1 = TERRAIN[i][1];
+        const x2 = TERRAIN[i+1][0], y2 = TERRAIN[i+1][1];
+        if (worldX >= x1 && worldX <= x2) {
+          const t = (worldX - x1) / (x2 - x1);
+          return y1 + t * (y2 - y1);
+        }
+      }
+      return WORLD_H;
+    }
+
+    // ── Terrain segment body ───────────────────────────────────
+    function makeSegment(x1, y1, x2, y2) {
+      const cx    = (x1 + x2) / 2;
+      const cy    = (y1 + y2) / 2;
+      const len   = Math.hypot(x2 - x1, y2 - y1);
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      return Bodies.rectangle(cx, cy + 11, len, 22, {
+        isStatic: true,
+        angle,
+        friction: 0.85,
+        frictionStatic: 1.0,
+        restitution: 0.05,
+        collisionFilter: { category: 0x0002, mask: 0x0001 },
+        label: 'terrain'
+      });
+    }
+
+    // ── Physics init / reset ───────────────────────────────────
+    function initPhysics() {
+      Composite.clear(world, false);
+
+      rearWheel = Bodies.circle(SPAWN_X - 20, SPAWN_Y, WHEEL_R, {
+        friction: 0.95,
+        density: 0.002,
+        restitution: 0.05,
+        frictionAir: 0.01,
+        collisionFilter: { category: 0x0001, mask: 0x0002 },
+        label: 'rearWheel'
+      });
+
+      frontWheel = Bodies.circle(SPAWN_X + 20, SPAWN_Y, WHEEL_R, {
+        friction: 0.95,
+        density: 0.002,
+        restitution: 0.05,
+        frictionAir: 0.01,
+        collisionFilter: { category: 0x0001, mask: 0x0002 },
+        label: 'frontWheel'
+      });
+
+      chassis = Bodies.rectangle(SPAWN_X, SPAWN_Y - 20, CHASSIS_W, CHASSIS_H, {
+        density: 0.005,
+        frictionAir: 0.02,
+        collisionFilter: { category: 0x0004, mask: 0x0000 },
+        label: 'chassis'
+      });
+
+      const rearConstraint = Constraint.create({
+        bodyA: chassis, bodyB: rearWheel,
+        pointA: { x: -20, y: 5 }, pointB: { x: 0, y: 0 },
+        stiffness: 0.9, damping: 0.1, length: 15
+      });
+
+      const frontConstraint = Constraint.create({
+        bodyA: chassis, bodyB: frontWheel,
+        pointA: { x: 20, y: 5 }, pointB: { x: 0, y: 0 },
+        stiffness: 0.9, damping: 0.1, length: 15
+      });
+
+      const terrainBodies = [];
+      for (let i = 0; i < TERRAIN.length - 1; i++) {
+        terrainBodies.push(makeSegment(
+          TERRAIN[i][0], TERRAIN[i][1],
+          TERRAIN[i+1][0], TERRAIN[i+1][1]
+        ));
+      }
+
+      const floor = Bodies.rectangle(1400, 720, 2800, 60, {
+        isStatic: true, friction: 0.85, frictionStatic: 1.0, restitution: 0.05,
+        collisionFilter: { category: 0x0002, mask: 0x0001 }, label: 'terrain'
+      });
+      const wallL = Bodies.rectangle(-20, 350, 40, 700, {
+        isStatic: true,
+        collisionFilter: { category: 0x0002, mask: 0x0001 }, label: 'terrain'
+      });
+      const wallR = Bodies.rectangle(WORLD_W + 20, 350, 40, 700, {
+        isStatic: true,
+        collisionFilter: { category: 0x0002, mask: 0x0001 }, label: 'terrain'
+      });
+
+      Composite.add(world, [
+        rearWheel, frontWheel, chassis,
+        rearConstraint, frontConstraint,
+        floor, wallL, wallR,
+        ...terrainBodies
+      ]);
+    }
+
+    // ── Apple & flower init ─────────────────────────────────────
+    function initPickups() {
+      apples = APPLES_DATA.map((d, i) => ({
+        ...d, collected: false, id: i,
+        wobble: Math.random() * Math.PI * 2
+      }));
+    }
+
+    // ── Input ──────────────────────────────────────────────────
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (e.code === 'Space' && state === 'start') startGame();
+      if (e.code === 'KeyR' && state === 'win')   resetToStart();
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    canvas.addEventListener('pointerdown', () => {
+      if (state === 'start') startGame();
+      if (state === 'win')   resetToStart();
+    });
+
+    function bindBtn(id, flag) {
+      const el = document.getElementById(id);
+      const press   = (e) => { e.preventDefault(); touch[flag] = true;  el.classList.add('pressed'); };
+      const release = ()  => { touch[flag] = false; el.classList.remove('pressed'); };
+      el.addEventListener('pointerdown',   press);
+      el.addEventListener('pointerup',     release);
+      el.addEventListener('pointercancel', release);
+      el.addEventListener('pointerleave',  release);
+    }
+    bindBtn('btn-right',    'right');
+    bindBtn('btn-left',     'left');
+    bindBtn('btn-lean-fwd', 'leanFwd');
+    bindBtn('btn-lean-back','leanBack');
+
+    // ── Controls application ───────────────────────────────────
+    function applyControls() {
+      const gas      = keys['ArrowRight'] || keys['KeyD'] || touch.right;
+      const brake    = keys['ArrowLeft']  || keys['KeyA'] || touch.left;
+      const leanFwd  = keys['ArrowUp']    || keys['KeyW'] || touch.leanFwd;
+      const leanBack = keys['ArrowDown']  || keys['KeyS'] || touch.leanBack;
+
+      if (gas) {
+        Body.setAngularVelocity(rearWheel, Math.min(rearWheel.angularVelocity + 0.4, 25));
+      }
+      if (brake) {
+        Body.setAngularVelocity(rearWheel, Math.max(rearWheel.angularVelocity - 0.3, -10));
+      }
+      if (leanFwd) {
+        Body.setAngularVelocity(chassis, chassis.angularVelocity + 0.08);
+      }
+      if (leanBack) {
+        Body.setAngularVelocity(chassis, chassis.angularVelocity - 0.08);
+      }
+    }
+
+    // ── Death detection ────────────────────────────────────────
+    function checkDeath() {
+      if (state !== 'playing') return;
+
+      const groundY = getTerrainY(chassis.position.x);
+      if (chassis.position.y + 8 > groundY) { die(); return; }
+      if (chassis.position.y > WORLD_H + 50) { die(); return; }
+
+      // Die if chassis is inverted (~135° – 225° from upright)
+      const angle = ((chassis.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      if (angle > Math.PI * 0.75 && angle < Math.PI * 1.25) { die(); return; }
+    }
+
+    // ── Apple & flower checks ──────────────────────────────────
+    function checkApples() {
+      if (state !== 'playing') return;
+      const cx = chassis.position.x, cy = chassis.position.y;
+      for (const apple of apples) {
+        if (!apple.collected) {
+          const dx = cx - apple.x, dy = cy - apple.y;
+          if (dx * dx + dy * dy < 35 * 35) {
+            apple.collected = true;
+          }
+        }
+      }
+    }
+
+    function checkWin() {
+      if (state !== 'playing') return;
+      if (!apples.every(a => a.collected)) return;
+      const dx = chassis.position.x - FLOWER_DATA.x;
+      const dy = chassis.position.y - FLOWER_DATA.y;
+      if (dx * dx + dy * dy < 45 * 45) win();
+    }
+
+    // ── State transitions ──────────────────────────────────────
+    function startGame() {
+      initPickups();
+      initPhysics();
+      state = 'playing';
+      startTime = performance.now();
+      lastTs = performance.now();
+    }
+
+    function die() {
+      state = 'dead';
+      deadTimer = performance.now();
+    }
+
+    function respawn() {
+      initPhysics(); // keeps apples collected state
+      state = 'playing';
+      lastTs = performance.now();
+    }
+
+    function win() {
+      state = 'win';
+      elapsedTime = (performance.now() - startTime) / 1000;
+    }
+
+    function resetToStart() {
+      state = 'start';
+    }
+
+    // ── Camera ─────────────────────────────────────────────────
+    function updateCamera() {
+      let bikeX, bikeY;
+      if (state === 'start') {
+        bikeX = SPAWN_X;
+        bikeY = SPAWN_Y;
+      } else {
+        bikeX = (rearWheel.position.x + frontWheel.position.x) / 2;
+        bikeY = (rearWheel.position.y + frontWheel.position.y) / 2;
+      }
+
+      const targetX = bikeX - canvas.width / 2;
+      const targetY = bikeY - canvas.height * 0.45;
+
+      camera.x += (targetX - camera.x) * 0.1;
+      camera.y += (targetY - camera.y) * 0.1;
+
+      camera.x = Math.max(0, Math.min(camera.x, Math.max(0, WORLD_W - canvas.width)));
+      camera.y = Math.max(0, Math.min(camera.y, Math.max(0, WORLD_H - canvas.height)));
+    }
+
+    // ── Wheel drawing ──────────────────────────────────────────
+    function drawWheel(pos, angle) {
+      ctx.save();
+      ctx.translate(pos.x, pos.y);
+
+      ctx.beginPath();
+      ctx.arc(0, 0, WHEEL_R, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fill();
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.rotate(angle);
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 4; i++) {
+        ctx.save();
+        ctx.rotate((i / 4) * Math.PI * 2);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -(WHEEL_R - 2));
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      ctx.arc(0, 0, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#888';
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // ── Motorcycle drawing ─────────────────────────────────────
+    function drawMotorcycle() {
+      const rp = rearWheel.position;
+      const fp = frontWheel.position;
+      const cp = chassis.position;
+      const ca = chassis.angle;
+
+      // Frame lines
+      ctx.strokeStyle = '#2a2a3a';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(rp.x, rp.y); ctx.lineTo(cp.x, cp.y);
+      ctx.moveTo(fp.x, fp.y); ctx.lineTo(cp.x, cp.y);
+      ctx.stroke();
+
+      drawWheel(rp, rearWheel.angle);
+      drawWheel(fp, frontWheel.angle);
+
+      // Exhaust pipe
+      ctx.save();
+      ctx.translate(cp.x, cp.y);
+      ctx.rotate(ca);
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-18, 4); ctx.lineTo(-26, 12);
+      ctx.stroke();
+      ctx.restore();
+
+      // Chassis body
+      ctx.save();
+      ctx.translate(cp.x, cp.y);
+      ctx.rotate(ca);
+      ctx.fillStyle = '#3a3a50';
+      ctx.fillRect(-CHASSIS_W / 2, -CHASSIS_H / 2, CHASSIS_W, CHASSIS_H);
+      ctx.restore();
+
+      // Rider
+      ctx.save();
+      ctx.translate(cp.x, cp.y);
+      ctx.rotate(ca);
+
+      // Torso
+      ctx.fillStyle = '#2244cc';
+      ctx.fillRect(-8, -30, 16, 18);
+
+      // Head
+      ctx.beginPath();
+      ctx.arc(0, -36, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#f5c090';
+      ctx.fill();
+
+      // Helmet
+      ctx.beginPath();
+      ctx.arc(0, -38, 8.5, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.fillStyle = '#cc2222';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, -36, 8, Math.PI, Math.PI * 2);
+      ctx.fillStyle = '#cc2222';
+      ctx.fill();
+
+      // Visor
+      ctx.beginPath();
+      ctx.arc(0, -34, 6, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.strokeStyle = 'rgba(0,100,200,0.6)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // ── Terrain drawing ────────────────────────────────────────
+    function drawTerrain() {
+      ctx.beginPath();
+      ctx.moveTo(TERRAIN[0][0], TERRAIN[0][1]);
+      for (let i = 1; i < TERRAIN.length; i++) {
+        ctx.lineTo(TERRAIN[i][0], TERRAIN[i][1]);
+      }
+      ctx.lineTo(WORLD_W, WORLD_H);
+      ctx.lineTo(0, WORLD_H);
+      ctx.closePath();
+      ctx.fillStyle = '#2d5a1b';
+      ctx.fill();
+
+      // Surface highlight
+      ctx.beginPath();
+      ctx.moveTo(TERRAIN[0][0], TERRAIN[0][1]);
+      for (let i = 1; i < TERRAIN.length; i++) {
+        ctx.lineTo(TERRAIN[i][0], TERRAIN[i][1]);
+      }
+      ctx.strokeStyle = '#5c9a3a';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    // ── Apple drawing ──────────────────────────────────────────
+    function drawApples() {
+      const now = performance.now();
+      for (const apple of apples) {
+        if (apple.collected) continue;
+        const bob = Math.sin(now * 0.002 + apple.wobble) * 3;
+        const ax = apple.x, ay = apple.y + bob;
+
+        ctx.beginPath();
+        ctx.arc(ax, ay, 8, 0, Math.PI * 2);
+        ctx.fillStyle = '#e63030';
+        ctx.fill();
+        ctx.strokeStyle = '#a01010';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Shine
+        ctx.beginPath();
+        ctx.arc(ax - 2, ay - 2, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fill();
+
+        // Stem
+        ctx.beginPath();
+        ctx.moveTo(ax, ay - 8);
+        ctx.lineTo(ax + 2, ay - 15);
+        ctx.strokeStyle = '#4a2800';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Leaf
+        ctx.save();
+        ctx.translate(ax + 5, ay - 14);
+        ctx.rotate(-0.4);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 5, 3, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#3a8020';
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // ── Flower drawing ─────────────────────────────────────────
+    function drawFlower() {
+      const allCollected = apples.length > 0 && apples.every(a => a.collected);
+      const fx = FLOWER_DATA.x, fy = FLOWER_DATA.y;
+      const now = performance.now();
+      const pulse = allCollected ? (1 + 0.15 * Math.sin(now * 0.004)) : 1;
+
+      ctx.save();
+      ctx.translate(fx, fy);
+      ctx.scale(pulse, pulse);
+
+      const petalColor = allCollected ? '#ffffff' : '#aaaaaa';
+      const centerColor = allCollected ? '#f5e020' : '#888888';
+
+      // Stem
+      ctx.strokeStyle = allCollected ? '#5c9a3a' : '#666';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(0, 18);
+      ctx.stroke();
+
+      // Petals
+      for (let i = 0; i < 6; i++) {
+        ctx.save();
+        ctx.rotate((i / 6) * Math.PI * 2);
+        ctx.beginPath();
+        ctx.ellipse(0, -12, 5, 9, 0, 0, Math.PI * 2);
+        ctx.fillStyle = petalColor;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Center
+      ctx.beginPath();
+      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.fillStyle = centerColor;
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // ── HUD ────────────────────────────────────────────────────
+    function drawHUD() {
+      if (state !== 'playing' && state !== 'dead') return;
+      const collected = apples.filter(a => a.collected).length;
+      const total     = apples.length;
+      const elapsed   = state === 'playing'
+        ? (performance.now() - startTime) / 1000
+        : elapsedTime;
+
+      const mins    = Math.floor(elapsed / 60);
+      const secVal  = elapsed % 60;
+      const timeStr = `${mins}:${secVal < 10 ? '0' : ''}${secVal.toFixed(2)}`;
+
+      ctx.save();
+      ctx.font = 'bold 16px system-ui, sans-serif';
+      ctx.textBaseline = 'middle';
+
+      // Apple pill
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath(); ctx.roundRect(12, 12, 115, 32, 8); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.fillText(`🍎  ${collected} / ${total}`, 22, 28);
+
+      // Timer pill
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath(); ctx.roundRect(canvas.width - 135, 12, 123, 32, 8); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'right';
+      ctx.fillText(`⏱ ${timeStr}`, canvas.width - 20, 28);
+
+      ctx.restore();
+    }
+
+    // ── Overlay screens ────────────────────────────────────────
+    function drawStartScreen() {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+
+      ctx.font = 'bold 42px system-ui, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#1e4d2b';
+      ctx.shadowBlur = 16;
+      ctx.fillText('🏍️  Elasto Mania', cx, cy - 65);
+
+      ctx.shadowBlur = 0;
+      ctx.font = '19px system-ui, sans-serif';
+      ctx.fillStyle = '#ccffcc';
+      ctx.fillText('Collect all 🍎 apples, then reach the 🌸 flower', cx, cy - 15);
+
+      const pulse = 0.75 + 0.25 * Math.sin(performance.now() * 0.003);
+      ctx.globalAlpha = pulse;
+      ctx.font = 'bold 22px system-ui, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('Press Space or Tap to Start', cx, cy + 38);
+      ctx.globalAlpha = 1;
+
+      ctx.font = '14px system-ui, sans-serif';
+      ctx.fillStyle = '#aaaaaa';
+      ctx.fillText('← → throttle/brake   ↑ ↓ lean', cx, cy + 80);
+
+      ctx.restore();
+    }
+
+    function drawDeadScreen() {
+      const elapsed = performance.now() - deadTimer;
+      const alpha   = Math.min(0.65, elapsed / 400);
+
+      ctx.save();
+      ctx.fillStyle = `rgba(80,0,0,${alpha * 0.8})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (elapsed > 180) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const a = Math.min(1, (elapsed - 180) / 300);
+        ctx.globalAlpha = a;
+        ctx.font = 'bold 48px system-ui, sans-serif';
+        ctx.fillStyle = '#ff4444';
+        ctx.fillText('BOOM! 💥', canvas.width / 2, canvas.height / 2 - 18);
+        ctx.font = '20px system-ui, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('Respawning…', canvas.width / 2, canvas.height / 2 + 26);
+        ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+
+      if (elapsed > 1500) respawn();
+    }
+
+    function drawWinScreen() {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,30,0,0.72)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+      const bounce = Math.sin(performance.now() * 0.004) * 5;
+
+      ctx.font = 'bold 46px system-ui, sans-serif';
+      ctx.fillStyle = '#88ff88';
+      ctx.shadowColor = '#00cc00';
+      ctx.shadowBlur = 22;
+      ctx.fillText('🌸  Level Complete!  🌸', cx, cy - 52 + bounce);
+
+      ctx.shadowBlur = 0;
+      const mins   = Math.floor(elapsedTime / 60);
+      const secVal = elapsedTime % 60;
+      const tStr   = `${mins}:${secVal < 10 ? '0' : ''}${secVal.toFixed(2)}`;
+      ctx.font = 'bold 28px system-ui, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(`Time: ${tStr}`, cx, cy + 18);
+
+      const pulse = 0.75 + 0.25 * Math.sin(performance.now() * 0.003);
+      ctx.globalAlpha = pulse;
+      ctx.font = '20px system-ui, sans-serif';
+      ctx.fillStyle = '#ccffcc';
+      ctx.fillText('Press R or Tap to play again', cx, cy + 72);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // ── Render ─────────────────────────────────────────────────
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Sky gradient
+      const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      sky.addColorStop(0, '#87ceeb');
+      sky.addColorStop(1, '#d4edda');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(-camera.x, -camera.y);
+
+      drawTerrain();
+      drawApples();
+      drawFlower();
+      if (state !== 'start') drawMotorcycle();
+
+      ctx.restore();
+
+      drawHUD();
+
+      if (state === 'start') drawStartScreen();
+      if (state === 'dead')  drawDeadScreen();
+      if (state === 'win')   drawWinScreen();
+    }
+
+    // ── Game loop ──────────────────────────────────────────────
+    function loop(ts) {
+      requestAnimationFrame(loop);
+      const dt = Math.min(ts - lastTs, 33);
+      lastTs = ts;
+
+      if (state === 'playing') {
+        applyControls();
+        Engine.update(engine, dt);
+        checkApples();
+        checkDeath();
+        checkWin();
+      }
+
+      updateCamera();
+      render();
+    }
+
+    // ── Boot ───────────────────────────────────────────────────
+    // Set start camera to spawn area
+    camera.x = Math.max(0, SPAWN_X - canvas.width / 2);
+    camera.y = Math.max(0, SPAWN_Y - canvas.height * 0.45);
+
+    lastTs = performance.now();
+    requestAnimationFrame(loop);
+
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "id": "/elastomania/",
+  "name": "Elasto Mania",
+  "short_name": "Elastomania",
+  "description": "A motorcycle physics game. Collect all apples, reach the flower — without falling off.",
+  "start_url": "/elastomania/",
+  "scope": "/elastomania/",
+  "display": "standalone",
+  "background_color": "#1e4d2b",
+  "theme_color": "#1e4d2b",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/img/elastomania-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/elastomania-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games"],
+  "lang": "en-US",
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

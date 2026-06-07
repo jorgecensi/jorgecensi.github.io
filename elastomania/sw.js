@@ -1,12 +1,13 @@
-const CACHE_VERSION = '2605121124';
-const CACHE_NAME = `auto-runner-${CACHE_VERSION}`;
-const OFFLINE_URL = '/auto-runner/';
+const CACHE_VERSION = '2606020938';
+const CACHE_NAME = `elastomania-${CACHE_VERSION}`;
+const OFFLINE_URL = '/elastomania/';
 const PRECACHE_URLS = [
-  '/auto-runner/',
-  '/auto-runner/manifest.json',
-  '/auto-runner/icons/icon.svg',
-  '/auto-runner/icons/icon-192.png',
-  '/auto-runner/icons/icon-512.png'
+  '/elastomania/',
+  '/elastomania/matter.min.js',
+  '/elastomania/manifest.json',
+  '/img/elastomania-icon-192.png',
+  '/img/elastomania-icon-512.png',
+  '/img/favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {
@@ -20,7 +21,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((names) =>
       Promise.all(
         names.map((name) => {
-          if (name !== CACHE_NAME && name.startsWith('auto-runner-')) {
+          if (name !== CACHE_NAME && name.startsWith('elastomania-')) {
             return caches.delete(name);
           }
           return Promise.resolve();
