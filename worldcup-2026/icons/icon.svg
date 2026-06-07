@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#080d16"/>
+      <stop offset="100%" stop-color="#0d1a2e"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#cc8800"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Green accent border -->
+  <rect x="4" y="4" width="504" height="504" rx="92" fill="none" stroke="#00d084" stroke-width="6" opacity="0.5"/>
+  <!-- "2" numeral left -->
+  <path d="M60 160 Q60 80 140 80 Q220 80 220 148 Q220 200 160 236 L60 300 L230 300 L230 340 L40 340 L40 288 L140 224 Q180 198 180 148 Q180 118 140 118 Q100 118 100 160 Z"
+    fill="#e8eaf0" opacity="0.9"/>
+  <!-- "6" numeral right -->
+  <path d="M290 80 L340 80 L340 200 Q368 168 400 170 Q460 175 460 250 Q460 320 400 330 Q330 338 310 278 Q285 278 285 250 Q285 190 290 80 Z"
+    fill="#e8eaf0" opacity="0.9"/>
+  <ellipse cx="395" cy="252" rx="48" ry="48" fill="#080d16"/>
+  <ellipse cx="395" cy="252" rx="28" ry="28" fill="#e8eaf0" opacity="0.9"/>
+  <ellipse cx="395" cy="252" rx="12" ry="12" fill="#080d16"/>
+  <!-- Trophy cup -->
+  <path d="M185 300 Q185 390 256 415 Q327 390 327 300 Z" fill="url(#gold)" filter="url(#glow)"/>
+  <rect x="240" y="413" width="32" height="48" rx="6" fill="url(#gold)"/>
+  <rect x="200" y="458" width="112" height="24" rx="8" fill="url(#gold)"/>
+  <!-- Trophy handles -->
+  <path d="M185 320 Q148 320 148 355 Q148 388 185 380" stroke="url(#gold)" stroke-width="10" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M327 320 Q364 320 364 355 Q364 388 327 380" stroke="url(#gold)" stroke-width="10" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+  <!-- Green glow base ring -->
+  <ellipse cx="256" cy="460" rx="56" ry="10" fill="#00d084" opacity="0.3"/>
+  <!-- FIFA text -->
+  <text x="256" y="510" text-anchor="middle" font-size="28" font-weight="900" fill="#00d084" font-family="Arial,sans-serif" letter-spacing="8" opacity="0.8">FIFA</text>
+</svg>

@@ -1,0 +1,22 @@
+{
+  "id": "/worldcup-2026/",
+  "name": "FIFA World Cup 2026",
+  "short_name": "WC 2026",
+  "description": "Interactive FIFA World Cup 2026 scorecard. All 48 teams, group standings, knockout bracket with penalties, and live stats. All times AEST (Brisbane).",
+  "start_url": "/worldcup-2026/",
+  "scope": "/worldcup-2026/",
+  "display": "standalone",
+  "background_color": "#080d16",
+  "theme_color": "#080d16",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/worldcup-2026/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/worldcup-2026/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/worldcup-2026/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Fixtures", "url": "/worldcup-2026/#fixtures", "description": "View all group stage fixtures" },
+    { "name": "Standings", "url": "/worldcup-2026/#standings", "description": "View group standings" },
+    { "name": "Knockout", "url": "/worldcup-2026/#knockout", "description": "View knockout bracket" }
+  ]
+}
