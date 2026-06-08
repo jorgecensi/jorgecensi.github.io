@@ -18,6 +18,20 @@
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
+    @keyframes penStripIn {
+      0%   { opacity: 0; transform: translateY(-6px) scale(0.97); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes penGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.0), inset 0 0 0 0 rgba(167,139,250,0.0); }
+      50%      { box-shadow: 0 0 22px 4px rgba(167,139,250,0.32), inset 0 0 14px 0 rgba(167,139,250,0.08); }
+    }
+    @keyframes penGoal {
+      0%   { transform: scale(0.35) rotate(-18deg); opacity: 0; }
+      55%  { transform: scale(1.35) rotate(6deg); }
+      75%  { transform: scale(0.92) rotate(-2deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -657,7 +671,7 @@ function propagateKO(ko,gm){
 }
 
 // ─── Shared UI ───────────────────────────────────────────────────────────────
-function Stepper({value,onChange,highlight,disabled=false,color=ACCENT,small=false}){
+function Stepper({value,onChange,highlight,disabled=false,color=ACCENT,small=false,pulse=false}){
   const h=small?30:38,numW=small?28:36,fs=small?12:16;
   const dec=()=>{if(disabled)return;if(value===null||value===0){onChange(null);return;}onChange(value-1);};
   const inc=()=>{if(disabled)return;onChange(value===null?0:value+1);};
@@ -680,8 +694,9 @@ function Stepper({value,onChange,highlight,disabled=false,color=ACCENT,small=fal
         background:disabled?"rgba(255,255,255,0.02)":highlight?`${color}18`:"rgba(255,255,255,0.07)",
         borderTop:`1.5px solid ${disabled?"rgba(255,255,255,0.05)":highlight?`${color}55`:"rgba(255,255,255,0.12)"}`,
         borderBottom:`1.5px solid ${disabled?"rgba(255,255,255,0.05)":highlight?`${color}55`:"rgba(255,255,255,0.12)"}`,
-        color:disabled?"#333":highlight?color:"#e8eaf0"}}>
-        {value===null?<span style={{color:"#444",fontSize:fs-2}}>–</span>:value}
+        color:disabled?"#333":highlight?color:"#e8eaf0",overflow:"hidden"}}>
+        {value===null?<span style={{color:"#444",fontSize:fs-2}}>–</span>:
+          <span key={pulse?value:"static"} style={pulse?{display:"inline-block",animation:"penGoal 0.5s cubic-bezier(0.22,1,0.36,1) both"}:undefined}>{value}</span>}
       </div>
       <button onClick={inc} style={btnS("right")} disabled={disabled}>+</button>
     </div>
@@ -1467,25 +1482,41 @@ function KOMatchCard({match,matchIdx,round,onScore,isMobile}){
           <span style={{fontSize:12,fontWeight:isWinner?800:400,color:isWinner?"#fff":has?"#aaa":"#444",fontStyle:has?"normal":"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{has?<TeamName name={team}/>:"TBD"}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
-          {draw&&(
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-              <span style={{fontSize:7,color:PURPLE,fontWeight:700}}>PEN</span>
-              <Stepper value={pen} onChange={v=>onScore(round,matchIdx,penField,v)} highlight={penWinner===team} disabled={!has} color={PURPLE} small/>
-            </div>
-          )}
           <Stepper value={score} onChange={v=>onScore(round,matchIdx,scoreField,v)} highlight={isWinner&&!draw} disabled={!has}/>
         </div>
       </div>
     );
   };
 
+  const penCell=(team,pen,penField,isWinner)=>(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,flex:1,minWidth:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0,maxWidth:"100%"}}>
+        <Flag team={team} size={15} />
+        <span style={{fontSize:10,fontWeight:isWinner?800:500,color:isWinner?"#fff":"#999",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><TeamName name={team}/></span>
+      </div>
+      <Stepper value={pen} onChange={v=>onScore(round,matchIdx,penField,v)} highlight={isWinner} color={PURPLE} small pulse/>
+    </div>
+  );
+
   return(
     <div style={{background:winner?"linear-gradient(135deg,rgba(0,208,132,0.07),rgba(255,255,255,0.02))":CARD,border:`1px solid ${winner?"rgba(0,208,132,0.22)":draw&&(match.penA!==null||match.penB!==null)?`rgba(167,139,250,0.3)`:BORDER}`,borderRadius:12,padding:"11px 13px"}}>
       <div style={{marginBottom:7}}><TimeBadge date={match.date} time={match.time} city={match.city}/></div>
       <div style={{borderBottom:`1px solid ${BORDER}`,paddingBottom:2,marginBottom:2}}>{row(match.teamA,match.scoreA,match.penA,"scoreA","penA",winner===match.teamA)}</div>
       {row(match.teamB,match.scoreB,match.penB,"scoreB","penB",winner===match.teamB)}
+      {draw&&(
+        <div style={{marginTop:8,padding:"9px 10px 11px",borderRadius:10,
+          background:"linear-gradient(135deg, rgba(167,139,250,0.12), rgba(167,139,250,0.03))",
+          border:"1px solid rgba(167,139,250,0.4)",
+          animation:`penStripIn 0.4s cubic-bezier(0.22,1,0.36,1) both${penWinner?"":", penGlow 2.2s ease-in-out infinite 0.4s"}`}}>
+          <div style={{textAlign:"center",fontSize:9,letterSpacing:2.5,fontWeight:800,color:PURPLE,textTransform:"uppercase",marginBottom:8}}>🥅 Penalty Shootout</div>
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"center",gap:14}}>
+            {penCell(match.teamA,match.penA,"penA",penWinner===match.teamA)}
+            <span style={{fontSize:9,color:"#666",fontWeight:800,marginTop:8}}>VS</span>
+            {penCell(match.teamB,match.penB,"penB",penWinner===match.teamB)}
+          </div>
+        </div>
+      )}
       <div style={{marginTop:5,display:"flex",gap:5,justifyContent:"center",flexWrap:"wrap"}}>
-        {draw&&!penWinner&&<span style={{fontSize:8,color:PURPLE,background:`${PURPLE}20`,border:`1px solid ${PURPLE}44`,borderRadius:20,padding:"2px 7px",fontWeight:700}}>DRAW — ENTER PENALTIES ↑</span>}
         {draw&&penWinner&&<span style={{fontSize:8,color:ACCENT,background:`${ACCENT}18`,border:`1px solid ${ACCENT}44`,borderRadius:20,padding:"2px 7px",fontWeight:700,display:"inline-flex",alignItems:"center",gap:3}}><Flag team={penWinner} size={11} /> <TeamName name={penWinner}/> WIN (PEN)</span>}
         {!draw&&winner&&<span style={{fontSize:8,color:ACCENT,background:`${ACCENT}18`,border:`1px solid ${ACCENT}44`,borderRadius:20,padding:"2px 7px",fontWeight:700,display:"inline-flex",alignItems:"center",gap:3}}><Flag team={winner} size={11} /> <TeamName name={winner}/> ADVANCE</span>}
       </div>
