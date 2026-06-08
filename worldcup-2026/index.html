@@ -364,6 +364,71 @@ function initKO() {
   };
 }
 
+// ─── Persistence ───────────────────────────────────────────────────────────────
+// User-entered scores are saved to localStorage so they survive page reloads and
+// app restarts (this is an installable PWA). Only the score values are stored —
+// keyed by stable match id — and merged back into a freshly generated schedule on
+// load, so changes to the fixtures/bracket data don't break old saved scores.
+const STORAGE_KEY = "wc2026:scores:v1";
+
+function loadStoredScores() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildInitialGroupMatches() {
+  const gm = generateGroupMatches(GROUPS);
+  const stored = loadStoredScores();
+  if (stored && stored.group) {
+    Object.values(gm).forEach(matches => matches.forEach(m => {
+      const s = stored.group[m.id];
+      if (s) {
+        if (s.homeScore !== undefined) m.homeScore = s.homeScore;
+        if (s.awayScore !== undefined) m.awayScore = s.awayScore;
+      }
+    }));
+  }
+  return gm;
+}
+
+function buildInitialKO() {
+  const ko = initKO();
+  const stored = loadStoredScores();
+  if (stored && stored.ko) {
+    Object.values(ko).forEach(matches => matches.forEach(m => {
+      const s = stored.ko[m.id];
+      if (s) {
+        ["scoreA", "scoreB", "penA", "penB"].forEach(f => {
+          if (s[f] !== undefined) m[f] = s[f];
+        });
+      }
+    }));
+  }
+  return ko;
+}
+
+function saveScores(groupMatches, ko) {
+  try {
+    const group = {};
+    Object.values(groupMatches).flat().forEach(m => {
+      if (m.homeScore !== null || m.awayScore !== null) {
+        group[m.id] = { homeScore: m.homeScore, awayScore: m.awayScore };
+      }
+    });
+    const koScores = {};
+    [...ko.r32, ...ko.r16, ...ko.qf, ...ko.sf, ...ko.final, ...ko.third].forEach(m => {
+      if (m.scoreA !== null || m.scoreB !== null || m.penA !== null || m.penB !== null) {
+        koScores[m.id] = { scoreA: m.scoreA, scoreB: m.scoreB, penA: m.penA, penB: m.penB };
+      }
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ group, ko: koScores }));
+  } catch (e) { /* storage unavailable (e.g. private mode) — fail silently */ }
+}
+
 // ─── Logic helpers ────────────────────────────────────────────────────────────
 function computeStandings(teams, matches) {
   const t={};
@@ -790,8 +855,8 @@ function IconStats({ size=22, active=false }) {
 
 function App(){
   const [splash,setSplash]=useState(true);
-  const [groupMatches,setGroupMatches]=useState(()=>generateGroupMatches(GROUPS));
-  const [ko,setKo]=useState(initKO);
+  const [groupMatches,setGroupMatches]=useState(buildInitialGroupMatches);
+  const [ko,setKo]=useState(buildInitialKO);
   const [view,setView]=useState("fixtures");
   const [fixtureFilter,setFixtureFilter]=useState(null); // group letter to pre-filter fixtures
   const isMobile=useIsMobile();
@@ -803,6 +868,9 @@ function App(){
   },[]);
 
   useEffect(()=>{setKo(prev=>propagateKO(prev,groupMatches));},[groupMatches]);
+
+  // Persist scores to localStorage whenever they change
+  useEffect(()=>{saveScores(groupMatches,ko);},[groupMatches,ko]);
 
   const updateGroupScore=useCallback((group,matchId,side,val)=>{
     setGroupMatches(prev=>({...prev,[group]:prev[group].map(m=>m.id===matchId?{...m,[side]:val}:m)}));
