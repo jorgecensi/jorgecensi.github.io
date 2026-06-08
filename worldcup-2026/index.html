@@ -1246,21 +1246,16 @@ function FixturesView({groupMatches,onScore,isMobile,initialFilter,onFilterUsed}
         );
       })}
 
-      {/* Group filter strip — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
+      {/* Group filter dropdown — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
       <div style={isMobile?{position:"fixed",left:0,right:0,bottom:58,zIndex:150,padding:"8px 10px",background:"rgba(10,16,32,0.94)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}:{position:"sticky",bottom:0,zIndex:50,marginTop:8,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
-        <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
-          <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
-            {["ALL",...Object.keys(GROUPS)].map(g=>{
-              const isA=filter===g;
-              const count=g==="ALL"?scored:groupMatches[g].filter(m=>m.homeScore!==null).length;
-              return(
-                <button key={g} onClick={()=>setFilter(g)} style={{padding:"6px 11px",borderRadius:7,border:`1.5px solid ${isA?GOLD:BORDER}`,background:isA?`${GOLD}18`:CARD,color:isA?GOLD:"#777",fontWeight:700,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",position:"relative"}}>
-                  {g==="ALL"?"All Groups":`Grp ${g}`}
-                  {count>0&&<span style={{position:"absolute",top:-4,right:-4,background:ACCENT,color:"#000",borderRadius:"50%",width:13,height:13,fontSize:7,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900}}>{count}</span>}
-                </button>
-              );
-            })}
-          </div>
+        <div style={{position:"relative"}}>
+          <select value={filter} onChange={e=>setFilter(e.target.value)} style={{width:"100%",appearance:"none",WebkitAppearance:"none",MozAppearance:"none",padding:"10px 36px 10px 14px",borderRadius:9,border:`1.5px solid ${BORDER}`,background:CARD,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+            <option value="ALL">All Groups ({scored} played)</option>
+            {Object.keys(GROUPS).map(g=>(
+              <option key={g} value={g}>Group {g} ({groupMatches[g].filter(m=>m.homeScore!==null).length} played)</option>
+            ))}
+          </select>
+          <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:"#777",fontSize:10}}>▾</span>
         </div>
       </div>
     </div>
@@ -1369,21 +1364,16 @@ function KnockoutView({ko,onScore,isMobile}){
         {matches.map((m,i)=><KOMatchCard key={m.id} match={m} matchIdx={i} round={round} onScore={onScore} isMobile={isMobile}/>)}
       </div>
 
-      {/* Round filter strip — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
+      {/* Round filter dropdown — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
       <div style={isMobile?{position:"fixed",left:0,right:0,bottom:58,zIndex:150,padding:"8px 10px",background:"rgba(10,16,32,0.94)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}:{position:"sticky",bottom:0,zIndex:50,marginTop:14,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
-        <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
-          <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
+        <div style={{position:"relative"}}>
+          <select value={round} onChange={e=>setRound(e.target.value)} style={{width:"100%",appearance:"none",WebkitAppearance:"none",MozAppearance:"none",padding:"10px 36px 10px 14px",borderRadius:9,border:`1.5px solid ${BORDER}`,background:CARD,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
             {ROUNDS.map(r=>{
-              const isA=round===r.key;
               const hasData=ko[r.key].some(m=>m.scoreA!==null||m.scoreB!==null);
-              return(
-                <button key={r.key} onClick={()=>setRound(r.key)} style={{padding:isMobile?"7px 12px":"7px 15px",borderRadius:8,border:`1.5px solid ${isA?ACCENT:BORDER}`,background:isA?`${ACCENT}1A`:CARD,color:isA?ACCENT:"#888",fontWeight:800,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",position:"relative"}}>
-                  {r.label}
-                  {hasData&&!isA&&<span style={{position:"absolute",top:-4,right:-4,background:ACCENT,borderRadius:"50%",width:7,height:7,display:"block"}}/>}
-                </button>
-              );
+              return <option key={r.key} value={r.key}>{r.fullLabel}{hasData?" •":""}</option>;
             })}
-          </div>
+          </select>
+          <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:"#777",fontSize:10}}>▾</span>
         </div>
       </div>
     </div>
