@@ -1206,7 +1206,7 @@ function FixturesView({groupMatches,onScore,isMobile,initialFilter,onFilterUsed}
   },[closestDate, filter]);
 
   return(
-    <div ref={containerRef} style={{paddingBottom:isMobile?70:0}}>
+    <div ref={containerRef} style={{paddingBottom:isMobile?130:0}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <span style={{fontSize:10,color:"#555"}}>{scored}/72 played</span>
       </div>
@@ -1246,8 +1246,8 @@ function FixturesView({groupMatches,onScore,isMobile,initialFilter,onFilterUsed}
         );
       })}
 
-      {/* Group filter strip — pinned to the bottom so it stays within thumb's reach on phones */}
-      <div style={{position:"sticky",bottom:isMobile?54:0,zIndex:50,marginTop:8,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
+      {/* Group filter strip — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
+      <div style={isMobile?{position:"fixed",left:0,right:0,bottom:58,zIndex:150,padding:"8px 10px",background:"rgba(10,16,32,0.94)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}:{position:"sticky",bottom:0,zIndex:50,marginTop:8,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
         <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
           <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
             {["ALL",...Object.keys(GROUPS)].map(g=>{
@@ -1357,7 +1357,7 @@ function KnockoutView({ko,onScore,isMobile}){
   const matches=ko[round];
   const currentRound=ROUNDS.find(r=>r.key===round);
   return(
-    <div style={{paddingBottom:isMobile?70:0}}>
+    <div style={{paddingBottom:isMobile?130:0}}>
       <SLabel>{currentRound?.fullLabel}</SLabel>      {round==="final"&&ko.final[0].teamA&&(
         <div style={{textAlign:"center",marginBottom:16}}>
           <div style={{fontSize:30}}>🏆</div>
@@ -1369,8 +1369,8 @@ function KnockoutView({ko,onScore,isMobile}){
         {matches.map((m,i)=><KOMatchCard key={m.id} match={m} matchIdx={i} round={round} onScore={onScore} isMobile={isMobile}/>)}
       </div>
 
-      {/* Round filter strip — pinned to the bottom so it stays within thumb's reach on phones */}
-      <div style={{position:"sticky",bottom:isMobile?54:0,zIndex:50,marginTop:14,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
+      {/* Round filter strip — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
+      <div style={isMobile?{position:"fixed",left:0,right:0,bottom:58,zIndex:150,padding:"8px 10px",background:"rgba(10,16,32,0.94)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}:{position:"sticky",bottom:0,zIndex:50,marginTop:14,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
         <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
           <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
             {ROUNDS.map(r=>{
