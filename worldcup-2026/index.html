@@ -1151,6 +1151,45 @@ function App(){
   );
 }
 
+// ─── UPWARD DROPDOWN ───────────────────────────────────────────────────────────
+// Custom select that always opens its option list above the trigger button
+// (native <select> popups are positioned by the browser and can't be forced up).
+function UpDropdown({value,options,onChange}){
+  const [open,setOpen]=useState(false);
+  const ref=useRef(null);
+  useEffect(()=>{
+    if(!open) return;
+    const onOutside=e=>{ if(ref.current&&!ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown",onOutside);
+    document.addEventListener("touchstart",onOutside);
+    return ()=>{
+      document.removeEventListener("mousedown",onOutside);
+      document.removeEventListener("touchstart",onOutside);
+    };
+  },[open]);
+  const current=options.find(o=>o.value===value);
+  return(
+    <div ref={ref} style={{position:"relative",fontFamily:"'Trebuchet MS','Segoe UI',sans-serif"}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,padding:"10px 14px",borderRadius:9,border:`1.5px solid ${open?ACCENT:BORDER}`,background:CARD,color:"#fff",fontWeight:700,fontSize:13,fontFamily:"inherit",cursor:"pointer"}}>
+        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{current?.label}</span>
+        <span style={{color:open?ACCENT:"#777",fontSize:11,flexShrink:0,transform:open?"rotate(180deg)":"none",transition:"transform 0.15s"}}>▾</span>
+      </button>
+      {open&&(
+        <div style={{position:"absolute",left:0,right:0,bottom:"calc(100% + 6px)",maxHeight:260,overflowY:"auto",borderRadius:10,border:`1.5px solid ${BORDER}`,background:"#0d1a2e",boxShadow:"0 -10px 30px rgba(0,0,0,0.55)",zIndex:250}}>
+          {options.map(o=>{
+            const isA=o.value===value;
+            return(
+              <div key={o.value} onClick={()=>{onChange(o.value);setOpen(false);}} style={{padding:"11px 14px",fontSize:13,fontWeight:isA?800:500,fontFamily:"inherit",color:isA?GOLD:"#ddd",background:isA?`${GOLD}14`:"transparent",cursor:"pointer",borderBottom:`1px solid rgba(255,255,255,0.05)`}}>
+                {o.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── FIXTURES VIEW ─────────────────────────────────────────────────────────────
 // All 72 group matches sorted chronologically, grouped by date
 function FixturesView({groupMatches,onScore,isMobile,initialFilter,onFilterUsed}){
@@ -1248,15 +1287,14 @@ function FixturesView({groupMatches,onScore,isMobile,initialFilter,onFilterUsed}
 
       {/* Group filter dropdown — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
       <div style={isMobile?{position:"fixed",left:0,right:0,bottom:58,zIndex:150,padding:"8px 10px",background:"rgba(10,16,32,0.94)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}:{position:"sticky",bottom:0,zIndex:50,marginTop:8,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
-        <div style={{position:"relative"}}>
-          <select value={filter} onChange={e=>setFilter(e.target.value)} style={{width:"100%",appearance:"none",WebkitAppearance:"none",MozAppearance:"none",padding:"10px 36px 10px 14px",borderRadius:9,border:`1.5px solid ${BORDER}`,background:CARD,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
-            <option value="ALL" style={{background:"#0d1a2e",color:"#fff"}}>All Groups ({scored} played)</option>
-            {Object.keys(GROUPS).map(g=>(
-              <option key={g} value={g} style={{background:"#0d1a2e",color:"#fff"}}>Group {g} ({groupMatches[g].filter(m=>m.homeScore!==null).length} played)</option>
-            ))}
-          </select>
-          <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:"#777",fontSize:10}}>▾</span>
-        </div>
+        <UpDropdown
+          value={filter}
+          onChange={setFilter}
+          options={[
+            {value:"ALL",label:`All Groups (${scored} played)`},
+            ...Object.keys(GROUPS).map(g=>({value:g,label:`Group ${g} (${groupMatches[g].filter(m=>m.homeScore!==null).length} played)`})),
+          ]}
+        />
       </div>
     </div>
   );
@@ -1366,15 +1404,14 @@ function KnockoutView({ko,onScore,isMobile}){
 
       {/* Round filter dropdown — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
       <div style={isMobile?{position:"fixed",left:0,right:0,bottom:58,zIndex:150,padding:"8px 10px",background:"rgba(10,16,32,0.94)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}:{position:"sticky",bottom:0,zIndex:50,marginTop:14,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
-        <div style={{position:"relative"}}>
-          <select value={round} onChange={e=>setRound(e.target.value)} style={{width:"100%",appearance:"none",WebkitAppearance:"none",MozAppearance:"none",padding:"10px 36px 10px 14px",borderRadius:9,border:`1.5px solid ${BORDER}`,background:CARD,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
-            {ROUNDS.map(r=>{
-              const hasData=ko[r.key].some(m=>m.scoreA!==null||m.scoreB!==null);
-              return <option key={r.key} value={r.key} style={{background:"#0d1a2e",color:"#fff"}}>{r.fullLabel}{hasData?" •":""}</option>;
-            })}
-          </select>
-          <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:"#777",fontSize:10}}>▾</span>
-        </div>
+        <UpDropdown
+          value={round}
+          onChange={setRound}
+          options={ROUNDS.map(r=>({
+            value:r.key,
+            label:r.fullLabel+(ko[r.key].some(m=>m.scoreA!==null||m.scoreB!==null)?" •":""),
+          }))}
+        />
       </div>
     </div>
   );
