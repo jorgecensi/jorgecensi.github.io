@@ -295,15 +295,16 @@ const GROUP_SCHEDULE = {
 };
 
 const KO_SCHEDULE = {
+  // Ordered to match R32_BRACKET (each entry is the venue/time of that match).
   r32:[
-    ["Mon 29 Jun","5:00 AM","Los Angeles"],["Tue 30 Jun","3:00 AM","Houston"],
-    ["Tue 30 Jun","6:30 AM","Boston"],["Tue 30 Jun","11:00 AM","Monterrey"],
-    ["Wed 1 Jul","3:00 AM","Dallas"],["Wed 1 Jul","7:00 AM","New York"],
-    ["Wed 1 Jul","11:00 AM","Mexico City"],["Thu 2 Jul","2:00 AM","Atlanta"],
-    ["Thu 2 Jul","6:00 AM","Seattle"],["Thu 2 Jul","10:00 AM","San Francisco"],
-    ["Fri 3 Jul","5:00 AM","Los Angeles"],["Fri 3 Jul","9:00 AM","Toronto"],
-    ["Fri 3 Jul","1:00 PM","Vancouver"],["Sat 4 Jul","4:00 AM","Dallas"],
-    ["Sat 4 Jul","8:00 AM","Miami"],["Sat 4 Jul","11:30 AM","Kansas City"],
+    ["Tue 30 Jun","6:30 AM","Boston"],      ["Wed 1 Jul","7:00 AM","New York"],     // M74, M77
+    ["Mon 29 Jun","5:00 AM","Los Angeles"], ["Tue 30 Jun","11:00 AM","Monterrey"],  // M73, M75
+    ["Fri 3 Jul","9:00 AM","Toronto"],      ["Fri 3 Jul","5:00 AM","Los Angeles"],  // M83, M84
+    ["Thu 2 Jul","10:00 AM","San Francisco"],["Thu 2 Jul","6:00 AM","Seattle"],     // M81, M82
+    ["Tue 30 Jun","3:00 AM","Houston"],     ["Wed 1 Jul","3:00 AM","Dallas"],       // M76, M78
+    ["Wed 1 Jul","11:00 AM","Mexico City"], ["Thu 2 Jul","2:00 AM","Atlanta"],      // M79, M80
+    ["Sat 4 Jul","8:00 AM","Miami"],        ["Sat 4 Jul","4:00 AM","Dallas"],       // M86, M88
+    ["Fri 3 Jul","1:00 PM","Vancouver"],    ["Sat 4 Jul","11:30 AM","Kansas City"], // M85, M87
   ],
   r16:[
     ["Sun 5 Jul","3:00 AM","Houston"],["Sun 5 Jul","7:00 AM","Philadelphia"],
@@ -320,19 +321,125 @@ const KO_SCHEDULE = {
   final:[["Mon 20 Jul","5:00 AM","New York"]],
 };
 
+// Official FIFA World Cup 2026 Round of 32 bracket (match numbers 73–88).
+// 32 teams = 12 group winners (1X) + 12 runners-up (2X) + the 8 best third-placed
+// teams. The array is laid out in bracket order so consecutive pairs form the
+// Round-of-16 ties (see R16_PAIRS): the eight winners 1A/1B/1D/1E/1G/1I/1K/1L each
+// face a third-placed team whose group is decided by THIRD_PLACE_TABLE (Annex C).
+// `thirdB` is the column index into a placement entry (winner order A,B,D,E,G,I,K,L).
 const R32_BRACKET = [
-  {id:"r32-0",slotA:"1A",slotB:"2C"},{id:"r32-1",slotA:"1C",slotB:"2A"},
-  {id:"r32-2",slotA:"1B",slotB:"2D"},{id:"r32-3",slotA:"1D",slotB:"2B"},
-  {id:"r32-4",slotA:"1E",slotB:"2G"},{id:"r32-5",slotA:"1G",slotB:"2E"},
-  {id:"r32-6",slotA:"1F",slotB:"2H"},{id:"r32-7",slotA:"1H",slotB:"2F"},
-  {id:"r32-8",slotA:"1I",slotB:"2K"},{id:"r32-9",slotA:"1K",slotB:"2I"},
-  {id:"r32-10",slotA:"1J",slotB:"2L"},{id:"r32-11",slotA:"1L",slotB:"2J"},
-  {id:"r32-12",slotA:"1A",slotB:"2B"},{id:"r32-13",slotA:"1B",slotB:"2A"},
-  {id:"r32-14",slotA:"1C",slotB:"2D"},{id:"r32-15",slotA:"1D",slotB:"2C"},
+  {id:"r32-0", slotA:"1E", thirdB:3},  // M74: 1E vs best-3rd (A/B/C/D/F)
+  {id:"r32-1", slotA:"1I", thirdB:5},  // M77: 1I vs best-3rd (C/D/F/G/H)
+  {id:"r32-2", slotA:"2A", slotB:"2B"},// M73
+  {id:"r32-3", slotA:"1F", slotB:"2C"},// M75
+  {id:"r32-4", slotA:"2K", slotB:"2L"},// M83
+  {id:"r32-5", slotA:"1H", slotB:"2J"},// M84
+  {id:"r32-6", slotA:"1D", thirdB:2},  // M81: 1D vs best-3rd (B/E/F/I/J)
+  {id:"r32-7", slotA:"1G", thirdB:4},  // M82: 1G vs best-3rd (A/E/H/I/J)
+  {id:"r32-8", slotA:"1C", slotB:"2F"},// M76
+  {id:"r32-9", slotA:"2E", slotB:"2I"},// M78
+  {id:"r32-10",slotA:"1A", thirdB:0},  // M79: 1A vs best-3rd (C/E/F/H/I)
+  {id:"r32-11",slotA:"1L", thirdB:7},  // M80: 1L vs best-3rd (E/H/I/J/K)
+  {id:"r32-12",slotA:"1J", slotB:"2H"},// M86
+  {id:"r32-13",slotA:"2D", slotB:"2G"},// M88
+  {id:"r32-14",slotA:"1B", thirdB:1},  // M85: 1B vs best-3rd (E/F/G/I/J)
+  {id:"r32-15",slotA:"1K", thirdB:6},  // M87: 1K vs best-3rd (D/E/I/J/L)
 ];
 const R16_PAIRS=[[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13],[14,15]];
 const QF_PAIRS=[[0,1],[2,3],[4,5],[6,7]];
 const SF_PAIRS=[[0,1],[2,3]];
+
+// ─── Third-placed team allocation (FIFA Annex C) ────────────────────────────────
+// Eight of the twelve third-placed teams advance. Which group winner each faces
+// depends on the exact set of eight qualifying groups — FIFA Annex C tabulates all
+// C(12,8)=495 combinations. Key: the 8 qualifying group letters sorted & joined.
+// Value: an 8-char string giving the group whose 3rd-place team fills each slot,
+// indexed by winner order [1A,1B,1D,1E,1G,1I,1K,1L] (matches R32_BRACKET.thirdB).
+const THIRD_PLACE_TABLE = {
+  "EFGHIJKL":"EJIFHGLK","DFGHIJKL":"HGIDJFLK","DEGHIJKL":"EJIDHGLK","DEFHIJKL":"EJIDHFLK","DEFGIJKL":"EGIDJFLK","DEFGHJKL":"EGJDHFLK",
+  "DEFGHIKL":"EGIDHFLK","DEFGHIJL":"EGJDHFLI","DEFGHIJK":"EGJDHFIK","CFGHIJKL":"HGICJFLK","CEGHIJKL":"EJICHGLK","CEFHIJKL":"EJICHFLK",
+  "CEFGIJKL":"EGICJFLK","CEFGHJKL":"EGJCHFLK","CEFGHIKL":"EGICHFLK","CEFGHIJL":"EGJCHFLI","CEFGHIJK":"EGJCHFIK","CDGHIJKL":"HGICJDLK",
+  "CDFHIJKL":"CJIDHFLK","CDFGIJKL":"CGIDJFLK","CDFGHJKL":"CGJDHFLK","CDFGHIKL":"CGIDHFLK","CDFGHIJL":"CGJDHFLI","CDFGHIJK":"CGJDHFIK",
+  "CDEHIJKL":"EJICHDLK","CDEGIJKL":"EGICJDLK","CDEGHJKL":"EGJCHDLK","CDEGHIKL":"EGICHDLK","CDEGHIJL":"EGJCHDLI","CDEGHIJK":"EGJCHDIK",
+  "CDEFIJKL":"CJEDIFLK","CDEFHJKL":"CJEDHFLK","CDEFHIKL":"CEIDHFLK","CDEFHIJL":"CJEDHFLI","CDEFHIJK":"CJEDHFIK","CDEFGJKL":"CGEDJFLK",
+  "CDEFGIKL":"CGEDIFLK","CDEFGIJL":"CGEDJFLI","CDEFGIJK":"CGEDJFIK","CDEFGHKL":"CGEDHFLK","CDEFGHJL":"CGJDHFLE","CDEFGHJK":"CGJDHFEK",
+  "CDEFGHIL":"CGEDHFLI","CDEFGHIK":"CGEDHFIK","CDEFGHIJ":"CGJDHFEI","BFGHIJKL":"HJBFIGLK","BEGHIJKL":"EJIBHGLK","BEFHIJKL":"EJBFIHLK",
+  "BEFGIJKL":"EJBFIGLK","BEFGHJKL":"EJBFHGLK","BEFGHIKL":"EGBFIHLK","BEFGHIJL":"EJBFHGLI","BEFGHIJK":"EJBFHGIK","BDGHIJKL":"HJBDIGLK",
+  "BDFHIJKL":"HJBDIFLK","BDFGIJKL":"IGBDJFLK","BDFGHJKL":"HGBDJFLK","BDFGHIKL":"HGBDIFLK","BDFGHIJL":"HGBDJFLI","BDFGHIJK":"HGBDJFIK",
+  "BDEHIJKL":"EJBDIHLK","BDEGIJKL":"EJBDIGLK","BDEGHJKL":"EJBDHGLK","BDEGHIKL":"EGBDIHLK","BDEGHIJL":"EJBDHGLI","BDEGHIJK":"EJBDHGIK",
+  "BDEFIJKL":"EJBDIFLK","BDEFHJKL":"EJBDHFLK","BDEFHIKL":"EIBDHFLK","BDEFHIJL":"EJBDHFLI","BDEFHIJK":"EJBDHFIK","BDEFGJKL":"EGBDJFLK",
+  "BDEFGIKL":"EGBDIFLK","BDEFGIJL":"EGBDJFLI","BDEFGIJK":"EGBDJFIK","BDEFGHKL":"EGBDHFLK","BDEFGHJL":"HGBDJFLE","BDEFGHJK":"HGBDJFEK",
+  "BDEFGHIL":"EGBDHFLI","BDEFGHIK":"EGBDHFIK","BDEFGHIJ":"HGBDJFEI","BCGHIJKL":"HJBCIGLK","BCFHIJKL":"HJBCIFLK","BCFGIJKL":"IGBCJFLK",
+  "BCFGHJKL":"HGBCJFLK","BCFGHIKL":"HGBCIFLK","BCFGHIJL":"HGBCJFLI","BCFGHIJK":"HGBCJFIK","BCEHIJKL":"EJBCIHLK","BCEGIJKL":"EJBCIGLK",
+  "BCEGHJKL":"EJBCHGLK","BCEGHIKL":"EGBCIHLK","BCEGHIJL":"EJBCHGLI","BCEGHIJK":"EJBCHGIK","BCEFIJKL":"EJBCIFLK","BCEFHJKL":"EJBCHFLK",
+  "BCEFHIKL":"EIBCHFLK","BCEFHIJL":"EJBCHFLI","BCEFHIJK":"EJBCHFIK","BCEFGJKL":"EGBCJFLK","BCEFGIKL":"EGBCIFLK","BCEFGIJL":"EGBCJFLI",
+  "BCEFGIJK":"EGBCJFIK","BCEFGHKL":"EGBCHFLK","BCEFGHJL":"HGBCJFLE","BCEFGHJK":"HGBCJFEK","BCEFGHIL":"EGBCHFLI","BCEFGHIK":"EGBCHFIK",
+  "BCEFGHIJ":"HGBCJFEI","BCDHIJKL":"HJBCIDLK","BCDGIJKL":"IGBCJDLK","BCDGHJKL":"HGBCJDLK","BCDGHIKL":"HGBCIDLK","BCDGHIJL":"HGBCJDLI",
+  "BCDGHIJK":"HGBCJDIK","BCDFIJKL":"CJBDIFLK","BCDFHJKL":"CJBDHFLK","BCDFHIKL":"CIBDHFLK","BCDFHIJL":"CJBDHFLI","BCDFHIJK":"CJBDHFIK",
+  "BCDFGJKL":"CGBDJFLK","BCDFGIKL":"CGBDIFLK","BCDFGIJL":"CGBDJFLI","BCDFGIJK":"CGBDJFIK","BCDFGHKL":"CGBDHFLK","BCDFGHJL":"CGBDHFLJ",
+  "BCDFGHJK":"HGBCJFDK","BCDFGHIL":"CGBDHFLI","BCDFGHIK":"CGBDHFIK","BCDFGHIJ":"HGBCJFDI","BCDEIJKL":"EJBCIDLK","BCDEHJKL":"EJBCHDLK",
+  "BCDEHIKL":"EIBCHDLK","BCDEHIJL":"EJBCHDLI","BCDEHIJK":"EJBCHDIK","BCDEGJKL":"EGBCJDLK","BCDEGIKL":"EGBCIDLK","BCDEGIJL":"EGBCJDLI",
+  "BCDEGIJK":"EGBCJDIK","BCDEGHKL":"EGBCHDLK","BCDEGHJL":"HGBCJDLE","BCDEGHJK":"HGBCJDEK","BCDEGHIL":"EGBCHDLI","BCDEGHIK":"EGBCHDIK",
+  "BCDEGHIJ":"HGBCJDEI","BCDEFJKL":"CJBDEFLK","BCDEFIKL":"CEBDIFLK","BCDEFIJL":"CJBDEFLI","BCDEFIJK":"CJBDEFIK","BCDEFHKL":"CEBDHFLK",
+  "BCDEFHJL":"CJBDHFLE","BCDEFHJK":"CJBDHFEK","BCDEFHIL":"CEBDHFLI","BCDEFHIK":"CEBDHFIK","BCDEFHIJ":"CJBDHFEI","BCDEFGKL":"CGBDEFLK",
+  "BCDEFGJL":"CGBDJFLE","BCDEFGJK":"CGBDJFEK","BCDEFGIL":"CGBDEFLI","BCDEFGIK":"CGBDEFIK","BCDEFGIJ":"CGBDJFEI","BCDEFGHL":"CGBDHFLE",
+  "BCDEFGHK":"CGBDHFEK","BCDEFGHJ":"HGBCJFDE","BCDEFGHI":"CGBDHFEI","AFGHIJKL":"HJIFAGLK","AEGHIJKL":"EJIAHGLK","AEFHIJKL":"EJIFAHLK",
+  "AEFGIJKL":"EJIFAGLK","AEFGHJKL":"EGJFAHLK","AEFGHIKL":"EGIFAHLK","AEFGHIJL":"EGJFAHLI","AEFGHIJK":"EGJFAHIK","ADGHIJKL":"HJIDAGLK",
+  "ADFHIJKL":"HJIDAFLK","ADFGIJKL":"IGJDAFLK","ADFGHJKL":"HGJDAFLK","ADFGHIKL":"HGIDAFLK","ADFGHIJL":"HGJDAFLI","ADFGHIJK":"HGJDAFIK",
+  "ADEHIJKL":"EJIDAHLK","ADEGIJKL":"EJIDAGLK","ADEGHJKL":"EGJDAHLK","ADEGHIKL":"EGIDAHLK","ADEGHIJL":"EGJDAHLI","ADEGHIJK":"EGJDAHIK",
+  "ADEFIJKL":"EJIDAFLK","ADEFHJKL":"HJEDAFLK","ADEFHIKL":"HEIDAFLK","ADEFHIJL":"HJEDAFLI","ADEFHIJK":"HJEDAFIK","ADEFGJKL":"EGJDAFLK",
+  "ADEFGIKL":"EGIDAFLK","ADEFGIJL":"EGJDAFLI","ADEFGIJK":"EGJDAFIK","ADEFGHKL":"HGEDAFLK","ADEFGHJL":"HGJDAFLE","ADEFGHJK":"HGJDAFEK",
+  "ADEFGHIL":"HGEDAFLI","ADEFGHIK":"HGEDAFIK","ADEFGHIJ":"HGJDAFEI","ACGHIJKL":"HJICAGLK","ACFHIJKL":"HJICAFLK","ACFGIJKL":"IGJCAFLK",
+  "ACFGHJKL":"HGJCAFLK","ACFGHIKL":"HGICAFLK","ACFGHIJL":"HGJCAFLI","ACFGHIJK":"HGJCAFIK","ACEHIJKL":"EJICAHLK","ACEGIJKL":"EJICAGLK",
+  "ACEGHJKL":"EGJCAHLK","ACEGHIKL":"EGICAHLK","ACEGHIJL":"EGJCAHLI","ACEGHIJK":"EGJCAHIK","ACEFIJKL":"EJICAFLK","ACEFHJKL":"HJECAFLK",
+  "ACEFHIKL":"HEICAFLK","ACEFHIJL":"HJECAFLI","ACEFHIJK":"HJECAFIK","ACEFGJKL":"EGJCAFLK","ACEFGIKL":"EGICAFLK","ACEFGIJL":"EGJCAFLI",
+  "ACEFGIJK":"EGJCAFIK","ACEFGHKL":"HGECAFLK","ACEFGHJL":"HGJCAFLE","ACEFGHJK":"HGJCAFEK","ACEFGHIL":"HGECAFLI","ACEFGHIK":"HGECAFIK",
+  "ACEFGHIJ":"HGJCAFEI","ACDHIJKL":"HJICADLK","ACDGIJKL":"IGJCADLK","ACDGHJKL":"HGJCADLK","ACDGHIKL":"HGICADLK","ACDGHIJL":"HGJCADLI",
+  "ACDGHIJK":"HGJCADIK","ACDFIJKL":"CJIDAFLK","ACDFHJKL":"HJFCADLK","ACDFHIKL":"HFICADLK","ACDFHIJL":"HJFCADLI","ACDFHIJK":"HJFCADIK",
+  "ACDFGJKL":"CGJDAFLK","ACDFGIKL":"CGIDAFLK","ACDFGIJL":"CGJDAFLI","ACDFGIJK":"CGJDAFIK","ACDFGHKL":"HGFCADLK","ACDFGHJL":"CGJDAFLH",
+  "ACDFGHJK":"HGJCAFDK","ACDFGHIL":"HGFCADLI","ACDFGHIK":"HGFCADIK","ACDFGHIJ":"HGJCAFDI","ACDEIJKL":"EJICADLK","ACDEHJKL":"HJECADLK",
+  "ACDEHIKL":"HEICADLK","ACDEHIJL":"HJECADLI","ACDEHIJK":"HJECADIK","ACDEGJKL":"EGJCADLK","ACDEGIKL":"EGICADLK","ACDEGIJL":"EGJCADLI",
+  "ACDEGIJK":"EGJCADIK","ACDEGHKL":"HGECADLK","ACDEGHJL":"HGJCADLE","ACDEGHJK":"HGJCADEK","ACDEGHIL":"HGECADLI","ACDEGHIK":"HGECADIK",
+  "ACDEGHIJ":"HGJCADEI","ACDEFJKL":"CJEDAFLK","ACDEFIKL":"CEIDAFLK","ACDEFIJL":"CJEDAFLI","ACDEFIJK":"CJEDAFIK","ACDEFHKL":"HEFCADLK",
+  "ACDEFHJL":"HJFCADLE","ACDEFHJK":"HJECAFDK","ACDEFHIL":"HEFCADLI","ACDEFHIK":"HEFCADIK","ACDEFHIJ":"HJECAFDI","ACDEFGKL":"CGEDAFLK",
+  "ACDEFGJL":"CGJDAFLE","ACDEFGJK":"CGJDAFEK","ACDEFGIL":"CGEDAFLI","ACDEFGIK":"CGEDAFIK","ACDEFGIJ":"CGJDAFEI","ACDEFGHL":"HGFCADLE",
+  "ACDEFGHK":"HGECAFDK","ACDEFGHJ":"HGJCAFDE","ACDEFGHI":"HGECAFDI","ABGHIJKL":"HJBAIGLK","ABFHIJKL":"HJBAIFLK","ABFGIJKL":"IJBFAGLK",
+  "ABFGHJKL":"HJBFAGLK","ABFGHIKL":"HGBAIFLK","ABFGHIJL":"HJBFAGLI","ABFGHIJK":"HJBFAGIK","ABEHIJKL":"EJBAIHLK","ABEGIJKL":"EJBAIGLK",
+  "ABEGHJKL":"EJBAHGLK","ABEGHIKL":"EGBAIHLK","ABEGHIJL":"EJBAHGLI","ABEGHIJK":"EJBAHGIK","ABEFIJKL":"EJBAIFLK","ABEFHJKL":"EJBFAHLK",
+  "ABEFHIKL":"EIBFAHLK","ABEFHIJL":"EJBFAHLI","ABEFHIJK":"EJBFAHIK","ABEFGJKL":"EJBFAGLK","ABEFGIKL":"EGBAIFLK","ABEFGIJL":"EJBFAGLI",
+  "ABEFGIJK":"EJBFAGIK","ABEFGHKL":"EGBFAHLK","ABEFGHJL":"HJBFAGLE","ABEFGHJK":"HJBFAGEK","ABEFGHIL":"EGBFAHLI","ABEFGHIK":"EGBFAHIK",
+  "ABEFGHIJ":"HJBFAGEI","ABDHIJKL":"IJBDAHLK","ABDGIJKL":"IJBDAGLK","ABDGHJKL":"HJBDAGLK","ABDGHIKL":"IGBDAHLK","ABDGHIJL":"HJBDAGLI",
+  "ABDGHIJK":"HJBDAGIK","ABDFIJKL":"IJBDAFLK","ABDFHJKL":"HJBDAFLK","ABDFHIKL":"HIBDAFLK","ABDFHIJL":"HJBDAFLI","ABDFHIJK":"HJBDAFIK",
+  "ABDFGJKL":"FJBDAGLK","ABDFGIKL":"IGBDAFLK","ABDFGIJL":"FJBDAGLI","ABDFGIJK":"FJBDAGIK","ABDFGHKL":"HGBDAFLK","ABDFGHJL":"HGBDAFLJ",
+  "ABDFGHJK":"HGBDAFJK","ABDFGHIL":"HGBDAFLI","ABDFGHIK":"HGBDAFIK","ABDFGHIJ":"HGBDAFIJ","ABDEIJKL":"EJBAIDLK","ABDEHJKL":"EJBDAHLK",
+  "ABDEHIKL":"EIBDAHLK","ABDEHIJL":"EJBDAHLI","ABDEHIJK":"EJBDAHIK","ABDEGJKL":"EJBDAGLK","ABDEGIKL":"EGBAIDLK","ABDEGIJL":"EJBDAGLI",
+  "ABDEGIJK":"EJBDAGIK","ABDEGHKL":"EGBDAHLK","ABDEGHJL":"HJBDAGLE","ABDEGHJK":"HJBDAGEK","ABDEGHIL":"EGBDAHLI","ABDEGHIK":"EGBDAHIK",
+  "ABDEGHIJ":"HJBDAGEI","ABDEFJKL":"EJBDAFLK","ABDEFIKL":"EIBDAFLK","ABDEFIJL":"EJBDAFLI","ABDEFIJK":"EJBDAFIK","ABDEFHKL":"HEBDAFLK",
+  "ABDEFHJL":"HJBDAFLE","ABDEFHJK":"HJBDAFEK","ABDEFHIL":"HEBDAFLI","ABDEFHIK":"HEBDAFIK","ABDEFHIJ":"HJBDAFEI","ABDEFGKL":"EGBDAFLK",
+  "ABDEFGJL":"EGBDAFLJ","ABDEFGJK":"EGBDAFJK","ABDEFGIL":"EGBDAFLI","ABDEFGIK":"EGBDAFIK","ABDEFGIJ":"EGBDAFIJ","ABDEFGHL":"HGBDAFLE",
+  "ABDEFGHK":"HGBDAFEK","ABDEFGHJ":"HGBDAFEJ","ABDEFGHI":"HGBDAFEI","ABCHIJKL":"IJBCAHLK","ABCGIJKL":"IJBCAGLK","ABCGHJKL":"HJBCAGLK",
+  "ABCGHIKL":"IGBCAHLK","ABCGHIJL":"HJBCAGLI","ABCGHIJK":"HJBCAGIK","ABCFIJKL":"IJBCAFLK","ABCFHJKL":"HJBCAFLK","ABCFHIKL":"HIBCAFLK",
+  "ABCFHIJL":"HJBCAFLI","ABCFHIJK":"HJBCAFIK","ABCFGJKL":"CJBFAGLK","ABCFGIKL":"IGBCAFLK","ABCFGIJL":"CJBFAGLI","ABCFGIJK":"CJBFAGIK",
+  "ABCFGHKL":"HGBCAFLK","ABCFGHJL":"HGBCAFLJ","ABCFGHJK":"HGBCAFJK","ABCFGHIL":"HGBCAFLI","ABCFGHIK":"HGBCAFIK","ABCFGHIJ":"HGBCAFIJ",
+  "ABCEIJKL":"EJBAICLK","ABCEHJKL":"EJBCAHLK","ABCEHIKL":"EIBCAHLK","ABCEHIJL":"EJBCAHLI","ABCEHIJK":"EJBCAHIK","ABCEGJKL":"EJBCAGLK",
+  "ABCEGIKL":"EGBAICLK","ABCEGIJL":"EJBCAGLI","ABCEGIJK":"EJBCAGIK","ABCEGHKL":"EGBCAHLK","ABCEGHJL":"HJBCAGLE","ABCEGHJK":"HJBCAGEK",
+  "ABCEGHIL":"EGBCAHLI","ABCEGHIK":"EGBCAHIK","ABCEGHIJ":"HJBCAGEI","ABCEFJKL":"EJBCAFLK","ABCEFIKL":"EIBCAFLK","ABCEFIJL":"EJBCAFLI",
+  "ABCEFIJK":"EJBCAFIK","ABCEFHKL":"HEBCAFLK","ABCEFHJL":"HJBCAFLE","ABCEFHJK":"HJBCAFEK","ABCEFHIL":"HEBCAFLI","ABCEFHIK":"HEBCAFIK",
+  "ABCEFHIJ":"HJBCAFEI","ABCEFGKL":"EGBCAFLK","ABCEFGJL":"EGBCAFLJ","ABCEFGJK":"EGBCAFJK","ABCEFGIL":"EGBCAFLI","ABCEFGIK":"EGBCAFIK",
+  "ABCEFGIJ":"EGBCAFIJ","ABCEFGHL":"HGBCAFLE","ABCEFGHK":"HGBCAFEK","ABCEFGHJ":"HGBCAFEJ","ABCEFGHI":"HGBCAFEI","ABCDIJKL":"IJBCADLK",
+  "ABCDHJKL":"HJBCADLK","ABCDHIKL":"HIBCADLK","ABCDHIJL":"HJBCADLI","ABCDHIJK":"HJBCADIK","ABCDGJKL":"CJBDAGLK","ABCDGIKL":"IGBCADLK",
+  "ABCDGIJL":"CJBDAGLI","ABCDGIJK":"CJBDAGIK","ABCDGHKL":"HGBCADLK","ABCDGHJL":"HGBCADLJ","ABCDGHJK":"HGBCADJK","ABCDGHIL":"HGBCADLI",
+  "ABCDGHIK":"HGBCADIK","ABCDGHIJ":"HGBCADIJ","ABCDFJKL":"CJBDAFLK","ABCDFIKL":"CIBDAFLK","ABCDFIJL":"CJBDAFLI","ABCDFIJK":"CJBDAFIK",
+  "ABCDFHKL":"HFBCADLK","ABCDFHJL":"CJBDAFLH","ABCDFHJK":"HJBCAFDK","ABCDFHIL":"HFBCADLI","ABCDFHIK":"HFBCADIK","ABCDFHIJ":"HJBCAFDI",
+  "ABCDFGKL":"CGBDAFLK","ABCDFGJL":"CGBDAFLJ","ABCDFGJK":"CGBDAFJK","ABCDFGIL":"CGBDAFLI","ABCDFGIK":"CGBDAFIK","ABCDFGIJ":"CGBDAFIJ",
+  "ABCDFGHL":"CGBDAFLH","ABCDFGHK":"HGBCAFDK","ABCDFGHJ":"HGBCAFDJ","ABCDFGHI":"HGBCAFDI","ABCDEJKL":"EJBCADLK","ABCDEIKL":"EIBCADLK",
+  "ABCDEIJL":"EJBCADLI","ABCDEIJK":"EJBCADIK","ABCDEHKL":"HEBCADLK","ABCDEHJL":"HJBCADLE","ABCDEHJK":"HJBCADEK","ABCDEHIL":"HEBCADLI",
+  "ABCDEHIK":"HEBCADIK","ABCDEHIJ":"HJBCADEI","ABCDEGKL":"EGBCADLK","ABCDEGJL":"EGBCADLJ","ABCDEGJK":"EGBCADJK","ABCDEGIL":"EGBCADLI",
+  "ABCDEGIK":"EGBCADIK","ABCDEGIJ":"EGBCADIJ","ABCDEGHL":"HGBCADLE","ABCDEGHK":"HGBCADEK","ABCDEGHJ":"HGBCADEJ","ABCDEGHI":"HGBCADEI",
+  "ABCDEFKL":"CEBDAFLK","ABCDEFJL":"CJBDAFLE","ABCDEFJK":"CJBDAFEK","ABCDEFIL":"CEBDAFLI","ABCDEFIK":"CEBDAFIK","ABCDEFIJ":"CJBDAFEI",
+  "ABCDEFHL":"HFBCADLE","ABCDEFHK":"HEBCAFDK","ABCDEFHJ":"HJBCAFDE","ABCDEFHI":"HEBCAFDI","ABCDEFGL":"CGBDAFLE","ABCDEFGK":"CGBDAFEK",
+  "ABCDEFGJ":"CGBDAFEJ","ABCDEFGI":"CGBDAFEI","ABCDEFGH":"HGBCAFDE",
+};
 
 // ─── Data generation ──────────────────────────────────────────────────────────
 function generateGroupMatches(groups) {
@@ -356,7 +463,7 @@ function mkKOMatch(id, schedIdx, round) {
 }
 function initKO() {
   return {
-    r32: R32_BRACKET.map((b,i)=>({...mkKOMatch(b.id,i,"r32"),slotA:b.slotA,slotB:b.slotB})),
+    r32: R32_BRACKET.map((b,i)=>({...mkKOMatch(b.id,i,"r32"),slotA:b.slotA,slotB:b.slotB,thirdB:b.thirdB})),
     r16: Array.from({length:8},(_,i)=>mkKOMatch(`r16-${i}`,i,"r16")),
     qf:  Array.from({length:4},(_,i)=>mkKOMatch(`qf-${i}`,i,"qf")),
     sf:  Array.from({length:2},(_,i)=>mkKOMatch(`sf-${i}`,i,"sf")),
@@ -501,6 +608,30 @@ function getGroupQualifiers(gm) {
   });
   return slots;
 }
+// Resolve the eight best third-placed teams and their bracket slots (FIFA Annex C).
+// Returns an 8-element array indexed by R32_BRACKET.thirdB (winner order
+// A,B,D,E,G,I,K,L), or null while any group still has matches to play — the eight
+// qualifiers (and therefore the matchups) can only be fixed once every group is final.
+function getThirdPlaceTeams(gm) {
+  const thirdByGroup = {};
+  for (const [g, teams] of Object.entries(GROUPS)) {
+    const matches = gm[g];
+    if (!matches || matches.some(m => m.homeScore === null || m.awayScore === null)) return null;
+    const st = computeStandings(teams, matches);
+    if (!st[2]) return null;
+    thirdByGroup[g] = { g, team: st[2].team, pts: st[2].pts, gd: st[2].gd, gf: st[2].gf };
+  }
+  // Rank the twelve third-placed teams; the top eight advance.
+  // FIFA criteria: points, then goal difference, then goals scored (disciplinary
+  // points / drawing of lots are not modelled — fall back to group letter).
+  const ranked = Object.values(thirdByGroup)
+    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.g.localeCompare(b.g));
+  const key = ranked.slice(0, 8).map(t => t.g).sort().join("");
+  const placement = THIRD_PLACE_TABLE[key];
+  if (!placement) return null;
+  // placement[col] is the group letter whose 3rd-place team fills that bracket slot.
+  return placement.split("").map(letter => thirdByGroup[letter]?.team || null);
+}
 function koWinner(m) {
   if(m.scoreA===null||m.scoreB===null) return null;
   const sa=+m.scoreA,sb=+m.scoreB;
@@ -511,8 +642,12 @@ function koWinner(m) {
 function koLoser(m){const w=koWinner(m);if(!w)return null;return w===m.teamA?m.teamB:m.teamA;}
 function propagateKO(ko,gm){
   const slots=getGroupQualifiers(gm);
+  const thirds=getThirdPlaceTeams(gm);
   const next=structuredClone(ko);
-  next.r32.forEach(m=>{m.teamA=slots[m.slotA]||null;m.teamB=slots[m.slotB]||null;});
+  next.r32.forEach(m=>{
+    m.teamA=slots[m.slotA]||null;
+    m.teamB = m.thirdB!=null ? (thirds?thirds[m.thirdB]:null) : (slots[m.slotB]||null);
+  });
   R16_PAIRS.forEach(([ia,ib],i)=>{next.r16[i].teamA=koWinner(next.r32[ia]);next.r16[i].teamB=koWinner(next.r32[ib]);});
   QF_PAIRS.forEach(([ia,ib],i)=>{next.qf[i].teamA=koWinner(next.r16[ia]);next.qf[i].teamB=koWinner(next.r16[ib]);});
   SF_PAIRS.forEach(([ia,ib],i)=>{next.sf[i].teamA=koWinner(next.qf[ia]);next.sf[i].teamB=koWinner(next.qf[ib]);});
