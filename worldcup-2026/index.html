@@ -1451,6 +1451,7 @@ function ConfederationChart({groupMatches, ko, isMobile}) {
                 <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                   <span style={{width:7,height:7,borderRadius:2,background:conf.color,display:"inline-block",flexShrink:0}}/>
                   <span style={{fontSize:10,fontWeight:700,color:"#ccc"}}>{conf.label}</span>
+                  <span style={{fontSize:8,fontWeight:800,letterSpacing:0.5,color:conf.color,background:`${conf.color}1a`,border:`1px solid ${conf.color}40`,borderRadius:4,padding:"1px 4px"}}>{conf.name}</span>
                   <span style={{fontSize:9,color:"#444"}}>({conf.teamCount} {conf.teamCount===1?"team":"teams"})</span>
                   {/* Always-visible team flags so every confederation shows its countries */}
                   <span style={{display:"flex",alignItems:"center",gap:2,flexWrap:"wrap"}}>
