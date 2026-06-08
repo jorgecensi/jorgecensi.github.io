@@ -1075,12 +1075,8 @@ function App(){
     gPlayed.forEach(m=>{teamGoals[m.home]=(teamGoals[m.home]||0)+(+m.homeScore);teamGoals[m.away]=(teamGoals[m.away]||0)+(+m.awayScore);});
     kPlayed.forEach(m=>{if(m.teamA)teamGoals[m.teamA]=(teamGoals[m.teamA]||0)+(+m.scoreA);if(m.teamB)teamGoals[m.teamB]=(teamGoals[m.teamB]||0)+(+m.scoreB);});
     return{
-      gPlayed:gPlayed.length,gTotal:allG.length,kPlayed:kPlayed.length,kTotal:allKO.length,
       totalGoals,totalPlayed,avgGoals:totalPlayed?(totalGoals/totalPlayed).toFixed(2):"0.00",
       topScorers:Object.entries(teamGoals).sort((a,b)=>b[1]-a[1]).slice(0,8).filter(([,g])=>g>0),
-      homeWins:gPlayed.filter(m=>+m.homeScore>+m.awayScore).length,
-      draws:gPlayed.filter(m=>+m.homeScore===+m.awayScore).length,
-      awayWins:gPlayed.filter(m=>+m.homeScore<+m.awayScore).length,
     };
   },[groupMatches,ko]);
 
@@ -1728,13 +1724,40 @@ function ConfederationChart({groupMatches, ko, isMobile}) {
   );
 }
 
+// Curated trivia about the 2026 tournament — the kind of thing you'd drop at a watch party
+const FUN_FACTS = [
+  {emoji:"🌎", text:"First-ever World Cup hosted by three countries at once — and Mexico becomes the first nation to host it three times."},
+  {emoji:"🦌", text:"Say hello to the mascots: Maple the Moose (Canada), Zayu the Jaguar (Mexico) and Clutch the Bald Eagle (USA)."},
+  {emoji:"✈️", text:"Vancouver's BC Place and Mexico City's Estadio Azteca sit ~4,400 km apart — the longest hop between venues in World Cup history."},
+  {emoji:"🏝️", text:"Curaçao, population ~150,000, is the smallest nation ever to qualify for a men's World Cup."},
+  {emoji:"🧤", text:"Mexico's Guillermo Ochoa is the first goalkeeper ever named to six World Cup squads."},
+  {emoji:"🐶", text:"In 1966 the World Cup trophy was stolen in London — and found a week later, wrapped in newspaper, by a dog named Pickles."},
+  {emoji:"📅", text:"104 matches over 39 days: the biggest, longest World Cup ever — 40 more games than Qatar 2022."},
+];
+
+function FunFacts({isMobile}){
+  return(
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px"}}>
+      <div style={{fontSize:8,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>Did You Know? 🤓</div>
+      <div style={{display:"flex",flexDirection:"column",gap:9}}>
+        {FUN_FACTS.map((f,i)=>(
+          <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+            <span style={{fontSize:14,flexShrink:0,lineHeight:1.5}}>{f.emoji}</span>
+            <span style={{fontSize:10.5,color:"#aaa",lineHeight:1.5}}>{f.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function GlobalStats({stats,groupMatches,ko,isMobile}){
   return(
     <div>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10,marginBottom:16}}>
         {[
-          {label:"Group Matches",value:`${stats.gPlayed}/${stats.gTotal}`,icon:"🏟️",color:ACCENT},
-          {label:"KO Matches",value:`${stats.kPlayed}/${stats.kTotal}`,icon:"⚡",color:PURPLE},
+          {label:"Host Cities",value:"16",icon:"🏙️",color:ACCENT},
+          {label:"Farthest Trip",value:"4,400 km",icon:"✈️",color:PURPLE},
           {label:"Total Goals",value:stats.totalGoals,icon:"⚽",color:GOLD},
           {label:"Goals/Game",value:stats.avgGoals,icon:"📈",color:RED},
         ].map(k=>(
@@ -1747,29 +1770,7 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
       </div>
       <ConfederationChart groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:13}}>
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px"}}>
-          <div style={{fontSize:8,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>Group Stage Outcomes</div>
-          {(()=>{
-            const decided=stats.gPlayed-stats.draws;
-            const items=[
-              {label:"Decided",val:decided,color:ACCENT},
-              {label:"Draws",val:stats.draws,color:GOLD},
-            ];
-            return items.map(r=>{
-              const pct=stats.gPlayed>0?Math.round((r.val/stats.gPlayed)*100):0;
-              return(
-                <div key={r.label} style={{marginBottom:9}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:3}}>
-                    <span style={{color:"#aaa"}}>{r.label}</span><span style={{color:r.color,fontWeight:700}}>{r.val} ({pct}%)</span>
-                  </div>
-                  <div style={{height:5,background:"rgba(255,255,255,0.06)",borderRadius:3}}>
-                    <div style={{width:`${pct}%`,height:"100%",background:r.color,borderRadius:3,transition:"width 0.4s"}}/>
-                  </div>
-                </div>
-              );
-            });
-          })()}
-        </div>
+        <FunFacts isMobile={isMobile}/>
         <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px"}}>
           <div style={{fontSize:8,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>Top Scoring Nations (All Stages)</div>
           {stats.topScorers.length===0
