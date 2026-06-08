@@ -1206,25 +1206,9 @@ function FixturesView({groupMatches,onScore,isMobile,initialFilter,onFilterUsed}
   },[closestDate, filter]);
 
   return(
-    <div ref={containerRef}>
+    <div ref={containerRef} style={{paddingBottom:isMobile?70:0}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <span style={{fontSize:10,color:"#555"}}>{scored}/72 played</span>
-      </div>
-
-      {/* Group filter strip */}
-      <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",marginBottom:16,paddingBottom:3}}>
-        <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
-          {["ALL",...Object.keys(GROUPS)].map(g=>{
-            const isA=filter===g;
-            const count=g==="ALL"?scored:groupMatches[g].filter(m=>m.homeScore!==null).length;
-            return(
-              <button key={g} onClick={()=>setFilter(g)} style={{padding:"6px 11px",borderRadius:7,border:`1.5px solid ${isA?GOLD:BORDER}`,background:isA?`${GOLD}18`:CARD,color:isA?GOLD:"#777",fontWeight:700,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",position:"relative"}}>
-                {g==="ALL"?"All Groups":`Grp ${g}`}
-                {count>0&&<span style={{position:"absolute",top:-4,right:-4,background:ACCENT,color:"#000",borderRadius:"50%",width:13,height:13,fontSize:7,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900}}>{count}</span>}
-              </button> 
-            );
-          })}
-        </div>
       </div>
 
       {/* Date sections */}
@@ -1261,6 +1245,24 @@ function FixturesView({groupMatches,onScore,isMobile,initialFilter,onFilterUsed}
           </div>
         );
       })}
+
+      {/* Group filter strip — pinned to the bottom so it stays within thumb's reach on phones */}
+      <div style={{position:"sticky",bottom:isMobile?54:0,zIndex:50,marginTop:8,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
+        <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+          <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
+            {["ALL",...Object.keys(GROUPS)].map(g=>{
+              const isA=filter===g;
+              const count=g==="ALL"?scored:groupMatches[g].filter(m=>m.homeScore!==null).length;
+              return(
+                <button key={g} onClick={()=>setFilter(g)} style={{padding:"6px 11px",borderRadius:7,border:`1.5px solid ${isA?GOLD:BORDER}`,background:isA?`${GOLD}18`:CARD,color:isA?GOLD:"#777",fontWeight:700,fontSize:11,cursor:"pointer",whiteSpace:"nowrap",position:"relative"}}>
+                  {g==="ALL"?"All Groups":`Grp ${g}`}
+                  {count>0&&<span style={{position:"absolute",top:-4,right:-4,background:ACCENT,color:"#000",borderRadius:"50%",width:13,height:13,fontSize:7,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900}}>{count}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1355,21 +1357,7 @@ function KnockoutView({ko,onScore,isMobile}){
   const matches=ko[round];
   const currentRound=ROUNDS.find(r=>r.key===round);
   return(
-    <div>
-      <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch",marginBottom:16,paddingBottom:3}}>
-        <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
-          {ROUNDS.map(r=>{
-            const isA=round===r.key;
-            const hasData=ko[r.key].some(m=>m.scoreA!==null||m.scoreB!==null);
-            return(
-              <button key={r.key} onClick={()=>setRound(r.key)} style={{padding:isMobile?"7px 12px":"7px 15px",borderRadius:8,border:`1.5px solid ${isA?ACCENT:BORDER}`,background:isA?`${ACCENT}1A`:CARD,color:isA?ACCENT:"#888",fontWeight:800,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",position:"relative"}}>
-                {r.label}
-                {hasData&&!isA&&<span style={{position:"absolute",top:-4,right:-4,background:ACCENT,borderRadius:"50%",width:7,height:7,display:"block"}}/>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <div style={{paddingBottom:isMobile?70:0}}>
       <SLabel>{currentRound?.fullLabel}</SLabel>      {round==="final"&&ko.final[0].teamA&&(
         <div style={{textAlign:"center",marginBottom:16}}>
           <div style={{fontSize:30}}>🏆</div>
@@ -1379,6 +1367,24 @@ function KnockoutView({ko,onScore,isMobile}){
       )}
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:9}}>
         {matches.map((m,i)=><KOMatchCard key={m.id} match={m} matchIdx={i} round={round} onScore={onScore} isMobile={isMobile}/>)}
+      </div>
+
+      {/* Round filter strip — pinned to the bottom so it stays within thumb's reach on phones */}
+      <div style={{position:"sticky",bottom:isMobile?54:0,zIndex:50,marginTop:14,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
+        <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+          <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
+            {ROUNDS.map(r=>{
+              const isA=round===r.key;
+              const hasData=ko[r.key].some(m=>m.scoreA!==null||m.scoreB!==null);
+              return(
+                <button key={r.key} onClick={()=>setRound(r.key)} style={{padding:isMobile?"7px 12px":"7px 15px",borderRadius:8,border:`1.5px solid ${isA?ACCENT:BORDER}`,background:isA?`${ACCENT}1A`:CARD,color:isA?ACCENT:"#888",fontWeight:800,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",position:"relative"}}>
+                  {r.label}
+                  {hasData&&!isA&&<span style={{position:"absolute",top:-4,right:-4,background:ACCENT,borderRadius:"50%",width:7,height:7,display:"block"}}/>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
