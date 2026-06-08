@@ -472,8 +472,9 @@ function generateGroupMatches(groups) {
 
 function mkKOMatch(id, schedIdx, round) {
   const s = KO_SCHEDULE[round]?.[schedIdx];
+  const date = s?.[0]||"TBD";
   return { id, teamA:null, teamB:null, scoreA:null, scoreB:null, penA:null, penB:null,
-    date:s?.[0]||"TBD", time:s?.[1]||"TBD", city:s?.[2]||"TBD" };
+    date, time:s?.[1]||"TBD", city:s?.[2]||"TBD", dk:s?.[0]?dateKey(s[0]):0 };
 }
 function initKO() {
   return {
@@ -1434,6 +1435,39 @@ function KnockoutView({ko,onScore,isMobile,navHeight}){
   ];
   const matches=ko[round];
   const currentRound=ROUNDS.find(r=>r.key===round);
+  const dateRefs=useRef({});
+
+  // Group by date
+  const byDate=useMemo(()=>{
+    const map={};
+    matches.forEach(m=>{
+      if(!map[m.date]) map[m.date]={date:m.date,dk:m.dk,matches:[]};
+      map[m.date].matches.push(m);
+    });
+    return Object.values(map).sort((a,b)=>a.dk-b.dk);
+  },[matches]);
+
+  // Find the date section closest to today (Brisbane = UTC+10, no DST)
+  const closestDate=useMemo(()=>{
+    if(byDate.length===0) return null;
+    const brisbaneMs = Date.now() + (10 * 60 * 60 * 1000);
+    const d = new Date(brisbaneMs);
+    const todayDk = ((d.getUTCMonth()+1)*100) + d.getUTCDate();
+    const future=byDate.filter(d=>d.dk>0&&d.dk>=todayDk);
+    return future.length>0 ? future[0].date : byDate[byDate.length-1].date;
+  },[byDate]);
+
+  // Scroll to closest date on mount and when round changes
+  useEffect(()=>{
+    if(!closestDate) return;
+    const el=dateRefs.current[closestDate];
+    if(!el) return;
+    const timer=setTimeout(()=>{
+      el.scrollIntoView({behavior:"smooth",block:"start"});
+    },120);
+    return ()=>clearTimeout(timer);
+  },[closestDate, round]);
+
   return(
     <div style={{paddingBottom:isMobile?130:0}}>
       <SLabel>{currentRound?.fullLabel}</SLabel>      {round==="final"&&ko.final[0].teamA&&(
@@ -1443,9 +1477,34 @@ function KnockoutView({ko,onScore,isMobile,navHeight}){
           {koWinner(ko.final[0])&&<div style={{marginTop:8,fontSize:isMobile?17:21,fontWeight:900,color:GOLD,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Flag team={koWinner(ko.final[0])} size={isMobile?17:21} /> <TeamName name={koWinner(ko.final[0])} style={{color:GOLD}}/> 🎉</div>}
         </div>
       )}
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:9}}>
-        {matches.map((m,i)=><KOMatchCard key={m.id} match={m} matchIdx={i} round={round} onScore={onScore} isMobile={isMobile}/>)}
-      </div>
+
+      {/* Date sections */}
+      {byDate.map(({date,matches:dayMatches})=>{
+        const isToday=date===closestDate;
+        return(
+          <div
+            key={date}
+            ref={el=>{dateRefs.current[date]=el;}}
+            style={{marginBottom:22,scrollMarginTop:72}}
+          >
+            {/* Date header */}
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:"#fff"}}>{date}</div>
+              {isToday&&(
+                <span style={{fontSize:8,fontWeight:800,letterSpacing:1,color:"#0a1020",background:ACCENT,borderRadius:4,padding:"2px 6px",flexShrink:0}}>NOW</span>
+              )}
+              <div style={{flex:1,height:1,background:isToday?`${ACCENT}44`:BORDER}}/>
+              <div style={{fontSize:9,color:"#555"}}>{dayMatches.length} match{dayMatches.length!==1?"es":""}</div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:9}}>
+              {dayMatches.map(m=>{
+                const matchIdx=matches.indexOf(m);
+                return <KOMatchCard key={m.id} match={m} matchIdx={matchIdx} round={round} onScore={onScore} isMobile={isMobile}/>;
+              })}
+            </div>
+          </div>
+        );
+      })}
 
       {/* Round filter dropdown — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
       <FixedFilterBar isMobile={isMobile} navHeight={navHeight} marginTop={14}>
