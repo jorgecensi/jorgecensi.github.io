@@ -1250,9 +1250,9 @@ function FixturesView({groupMatches,onScore,isMobile,initialFilter,onFilterUsed}
       <div style={isMobile?{position:"fixed",left:0,right:0,bottom:58,zIndex:150,padding:"8px 10px",background:"rgba(10,16,32,0.94)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}:{position:"sticky",bottom:0,zIndex:50,marginTop:8,paddingTop:8,paddingBottom:8,background:"rgba(10,16,32,0.92)",backdropFilter:"blur(6px)",borderTop:`1px solid ${BORDER}`}}>
         <div style={{position:"relative"}}>
           <select value={filter} onChange={e=>setFilter(e.target.value)} style={{width:"100%",appearance:"none",WebkitAppearance:"none",MozAppearance:"none",padding:"10px 36px 10px 14px",borderRadius:9,border:`1.5px solid ${BORDER}`,background:CARD,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
-            <option value="ALL">All Groups ({scored} played)</option>
+            <option value="ALL" style={{background:"#0d1a2e",color:"#fff"}}>All Groups ({scored} played)</option>
             {Object.keys(GROUPS).map(g=>(
-              <option key={g} value={g}>Group {g} ({groupMatches[g].filter(m=>m.homeScore!==null).length} played)</option>
+              <option key={g} value={g} style={{background:"#0d1a2e",color:"#fff"}}>Group {g} ({groupMatches[g].filter(m=>m.homeScore!==null).length} played)</option>
             ))}
           </select>
           <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:"#777",fontSize:10}}>▾</span>
@@ -1370,7 +1370,7 @@ function KnockoutView({ko,onScore,isMobile}){
           <select value={round} onChange={e=>setRound(e.target.value)} style={{width:"100%",appearance:"none",WebkitAppearance:"none",MozAppearance:"none",padding:"10px 36px 10px 14px",borderRadius:9,border:`1.5px solid ${BORDER}`,background:CARD,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
             {ROUNDS.map(r=>{
               const hasData=ko[r.key].some(m=>m.scoreA!==null||m.scoreB!==null);
-              return <option key={r.key} value={r.key}>{r.fullLabel}{hasData?" •":""}</option>;
+              return <option key={r.key} value={r.key} style={{background:"#0d1a2e",color:"#fff"}}>{r.fullLabel}{hasData?" •":""}</option>;
             })}
           </select>
           <span style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:"#777",fontSize:10}}>▾</span>
