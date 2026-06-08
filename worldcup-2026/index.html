@@ -1331,7 +1331,7 @@ function GroupMatchCard({match,onScore,isMobile}){
 const CONFEDERATIONS = {
   UEFA: {
     name:"UEFA", label:"Europe", color:"#4f8ef7",
-    teams:["Germany","Netherlands","Sweden","Belgium","Spain","France","England","Croatia","Switzerland","Portugal","Serbia","Bosnia","Czechia","Scotland","Norway","Austria"],
+    teams:["Germany","Netherlands","Sweden","Belgium","Spain","France","England","Croatia","Switzerland","Portugal","Serbia","Bosnia","Czechia","Scotland","Norway","Austria","Turkey"],
   },
   CONMEBOL: {
     name:"CONMEBOL", label:"S. America", color:"#f7c948",
@@ -1343,11 +1343,11 @@ const CONFEDERATIONS = {
   },
   CAF: {
     name:"CAF", label:"Africa", color:"#ff6b35",
-    teams:["Morocco","South Africa","Senegal","Ivory Coast","Egypt","Ghana","DR Congo","Cameroon","Tunisia","Mali","Nigeria","Algeria"],
+    teams:["Morocco","South Africa","Senegal","Ivory Coast","Egypt","Ghana","DR Congo","Cameroon","Tunisia","Mali","Nigeria","Algeria","Cape Verde"],
   },
   AFC: {
     name:"AFC", label:"Asia", color:"#a78bfa",
-    teams:["South Korea","Japan","Saudi Arabia","Iran","Iraq","Australia","Qatar","Uzbekistan"],
+    teams:["South Korea","Japan","Saudi Arabia","Iran","Iraq","Australia","Qatar","Uzbekistan","Jordan"],
   },
   OFC: {
     name:"OFC", label:"Oceania", color:"#ff3b55",
@@ -1448,10 +1448,16 @@ function ConfederationChart({groupMatches, ko, isMobile}) {
             <div key={conf.key}>
               {/* Conf name + teams row */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                   <span style={{width:7,height:7,borderRadius:2,background:conf.color,display:"inline-block",flexShrink:0}}/>
                   <span style={{fontSize:10,fontWeight:700,color:"#ccc"}}>{conf.label}</span>
-                  <span style={{fontSize:9,color:"#444"}}>({conf.teamCount} teams)</span>
+                  <span style={{fontSize:9,color:"#444"}}>({conf.teamCount} {conf.teamCount===1?"team":"teams"})</span>
+                  {/* Always-visible team flags so every confederation shows its countries */}
+                  <span style={{display:"flex",alignItems:"center",gap:2,flexWrap:"wrap"}}>
+                    {conf.teams.slice(0,isMobile?6:12).map(t=>(
+                      <Flag key={t} team={t} size={11} />
+                    ))}
+                  </span>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   {!noData&&<span style={{fontSize:9,color:"#555"}}>{conf.teamCount>0?`avg ${conf.avgPts} pts`:""}</span>}
@@ -1474,12 +1480,7 @@ function ConfederationChart({groupMatches, ko, isMobile}) {
                     display:"flex",alignItems:"center",
                     justifyContent:isNeg?"flex-start":"flex-end",
                     paddingRight:isNeg?0:5,paddingLeft:isNeg?5:0,
-                  }}>
-                    {/* Team flags inside bar */}
-                    {pct>18&&conf.teams.slice(0,isMobile?4:8).map(t=>(
-                      <Flag key={t} team={t} size={11} />
-                    ))}
-                  </div>
+                  }}/>
                 )}
                 {noData&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:8,fontSize:9,color:"#333"}}>No results yet</div>}
               </div>
