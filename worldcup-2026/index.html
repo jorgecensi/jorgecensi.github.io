@@ -1168,24 +1168,19 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
                 </div>
               </div>
               {/* Compact table header */}
-              <div style={{display:"grid",gridTemplateColumns:"20px 1fr 24px 24px 24px 30px 30px",gap:2,padding:"7px 12px",fontSize:8,color:"#555",letterSpacing:1,fontWeight:700,textTransform:"uppercase"}}>
+              <div style={{display:"grid",gridTemplateColumns:"20px 1fr 30px 30px",gap:2,padding:"7px 12px",fontSize:8,color:"#555",letterSpacing:1,fontWeight:700,textTransform:"uppercase"}}>
                 <span>#</span><span>Team</span>
-                <span style={{textAlign:"center"}}>P</span><span style={{textAlign:"center"}}>W</span>
-                <span style={{textAlign:"center"}}>D</span>
                 <span style={{textAlign:"center"}}>GD</span>
                 <span style={{textAlign:"center"}}>PTS</span>
               </div>
               {standings.map((row,i)=>(
-                <div key={row.team} style={{display:"grid",gridTemplateColumns:"20px 1fr 24px 24px 24px 30px 30px",gap:2,padding:"8px 12px",borderTop:`1px solid rgba(255,255,255,0.04)`,background:i<2?"rgba(0,208,132,0.04)":"transparent",alignItems:"center"}}>
+                <div key={row.team} style={{display:"grid",gridTemplateColumns:"20px 1fr 30px 30px",gap:2,padding:"8px 12px",borderTop:`1px solid rgba(255,255,255,0.04)`,background:i<2?"rgba(0,208,132,0.04)":"transparent",alignItems:"center"}}>
                   <span style={{fontSize:9,fontWeight:700,color:i===0?GOLD:i===1?"#aaa":"#444"}}>{i+1}</span>
                   <span style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}>
                     <Flag team={row.team} size={15} />
                     <TeamName name={row.team} style={{fontWeight:i<2?700:400,color:i<2?"#fff":"#bbb",fontSize:11}}/>
                     <ResultDots results={row.results}/>
                   </span>
-                  <span style={{textAlign:"center",color:"#777",fontSize:11}}>{row.played}</span>
-                  <span style={{textAlign:"center",color:row.won>0?ACCENT:"#777",fontSize:11}}>{row.won}</span>
-                  <span style={{textAlign:"center",color:"#777",fontSize:11}}>{row.drawn}</span>
                   <span style={{textAlign:"center",color:row.gd>0?ACCENT:row.gd<0?RED:"#777",fontWeight:600,fontSize:11}}>{row.gd>0?`+${row.gd}`:row.gd}</span>
                   <span style={{textAlign:"center",fontWeight:900,fontSize:13,color:i<2?GOLD:"#e8eaf0"}}>{row.pts}</span>
                 </div>
