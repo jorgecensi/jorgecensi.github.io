@@ -145,10 +145,11 @@ function TeamName({ name, style={} }) {
       <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{name}</span>
       {titles > 0 && (
         <span style={{
-          fontSize:8, color:GOLD, letterSpacing:0, flexShrink:0,
+          fontSize:10, color:GOLD, letterSpacing:0, flexShrink:0, fontWeight:800,
+          display:"inline-flex", alignItems:"center", gap:1, lineHeight:1,
           textShadow:"0 0 4px rgba(255,215,0,0.6)",
         }} title={`${titles}× World Cup winner`}>
-          {"★".repeat(titles)}
+          {titles}<span style={{fontSize:9}}>★</span>
         </span>
       )}
       {isNew && (
@@ -432,18 +433,38 @@ function saveScores(groupMatches, ko) {
 // ─── Logic helpers ────────────────────────────────────────────────────────────
 function computeStandings(teams, matches) {
   const t={};
-  teams.forEach(tm=>{t[tm]={team:tm,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0};});
-  matches.forEach(m=>{
-    if(m.homeScore===null||m.awayScore===null) return;
+  teams.forEach(tm=>{t[tm]={team:tm,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,gd:0,pts:0,results:[]};});
+  // Iterate in chronological order so per-team result dots read left→right by date.
+  const ordered=[...matches].sort((a,b)=>(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0));
+  ordered.forEach(m=>{
+    if(!t[m.home]||!t[m.away]) return;
+    if(m.homeScore===null||m.awayScore===null){
+      t[m.home].results.push("future");t[m.away].results.push("future");
+      return;
+    }
     const hs=+m.homeScore,as_=+m.awayScore;
     t[m.home].played++;t[m.away].played++;
     t[m.home].gf+=hs;t[m.home].ga+=as_;t[m.away].gf+=as_;t[m.away].ga+=hs;
     t[m.home].gd=t[m.home].gf-t[m.home].ga;t[m.away].gd=t[m.away].gf-t[m.away].ga;
-    if(hs>as_){t[m.home].won++;t[m.home].pts+=3;t[m.away].lost++;}
-    else if(hs<as_){t[m.away].won++;t[m.away].pts+=3;t[m.home].lost++;}
-    else{t[m.home].drawn++;t[m.home].pts++;t[m.away].drawn++;t[m.away].pts++;}
+    if(hs>as_){t[m.home].won++;t[m.home].pts+=3;t[m.away].lost++;t[m.home].results.push("win");t[m.away].results.push("loss");}
+    else if(hs<as_){t[m.away].won++;t[m.away].pts+=3;t[m.home].lost++;t[m.away].results.push("win");t[m.home].results.push("loss");}
+    else{t[m.home].drawn++;t[m.home].pts++;t[m.away].drawn++;t[m.away].pts++;t[m.home].results.push("draw");t[m.away].results.push("draw");}
   });
   return Object.values(t).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
+}
+
+// Colour-coded result dots shown after a team's name in the standings.
+const RESULT_DOT_COLORS = { win:ACCENT, loss:RED, draw:GOLD, future:"#4a4f5e" };
+function ResultDots({ results=[] }) {
+  if(!results.length) return null;
+  return (
+    <span style={{display:"inline-flex",alignItems:"center",gap:2,marginLeft:4,flexShrink:0}}>
+      {results.map((r,i)=>(
+        <span key={i} title={r==="future"?"Upcoming":r==="win"?"Won":r==="loss"?"Lost":"Draw"}
+          style={{width:6,height:6,borderRadius:"50%",background:RESULT_DOT_COLORS[r]||"#4a4f5e",display:"inline-block"}}/>
+      ))}
+    </span>
+  );
 }
 // Returns only teams that have MATHEMATICALLY CLINCHED their position.
 // A team is confirmed 1st/2nd only when no permutation of remaining results
@@ -1157,9 +1178,10 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
               {standings.map((row,i)=>(
                 <div key={row.team} style={{display:"grid",gridTemplateColumns:"20px 1fr 24px 24px 24px 30px 30px",gap:2,padding:"8px 12px",borderTop:`1px solid rgba(255,255,255,0.04)`,background:i<2?"rgba(0,208,132,0.04)":"transparent",alignItems:"center"}}>
                   <span style={{fontSize:9,fontWeight:700,color:i===0?GOLD:i===1?"#aaa":"#444"}}>{i+1}</span>
-                  <span style={{display:"flex",alignItems:"center",gap:5}}>
+                  <span style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}>
                     <Flag team={row.team} size={15} />
                     <TeamName name={row.team} style={{fontWeight:i<2?700:400,color:i<2?"#fff":"#bbb",fontSize:11}}/>
+                    <ResultDots results={row.results}/>
                   </span>
                   <span style={{textAlign:"center",color:"#777",fontSize:11}}>{row.played}</span>
                   <span style={{textAlign:"center",color:row.won>0?ACCENT:"#777",fontSize:11}}>{row.won}</span>
@@ -1168,9 +1190,18 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
                   <span style={{textAlign:"center",fontWeight:900,fontSize:13,color:i<2?GOLD:"#e8eaf0"}}>{row.pts}</span>
                 </div>
               ))}
-              <div style={{padding:"6px 12px",borderTop:`1px solid rgba(255,255,255,0.05)`,display:"flex",alignItems:"center",gap:5,fontSize:9,color:"#444"}}>
-                <span style={{width:7,height:7,borderRadius:2,background:ACCENT,display:"inline-block",flexShrink:0}}/>
-                Top 2 advance
+              <div style={{padding:"6px 12px",borderTop:`1px solid rgba(255,255,255,0.05)`,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,fontSize:9,color:"#444",flexWrap:"wrap"}}>
+                <span style={{display:"flex",alignItems:"center",gap:5}}>
+                  <span style={{width:7,height:7,borderRadius:2,background:ACCENT,display:"inline-block",flexShrink:0}}/>
+                  Top 2 advance
+                </span>
+                <span style={{display:"flex",alignItems:"center",gap:8}}>
+                  {[["win","Won"],["draw","Draw"],["loss","Lost"],["future","Next"]].map(([k,lbl])=>(
+                    <span key={k} style={{display:"inline-flex",alignItems:"center",gap:3}}>
+                      <span style={{width:6,height:6,borderRadius:"50%",background:RESULT_DOT_COLORS[k],display:"inline-block"}}/>{lbl}
+                    </span>
+                  ))}
+                </span>
               </div>
             </div>
           );
