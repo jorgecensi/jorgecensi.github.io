@@ -2606,12 +2606,12 @@ function ConfederationChart({groupMatches, ko, isMobile}) {
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"14px 14px",marginBottom:13}}>
       {/* Header */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-        <div style={{fontSize:8,color:"#555",letterSpacing:2,textTransform:"uppercase",fontWeight:700}}>{t('perf_by_conf')}</div>
+        <div style={{fontSize:11,color:"#555",letterSpacing:2,textTransform:"uppercase",fontWeight:700}}>{t('perf_by_conf')}</div>
         {/* Metric toggle */}
         <div style={{display:"flex",gap:3}}>
           {[["pts",t('metric_pts')],["gf",t('metric_gf')],["gd",t('metric_gd')]].map(([v,label])=>(
             <button key={v} onClick={()=>setMetric(v)} style={{
-              padding:"3px 8px",borderRadius:5,fontSize:8,fontWeight:700,letterSpacing:0.8,
+              padding:"3px 8px",borderRadius:5,fontSize:10,fontWeight:700,letterSpacing:0.8,
               border:`1px solid ${metric===v?GOLD:BORDER}`,
               background:metric===v?`${GOLD}18`:"transparent",
               color:metric===v?GOLD:"#555",cursor:"pointer",
@@ -2633,9 +2633,9 @@ function ConfederationChart({groupMatches, ko, isMobile}) {
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                   <span style={{width:7,height:7,borderRadius:2,background:conf.color,display:"inline-block",flexShrink:0}}/>
-                  <span style={{fontSize:10,fontWeight:700,color:"#ccc"}}>{confLabelMap[conf.key]||conf.label}</span>
-                  <span style={{fontSize:8,fontWeight:800,letterSpacing:0.5,color:conf.color,background:`${conf.color}1a`,border:`1px solid ${conf.color}40`,borderRadius:4,padding:"1px 4px"}}>{conf.name}</span>
-                  <span style={{fontSize:9,color:"#444"}}>({conf.teamCount} {conf.teamCount===1?t('conf_team'):t('conf_teams')})</span>
+                  <span style={{fontSize:12,fontWeight:700,color:"#ccc"}}>{confLabelMap[conf.key]||conf.label}</span>
+                  <span style={{fontSize:10,fontWeight:800,letterSpacing:0.5,color:conf.color,background:`${conf.color}1a`,border:`1px solid ${conf.color}40`,borderRadius:4,padding:"1px 4px"}}>{conf.name}</span>
+                  <span style={{fontSize:11,color:"#444"}}>({conf.teamCount} {conf.teamCount===1?t('conf_team'):t('conf_teams')})</span>
                   {/* Always-visible team flags so every confederation shows its countries */}
                   <span style={{display:"flex",alignItems:"center",gap:2,flexWrap:"wrap"}}>
                     {conf.teams.slice(0,isMobile?6:12).map(tm=>(
@@ -2644,8 +2644,8 @@ function ConfederationChart({groupMatches, ko, isMobile}) {
                   </span>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  {!noData&&<span style={{fontSize:9,color:"#555"}}>{conf.teamCount>0?t('conf_avg_pts').replace('{n}',conf.avgPts):""}</span>}
-                  <span style={{fontSize:11,fontWeight:900,color:noData?"#333":isNeg?RED:conf.color,minWidth:24,textAlign:"right"}}>
+                  {!noData&&<span style={{fontSize:11,color:"#555"}}>{conf.teamCount>0?t('conf_avg_pts').replace('{n}',conf.avgPts):""}</span>}
+                  <span style={{fontSize:13,fontWeight:900,color:noData?"#333":isNeg?RED:conf.color,minWidth:24,textAlign:"right"}}>
                     {noData?"—":val>0?`+${val}`:val}
                   </span>
                 </div>
@@ -2673,7 +2673,7 @@ function ConfederationChart({groupMatches, ko, isMobile}) {
         })}
       </div>
 
-      <div style={{marginTop:10,fontSize:8,color:"#444",textAlign:"right"}}>{metricLabel} · {t('all_stages_combined')}</div>
+      <div style={{marginTop:10,fontSize:10,color:"#444",textAlign:"right"}}>{metricLabel} · {t('all_stages_combined')}</div>
     </div>
   );
 }
@@ -2682,6 +2682,7 @@ function ConfederationChart({groupMatches, ko, isMobile}) {
 const FUN_FACTS = {
   en: [
     {emoji:"🌎", text:"First-ever World Cup hosted by three countries at once — and Mexico becomes the first nation to host it three times."},
+    {emoji:"🏙️", text:"16 host cities spread across three countries — 11 in the USA, 3 in Canada, and 2 in Mexico."},
     {emoji:"🦌", text:"Say hello to the mascots: Maple the Moose (Canada), Zayu the Jaguar (Mexico) and Clutch the Bald Eagle (USA)."},
     {emoji:"✈️", text:"Vancouver's BC Place and Mexico City's Estadio Azteca sit ~4,400 km apart — the longest hop between venues in World Cup history."},
     {emoji:"🏝️", text:"Curaçao, population ~150,000, is the smallest nation ever to qualify for a men's World Cup."},
@@ -2691,6 +2692,7 @@ const FUN_FACTS = {
   ],
   'pt-BR': [
     {emoji:"🌎", text:"Primeira Copa do Mundo sediada por três países ao mesmo tempo — e o México se torna a primeira nação a sediar o torneio três vezes."},
+    {emoji:"🏙️", text:"16 cidades-sede distribuídas por três países — 11 nos EUA, 3 no Canadá e 2 no México."},
     {emoji:"🦌", text:"Conheça os mascotes: Maple, o Alce (Canadá), Zayu, o Jaguar (México) e Clutch, a Águia Careca (EUA)."},
     {emoji:"✈️", text:"O BC Place de Vancouver e o Estádio Azteca, na Cidade do México, ficam a ~4.400 km um do outro — a maior distância entre sedes na história da Copa."},
     {emoji:"🏝️", text:"Curaçao, com ~150.000 habitantes, é a menor nação já classificada para uma Copa do Mundo masculina."},
@@ -2721,13 +2723,13 @@ function HistoricalGoalsChart({stats}) {
   return (
     <div style={{background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:"14px 14px", marginBottom:13}}>
       <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, gap:6, flexWrap:"wrap"}}>
-        <div style={{fontSize:8, color:"#555", letterSpacing:2, textTransform:"uppercase", fontWeight:700}}>
+        <div style={{fontSize:11, color:"#555", letterSpacing:2, textTransform:"uppercase", fontWeight:700}}>
           {metric==="gpg"?t('chart_gpg'):metric==="goals"?t('chart_goals'):t('chart_teams')} · {t('chart_all_editions')}
         </div>
         <div style={{display:"flex", gap:3}}>
           {[["gpg",t('chart_gpg_btn')],["goals",t('chart_goals_btn')],["teams",t('chart_teams_btn')]].map(([v,l])=>(
             <button key={v} onClick={()=>setMetric(v)} style={{
-              padding:"3px 8px", borderRadius:5, fontSize:8, fontWeight:700, letterSpacing:0.8,
+              padding:"3px 8px", borderRadius:5, fontSize:10, fontWeight:700, letterSpacing:0.8,
               border:`1px solid ${metric===v?ACCENT:BORDER}`,
               background:metric===v?`${ACCENT}18`:"transparent",
               color:metric===v?ACCENT:"#555", cursor:"pointer",
@@ -2793,7 +2795,7 @@ function HistoricalGoalsChart({stats}) {
         </div>
       </div>
 
-      <div style={{display:"flex", gap:10, fontSize:8, color:"#444", flexWrap:"wrap", marginTop:6}}>
+      <div style={{display:"flex", gap:10, fontSize:10, color:"#444", flexWrap:"wrap", marginTop:6}}>
         <span><span style={{color:GOLD}}>■</span> {t('chart_most')}</span>
         <span><span style={{color:RED}}>■</span> {t('chart_fewest')}</span>
         <span><span style={{color:ACCENT}}>■</span> {t('chart_live')}</span>
@@ -2817,12 +2819,12 @@ function PastChampions({isMobile}) {
 
   return (
     <div style={{background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:"12px 14px", marginBottom:13}}>
-      <div style={{fontSize:8, color:"#555", letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:700}}>
+      <div style={{fontSize:11, color:"#555", letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:700}}>
         {t('past_champions')}
       </div>
       <div style={{display:"grid", gridTemplateColumns:"34px 1fr 1fr 34px", gap:6, paddingBottom:6, borderBottom:`1px solid ${BORDER}`, marginBottom:4}}>
         {[t('col_year'),t('col_champion'),t('col_runner_up'),t('col_gpg')].map(h=>(
-          <div key={h} style={{fontSize:8, color:"#444", fontWeight:700, letterSpacing:0.5}}>{h}</div>
+          <div key={h} style={{fontSize:11, color:"#444", fontWeight:700, letterSpacing:0.5}}>{h}</div>
         ))}
       </div>
       {displayed.map(wc=>(
@@ -2831,11 +2833,11 @@ function PastChampions({isMobile}) {
           padding:"5px 0", borderBottom:`1px solid rgba(255,255,255,0.025)`,
           alignItems:"center",
         }}>
-          <div style={{fontSize:10, color:"#777", fontWeight:600}}>{wc.year}</div>
+          <div style={{fontSize:12, color:"#777", fontWeight:600}}>{wc.year}</div>
           <div style={{display:"flex", alignItems:"center", gap:4, minWidth:0}}>
             <Flag team={wc.champion} size={13}/>
             <span style={{
-              fontSize:10, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+              fontSize:12, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
               color:champCount[wc.champion]>=3?GOLD:"#ccc",
               fontWeight:champCount[wc.champion]>=3?700:400,
             }}>
@@ -2844,16 +2846,16 @@ function PastChampions({isMobile}) {
           </div>
           <div style={{display:"flex", alignItems:"center", gap:4, minWidth:0}}>
             <Flag team={wc.runnerUp} size={13}/>
-            <span style={{fontSize:10, color:"#555", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+            <span style={{fontSize:12, color:"#555", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
               {wc.runnerUp}
             </span>
           </div>
-          <div style={{fontSize:10, fontWeight:600, color:wc.gpg>=4?GOLD:wc.gpg<2.3?RED:"#555"}}>{wc.gpg.toFixed(2)}</div>
+          <div style={{fontSize:12, fontWeight:600, color:wc.gpg>=4?GOLD:wc.gpg<2.3?RED:"#555"}}>{wc.gpg.toFixed(2)}</div>
         </div>
       ))}
       {!showAll && (
         <button onClick={()=>setShowAll(true)} style={{
-          marginTop:8, width:"100%", padding:"6px 0", fontSize:9, color:"#555",
+          marginTop:8, width:"100%", padding:"6px 0", fontSize:11, color:"#555",
           background:"transparent", border:`1px solid ${BORDER}`, borderRadius:6,
           cursor:"pointer", letterSpacing:0.5,
         }}>{t('show_all_editions').replace('{n}',HISTORICAL_WC.length)}</button>
@@ -2863,7 +2865,7 @@ function PastChampions({isMobile}) {
 }
 
 const FINISH_I18N_KEY = {W:'finish_champion',F:'finish_runner_up','3':'finish_3rd','4':'finish_4th',QF:'finish_qf',R16:'finish_r16',GS:'finish_gs'};
-function FinishBadge({finish, size=9}) {
+function FinishBadge({finish, size=11}) {
   const { t } = useLang();
   if (!finish) return <span style={{fontSize:size,color:"#555",fontStyle:"italic"}}>{t('debut')}</span>;
   const color = FINISH_COLOR_MAP[finish] || "#555";
@@ -2895,7 +2897,7 @@ function TeamHistoryRow({team, history, expanded, onToggle}) {
         cursor:"pointer", userSelect:"none",
       }}>
         <Flag team={team} size={15}/>
-        <span style={{flex:1, fontSize:10.5, color:"#bbb", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+        <span style={{flex:1, fontSize:13, color:"#bbb", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
           <TeamName name={team}/>
         </span>
         {/* Mini coloured dots — last 8 appearances */}
@@ -2908,14 +2910,14 @@ function TeamHistoryRow({team, history, expanded, onToggle}) {
           ))}
         </div>
         <div style={{flexShrink:0}}><FinishBadge finish={bestFinish}/></div>
-        <span style={{fontSize:8, color:"#555", minWidth:22, textAlign:"right", flexShrink:0}}>
+        <span style={{fontSize:10, color:"#555", minWidth:22, textAlign:"right", flexShrink:0}}>
           {years.length>0?`×${years.length}`:""}
         </span>
       </div>
       {expanded && (
         <div style={{padding:"8px 4px 10px 20px", display:"flex", flexWrap:"wrap", gap:5, borderBottom:`1px solid rgba(255,255,255,0.04)`}}>
           {years.length===0 ? (
-            <span style={{fontSize:9, color:"#555", fontStyle:"italic"}}>{t('first_appearance')}</span>
+            <span style={{fontSize:11, color:"#555", fontStyle:"italic"}}>{t('first_appearance')}</span>
           ) : years.map(year=>{
             const f = history[year];
             const col = FINISH_COLOR_MAP[f]||"#333";
@@ -2926,8 +2928,8 @@ function TeamHistoryRow({team, history, expanded, onToggle}) {
                 background:`${col}18`, border:`1px solid ${col}33`,
                 borderRadius:5, padding:"4px 7px", minWidth:46,
               }}>
-                <span style={{fontSize:8, color:"#666", fontWeight:600}}>{year}</span>
-                <span style={{fontSize:9, fontWeight:800, color:col}}>{icon||(FINISH_I18N_KEY[f]?t(FINISH_I18N_KEY[f]):(FINISH_LABEL_MAP[f]||f))}</span>
+                <span style={{fontSize:10, color:"#666", fontWeight:600}}>{year}</span>
+                <span style={{fontSize:11, fontWeight:800, color:col}}>{icon||(FINISH_I18N_KEY[f]?t(FINISH_I18N_KEY[f]):(FINISH_LABEL_MAP[f]||f))}</span>
               </div>
             );
           })}
@@ -2964,13 +2966,13 @@ function TeamHistorySection({isMobile}) {
   return (
     <div style={{background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:"12px 14px", marginBottom:13}}>
       <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, gap:6, flexWrap:"wrap"}}>
-        <div style={{fontSize:8, color:"#555", letterSpacing:2, textTransform:"uppercase", fontWeight:700}}>
+        <div style={{fontSize:11, color:"#555", letterSpacing:2, textTransform:"uppercase", fontWeight:700}}>
           {t('team_wc_history')}
         </div>
         <div style={{display:"flex", gap:3}}>
           {[["best",t('sort_best_finish')],["apps",t('sort_most_apps')],["alpha",t('sort_alpha')]].map(([v,l])=>(
             <button key={v} onClick={()=>setSortBy(v)} style={{
-              padding:"3px 8px", borderRadius:5, fontSize:8, fontWeight:700, letterSpacing:0.8,
+              padding:"3px 8px", borderRadius:5, fontSize:10, fontWeight:700, letterSpacing:0.8,
               border:`1px solid ${sortBy===v?ACCENT:BORDER}`,
               background:sortBy===v?`${ACCENT}18`:"transparent",
               color:sortBy===v?ACCENT:"#555", cursor:"pointer",
@@ -2998,12 +3000,12 @@ function FunFacts({isMobile}){
   const facts = FUN_FACTS[lang] || FUN_FACTS['en'];
   return(
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px"}}>
-      <div style={{fontSize:8,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>{t('did_you_know')}</div>
+      <div style={{fontSize:11,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>{t('did_you_know')}</div>
       <div style={{display:"flex",flexDirection:"column",gap:9}}>
         {facts.map((f,i)=>(
           <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-            <span style={{fontSize:14,flexShrink:0,lineHeight:1.5}}>{f.emoji}</span>
-            <span style={{fontSize:10.5,color:"#aaa",lineHeight:1.5}}>{f.text}</span>
+            <span style={{fontSize:16,flexShrink:0,lineHeight:1.5}}>{f.emoji}</span>
+            <span style={{fontSize:13,color:"#aaa",lineHeight:1.5}}>{f.text}</span>
           </div>
         ))}
       </div>
@@ -3015,41 +3017,37 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
   const { t } = useLang();
   return(
     <div>
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
         {[
-          {label:t('stat_host_cities'),value:"16",icon:"🏙️",color:ACCENT},
-          {label:t('stat_farthest_trip'),value:"4,400 km",icon:"✈️",color:PURPLE},
           {label:t('stat_total_goals'),value:stats.totalGoals,icon:"⚽",color:GOLD},
           {label:t('stat_goals_per_game'),value:stats.avgGoals,icon:"📈",color:RED},
         ].map(k=>(
           <div key={k.label} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"13px 10px",textAlign:"center"}}>
             <div style={{fontSize:20,marginBottom:3}}>{k.icon}</div>
             <div style={{fontSize:isMobile?19:22,fontWeight:900,color:k.color}}>{k.value}</div>
-            <div style={{fontSize:8,color:"#555",letterSpacing:1,marginTop:2,textTransform:"uppercase"}}>{k.label}</div>
+            <div style={{fontSize:11,color:"#555",letterSpacing:1,marginTop:2,textTransform:"uppercase"}}>{k.label}</div>
           </div>
         ))}
       </div>
       <ConfederationChart groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>
-      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:13}}>
-        <FunFacts isMobile={isMobile}/>
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px"}}>
-          <div style={{fontSize:8,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>{t('top_scoring_nations')}</div>
-          {stats.topScorers.length===0
-            ?<div style={{color:"#444",fontSize:12,textAlign:"center",paddingTop:12}}>{t('enter_scores_rankings')}</div>
-            :stats.topScorers.map(([team,goals],i)=>(
-              <div key={team} style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
-                <span style={{width:14,fontSize:9,color:i===0?GOLD:"#555",fontWeight:700}}>{i+1}</span>
-                <Flag team={team} size={17} />
-                <span style={{flex:1,fontSize:11,color:"#bbb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><TeamName name={team}/></span>
-                <span style={{fontSize:13,fontWeight:900,color:i===0?GOLD:ACCENT}}>{goals}</span>
-              </div>
-            ))
-          }
-        </div>
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px",marginBottom:13}}>
+        <div style={{fontSize:11,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>{t('top_scoring_nations')}</div>
+        {stats.topScorers.length===0
+          ?<div style={{color:"#444",fontSize:13,textAlign:"center",paddingTop:12}}>{t('enter_scores_rankings')}</div>
+          :stats.topScorers.map(([team,goals],i)=>(
+            <div key={team} style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
+              <span style={{width:16,fontSize:11,color:i===0?GOLD:"#555",fontWeight:700}}>{i+1}</span>
+              <Flag team={team} size={17} />
+              <span style={{flex:1,fontSize:13,color:"#bbb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><TeamName name={team}/></span>
+              <span style={{fontSize:15,fontWeight:900,color:i===0?GOLD:ACCENT}}>{goals}</span>
+            </div>
+          ))
+        }
       </div>
       <HistoricalGoalsChart stats={stats}/>
       <PastChampions isMobile={isMobile}/>
       <TeamHistorySection isMobile={isMobile}/>
+      <FunFacts isMobile={isMobile}/>
     </div>
   );
 }
