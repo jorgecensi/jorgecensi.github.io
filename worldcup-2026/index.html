@@ -64,6 +64,10 @@ const FLAG = {
   "Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo",
   "Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co",
   "England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa",
+  // Historical nations not in the 2026 tournament
+  "Italy":"it","Hungary":"hu","Poland":"pl","Chile":"cl","Russia":"ru",
+  "Czechoslovakia":"cz","Yugoslavia":"rs","USA":"us","Korea/Japan":"kr",
+  "S. Africa":"za","S. Korea":"kr",
 };
 
 // Country flags are rendered as native emoji rather than from an external image
@@ -2015,6 +2019,93 @@ const CONFEDERATIONS = {
   },
 };
 
+// ─── Historical World Cup Data ───────────────────────────────────────────────
+const HISTORICAL_WC = [
+  {year:1930, host:"Uruguay",     teams:13, matches:18, goals:70,  gpg:3.89, champion:"Uruguay",       runnerUp:"Argentina",      third:"USA"},
+  {year:1934, host:"Italy",       teams:16, matches:17, goals:70,  gpg:4.12, champion:"Italy",         runnerUp:"Czechoslovakia",  third:"Germany"},
+  {year:1938, host:"France",      teams:15, matches:18, goals:84,  gpg:4.67, champion:"Italy",         runnerUp:"Hungary",         third:"Brazil"},
+  {year:1950, host:"Brazil",      teams:13, matches:22, goals:88,  gpg:4.00, champion:"Uruguay",       runnerUp:"Brazil",          third:"Sweden"},
+  {year:1954, host:"Switzerland", teams:16, matches:26, goals:140, gpg:5.38, champion:"Germany",       runnerUp:"Hungary",         third:"Austria"},
+  {year:1958, host:"Sweden",      teams:16, matches:35, goals:126, gpg:3.60, champion:"Brazil",        runnerUp:"Sweden",          third:"France"},
+  {year:1962, host:"Chile",       teams:16, matches:32, goals:89,  gpg:2.78, champion:"Brazil",        runnerUp:"Czechoslovakia",  third:"Chile"},
+  {year:1966, host:"England",     teams:16, matches:32, goals:89,  gpg:2.78, champion:"England",       runnerUp:"Germany",         third:"Portugal"},
+  {year:1970, host:"Mexico",      teams:16, matches:32, goals:95,  gpg:2.97, champion:"Brazil",        runnerUp:"Italy",           third:"Germany"},
+  {year:1974, host:"Germany",     teams:16, matches:38, goals:97,  gpg:2.55, champion:"Germany",       runnerUp:"Netherlands",     third:"Poland"},
+  {year:1978, host:"Argentina",   teams:16, matches:38, goals:102, gpg:2.68, champion:"Argentina",     runnerUp:"Netherlands",     third:"Brazil"},
+  {year:1982, host:"Spain",       teams:24, matches:52, goals:146, gpg:2.81, champion:"Italy",         runnerUp:"Germany",         third:"Poland"},
+  {year:1986, host:"Mexico",      teams:24, matches:52, goals:132, gpg:2.54, champion:"Argentina",     runnerUp:"Germany",         third:"France"},
+  {year:1990, host:"Italy",       teams:24, matches:52, goals:115, gpg:2.21, champion:"Germany",       runnerUp:"Argentina",       third:"Italy"},
+  {year:1994, host:"USA",         teams:24, matches:52, goals:141, gpg:2.71, champion:"Brazil",        runnerUp:"Italy",           third:"Sweden"},
+  {year:1998, host:"France",      teams:32, matches:64, goals:171, gpg:2.67, champion:"France",        runnerUp:"Brazil",          third:"Croatia"},
+  {year:2002, host:"Korea/Japan", teams:32, matches:64, goals:161, gpg:2.52, champion:"Brazil",        runnerUp:"Germany",         third:"Turkey"},
+  {year:2006, host:"Germany",     teams:32, matches:64, goals:147, gpg:2.30, champion:"Italy",         runnerUp:"France",          third:"Germany"},
+  {year:2010, host:"S. Africa",   teams:32, matches:64, goals:145, gpg:2.27, champion:"Spain",         runnerUp:"Netherlands",     third:"Germany"},
+  {year:2014, host:"Brazil",      teams:32, matches:64, goals:171, gpg:2.67, champion:"Germany",       runnerUp:"Argentina",       third:"Netherlands"},
+  {year:2018, host:"Russia",      teams:32, matches:64, goals:169, gpg:2.64, champion:"France",        runnerUp:"Croatia",         third:"Belgium"},
+  {year:2022, host:"Qatar",       teams:32, matches:64, goals:172, gpg:2.69, champion:"Argentina",     runnerUp:"France",          third:"Croatia"},
+];
+
+// ─── Team World Cup History ──────────────────────────────────────────────────
+const FINISH_RANK      = {W:1,F:2,"3":3,"4":4,QF:5,R16:6,GS:7};
+const FINISH_COLOR_MAP = {W:GOLD,F:"#b8b8b8","3":"#c87533","4":PURPLE,QF:ACCENT,R16:"#4b88a2",GS:"#374151"};
+const FINISH_LABEL_MAP = {W:"Champion",F:"Runner-up","3":"3rd","4":"4th",QF:"Quarter-final",R16:"Round of 16",GS:"Group Stage"};
+
+const TEAM_WC_HISTORY = {
+  // CONMEBOL
+  "Argentina":    {1930:"F",1934:"GS",1958:"GS",1962:"QF",1966:"QF",1974:"QF",1978:"W",1982:"QF",1986:"W",1990:"F",1994:"R16",1998:"QF",2002:"GS",2006:"QF",2010:"QF",2014:"F",2018:"R16",2022:"W"},
+  "Brazil":       {1930:"3",1934:"GS",1938:"3",1950:"F",1954:"QF",1958:"W",1962:"W",1966:"GS",1970:"W",1974:"4",1978:"3",1982:"QF",1986:"QF",1990:"R16",1994:"W",1998:"F",2002:"W",2006:"QF",2010:"QF",2014:"4",2018:"QF",2022:"QF"},
+  "Uruguay":      {1930:"W",1950:"W",1954:"4",1962:"QF",1966:"QF",1970:"4",1974:"QF",1986:"R16",1990:"R16",2002:"GS",2010:"4",2014:"R16",2018:"QF",2022:"GS"},
+  "Colombia":     {1962:"GS",1990:"R16",1994:"GS",1998:"GS",2014:"QF",2018:"R16"},
+  "Ecuador":      {2002:"GS",2006:"R16",2014:"GS",2022:"GS"},
+  "Paraguay":     {1930:"GS",1950:"GS",1958:"GS",1986:"R16",1998:"R16",2002:"R16",2006:"R16",2010:"QF"},
+  // UEFA
+  "Germany":      {1934:"3",1938:"GS",1954:"W",1958:"4",1962:"QF",1966:"F",1970:"3",1974:"W",1978:"QF",1982:"F",1986:"F",1990:"W",1994:"QF",1998:"QF",2002:"F",2006:"3",2010:"3",2014:"W",2018:"GS",2022:"GS"},
+  "France":       {1930:"GS",1934:"GS",1938:"QF",1954:"GS",1958:"3",1966:"GS",1978:"GS",1982:"4",1986:"3",1998:"W",2002:"GS",2006:"F",2010:"GS",2014:"QF",2018:"W",2022:"F"},
+  "England":      {1950:"GS",1954:"QF",1958:"GS",1962:"QF",1966:"W",1970:"QF",1982:"QF",1986:"QF",1990:"4",1998:"R16",2002:"QF",2006:"QF",2010:"R16",2014:"GS",2018:"4",2022:"QF"},
+  "Spain":        {1934:"QF",1950:"4",1962:"GS",1966:"GS",1978:"GS",1982:"QF",1986:"QF",1990:"R16",1994:"QF",1998:"R16",2002:"QF",2006:"R16",2010:"W",2014:"GS",2018:"R16",2022:"QF"},
+  "Netherlands":  {1934:"GS",1938:"GS",1974:"F",1978:"F",1990:"QF",1994:"QF",1998:"4",2006:"R16",2010:"F",2014:"3",2022:"QF"},
+  "Belgium":      {1930:"GS",1934:"GS",1938:"GS",1954:"GS",1970:"GS",1982:"QF",1986:"4",1990:"R16",1994:"R16",1998:"R16",2002:"GS",2014:"QF",2018:"3",2022:"GS"},
+  "Portugal":     {1966:"3",1986:"GS",2002:"GS",2006:"4",2010:"R16",2014:"GS",2018:"R16",2022:"QF"},
+  "Croatia":      {1998:"3",2002:"GS",2006:"R16",2010:"GS",2014:"GS",2018:"F",2022:"3"},
+  "Sweden":       {1934:"GS",1938:"4",1950:"3",1958:"F",1970:"GS",1974:"QF",1978:"GS",1990:"GS",1994:"3",2002:"R16",2006:"R16",2018:"QF"},
+  "Norway":       {1938:"GS",1994:"R16",1998:"R16"},
+  "Austria":      {1934:"4",1954:"3",1958:"GS",1978:"QF",1982:"QF",1990:"GS",1998:"GS"},
+  "Scotland":     {1954:"GS",1958:"GS",1974:"GS",1978:"GS",1982:"GS",1986:"GS",1990:"GS",1998:"GS"},
+  "Switzerland":  {1934:"QF",1938:"QF",1950:"QF",1954:"QF",1962:"GS",1966:"GS",1994:"R16",2006:"R16",2010:"GS",2014:"R16",2018:"R16",2022:"QF"},
+  "Czechia":      {1934:"F",1938:"QF",1954:"GS",1962:"F",1970:"GS",1982:"QF",1990:"R16",2006:"R16"},
+  "Bosnia":       {2014:"GS"},
+  // CONCACAF
+  "Mexico":       {1930:"GS",1950:"GS",1954:"GS",1958:"GS",1962:"GS",1966:"GS",1970:"QF",1978:"GS",1986:"QF",1994:"R16",1998:"R16",2002:"R16",2006:"R16",2010:"R16",2014:"R16",2018:"R16",2022:"R16"},
+  "United States":{1930:"3",1934:"GS",1950:"GS",1990:"GS",1994:"QF",1998:"GS",2002:"QF",2006:"GS",2010:"R16",2014:"R16",2022:"R16"},
+  "Canada":       {1986:"GS",2022:"GS"},
+  "Haiti":        {1974:"GS"},
+  "Panama":       {2018:"GS"},
+  "Curacao":      {},
+  // CAF
+  "Morocco":      {1970:"GS",1986:"R16",1994:"GS",1998:"GS",2018:"GS",2022:"4"},
+  "South Africa": {1998:"GS",2002:"GS",2010:"GS"},
+  "Tunisia":      {1978:"GS",1998:"GS",2002:"GS",2006:"GS",2018:"GS",2022:"GS"},
+  "Ivory Coast":  {2006:"GS",2010:"GS",2014:"GS"},
+  "Ghana":        {2006:"R16",2010:"QF",2014:"GS",2022:"GS"},
+  "Egypt":        {1934:"GS",1990:"GS"},
+  "Senegal":      {2002:"QF",2022:"R16"},
+  "Algeria":      {1982:"GS",1986:"GS",2010:"GS",2014:"R16"},
+  "DR Congo":     {1974:"GS"},
+  "Cape Verde":   {},
+  // AFC
+  "South Korea":  {1954:"GS",1986:"GS",1990:"GS",1994:"GS",1998:"GS",2002:"4",2006:"GS",2010:"R16",2014:"GS",2018:"R16",2022:"R16"},
+  "Japan":        {1998:"GS",2002:"R16",2006:"GS",2010:"R16",2014:"GS",2018:"R16",2022:"R16"},
+  "Saudi Arabia": {1994:"R16",1998:"GS",2002:"GS",2006:"GS",2018:"GS",2022:"GS"},
+  "Iran":         {1978:"GS",1998:"GS",2006:"GS",2014:"GS",2018:"GS",2022:"GS"},
+  "Australia":    {1974:"GS",2006:"R16",2010:"GS",2014:"GS",2018:"GS",2022:"R16"},
+  "Qatar":        {2022:"GS"},
+  "Jordan":       {},
+  "Uzbekistan":   {},
+  "Iraq":         {1986:"GS"},
+  // OFC
+  "New Zealand":  {1982:"GS",2010:"GS"},
+};
+
 function ConfederationChart({groupMatches, ko, isMobile}) {
   const data = useMemo(()=>{
     // Build per-team stats across group + KO
@@ -2166,6 +2257,293 @@ const FUN_FACTS = [
   {emoji:"📅", text:"104 matches over 39 days: the biggest, longest World Cup ever — 40 more games than Qatar 2022."},
 ];
 
+function HistoricalGoalsChart({stats}) {
+  const [metric, setMetric] = useState("gpg");
+
+  const currentGpg = stats.totalPlayed > 0 ? stats.totalGoals / stats.totalPlayed : null;
+
+  const allData = useMemo(() => [
+    ...HISTORICAL_WC.map(wc => ({...wc, isCurrent:false})),
+    {year:2026, host:"USA/Can/Mex", teams:48, matches:104, goals:stats.totalGoals, gpg:currentGpg, isCurrent:true},
+  ], [stats.totalGoals, currentGpg]);
+
+  const getValue = d => metric==="gpg" ? d.gpg : metric==="goals" ? d.goals : d.teams;
+  const values = allData.map(d => getValue(d)).filter(v => v !== null && v > 0);
+  const maxVal = Math.max(...values, 1);
+  const avgGpg = HISTORICAL_WC.reduce((s,d)=>s+d.gpg, 0) / HISTORICAL_WC.length;
+
+  const BAR_W=22, GAP=5, CHART_H=110;
+
+  return (
+    <div style={{background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:"14px 14px", marginBottom:13}}>
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, gap:6, flexWrap:"wrap"}}>
+        <div style={{fontSize:8, color:"#555", letterSpacing:2, textTransform:"uppercase", fontWeight:700}}>
+          {metric==="gpg"?"Goals / Game":metric==="goals"?"Total Goals":"Teams"} · All Editions
+        </div>
+        <div style={{display:"flex", gap:3}}>
+          {[["gpg","GPG"],["goals","Goals"],["teams","Teams"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setMetric(v)} style={{
+              padding:"3px 8px", borderRadius:5, fontSize:8, fontWeight:700, letterSpacing:0.8,
+              border:`1px solid ${metric===v?ACCENT:BORDER}`,
+              background:metric===v?`${ACCENT}18`:"transparent",
+              color:metric===v?ACCENT:"#555", cursor:"pointer",
+            }}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{overflowX:"auto", paddingBottom:2}}>
+        <div style={{position:"relative", height:CHART_H+32, width:allData.length*(BAR_W+GAP)}}>
+
+          {/* Average GPG dashed line */}
+          {metric==="gpg" && (
+            <div style={{
+              position:"absolute", left:0, right:0,
+              top: CHART_H - (avgGpg/maxVal*CHART_H) - 1,
+              borderTop:`1px dashed ${GOLD}55`, zIndex:2, pointerEvents:"none",
+            }}>
+              <span style={{position:"absolute", right:2, top:-9, fontSize:7, color:GOLD, opacity:0.65, whiteSpace:"nowrap"}}>
+                avg {avgGpg.toFixed(2)}
+              </span>
+            </div>
+          )}
+
+          {/* Bars */}
+          {allData.map((d,i)=>{
+            const val = getValue(d);
+            const hasData = val !== null && val > 0;
+            const barH = hasData ? Math.max(val/maxVal*CHART_H, 3) : 3;
+            const isHighest = metric==="gpg" && d.year===1954;
+            const isLowest  = metric==="gpg" && d.year===1990;
+            const color = d.isCurrent ? ACCENT : isHighest ? GOLD : isLowest ? RED : "rgba(255,255,255,0.18)";
+            const x = i*(BAR_W+GAP);
+
+            return (
+              <div key={d.year} style={{position:"absolute", left:x, bottom:28, width:BAR_W}}>
+                {(d.isCurrent||isHighest||isLowest) && hasData && (
+                  <div style={{
+                    position:"absolute", bottom:barH+3, width:"100%", textAlign:"center",
+                    fontSize:7, fontWeight:900, color, whiteSpace:"nowrap",
+                  }}>
+                    {metric==="gpg" ? (val).toFixed(2) : val}
+                  </div>
+                )}
+                <div style={{
+                  position:"absolute", bottom:0, width:"100%", height:barH,
+                  background:color, borderRadius:"3px 3px 0 0",
+                  border:d.isCurrent?`1px solid ${ACCENT}88`:"none",
+                  opacity:hasData?1:0.25,
+                }}/>
+                <div style={{
+                  position:"absolute", top:"100%", left:0, width:BAR_W,
+                  marginTop:4, fontSize:7, textAlign:"left",
+                  color:d.isCurrent?ACCENT:"#444", fontWeight:d.isCurrent?900:400,
+                  transform:"rotate(-45deg)", transformOrigin:"top left",
+                  whiteSpace:"nowrap",
+                }}>
+                  {d.year}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{display:"flex", gap:10, fontSize:8, color:"#444", flexWrap:"wrap", marginTop:6}}>
+        <span><span style={{color:GOLD}}>■</span> Most (1954: 5.38)</span>
+        <span><span style={{color:RED}}>■</span> Fewest (1990: 2.21)</span>
+        <span><span style={{color:ACCENT}}>■</span> 2026 live</span>
+        {metric==="gpg" && <span><span style={{color:GOLD, opacity:0.5}}>╌</span> Hist. avg {avgGpg.toFixed(2)}</span>}
+      </div>
+    </div>
+  );
+}
+
+function PastChampions({isMobile}) {
+  const [showAll, setShowAll] = useState(false);
+  const reversed = useMemo(()=>[...HISTORICAL_WC].reverse(), []);
+  const displayed = showAll ? reversed : reversed.slice(0, 8);
+
+  const champCount = useMemo(()=>{
+    const c={};
+    HISTORICAL_WC.forEach(wc=>{ c[wc.champion]=(c[wc.champion]||0)+1; });
+    return c;
+  },[]);
+
+  return (
+    <div style={{background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:"12px 14px", marginBottom:13}}>
+      <div style={{fontSize:8, color:"#555", letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:700}}>
+        Past Champions
+      </div>
+      <div style={{display:"grid", gridTemplateColumns:"34px 1fr 1fr 34px", gap:6, paddingBottom:6, borderBottom:`1px solid ${BORDER}`, marginBottom:4}}>
+        {["Year","Champion","Runner-up","GPG"].map(h=>(
+          <div key={h} style={{fontSize:8, color:"#444", fontWeight:700, letterSpacing:0.5}}>{h}</div>
+        ))}
+      </div>
+      {displayed.map(wc=>(
+        <div key={wc.year} style={{
+          display:"grid", gridTemplateColumns:"34px 1fr 1fr 34px", gap:6,
+          padding:"5px 0", borderBottom:`1px solid rgba(255,255,255,0.025)`,
+          alignItems:"center",
+        }}>
+          <div style={{fontSize:10, color:"#777", fontWeight:600}}>{wc.year}</div>
+          <div style={{display:"flex", alignItems:"center", gap:4, minWidth:0}}>
+            <Flag team={wc.champion} size={13}/>
+            <span style={{
+              fontSize:10, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+              color:champCount[wc.champion]>=3?GOLD:"#ccc",
+              fontWeight:champCount[wc.champion]>=3?700:400,
+            }}>
+              {wc.champion}{champCount[wc.champion]>=3?" ★":""}
+            </span>
+          </div>
+          <div style={{display:"flex", alignItems:"center", gap:4, minWidth:0}}>
+            <Flag team={wc.runnerUp} size={13}/>
+            <span style={{fontSize:10, color:"#555", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+              {wc.runnerUp}
+            </span>
+          </div>
+          <div style={{fontSize:10, fontWeight:600, color:wc.gpg>=4?GOLD:wc.gpg<2.3?RED:"#555"}}>{wc.gpg.toFixed(2)}</div>
+        </div>
+      ))}
+      {!showAll && (
+        <button onClick={()=>setShowAll(true)} style={{
+          marginTop:8, width:"100%", padding:"6px 0", fontSize:9, color:"#555",
+          background:"transparent", border:`1px solid ${BORDER}`, borderRadius:6,
+          cursor:"pointer", letterSpacing:0.5,
+        }}>Show all {HISTORICAL_WC.length} editions ↓</button>
+      )}
+    </div>
+  );
+}
+
+function FinishBadge({finish, size=9}) {
+  if (!finish) return <span style={{fontSize:size,color:"#555",fontStyle:"italic"}}>Debut</span>;
+  const color = FINISH_COLOR_MAP[finish] || "#555";
+  const icon = finish==="W"?"🏆 ":finish==="F"?"🥈 ":finish==="3"?"🥉 ":"";
+  return (
+    <span style={{
+      fontSize:size, fontWeight:800, color,
+      background:`${color}22`, border:`1px solid ${color}44`,
+      borderRadius:4, padding:"1px 5px", whiteSpace:"nowrap",
+    }}>
+      {icon}{FINISH_LABEL_MAP[finish]||finish}
+    </span>
+  );
+}
+
+function TeamHistoryRow({team, history, expanded, onToggle}) {
+  const finishes = Object.values(history);
+  const bestFinish = finishes.length > 0
+    ? finishes.reduce((b,f)=>(FINISH_RANK[f]||99)<(FINISH_RANK[b]||99)?f:b, finishes[0])
+    : null;
+  const years = Object.keys(history).map(Number).sort((a,b)=>a-b);
+
+  return (
+    <div>
+      <div onClick={onToggle} style={{
+        display:"flex", alignItems:"center", gap:6, padding:"6px 0",
+        borderBottom:`1px solid rgba(255,255,255,0.025)`,
+        cursor:"pointer", userSelect:"none",
+      }}>
+        <Flag team={team} size={15}/>
+        <span style={{flex:1, fontSize:10.5, color:"#bbb", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+          <TeamName name={team}/>
+        </span>
+        {/* Mini coloured dots — last 8 appearances */}
+        <div style={{display:"flex", gap:2, alignItems:"center", flexShrink:0}}>
+          {years.slice(-8).map(y=>(
+            <div key={y} style={{
+              width:5, height:5, borderRadius:1,
+              background:FINISH_COLOR_MAP[history[y]]||"#333",
+            }}/>
+          ))}
+        </div>
+        <div style={{flexShrink:0}}><FinishBadge finish={bestFinish}/></div>
+        <span style={{fontSize:8, color:"#555", minWidth:22, textAlign:"right", flexShrink:0}}>
+          {years.length>0?`×${years.length}`:""}
+        </span>
+      </div>
+      {expanded && (
+        <div style={{padding:"8px 4px 10px 20px", display:"flex", flexWrap:"wrap", gap:5, borderBottom:`1px solid rgba(255,255,255,0.04)`}}>
+          {years.length===0 ? (
+            <span style={{fontSize:9, color:"#555", fontStyle:"italic"}}>First appearance in 2026 🎉</span>
+          ) : years.map(year=>{
+            const f = history[year];
+            const col = FINISH_COLOR_MAP[f]||"#333";
+            const icon = f==="W"?"🏆":f==="F"?"🥈":f==="3"?"🥉":"";
+            return (
+              <div key={year} style={{
+                display:"flex", flexDirection:"column", alignItems:"center", gap:1,
+                background:`${col}18`, border:`1px solid ${col}33`,
+                borderRadius:5, padding:"4px 7px", minWidth:46,
+              }}>
+                <span style={{fontSize:8, color:"#666", fontWeight:600}}>{year}</span>
+                <span style={{fontSize:9, fontWeight:800, color:col}}>{icon||FINISH_LABEL_MAP[f]||f}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TeamHistorySection({isMobile}) {
+  const [expanded, setExpanded] = useState(null);
+  const [sortBy, setSortBy] = useState("best");
+
+  const allTeams = useMemo(()=>Object.values(GROUPS).flat(), []);
+  const getHist  = t => TEAM_WC_HISTORY[t] || {};
+  const getBest  = t => {
+    const f = Object.values(getHist(t));
+    return f.length ? f.reduce((b,v)=>(FINISH_RANK[v]||99)<(FINISH_RANK[b]||99)?v:b, f[0]) : null;
+  };
+
+  const sorted = useMemo(()=>[...allTeams].sort((a,b)=>{
+    if(sortBy==="best"){
+      const d=(FINISH_RANK[getBest(a)]||99)-(FINISH_RANK[getBest(b)]||99);
+      if(d!==0) return d;
+      return Object.keys(getHist(b)).length-Object.keys(getHist(a)).length;
+    }
+    if(sortBy==="apps") return Object.keys(getHist(b)).length-Object.keys(getHist(a)).length;
+    return a.localeCompare(b);
+  }), [allTeams,sortBy]);
+
+  const toggle = t => setExpanded(p=>p===t?null:t);
+
+  return (
+    <div style={{background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:"12px 14px", marginBottom:13}}>
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, gap:6, flexWrap:"wrap"}}>
+        <div style={{fontSize:8, color:"#555", letterSpacing:2, textTransform:"uppercase", fontWeight:700}}>
+          Team WC History
+        </div>
+        <div style={{display:"flex", gap:3}}>
+          {[["best","Best Finish"],["apps","Most Apps"],["alpha","A–Z"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setSortBy(v)} style={{
+              padding:"3px 8px", borderRadius:5, fontSize:8, fontWeight:700, letterSpacing:0.8,
+              border:`1px solid ${sortBy===v?ACCENT:BORDER}`,
+              background:sortBy===v?`${ACCENT}18`:"transparent",
+              color:sortBy===v?ACCENT:"#555", cursor:"pointer",
+            }}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex", flexDirection:"column"}}>
+        {sorted.map(team=>(
+          <TeamHistoryRow
+            key={team}
+            team={team}
+            history={getHist(team)}
+            expanded={expanded===team}
+            onToggle={()=>toggle(team)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function FunFacts({isMobile}){
   return(
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px"}}>
@@ -2217,6 +2595,9 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
           }
         </div>
       </div>
+      <HistoricalGoalsChart stats={stats}/>
+      <PastChampions isMobile={isMobile}/>
+      <TeamHistorySection isMobile={isMobile}/>
     </div>
   );
 }
