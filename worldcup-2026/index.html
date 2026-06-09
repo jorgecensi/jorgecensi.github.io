@@ -1714,8 +1714,17 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
           value={filter}
           onChange={setFilter}
           options={[
-            {value:"ALL",label:`All Groups (${scored} played)`},
-            ...Object.keys(GROUPS).map(g=>({value:g,label:`Group ${g} (${groupMatches[g].filter(m=>m.homeScore!==null).length} played)`})),
+            {value:"ALL",label:`⚽ All Groups (${scored} played)`},
+            ...Object.keys(GROUPS).map(g=>{
+              const count=groupMatches[g].filter(m=>m.homeScore!==null).length;
+              return {value:g,label:(
+                <span style={{display:"inline-flex",alignItems:"center",gap:5,width:"100%"}}>
+                  <span style={{display:"inline-flex",gap:1}}>{GROUPS[g].map(t=><Flag key={t} team={t} size={13}/>)}</span>
+                  <span>Group {g}</span>
+                  <span style={{marginLeft:"auto",opacity:0.45,fontSize:11}}>({count} played)</span>
+                </span>
+              )};
+            }),
           ]}
         />
       </FixedFilterBar>
@@ -1850,12 +1859,12 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
 function KnockoutView({ko,onScore,isMobile,navHeight}){
   const [round,setRound]=useState("r32");
   const ROUNDS=[
-    {key:"r32",label:"R32",fullLabel:"Round of 32"},
-    {key:"r16",label:"R16",fullLabel:"Round of 16"},
-    {key:"qf",label:"QF",fullLabel:"Quarter-Finals"},
-    {key:"sf",label:"SF",fullLabel:"Semi-Finals"},
-    {key:"third",label:"3rd",fullLabel:"Third Place"},
-    {key:"final",label:"🏆 Final",fullLabel:"The Final"},
+    {key:"r32",label:"R32",fullLabel:"⚽ Round of 32"},
+    {key:"r16",label:"R16",fullLabel:"⚡ Round of 16"},
+    {key:"qf",label:"QF",fullLabel:"🥊 Quarter-Finals"},
+    {key:"sf",label:"SF",fullLabel:"🔥 Semi-Finals"},
+    {key:"third",label:"3rd",fullLabel:"🥉 Third Place"},
+    {key:"final",label:"🏆 Final",fullLabel:"🏆 The Final"},
   ];
   const matches=ko[round];
   const currentRound=ROUNDS.find(r=>r.key===round);
