@@ -150,9 +150,12 @@ const WC_TITLES = {
 // Teams appearing at the World Cup for the first time ever in 2026
 const WC_DEBUTANTS = new Set(["Cape Verde","Curacao","Jordan","Uzbekistan"]);
 
+const ChampionContext = React.createContext(null);
+
 // Renders team name with WC stars and/or NEW badge inline
 function TeamName({ name, style={} }) {
-  const titles = WC_TITLES[name] || 0;
+  const champion = React.useContext(ChampionContext);
+  const titles = (WC_TITLES[name] || 0) + (name === champion ? 1 : 0);
   const isNew  = WC_DEBUTANTS.has(name);
   return (
     <span style={{ display:"inline-flex", alignItems:"center", gap:3, minWidth:0, ...style }}>
@@ -1414,6 +1417,8 @@ function App(){
     setPredictions(prev=>({...prev,ko:{...prev.ko,[matchId]:{...prev.ko?.[matchId],[field]:val}}}));
   },[]);
 
+  const champion = React.useMemo(()=>koWinner(ko.final[0]),[ko]);
+
   const globalStats=useMemo(()=>{
     const allG=Object.values(groupMatches).flat();
     const gPlayed=allG.filter(m=>m.homeScore!==null&&m.awayScore!==null);
@@ -1444,6 +1449,7 @@ function App(){
   const currentNav = NAV.find(n=>n.v===view)||NAV[0];
 
   return(
+    <ChampionContext.Provider value={champion}>
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${BG} 0%,#0d1a2e 60%,${BG} 100%)`,fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",color:"#e8eaf0",paddingBottom:isMobile?68:0}}>
       {splash && <SplashScreen onDone={()=>setSplash(false)}/>}
 
@@ -1525,6 +1531,7 @@ function App(){
         </div>
       )}
     </div>
+    </ChampionContext.Provider>
   );
 }
 
