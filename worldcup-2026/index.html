@@ -552,6 +552,116 @@ function saveScores(groupMatches, ko) {
   } catch (e) { /* storage unavailable (e.g. private mode) — fail silently */ }
 }
 
+// ─── Bolão (score-guessing predictions) ──────────────────────────────────────
+const PRED_KEY = "wc2026:predictions:v1";
+
+function loadPredictions() {
+  try {
+    const raw = localStorage.getItem(PRED_KEY);
+    return raw ? JSON.parse(raw) : { group: {}, ko: {} };
+  } catch(e) { return { group: {}, ko: {} }; }
+}
+
+function savePredictions(predictions) {
+  try { localStorage.setItem(PRED_KEY, JSON.stringify(predictions)); } catch(e) {}
+}
+
+// Returns 3 (exact), 1 (correct result), 0 (wrong), or null (actuals not in yet)
+function scorePrediction(predH, predA, actualH, actualA) {
+  if (predH === null || predA === null || actualH === null || actualA === null) return null;
+  const pH=+predH, pA=+predA, aH=+actualH, aA=+actualA;
+  if (pH === aH && pA === aA) return 3;
+  const predOut = pH > pA ? 1 : pA > pH ? -1 : 0;
+  const actOut  = aH > aA ? 1 : aA > aH ? -1 : 0;
+  return predOut === actOut ? 1 : 0;
+}
+
+function calcPoints(groupMatches, ko, predictions) {
+  const byPhase = { group:0, r32:0, r16:0, qf:0, sf:0, final:0 };
+  let total=0, exact=0, correct=0, wrong=0, played=0;
+  Object.values(groupMatches).flat().forEach(m => {
+    const p = predictions.group?.[m.id];
+    if (!p || p.home === null || p.home === undefined || p.away === null || p.away === undefined) return;
+    const pts = scorePrediction(p.home, p.away, m.homeScore, m.awayScore);
+    if (pts === null) return;
+    played++; total += pts; byPhase.group += pts;
+    if (pts === 3) exact++; else if (pts === 1) correct++; else wrong++;
+  });
+  ['r32','r16','qf','sf','final'].forEach(round => {
+    [...(ko[round]||[]), ...(round==='final'?ko.third||[]:[])].forEach(m => {
+      const p = predictions.ko?.[m.id];
+      if (!p || p.a === null || p.a === undefined || p.b === null || p.b === undefined) return;
+      const pts = scorePrediction(p.a, p.b, m.scoreA, m.scoreB);
+      if (pts === null) return;
+      played++; total += pts; byPhase[round] += pts;
+      if (pts === 3) exact++; else if (pts === 1) correct++; else wrong++;
+    });
+  });
+  return { total, byPhase, exact, correct, wrong, played };
+}
+
+function buildShareText(groupMatches, ko, predictions, pts, phaseKey) {
+  const phaseLabels = {
+    group:'GROUP STAGE', r32:'ROUND OF 32', r16:'ROUND OF 16',
+    qf:'QUARTER-FINALS', sf:'SEMI-FINALS', final:'FINAL',
+  };
+  const lines = [];
+  const single = phaseKey && phaseKey !== 'all';
+
+  if (single) {
+    lines.push(`⚽ *World Cup 2026 – My ${phaseLabels[phaseKey]} Guesses*`);
+  } else {
+    lines.push('⚽ *World Cup 2026 – My Guesses*');
+  }
+  lines.push('');
+
+  const teamFlag = t => {
+    if (!t) return '❓';
+    const cc = FLAG[t];
+    if (!cc) return t;
+    return ccToFlagEmoji(cc);
+  };
+
+  const matchLine = (hn, an, pH, pA, aH, aA) => {
+    const p = scorePrediction(pH, pA, aH, aA);
+    const badge = p === 3 ? ' ✓3' : p === 1 ? ' ~1' : p === 0 ? ' ✗0' : '';
+    return `${teamFlag(hn)} ${hn||'?'} ${pH}-${pA} ${an||'?'} ${teamFlag(an)}${badge}`;
+  };
+
+  const phases = single ? [phaseKey] : ['group','r32','r16','qf','sf','final'];
+  phases.forEach(p => {
+    const phaseLines = [];
+    if (p === 'group') {
+      Object.values(groupMatches).flat()
+        .sort((a,b)=>(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0))
+        .forEach(m => {
+          const pred = predictions.group?.[m.id];
+          if (!pred || pred.home === null || pred.home === undefined || pred.away === null || pred.away === undefined) return;
+          phaseLines.push(matchLine(m.home, m.away, pred.home, pred.away, m.homeScore, m.awayScore));
+        });
+    } else {
+      const pMatches = p === 'final' ? [...(ko.final||[]), ...(ko.third||[])] : (ko[p]||[]);
+      pMatches.forEach(m => {
+        const pred = predictions.ko?.[m.id];
+        if (!pred || pred.a === null || pred.a === undefined || pred.b === null || pred.b === undefined) return;
+        phaseLines.push(matchLine(m.teamA, m.teamB, pred.a, pred.b, m.scoreA, m.scoreB));
+      });
+    }
+    if (phaseLines.length > 0) {
+      if (!single) lines.push(`*${phaseLabels[p]}*`);
+      lines.push(...phaseLines);
+      lines.push('');
+    }
+  });
+
+  if (!single && pts) {
+    lines.push(`*🏆 Total: ${pts.total} pts* (${pts.played} played · 🎯 ${pts.exact} exact · ✅ ${pts.correct} right · ❌ ${pts.wrong} wrong)`);
+    lines.push('');
+  }
+  lines.push('jorgecensi.github.io/worldcup-2026');
+  return lines.join('\n');
+}
+
 // ─── Logic helpers ────────────────────────────────────────────────────────────
 function computeStandings(teams, matches) {
   const t={};
@@ -1025,12 +1135,245 @@ function IconStats({ size=22, active=false }) {
 }
 
 
+function IconGuesses({ size=22, active=false }) {
+  const c = active ? ACCENT : "#555";
+  const g = active ? GOLD : "#666";
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      <circle cx="24" cy="24" r="18" stroke={c} strokeWidth="2"/>
+      <circle cx="24" cy="24" r="11" stroke={c} strokeWidth="1.5" opacity="0.7"/>
+      <circle cx="24" cy="24" r="5" stroke={g} strokeWidth="2" fill={active?"rgba(255,215,0,0.15)":"none"}/>
+      <line x1="24" y1="2" x2="24" y2="10" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+      <line x1="24" y1="38" x2="24" y2="46" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+      <line x1="2" y1="24" x2="10" y2="24" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+      <line x1="38" y1="24" x2="46" y2="24" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function GuessBadge({ pts }) {
+  if (pts === null || pts === undefined) return null;
+  const [col, text] = pts === 3 ? [ACCENT, '✓ 3'] : pts === 1 ? [GOLD, '~ 1'] : [RED, '✗ 0'];
+  return (
+    <span style={{
+      fontSize:9, fontWeight:800, letterSpacing:0.5, flexShrink:0,
+      color:col, background:`${col}18`, border:`1px solid ${col}44`,
+      borderRadius:20, padding:"2px 7px",
+    }}>{text}</span>
+  );
+}
+
+function GuessGroupMatchCard({ match, prediction, onPred, isMobile }) {
+  const predH = prediction?.home ?? null;
+  const predA = prediction?.away ?? null;
+  const actual = match.homeScore !== null && match.awayScore !== null;
+  const pts = actual ? scorePrediction(predH, predA, match.homeScore, match.awayScore) : null;
+  const hasPred = predH !== null && predA !== null;
+  return (
+    <div style={{background:CARD, border:`1px solid ${hasPred?'rgba(167,139,250,0.3)':BORDER}`, borderRadius:12, padding:"10px 12px"}}>
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:7, gap:6}}>
+        <span style={{fontSize:8, color:GOLD, fontWeight:800, background:`${GOLD}18`, border:`1px solid ${GOLD}33`, borderRadius:4, padding:"2px 6px", letterSpacing:1}}>GROUP {match.group}</span>
+        <div style={{display:"flex", alignItems:"center", gap:5}}>
+          {hasPred && <GuessBadge pts={pts}/>}
+          <span style={{fontSize:8, color:"#555"}}>{match.date}</span>
+        </div>
+      </div>
+      <div style={{display:"flex", alignItems:"center", gap:7, paddingBottom:5, borderBottom:`1px solid ${BORDER}`}}>
+        <Flag team={match.home} size={isMobile?21:19}/>
+        <span style={{flex:1, fontSize:12, fontWeight:500, color:"#ccc", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}><TeamName name={match.home}/></span>
+        <Stepper value={predH} onChange={v=>onPred(match.id,"home",v)} color={PURPLE}/>
+      </div>
+      <div style={{display:"flex", alignItems:"center", gap:7, paddingTop:5}}>
+        <Flag team={match.away} size={isMobile?21:19}/>
+        <span style={{flex:1, fontSize:12, fontWeight:500, color:"#ccc", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}><TeamName name={match.away}/></span>
+        <Stepper value={predA} onChange={v=>onPred(match.id,"away",v)} color={PURPLE}/>
+      </div>
+      {actual && hasPred && (
+        <div style={{marginTop:5, fontSize:9, color:"#555", textAlign:"center"}}>
+          Actual: {match.homeScore}–{match.awayScore}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel }) {
+  const hasTeams = !!match.teamA && !!match.teamB;
+  const predA = prediction?.a ?? null;
+  const predB = prediction?.b ?? null;
+  const actual = match.scoreA !== null && match.scoreB !== null;
+  const pts = (actual && hasTeams) ? scorePrediction(predA, predB, match.scoreA, match.scoreB) : null;
+  const hasPred = predA !== null && predB !== null;
+
+  const teamRow = (team, val, field, isTop) => (
+    <div style={{display:"flex", alignItems:"center", gap:8, padding:"9px 0",
+      ...(isTop ? {borderBottom:`1px solid ${BORDER}`, paddingBottom:5} : {paddingTop:5})}}>
+      <Flag team={team||null} size={isMobile?21:19} faded={!team}/>
+      <span style={{flex:1, fontSize:12, fontWeight:400, color:team?"#ccc":"#444",
+        fontStyle:team?"normal":"italic", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+        {team ? <TeamName name={team}/> : "TBD"}
+      </span>
+      <Stepper value={val} onChange={v=>onPred(match.id,field,v)} color={PURPLE} disabled={!hasTeams}/>
+    </div>
+  );
+
+  return (
+    <div style={{background:CARD, border:`1px solid ${hasPred&&hasTeams?'rgba(167,139,250,0.3)':BORDER}`, borderRadius:12, padding:"11px 13px"}}>
+      {matchLabel && (
+        <div style={{fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:GOLD, marginBottom:6}}>{matchLabel}</div>
+      )}
+      <div style={{marginBottom:7, display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+        <TimeBadge date={match.date} time={match.time} city={match.city}/>
+        {hasPred && hasTeams && <GuessBadge pts={pts}/>}
+      </div>
+      {teamRow(match.teamA, predA, "a", true)}
+      {teamRow(match.teamB, predB, "b", false)}
+      {!hasTeams && (
+        <div style={{marginTop:6, fontSize:9, color:"#555", textAlign:"center"}}>Enter previous round results to unlock</div>
+      )}
+      {actual && hasPred && hasTeams && (
+        <div style={{marginTop:5, fontSize:9, color:"#555", textAlign:"center"}}>
+          Actual: {match.scoreA}–{match.scoreB}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isMobile }) {
+  const PHASES = [
+    { key:'group', label:'Group Stage',    matches:Object.values(groupMatches).flat().sort((a,b)=>a.group.localeCompare(b.group)||(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
+    { key:'r32',   label:'Round of 32',   matches:ko.r32 },
+    { key:'r16',   label:'Round of 16',   matches:ko.r16 },
+    { key:'qf',    label:'Quarter-finals', matches:ko.qf },
+    { key:'sf',    label:'Semi-finals',    matches:ko.sf },
+    { key:'final', label:'Final',          matches:[...ko.third,...ko.final] },
+  ];
+
+  const isUnlocked = key => {
+    if (key === 'group') return true;
+    const bucket = key === 'final' ? [...ko.final,...ko.third] : (ko[key]||[]);
+    return bucket.some(m => !!m.teamA || !!m.teamB);
+  };
+
+  const [phase, setPhase] = useState('group');
+  const pts = useMemo(()=>calcPoints(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
+  const [copied, setCopied] = useState(null); // null | 'all' | 'phase'
+
+  const copyText = (text, which) => {
+    const done = () => { setCopied(which); setTimeout(()=>setCopied(null),2000); };
+    navigator.clipboard?.writeText(text).then(done).catch(()=>{
+      const el=document.createElement('textarea');
+      el.value=text; document.body.appendChild(el); el.select();
+      document.execCommand('copy'); document.body.removeChild(el); done();
+    });
+  };
+
+  const currentPhase = PHASES.find(p => p.key === phase);
+
+  return (
+    <div>
+      {/* Summary + Share All */}
+      <div style={{background:CARD, border:`1px solid rgba(167,139,250,0.3)`, borderRadius:14, padding:"14px 16px", marginBottom:14}}>
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8}}>
+          <div>
+            <div style={{fontSize:9, color:PURPLE, letterSpacing:2, fontWeight:700, textTransform:"uppercase", marginBottom:4}}>🎯 Fantasy</div>
+            <div style={{fontSize:22, fontWeight:900, color:"#fff"}}>
+              {pts.total} <span style={{fontSize:13, color:"#666", fontWeight:400}}>pts</span>
+            </div>
+            {pts.played > 0 && (
+              <div style={{fontSize:10, color:"#666", marginTop:2}}>
+                {pts.played} played · 🎯 {pts.exact} exact · ✅ {pts.correct} right · ❌ {pts.wrong} wrong
+              </div>
+            )}
+          </div>
+          <button
+            onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,null),'all')}
+            style={{background:`rgba(167,139,250,0.15)`, border:`1px solid rgba(167,139,250,0.4)`,
+              color:PURPLE, borderRadius:10, padding:"8px 14px", fontSize:12, fontWeight:700,
+              cursor:"pointer", display:"flex", alignItems:"center", gap:6}}
+          >
+            {copied==='all' ? '✓ Copied!' : '📋 Share All'}
+          </button>
+        </div>
+      </div>
+
+      {/* Phase Selector */}
+      <div style={{display:"flex", gap:6, overflowX:"auto", paddingBottom:8, marginBottom:12, scrollbarWidth:"none", msOverflowStyle:"none"}}>
+        {PHASES.map(p => {
+          const unlocked = isUnlocked(p.key);
+          const active = phase === p.key;
+          return (
+            <button key={p.key} onClick={()=>unlocked&&setPhase(p.key)} style={{
+              padding:"6px 12px", borderRadius:20, fontSize:11, fontWeight:700,
+              letterSpacing:0.5, whiteSpace:"nowrap", flexShrink:0,
+              border:`1px solid ${active?PURPLE:unlocked?'rgba(167,139,250,0.3)':BORDER}`,
+              background:active?`rgba(167,139,250,0.2)`:"transparent",
+              color:active?PURPLE:unlocked?"#888":"#444",
+              cursor:unlocked?"pointer":"default",
+            }}>
+              {unlocked?'':'🔒 '}{p.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Phase header + Share Phase */}
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
+        <div>
+          <div style={{fontSize:12, fontWeight:700, color:"#ccc"}}>{currentPhase?.label}</div>
+          {pts.byPhase[phase] > 0 && (
+            <div style={{fontSize:10, color:PURPLE, marginTop:2}}>{pts.byPhase[phase]} pts earned this phase</div>
+          )}
+        </div>
+        <button
+          onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,phase),'phase')}
+          style={{background:"transparent", border:`1px solid rgba(167,139,250,0.3)`,
+            color:"#888", borderRadius:8, padding:"5px 10px", fontSize:10, fontWeight:700, cursor:"pointer"}}
+        >
+          {copied==='phase' ? '✓ Copied!' : '📋 Share Phase'}
+        </button>
+      </div>
+
+      {/* Match list */}
+      {!isUnlocked(phase) ? (
+        <div style={{textAlign:"center", padding:"32px 0", color:"#555", fontSize:13}}>
+          🔒 Enter results for the previous round first
+        </div>
+      ) : (
+        <div style={{display:"flex", flexDirection:"column", gap:8}}>
+          {phase === 'group' ? (
+            currentPhase.matches.map(m => (
+              <GuessGroupMatchCard key={m.id} match={m}
+                prediction={predictions.group?.[m.id]}
+                onPred={onGroupPred} isMobile={isMobile}/>
+            ))
+          ) : (
+            currentPhase.matches.map(m => {
+              const label = phase === 'final'
+                ? (m.id === 'third' ? '🥉 3rd Place' : '🏆 Final')
+                : undefined;
+              return (
+                <GuessKOMatchCard key={m.id} match={m}
+                  prediction={predictions.ko?.[m.id]}
+                  onPred={onKOPred} isMobile={isMobile}
+                  matchLabel={label}/>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App(){
   const [splash,setSplash]=useState(true);
   const [groupMatches,setGroupMatches]=useState(buildInitialGroupMatches);
   const [ko,setKo]=useState(buildInitialKO);
-  const [view,setView]=useState("fixtures");
+  const [view,setView]=useState("guesses");
   const [fixtureFilter,setFixtureFilter]=useState(null); // group letter to pre-filter fixtures
+  const [predictions,setPredictions]=useState(loadPredictions);
   const isMobile=useIsMobile();
   const navRef=useRef(null);
   const [navHeight,setNavHeight]=useState(0);
@@ -1056,6 +1399,7 @@ function App(){
 
   // Persist scores to localStorage whenever they change
   useEffect(()=>{saveScores(groupMatches,ko);},[groupMatches,ko]);
+  useEffect(()=>{savePredictions(predictions);},[predictions]);
 
   const updateGroupScore=useCallback((group,matchId,side,val)=>{
     setGroupMatches(prev=>({...prev,[group]:prev[group].map(m=>m.id===matchId?{...m,[side]:val}:m)}));
@@ -1063,6 +1407,12 @@ function App(){
   const updateKOScore=useCallback((round,idx,field,val)=>{
     setKo(prev=>{const next=structuredClone(prev);next[round][idx][field]=val;return propagateKO(next,groupMatches);});
   },[groupMatches]);
+  const updateGroupPred=useCallback((matchId,side,val)=>{
+    setPredictions(prev=>({...prev,group:{...prev.group,[matchId]:{...prev.group?.[matchId],[side]:val}}}));
+  },[]);
+  const updateKOPred=useCallback((matchId,field,val)=>{
+    setPredictions(prev=>({...prev,ko:{...prev.ko,[matchId]:{...prev.ko?.[matchId],[field]:val}}}));
+  },[]);
 
   const globalStats=useMemo(()=>{
     const allG=Object.values(groupMatches).flat();
@@ -1084,6 +1434,7 @@ function App(){
   const totalEntered=Object.values(groupMatches).flat().filter(m=>m.homeScore!==null).length;
 
   const NAV=[
+    {v:"guesses",   Icon:IconGuesses,   label:"Fantasy"},
     {v:"fixtures",  Icon:IconFixtures,  label:"Fixtures"},
     {v:"standings", Icon:IconStandings, label:"Standings"},
     {v:"knockout",  Icon:IconKnockout,  label:"Knockout"},
@@ -1158,6 +1509,7 @@ function App(){
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
         {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
+        {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight}/>}
       </div>
 
       {/* MOBILE BOTTOM NAV */}
