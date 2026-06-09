@@ -2032,6 +2032,67 @@ const HISTORICAL_WC = [
   {year:2022, host:"Qatar",       teams:32, matches:64, goals:172, gpg:2.69, champion:"Argentina",     runnerUp:"France",          third:"Croatia"},
 ];
 
+// ─── Team World Cup History ──────────────────────────────────────────────────
+const FINISH_RANK      = {W:1,F:2,"3":3,"4":4,QF:5,R16:6,GS:7};
+const FINISH_COLOR_MAP = {W:GOLD,F:"#b8b8b8","3":"#c87533","4":PURPLE,QF:ACCENT,R16:"#4b88a2",GS:"#374151"};
+const FINISH_LABEL_MAP = {W:"Champion",F:"Runner-up","3":"3rd","4":"4th",QF:"Quarter-final",R16:"Round of 16",GS:"Group Stage"};
+
+const TEAM_WC_HISTORY = {
+  // CONMEBOL
+  "Argentina":    {1930:"F",1934:"GS",1958:"GS",1962:"QF",1966:"QF",1974:"QF",1978:"W",1982:"QF",1986:"W",1990:"F",1994:"R16",1998:"QF",2002:"GS",2006:"QF",2010:"QF",2014:"F",2018:"R16",2022:"W"},
+  "Brazil":       {1930:"3",1934:"GS",1938:"3",1950:"F",1954:"QF",1958:"W",1962:"W",1966:"GS",1970:"W",1974:"4",1978:"3",1982:"QF",1986:"QF",1990:"R16",1994:"W",1998:"F",2002:"W",2006:"QF",2010:"QF",2014:"4",2018:"QF",2022:"QF"},
+  "Uruguay":      {1930:"W",1950:"W",1954:"4",1962:"QF",1966:"QF",1970:"4",1974:"QF",1986:"R16",1990:"R16",2002:"GS",2010:"4",2014:"R16",2018:"QF",2022:"GS"},
+  "Colombia":     {1962:"GS",1990:"R16",1994:"GS",1998:"GS",2014:"QF",2018:"R16"},
+  "Ecuador":      {2002:"GS",2006:"R16",2014:"GS",2022:"GS"},
+  "Paraguay":     {1930:"GS",1950:"GS",1958:"GS",1986:"R16",1998:"R16",2002:"R16",2006:"R16",2010:"QF"},
+  // UEFA
+  "Germany":      {1934:"3",1938:"GS",1954:"W",1958:"4",1962:"QF",1966:"F",1970:"3",1974:"W",1978:"QF",1982:"F",1986:"F",1990:"W",1994:"QF",1998:"QF",2002:"F",2006:"3",2010:"3",2014:"W",2018:"GS",2022:"GS"},
+  "France":       {1930:"GS",1934:"GS",1938:"QF",1954:"GS",1958:"3",1966:"GS",1978:"GS",1982:"4",1986:"3",1998:"W",2002:"GS",2006:"F",2010:"GS",2014:"QF",2018:"W",2022:"F"},
+  "England":      {1950:"GS",1954:"QF",1958:"GS",1962:"QF",1966:"W",1970:"QF",1982:"QF",1986:"QF",1990:"4",1998:"R16",2002:"QF",2006:"QF",2010:"R16",2014:"GS",2018:"4",2022:"QF"},
+  "Spain":        {1934:"QF",1950:"4",1962:"GS",1966:"GS",1978:"GS",1982:"QF",1986:"QF",1990:"R16",1994:"QF",1998:"R16",2002:"QF",2006:"R16",2010:"W",2014:"GS",2018:"R16",2022:"QF"},
+  "Netherlands":  {1934:"GS",1938:"GS",1974:"F",1978:"F",1990:"QF",1994:"QF",1998:"4",2006:"R16",2010:"F",2014:"3",2022:"QF"},
+  "Belgium":      {1930:"GS",1934:"GS",1938:"GS",1954:"GS",1970:"GS",1982:"QF",1986:"4",1990:"R16",1994:"R16",1998:"R16",2002:"GS",2014:"QF",2018:"3",2022:"GS"},
+  "Portugal":     {1966:"3",1986:"GS",2002:"GS",2006:"4",2010:"R16",2014:"GS",2018:"R16",2022:"QF"},
+  "Croatia":      {1998:"3",2002:"GS",2006:"R16",2010:"GS",2014:"GS",2018:"F",2022:"3"},
+  "Sweden":       {1934:"GS",1938:"4",1950:"3",1958:"F",1970:"GS",1974:"QF",1978:"GS",1990:"GS",1994:"3",2002:"R16",2006:"R16",2018:"QF"},
+  "Norway":       {1938:"GS",1994:"R16",1998:"R16"},
+  "Austria":      {1934:"4",1954:"3",1958:"GS",1978:"QF",1982:"QF",1990:"GS",1998:"GS"},
+  "Scotland":     {1954:"GS",1958:"GS",1974:"GS",1978:"GS",1982:"GS",1986:"GS",1990:"GS",1998:"GS"},
+  "Switzerland":  {1934:"QF",1938:"QF",1950:"QF",1954:"QF",1962:"GS",1966:"GS",1994:"R16",2006:"R16",2010:"GS",2014:"R16",2018:"R16",2022:"QF"},
+  "Czechia":      {1934:"F",1938:"QF",1954:"GS",1962:"F",1970:"GS",1982:"QF",1990:"R16",2006:"R16"},
+  "Bosnia":       {2014:"GS"},
+  // CONCACAF
+  "Mexico":       {1930:"GS",1950:"GS",1954:"GS",1958:"GS",1962:"GS",1966:"GS",1970:"QF",1978:"GS",1986:"QF",1994:"R16",1998:"R16",2002:"R16",2006:"R16",2010:"R16",2014:"R16",2018:"R16",2022:"R16"},
+  "United States":{1930:"3",1934:"GS",1950:"GS",1990:"GS",1994:"QF",1998:"GS",2002:"QF",2006:"GS",2010:"R16",2014:"R16",2022:"R16"},
+  "Canada":       {1986:"GS",2022:"GS"},
+  "Haiti":        {1974:"GS"},
+  "Panama":       {2018:"GS"},
+  "Curacao":      {},
+  // CAF
+  "Morocco":      {1970:"GS",1986:"R16",1994:"GS",1998:"GS",2018:"GS",2022:"4"},
+  "South Africa": {1998:"GS",2002:"GS",2010:"GS"},
+  "Tunisia":      {1978:"GS",1998:"GS",2002:"GS",2006:"GS",2018:"GS",2022:"GS"},
+  "Ivory Coast":  {2006:"GS",2010:"GS",2014:"GS"},
+  "Ghana":        {2006:"R16",2010:"QF",2014:"GS",2022:"GS"},
+  "Egypt":        {1934:"GS",1990:"GS"},
+  "Senegal":      {2002:"QF",2022:"R16"},
+  "Algeria":      {1982:"GS",1986:"GS",2010:"GS",2014:"R16"},
+  "DR Congo":     {1974:"GS"},
+  "Cape Verde":   {},
+  // AFC
+  "South Korea":  {1954:"GS",1986:"GS",1990:"GS",1994:"GS",1998:"GS",2002:"4",2006:"GS",2010:"R16",2014:"GS",2018:"R16",2022:"R16"},
+  "Japan":        {1998:"GS",2002:"R16",2006:"GS",2010:"R16",2014:"GS",2018:"R16",2022:"R16"},
+  "Saudi Arabia": {1994:"R16",1998:"GS",2002:"GS",2006:"GS",2018:"GS",2022:"GS"},
+  "Iran":         {1978:"GS",1998:"GS",2006:"GS",2014:"GS",2018:"GS",2022:"GS"},
+  "Australia":    {1974:"GS",2006:"R16",2010:"GS",2014:"GS",2018:"GS",2022:"R16"},
+  "Qatar":        {2022:"GS"},
+  "Jordan":       {},
+  "Uzbekistan":   {},
+  "Iraq":         {1986:"GS"},
+  // OFC
+  "New Zealand":  {1982:"GS",2010:"GS"},
+};
+
 function ConfederationChart({groupMatches, ko, isMobile}) {
   const data = useMemo(()=>{
     // Build per-team stats across group + KO
@@ -2343,6 +2404,133 @@ function PastChampions({isMobile}) {
   );
 }
 
+function FinishBadge({finish, size=9}) {
+  if (!finish) return <span style={{fontSize:size,color:"#555",fontStyle:"italic"}}>Debut</span>;
+  const color = FINISH_COLOR_MAP[finish] || "#555";
+  const icon = finish==="W"?"🏆 ":finish==="F"?"🥈 ":finish==="3"?"🥉 ":"";
+  return (
+    <span style={{
+      fontSize:size, fontWeight:800, color,
+      background:`${color}22`, border:`1px solid ${color}44`,
+      borderRadius:4, padding:"1px 5px", whiteSpace:"nowrap",
+    }}>
+      {icon}{FINISH_LABEL_MAP[finish]||finish}
+    </span>
+  );
+}
+
+function TeamHistoryRow({team, history, expanded, onToggle}) {
+  const finishes = Object.values(history);
+  const bestFinish = finishes.length > 0
+    ? finishes.reduce((b,f)=>(FINISH_RANK[f]||99)<(FINISH_RANK[b]||99)?f:b, finishes[0])
+    : null;
+  const years = Object.keys(history).map(Number).sort((a,b)=>a-b);
+
+  return (
+    <div>
+      <div onClick={onToggle} style={{
+        display:"flex", alignItems:"center", gap:6, padding:"6px 0",
+        borderBottom:`1px solid rgba(255,255,255,0.025)`,
+        cursor:"pointer", userSelect:"none",
+      }}>
+        <Flag team={team} size={15}/>
+        <span style={{flex:1, fontSize:10.5, color:"#bbb", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+          <TeamName name={team}/>
+        </span>
+        {/* Mini coloured dots — last 8 appearances */}
+        <div style={{display:"flex", gap:2, alignItems:"center", flexShrink:0}}>
+          {years.slice(-8).map(y=>(
+            <div key={y} style={{
+              width:5, height:5, borderRadius:1,
+              background:FINISH_COLOR_MAP[history[y]]||"#333",
+            }}/>
+          ))}
+        </div>
+        <div style={{flexShrink:0}}><FinishBadge finish={bestFinish}/></div>
+        <span style={{fontSize:8, color:"#555", minWidth:22, textAlign:"right", flexShrink:0}}>
+          {years.length>0?`×${years.length}`:""}
+        </span>
+      </div>
+      {expanded && (
+        <div style={{padding:"8px 4px 10px 20px", display:"flex", flexWrap:"wrap", gap:5, borderBottom:`1px solid rgba(255,255,255,0.04)`}}>
+          {years.length===0 ? (
+            <span style={{fontSize:9, color:"#555", fontStyle:"italic"}}>First appearance in 2026 🎉</span>
+          ) : years.map(year=>{
+            const f = history[year];
+            const col = FINISH_COLOR_MAP[f]||"#333";
+            const icon = f==="W"?"🏆":f==="F"?"🥈":f==="3"?"🥉":"";
+            return (
+              <div key={year} style={{
+                display:"flex", flexDirection:"column", alignItems:"center", gap:1,
+                background:`${col}18`, border:`1px solid ${col}33`,
+                borderRadius:5, padding:"4px 7px", minWidth:46,
+              }}>
+                <span style={{fontSize:8, color:"#666", fontWeight:600}}>{year}</span>
+                <span style={{fontSize:9, fontWeight:800, color:col}}>{icon||FINISH_LABEL_MAP[f]||f}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TeamHistorySection({isMobile}) {
+  const [expanded, setExpanded] = useState(null);
+  const [sortBy, setSortBy] = useState("best");
+
+  const allTeams = useMemo(()=>Object.values(GROUPS).flat(), []);
+  const getHist  = t => TEAM_WC_HISTORY[t] || {};
+  const getBest  = t => {
+    const f = Object.values(getHist(t));
+    return f.length ? f.reduce((b,v)=>(FINISH_RANK[v]||99)<(FINISH_RANK[b]||99)?v:b, f[0]) : null;
+  };
+
+  const sorted = useMemo(()=>[...allTeams].sort((a,b)=>{
+    if(sortBy==="best"){
+      const d=(FINISH_RANK[getBest(a)]||99)-(FINISH_RANK[getBest(b)]||99);
+      if(d!==0) return d;
+      return Object.keys(getHist(b)).length-Object.keys(getHist(a)).length;
+    }
+    if(sortBy==="apps") return Object.keys(getHist(b)).length-Object.keys(getHist(a)).length;
+    return a.localeCompare(b);
+  }), [allTeams,sortBy]);
+
+  const toggle = t => setExpanded(p=>p===t?null:t);
+
+  return (
+    <div style={{background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:"12px 14px", marginBottom:13}}>
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, gap:6, flexWrap:"wrap"}}>
+        <div style={{fontSize:8, color:"#555", letterSpacing:2, textTransform:"uppercase", fontWeight:700}}>
+          Team WC History
+        </div>
+        <div style={{display:"flex", gap:3}}>
+          {[["best","Best Finish"],["apps","Most Apps"],["alpha","A–Z"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setSortBy(v)} style={{
+              padding:"3px 8px", borderRadius:5, fontSize:8, fontWeight:700, letterSpacing:0.8,
+              border:`1px solid ${sortBy===v?ACCENT:BORDER}`,
+              background:sortBy===v?`${ACCENT}18`:"transparent",
+              color:sortBy===v?ACCENT:"#555", cursor:"pointer",
+            }}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex", flexDirection:"column"}}>
+        {sorted.map(team=>(
+          <TeamHistoryRow
+            key={team}
+            team={team}
+            history={getHist(team)}
+            expanded={expanded===team}
+            onToggle={()=>toggle(team)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function FunFacts({isMobile}){
   return(
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px"}}>
@@ -2396,6 +2584,7 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
       </div>
       <HistoricalGoalsChart stats={stats}/>
       <PastChampions isMobile={isMobile}/>
+      <TeamHistorySection isMobile={isMobile}/>
     </div>
   );
 }
