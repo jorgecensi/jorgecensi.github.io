@@ -1242,7 +1242,7 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel }) {
 
 function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isMobile }) {
   const PHASES = [
-    { key:'group', label:'Group Stage',    matches:Object.values(groupMatches).flat().sort((a,b)=>(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
+    { key:'group', label:'Group Stage',    matches:Object.values(groupMatches).flat().sort((a,b)=>a.group.localeCompare(b.group)||(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
     { key:'r32',   label:'Round of 32',   matches:ko.r32 },
     { key:'r16',   label:'Round of 16',   matches:ko.r16 },
     { key:'qf',    label:'Quarter-finals', matches:ko.qf },
