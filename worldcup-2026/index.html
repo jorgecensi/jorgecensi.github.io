@@ -32,6 +32,25 @@
       75%  { transform: scale(0.92) rotate(-2deg); }
       100% { transform: scale(1) rotate(0deg); opacity: 1; }
     }
+    @keyframes flashOverlayIn {
+      0%   { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @keyframes flashBounce {
+      0%   { transform: scale(0.4) translateY(24px); opacity: 0; }
+      60%  { transform: scale(1.08) translateY(-4px); opacity: 1; }
+      80%  { transform: scale(0.96) translateY(0); }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes confettiDrop {
+      0%   { transform: translateY(-20px) rotate(0deg) scaleX(1); opacity: 1; }
+      80%  { opacity: 1; }
+      100% { transform: translateY(105vh) rotate(720deg) scaleX(0.6); opacity: 0; }
+    }
+    @keyframes shareModalIn {
+      0%   { opacity: 0; transform: translateY(20px) scale(0.96); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
   </style>
 </head>
 <body>
@@ -39,6 +58,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
   <script type="text/babel" data-presets="react">
 const { useState, useMemo, useEffect, useCallback, useRef } = React;
 
@@ -665,6 +685,423 @@ function buildShareText(groupMatches, ko, predictions, pts, phaseKey) {
   return lines.join('\n');
 }
 
+// ─── Proximity / Rival sharing ────────────────────────────────────────────────
+const RIVALS_KEY  = "wc2026:rivals:v1";
+const PLAYER_KEY  = "wc2026:player:v1";
+const SHARE_BASE  = "https://jorgecensi.github.io/worldcup-2026/";
+
+function loadRivals() {
+  try { const r = localStorage.getItem(RIVALS_KEY); return r ? JSON.parse(r) : []; }
+  catch(e) { return []; }
+}
+function saveRivals(r) {
+  try { localStorage.setItem(RIVALS_KEY, JSON.stringify(r)); } catch(e) {}
+}
+function loadPlayerName() {
+  try { return localStorage.getItem(PLAYER_KEY) || ""; } catch(e) { return ""; }
+}
+function savePlayerName(n) {
+  try { localStorage.setItem(PLAYER_KEY, n); } catch(e) {}
+}
+
+function encodePreds(name, predictions) {
+  const g = {}, k = {};
+  Object.entries(predictions.group || {}).forEach(([id, p]) => {
+    if (p && p.home != null && p.away != null) g[id] = [+p.home, +p.away];
+  });
+  Object.entries(predictions.ko || {}).forEach(([id, p]) => {
+    if (p && p.a != null && p.b != null) k[id] = [+p.a, +p.b];
+  });
+  const payload = JSON.stringify({ n: name || "Anonymous", g, k });
+  try { return btoa(unescape(encodeURIComponent(payload))); } catch(e) { return btoa(payload); }
+}
+
+function decodePreds(encoded) {
+  try {
+    const json = decodeURIComponent(escape(atob(encoded)));
+    const d = JSON.parse(json);
+    const group = {}, ko = {};
+    Object.entries(d.g || {}).forEach(([id, arr]) => { group[id] = { home: arr[0], away: arr[1] }; });
+    Object.entries(d.k || {}).forEach(([id, arr]) => { ko[id] = { a: arr[0], b: arr[1] }; });
+    return { n: d.n || "Anonymous", predictions: { group, ko } };
+  } catch(e) { return null; }
+}
+
+function buildShareUrl(name, predictions) {
+  return SHARE_BASE + "?rival=" + encodeURIComponent(encodePreds(name, predictions));
+}
+
+function calcRivalPoints(rival, groupMatches, ko) {
+  return calcPoints(groupMatches, ko, rival.predictions || { group: {}, ko: {} });
+}
+
+// ─── QR Code component ────────────────────────────────────────────────────────
+function QRCodeView({ url }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    ref.current.innerHTML = '';
+    if (window.QRCode) {
+      try {
+        new window.QRCode(ref.current, {
+          text: url, width: 200, height: 200,
+          colorDark: '#ffffff', colorLight: '#080d16',
+          correctLevel: window.QRCode.CorrectLevel?.M,
+        });
+      } catch(e) {
+        ref.current.innerHTML = '<div style="color:#666;font-size:11px;padding:20px;text-align:center">QR unavailable</div>';
+      }
+    } else {
+      ref.current.innerHTML = '<div style="color:#666;font-size:11px;padding:20px;text-align:center;line-height:1.5">QR needs network<br/>Use Copy Link instead</div>';
+    }
+  }, [url]);
+  return (
+    <div ref={ref} style={{
+      display:'flex', justifyContent:'center', alignItems:'center',
+      width:200, height:200, borderRadius:8, overflow:'hidden',
+    }} />
+  );
+}
+
+// ─── Share Modal ──────────────────────────────────────────────────────────────
+function ShareModal({ playerName, predictions, onClose, onNameSave }) {
+  const [name, setName] = useState(playerName || '');
+  const url = buildShareUrl(name, predictions);
+  const [copied, setCopied] = useState(false);
+  const [nfcStatus, setNfcStatus] = useState(null); // null | 'writing' | 'done' | 'error' | 'unsupported'
+  const hasShare = !!navigator.share;
+  const hasNFC   = 'NDEFReader' in window;
+
+  const handleCopy = () => {
+    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 2500); };
+    navigator.clipboard?.writeText(url).then(done).catch(() => {
+      const el = document.createElement('textarea');
+      el.value = url; document.body.appendChild(el); el.select();
+      document.execCommand('copy'); document.body.removeChild(el); done();
+    });
+  };
+
+  const handleShare = () => {
+    navigator.share({ title: 'My WC 2026 Bolão Predictions', url }).catch(() => {});
+  };
+
+  const handleNFC = async () => {
+    if (!hasNFC) { setNfcStatus('unsupported'); return; }
+    try {
+      setNfcStatus('writing');
+      const ndef = new window.NDEFReader();
+      await ndef.write({ records: [{ recordType: 'url', data: url }] });
+      setNfcStatus('done');
+      setTimeout(() => setNfcStatus(null), 3000);
+    } catch(e) {
+      setNfcStatus(e.name === 'NotAllowedError' ? 'error' : 'error');
+      setTimeout(() => setNfcStatus(null), 3000);
+    }
+  };
+
+  const handleNameBlur = () => { if (name.trim()) onNameSave(name.trim()); };
+
+  // Count filled predictions
+  const filledCount = Object.values(predictions.group || {}).filter(p => p && p.home != null).length
+                    + Object.values(predictions.ko || {}).filter(p => p && p.a != null).length;
+
+  return (
+    <div onClick={onClose} style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:500,
+      display:'flex', alignItems:'flex-end', justifyContent:'center',
+      padding:'0 0 env(safe-area-inset-bottom,0)',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background:'#0d1a2e', border:`1px solid rgba(167,139,250,0.4)`,
+        borderRadius:'20px 20px 0 0', padding:'20px 20px 28px',
+        width:'100%', maxWidth:440,
+        display:'flex', flexDirection:'column', alignItems:'center', gap:14,
+        animation:'shareModalIn 0.3s ease',
+      }}>
+        {/* drag handle */}
+        <div style={{ width:36, height:4, borderRadius:2, background:'rgba(255,255,255,0.12)', marginBottom:2 }}/>
+
+        <div style={{ fontSize:11, color:PURPLE, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
+          Share Predictions
+        </div>
+        <div style={{ fontSize:11, color:'#666', textAlign:'center', lineHeight:1.5, marginTop:-6 }}>
+          Show this QR to a friend — they scan &amp; add you as a rival
+        </div>
+
+        {/* Name */}
+        <div style={{ width:'100%' }}>
+          <div style={{ fontSize:9, color:'#888', marginBottom:5, fontWeight:700, letterSpacing:1, textTransform:'uppercase' }}>Your name in the bolão</div>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onBlur={handleNameBlur}
+            placeholder="e.g. João"
+            style={{
+              width:'100%', padding:'9px 12px', borderRadius:9,
+              border:`1.5px solid rgba(167,139,250,0.4)`, background:'rgba(255,255,255,0.05)',
+              color:'#fff', fontSize:14, fontFamily:'inherit', outline:'none',
+            }}
+          />
+        </div>
+
+        {/* QR + info */}
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+          <div style={{
+            background:'#060c18', borderRadius:14, padding:12,
+            border:`1px solid rgba(167,139,250,0.2)`,
+            boxShadow:'0 4px 24px rgba(0,0,0,0.4)',
+          }}>
+            <QRCodeView url={url} />
+          </div>
+          <div style={{ fontSize:10, color:'#555' }}>
+            {filledCount} prediction{filledCount !== 1 ? 's' : ''} encoded
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div style={{ display:'flex', flexDirection:'column', gap:8, width:'100%' }}>
+          {hasShare && (
+            <button onClick={handleShare} style={{
+              width:'100%', padding:'12px', borderRadius:11,
+              background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
+              color:ACCENT, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+            }}>
+              📤 Share via…
+            </button>
+          )}
+          <button onClick={handleCopy} style={{
+            width:'100%', padding:'12px', borderRadius:11,
+            background:`rgba(167,139,250,0.1)`, border:`1px solid rgba(167,139,250,0.4)`,
+            color:PURPLE, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+          }}>
+            {copied ? '✓ Copied!' : '📋 Copy Link'}
+          </button>
+          {hasNFC && (
+            <button onClick={handleNFC} style={{
+              width:'100%', padding:'12px', borderRadius:11,
+              background: nfcStatus==='done' ? `rgba(0,208,132,0.14)` : `rgba(255,215,0,0.08)`,
+              border: `1px solid ${nfcStatus==='done' ? `rgba(0,208,132,0.45)` : 'rgba(255,215,0,0.3)'}`,
+              color: nfcStatus==='done' ? ACCENT : nfcStatus==='error' ? RED : GOLD,
+              fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+            }}>
+              {nfcStatus === 'writing' ? '📡 Hold phones back-to-back…'
+               : nfcStatus === 'done'  ? '✓ Written to NFC tag!'
+               : nfcStatus === 'error' ? '⚠ NFC failed — use QR instead'
+               : '📡 Write to NFC Tag'}
+            </button>
+          )}
+        </div>
+
+        <button onClick={onClose} style={{
+          background:'transparent', border:'none', color:'#555',
+          fontSize:12, cursor:'pointer', paddingTop:4, fontFamily:'inherit',
+        }}>✕ Close</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Add Rival Prompt ─────────────────────────────────────────────────────────
+function AddRivalModal({ rival, onAccept, onDecline }) {
+  return (
+    <div style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:500,
+      display:'flex', alignItems:'center', justifyContent:'center', padding:20,
+    }}>
+      <div style={{
+        background:'#0d1a2e', border:`1px solid rgba(0,208,132,0.45)`,
+        borderRadius:20, padding:'28px 24px', maxWidth:320, width:'100%',
+        textAlign:'center', display:'flex', flexDirection:'column', gap:16,
+        animation:'flashBounce 0.4s ease',
+      }}>
+        <div style={{ fontSize:36 }}>🤝</div>
+        <div>
+          <div style={{ fontSize:15, fontWeight:900, color:'#fff', marginBottom:8 }}>
+            Add rival?
+          </div>
+          <div style={{ fontSize:13, color:'#aaa', lineHeight:1.5 }}>
+            <span style={{ color:ACCENT, fontWeight:700 }}>{rival.n}</span>
+            {' '}wants to compete in your bolão.
+            Their predictions are included — you'll see who's ahead as results come in.
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:10 }}>
+          <button onClick={onDecline} style={{
+            flex:1, padding:'11px', borderRadius:10,
+            background:'transparent', border:`1px solid rgba(255,255,255,0.12)`,
+            color:'#666', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+          }}>Ignore</button>
+          <button onClick={() => onAccept(rival)} style={{
+            flex:1, padding:'11px', borderRadius:10,
+            background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
+            color:ACCENT, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+          }}>Add Rival ✓</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Winner Flash overlay ─────────────────────────────────────────────────────
+const CONFETTI_CFG = Array.from({length:22}, (_,i) => ({
+  left: `${2 + (i * 96/21)}%`,
+  delay: `${(i * 0.1).toFixed(2)}s`,
+  dur:   `${(1.4 + (i % 6) * 0.28).toFixed(2)}s`,
+  color: ['#00d084','#ffd700','#a78bfa','#ff6b6b','#4ecdc4','#ff9f43','#fff'][i % 7],
+  size:  5 + (i % 5) * 4,
+  rot:   `${(i * 53) % 360}deg`,
+}));
+
+function WinnerFlash({ data, onDismiss }) {
+  const exact = data.winners.filter(w => w.pts === 3);
+  const right = data.winners.filter(w => w.pts === 1);
+  const best  = exact.length > 0 ? exact : right;
+  const isExact = exact.length > 0;
+
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 4500);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  return (
+    <div onClick={onDismiss} style={{
+      position:'fixed', inset:0, zIndex:600,
+      background:'rgba(0,0,0,0.55)',
+      display:'flex', alignItems:'center', justifyContent:'center',
+      animation:'flashOverlayIn 0.2s ease',
+      cursor:'pointer',
+    }}>
+      {/* confetti */}
+      {isExact && CONFETTI_CFG.map((c, i) => (
+        <div key={i} style={{
+          position:'absolute', top:'-12px', left:c.left,
+          width:c.size, height:Math.round(c.size*0.55),
+          background:c.color, borderRadius:2,
+          transform:`rotate(${c.rot})`,
+          animation:`confettiDrop ${c.dur} ${c.delay} ease-in forwards`,
+          pointerEvents:'none',
+        }}/>
+      ))}
+
+      {/* card */}
+      <div onClick={e => e.stopPropagation()} style={{
+        background:'#0c1827',
+        border:`2px solid ${isExact ? ACCENT : PURPLE}`,
+        borderRadius:22, padding:'28px 32px 24px',
+        maxWidth:300, width:'88%',
+        textAlign:'center',
+        boxShadow:`0 0 80px ${isExact ? 'rgba(0,208,132,0.45)' : 'rgba(167,139,250,0.35)'}`,
+        animation:'flashBounce 0.45s cubic-bezier(0.34,1.56,0.64,1)',
+      }}>
+        <div style={{ fontSize:54, marginBottom:10, lineHeight:1 }}>{isExact ? '🎯' : '✅'}</div>
+        <div style={{ fontSize:13, fontWeight:900, color:isExact?ACCENT:PURPLE, letterSpacing:1.5, textTransform:'uppercase', marginBottom:10 }}>
+          {isExact ? (best.length > 1 ? 'Exact scores!' : 'Exact score!') : 'Right result!'}
+        </div>
+        {best.map((w, i) => (
+          <div key={i} style={{
+            fontSize: best.length > 1 ? 18 : 22,
+            fontWeight:900, color:'#fff', marginBottom:4,
+          }}>
+            {w.isMe ? `${w.name} (you)` : w.name}
+          </div>
+        ))}
+        {data.score && (
+          <div style={{ fontSize:12, color:'#666', marginTop:8 }}>
+            {data.home} {data.scoreH}–{data.scoreA} {data.away}
+          </div>
+        )}
+        <div style={{ fontSize:10, color:'#444', marginTop:14 }}>tap to dismiss</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Rivals Leaderboard ───────────────────────────────────────────────────────
+function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, onShare, onRemove }) {
+  const allPlayers = [
+    { n: myName || 'You', pts: myPts, isMe: true },
+    ...rivals.map(r => ({ n: r.n, pts: calcRivalPoints(r, groupMatches, ko), isMe: false })),
+  ].sort((a, b) => b.pts.total - a.pts.total);
+
+  if (rivals.length === 0) {
+    return (
+      <div style={{
+        background: CARD, border:`1px solid rgba(0,208,132,0.2)`,
+        borderRadius:14, padding:'18px 16px', marginBottom:14, textAlign:'center',
+      }}>
+        <div style={{ fontSize:26, marginBottom:8 }}>📲</div>
+        <div style={{ fontSize:12, fontWeight:800, color:'#ccc', marginBottom:4 }}>Compete with friends</div>
+        <div style={{ fontSize:11, color:'#555', marginBottom:14, lineHeight:1.5 }}>
+          Share your QR — anyone who scans it joins your leaderboard.
+          The app flashes when someone nails a score.
+        </div>
+        <button onClick={onShare} style={{
+          background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
+          color:ACCENT, borderRadius:10, padding:'9px 20px',
+          fontSize:12, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+        }}>
+          📲 Share via QR / NFC
+        </button>
+      </div>
+    );
+  }
+
+  const medalColors = [GOLD, '#c0c0c0', '#cd7f32'];
+
+  return (
+    <div style={{
+      background:CARD, border:`1px solid rgba(0,208,132,0.2)`,
+      borderRadius:14, padding:'12px 14px', marginBottom:14,
+    }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+        <div style={{ fontSize:9, color:ACCENT, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
+          🏆 Leaderboard
+        </div>
+        <button onClick={onShare} style={{
+          background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
+          color:ACCENT, borderRadius:7, padding:'4px 10px',
+          fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+        }}>+ Add Rival</button>
+      </div>
+
+      {allPlayers.map((p, i) => (
+        <div key={p.n} style={{
+          display:'flex', alignItems:'center', gap:8,
+          padding:'7px 8px', borderRadius:9, marginBottom:3,
+          background: p.isMe ? 'rgba(0,208,132,0.07)' : 'transparent',
+          border: p.isMe ? `1px solid rgba(0,208,132,0.18)` : '1px solid transparent',
+        }}>
+          <div style={{
+            fontSize: i < 3 ? 16 : 11, fontWeight:900,
+            color: i < 3 ? medalColors[i] : '#555',
+            width:22, textAlign:'center', flexShrink:0,
+          }}>
+            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i+1}
+          </div>
+          <div style={{ flex:1, fontSize:13, fontWeight:700, color:p.isMe?ACCENT:'#ccc', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {p.n}{p.isMe ? ' (you)' : ''}
+          </div>
+          <div style={{ display:'flex', alignItems:'baseline', gap:3 }}>
+            <span style={{ fontSize:16, fontWeight:900, color:'#fff' }}>{p.pts.total}</span>
+            <span style={{ fontSize:9, color:'#555' }}>pts</span>
+          </div>
+          {p.pts.played > 0 && (
+            <div style={{ fontSize:9, color:'#444', flexShrink:0 }}>
+              🎯{p.pts.exact} ✅{p.pts.correct}
+            </div>
+          )}
+          {!p.isMe && (
+            <button onClick={() => onRemove(p.n)} style={{
+              background:'transparent', border:'none', color:'#333',
+              fontSize:13, cursor:'pointer', padding:'0 2px', flexShrink:0, lineHeight:1,
+            }} title="Remove rival">✕</button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Logic helpers ────────────────────────────────────────────────────────────
 function computeStandings(teams, matches) {
   const t={};
@@ -1243,7 +1680,8 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel }) {
   );
 }
 
-function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isMobile }) {
+function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isMobile,
+                        rivals, playerName, onShare, onRemoveRival }) {
   const PHASES = [
     { key:'group', label:'Group Stage',    matches:Object.values(groupMatches).flat().sort((a,b)=>a.group.localeCompare(b.group)||(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
     { key:'r32',   label:'Round of 32',   matches:ko.r32 },
@@ -1276,6 +1714,13 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
 
   return (
     <div>
+      {/* Rivals Leaderboard */}
+      <RivalsLeaderboard
+        rivals={rivals} myName={playerName} myPts={pts}
+        groupMatches={groupMatches} ko={ko}
+        onShare={onShare} onRemove={onRemoveRival}
+      />
+
       {/* Summary + Share All */}
       <div style={{background:CARD, border:`1px solid rgba(167,139,250,0.3)`, borderRadius:14, padding:"14px 16px", marginBottom:14}}>
         <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8}}>
@@ -1381,6 +1826,39 @@ function App(){
   const navRef=useRef(null);
   const [navHeight,setNavHeight]=useState(0);
 
+  // Rivals / proximity sharing
+  const [rivals,setRivals]=useState(loadRivals);
+  const [playerName,setPlayerName]=useState(loadPlayerName);
+  const [showShareModal,setShowShareModal]=useState(false);
+  const [incomingRival,setIncomingRival]=useState(null);
+  const [flashData,setFlashData]=useState(null);
+
+  // Refs to read current state inside effects without re-running them
+  const predictionsRef=useRef(predictions);
+  predictionsRef.current=predictions;
+  const rivalsRef=useRef(rivals);
+  rivalsRef.current=rivals;
+  const playerNameRef=useRef(playerName);
+  playerNameRef.current=playerName;
+
+  // Persist rivals + playerName
+  useEffect(()=>{saveRivals(rivals);},[rivals]);
+  useEffect(()=>{savePlayerName(playerName);},[playerName]);
+
+  // Detect ?rival= URL param on first load — offer to add the rival
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const rivalParam=params.get('rival');
+    if(!rivalParam) return;
+    const decoded=decodePreds(rivalParam);
+    if(!decoded) return;
+    // Don't add yourself or a duplicate
+    const alreadyExists=loadRivals().some(r=>r.n===decoded.n);
+    if(alreadyExists){ window.history.replaceState({},'',window.location.pathname); return; }
+    setIncomingRival(decoded);
+    window.history.replaceState({},'',window.location.pathname);
+  },[]);
+
   // Measure the real (unzoomed) bottom-nav height so fixed bars can sit flush above it
   useEffect(()=>{
     const el=navRef.current;
@@ -1404,6 +1882,50 @@ function App(){
   useEffect(()=>{saveScores(groupMatches,ko);},[groupMatches,ko]);
   useEffect(()=>{savePredictions(predictions);},[predictions]);
 
+  // Flash detection: compare snapshot of all scores before/after changes
+  const prevScoresRef=useRef(null);
+  useEffect(()=>{
+    // Build current score snapshot
+    const snap={};
+    Object.values(groupMatches).flat().forEach(m=>{
+      if(m.homeScore!==null&&m.awayScore!==null) snap[m.id]={h:m.homeScore,a:m.awayScore,hn:m.home,an:m.away};
+    });
+    [...ko.r32,...ko.r16,...ko.qf,...ko.sf,...ko.final,...ko.third].forEach(m=>{
+      if(m.scoreA!==null&&m.scoreB!==null&&m.teamA&&m.teamB) snap[m.id]={h:m.scoreA,a:m.scoreB,hn:m.teamA,an:m.teamB};
+    });
+
+    const prev=prevScoresRef.current;
+    if(prev===null){prevScoresRef.current=snap;return;}
+
+    // Find matches that just became fully scored
+    Object.entries(snap).forEach(([id,{h,a,hn,an}])=>{
+      if(prev[id]) return; // already had a score
+      const winners=[];
+      const preds=predictionsRef.current;
+      const myG=preds.group?.[id]; const myK=preds.ko?.[id];
+      const myH=myG?myG.home:myK?myK.a:undefined;
+      const myA=myG?myG.away:myK?myK.b:undefined;
+      if(myH!=null&&myA!=null){
+        const pts=scorePrediction(myH,myA,h,a);
+        if(pts>0) winners.push({name:playerNameRef.current||'You',pts,isMe:true});
+      }
+      rivalsRef.current.forEach(r=>{
+        const rG=r.predictions?.group?.[id]; const rK=r.predictions?.ko?.[id];
+        const rH=rG?rG.home:rK?rK.a:undefined;
+        const rA=rG?rG.away:rK?rK.b:undefined;
+        if(rH!=null&&rA!=null){
+          const pts=scorePrediction(rH,rA,h,a);
+          if(pts>0) winners.push({name:r.n,pts,isMe:false});
+        }
+      });
+      if(winners.length>0){
+        setFlashData({matchId:id,scoreH:h,scoreA:a,home:hn,away:an,winners});
+      }
+    });
+
+    prevScoresRef.current=snap;
+  },[groupMatches,ko]);
+
   const updateGroupScore=useCallback((group,matchId,side,val)=>{
     setGroupMatches(prev=>({...prev,[group]:prev[group].map(m=>m.id===matchId?{...m,[side]:val}:m)}));
   },[]);
@@ -1415,6 +1937,15 @@ function App(){
   },[]);
   const updateKOPred=useCallback((matchId,field,val)=>{
     setPredictions(prev=>({...prev,ko:{...prev.ko,[matchId]:{...prev.ko?.[matchId],[field]:val}}}));
+  },[]);
+
+  const handleAcceptRival=useCallback((rival)=>{
+    setRivals(prev=>[...prev,{...rival,addedAt:Date.now()}]);
+    setIncomingRival(null);
+  },[]);
+
+  const handleRemoveRival=useCallback((name)=>{
+    setRivals(prev=>prev.filter(r=>r.n!==name));
   },[]);
 
   const champion = React.useMemo(()=>koWinner(ko.final[0]),[ko]);
@@ -1452,6 +1983,21 @@ function App(){
     <ChampionContext.Provider value={champion}>
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${BG} 0%,#0d1a2e 60%,${BG} 100%)`,fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",color:"#e8eaf0",paddingBottom:isMobile?68:0}}>
       {splash && <SplashScreen onDone={()=>setSplash(false)}/>}
+      {flashData && <WinnerFlash data={flashData} onDismiss={()=>setFlashData(null)}/>}
+      {showShareModal && (
+        <ShareModal
+          playerName={playerName} predictions={predictions}
+          onClose={()=>setShowShareModal(false)}
+          onNameSave={n=>{setPlayerName(n);}}
+        />
+      )}
+      {incomingRival && (
+        <AddRivalModal
+          rival={incomingRival}
+          onAccept={handleAcceptRival}
+          onDecline={()=>setIncomingRival(null)}
+        />
+      )}
 
       {/* HEADER */}
       <div style={{background:"linear-gradient(90deg,#0a1020,#162035,#0a1020)",borderBottom:`2px solid ${ACCENT}`,position:"sticky",top:0,zIndex:100,boxShadow:`0 4px 24px rgba(0,208,132,0.18)`,overflow:"hidden"}}>
@@ -1515,7 +2061,7 @@ function App(){
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
         {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
-        {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight}/>}
+        {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>setShowShareModal(true)} onRemoveRival={handleRemoveRival}/>}
       </div>
 
       {/* MOBILE BOTTOM NAV */}
