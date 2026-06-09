@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
   <meta name="theme-color" content="#080d16"/>
-  <meta name="description" content="Interactive FIFA World Cup 2026 scorecard — track all 48 teams, group standings, knockout bracket with penalties, and live stats. All times in AEST (Brisbane)."/>
+  <meta name="description" content="Interactive FIFA World Cup 2026 scorecard — track all 48 teams, group standings, knockout bracket with penalties, and live stats. All times in your local timezone."/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="WC 2026"/>
@@ -209,6 +209,18 @@ function timeKey(t) {
   if (ap === "PM" && h !== 12) h += 12;
   if (ap === "AM" && h === 12) h = 0;
   return h * 60 + m;
+}
+// Convert AEST match date+time strings to a UTC Date object (AEST = UTC+10)
+const MONTHS_PARSE = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+function matchToUTC(date, time) {
+  const parts = date.split(" ");
+  const day = parseInt(parts[1]);
+  const month = MONTHS_PARSE[parts[2]];
+  const [hm, ap] = time.split(" ");
+  let [h, m] = hm.split(":").map(Number);
+  if (ap === "PM" && h !== 12) h += 12;
+  if (ap === "AM" && h === 12) h = 0;
+  return new Date(Date.UTC(2026, month, day, h - 10, m));
 }
 
 // [homeIdx, awayIdx, date, time, city]
@@ -818,12 +830,16 @@ function Stepper({value,onChange,highlight,disabled=false,color=ACCENT,small=fal
 }
 
 function TimeBadge({date,time,city}){
-  const h=timeKey(time);
-  const col=h<300?RED:h<420?"#ff9500":h<720?GOLD:ACCENT;
+  const utc=matchToUTC(date,time);
+  const localH=utc.getHours();
+  const col=localH<5?RED:localH<7?"#ff9500":localH<12?GOLD:ACCENT;
+  const localTime=utc.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+  const tzLabel=new Intl.DateTimeFormat(undefined,{timeZoneName:"short"}).formatToParts(utc).find(p=>p.type==="timeZoneName")?.value||"";
+  const localDate=utc.toLocaleDateString([],{weekday:"short",day:"numeric",month:"short"});
   return(
     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-      <span style={{fontSize:9,color:col,fontWeight:700,background:`${col}18`,border:`1px solid ${col}44`,borderRadius:4,padding:"2px 6px",whiteSpace:"nowrap"}}>{time} AEST</span>
-      <span style={{fontSize:9,color:"#555",whiteSpace:"nowrap"}}>{date} · {city}</span>
+      <span style={{fontSize:9,color:col,fontWeight:700,background:`${col}18`,border:`1px solid ${col}44`,borderRadius:4,padding:"2px 6px",whiteSpace:"nowrap"}}>{localTime} {tzLabel}</span>
+      <span style={{fontSize:9,color:"#555",whiteSpace:"nowrap"}}>{localDate} · {city}</span>
     </div>
   );
 }
@@ -1626,13 +1642,11 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 
   const scored=Object.values(groupMatches).flat().filter(m=>m.homeScore!==null).length;
 
-  // Find the date section closest to today (Brisbane = UTC+10, no DST)
+  // Find the date section closest to today (local device time)
   const closestDate=useMemo(()=>{
     if(byDate.length===0) return null;
-    // Derive Brisbane date using raw UTC offset (UTC+10, Queensland has no DST)
-    const brisbaneMs = Date.now() + (10 * 60 * 60 * 1000);
-    const d = new Date(brisbaneMs);
-    const todayDk = ((d.getUTCMonth()+1)*100) + d.getUTCDate();
+    const now=new Date();
+    const todayDk=(now.getMonth()+1)*100+now.getDate();
     const future=byDate.filter(d=>d.dk>=todayDk);
     return future.length>0 ? future[0].date : byDate[byDate.length-1].date;
   },[byDate]);
@@ -1806,12 +1820,11 @@ function KnockoutView({ko,onScore,isMobile,navHeight}){
     return Object.values(map).sort((a,b)=>a.dk-b.dk);
   },[matches]);
 
-  // Find the date section closest to today (Brisbane = UTC+10, no DST)
+  // Find the date section closest to today (local device time)
   const closestDate=useMemo(()=>{
     if(byDate.length===0) return null;
-    const brisbaneMs = Date.now() + (10 * 60 * 60 * 1000);
-    const d = new Date(brisbaneMs);
-    const todayDk = ((d.getUTCMonth()+1)*100) + d.getUTCDate();
+    const now=new Date();
+    const todayDk=(now.getMonth()+1)*100+now.getDate();
     const future=byDate.filter(d=>d.dk>0&&d.dk>=todayDk);
     return future.length>0 ? future[0].date : byDate[byDate.length-1].date;
   },[byDate]);
