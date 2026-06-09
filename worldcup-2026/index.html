@@ -1197,7 +1197,7 @@ function GuessGroupMatchCard({ match, prediction, onPred, isMobile }) {
   );
 }
 
-function GuessKOMatchCard({ match, prediction, onPred, isMobile }) {
+function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel }) {
   const hasTeams = !!match.teamA && !!match.teamB;
   const predA = prediction?.a ?? null;
   const predB = prediction?.b ?? null;
@@ -1219,6 +1219,9 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile }) {
 
   return (
     <div style={{background:CARD, border:`1px solid ${hasPred&&hasTeams?'rgba(167,139,250,0.3)':BORDER}`, borderRadius:12, padding:"11px 13px"}}>
+      {matchLabel && (
+        <div style={{fontSize:9, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:GOLD, marginBottom:6}}>{matchLabel}</div>
+      )}
       <div style={{marginBottom:7, display:"flex", alignItems:"center", justifyContent:"space-between"}}>
         <TimeBadge date={match.date} time={match.time} city={match.city}/>
         {hasPred && hasTeams && <GuessBadge pts={pts}/>}
@@ -1244,7 +1247,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
     { key:'r16',   label:'Round of 16',   matches:ko.r16 },
     { key:'qf',    label:'Quarter-finals', matches:ko.qf },
     { key:'sf',    label:'Semi-finals',    matches:ko.sf },
-    { key:'final', label:'Final',          matches:[...ko.final,...ko.third] },
+    { key:'final', label:'Final',          matches:[...ko.third,...ko.final] },
   ];
 
   const isUnlocked = key => {
@@ -1346,11 +1349,17 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
                 onPred={onGroupPred} isMobile={isMobile}/>
             ))
           ) : (
-            currentPhase.matches.map(m => (
-              <GuessKOMatchCard key={m.id} match={m}
-                prediction={predictions.ko?.[m.id]}
-                onPred={onKOPred} isMobile={isMobile}/>
-            ))
+            currentPhase.matches.map(m => {
+              const label = phase === 'final'
+                ? (m.id === 'third' ? '🥉 3rd Place' : '🏆 Final')
+                : undefined;
+              return (
+                <GuessKOMatchCard key={m.id} match={m}
+                  prediction={predictions.ko?.[m.id]}
+                  onPred={onKOPred} isMobile={isMobile}
+                  matchLabel={label}/>
+              );
+            })
           )}
         </div>
       )}
