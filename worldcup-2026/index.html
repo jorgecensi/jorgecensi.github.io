@@ -1277,7 +1277,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
       <div style={{background:CARD, border:`1px solid rgba(167,139,250,0.3)`, borderRadius:14, padding:"14px 16px", marginBottom:14}}>
         <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8}}>
           <div>
-            <div style={{fontSize:9, color:PURPLE, letterSpacing:2, fontWeight:700, textTransform:"uppercase", marginBottom:4}}>🎯 My Guesses</div>
+            <div style={{fontSize:9, color:PURPLE, letterSpacing:2, fontWeight:700, textTransform:"uppercase", marginBottom:4}}>🎯 Fantasy</div>
             <div style={{fontSize:22, fontWeight:900, color:"#fff"}}>
               {pts.total} <span style={{fontSize:13, color:"#666", fontWeight:400}}>pts</span>
             </div>
@@ -1371,7 +1371,7 @@ function App(){
   const [splash,setSplash]=useState(true);
   const [groupMatches,setGroupMatches]=useState(buildInitialGroupMatches);
   const [ko,setKo]=useState(buildInitialKO);
-  const [view,setView]=useState("fixtures");
+  const [view,setView]=useState("guesses");
   const [fixtureFilter,setFixtureFilter]=useState(null); // group letter to pre-filter fixtures
   const [predictions,setPredictions]=useState(loadPredictions);
   const isMobile=useIsMobile();
@@ -1434,11 +1434,11 @@ function App(){
   const totalEntered=Object.values(groupMatches).flat().filter(m=>m.homeScore!==null).length;
 
   const NAV=[
+    {v:"guesses",   Icon:IconGuesses,   label:"Fantasy"},
     {v:"fixtures",  Icon:IconFixtures,  label:"Fixtures"},
     {v:"standings", Icon:IconStandings, label:"Standings"},
     {v:"knockout",  Icon:IconKnockout,  label:"Knockout"},
     {v:"stats",     Icon:IconStats,     label:"Stats"},
-    {v:"guesses",   Icon:IconGuesses,   label:"Guesses"},
   ];
 
   const currentNav = NAV.find(n=>n.v===view)||NAV[0];
