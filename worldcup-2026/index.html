@@ -1721,8 +1721,13 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 
 // ─── STANDINGS VIEW ────────────────────────────────────────────────────────────
 function StandingsView({groupMatches,isMobile,onShowFixtures}){
+  const thirdPlaces=Object.entries(GROUPS).map(([g,teams])=>{
+    const s=computeStandings(teams,groupMatches[g]);
+    return {...s[2],group:g};
+  }).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
+
   return(
-    <div>
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:16}}>
         {Object.entries(GROUPS).map(([g,teams])=>{
           const standings=computeStandings(teams,groupMatches[g]);
@@ -1793,6 +1798,46 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
           );
         })}
       </div>
+
+      {/* ── 3rd Place Race ── */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,overflow:"hidden"}}>
+        <div style={{padding:"10px 14px",background:"rgba(0,0,0,0.3)",borderBottom:`1px solid ${BORDER}`,display:"flex",alignItems:"baseline",gap:8}}>
+          <span style={{fontSize:15,fontWeight:900,color:PURPLE,letterSpacing:1}}>3RD PLACE RACE</span>
+          <span style={{fontSize:11,color:"#555"}}>Best 8 of 12 advance</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"24px 1fr 44px 36px 36px",gap:2,padding:"7px 12px",fontSize:10,color:"#555",letterSpacing:1,fontWeight:700,textTransform:"uppercase"}}>
+          <span>#</span><span>Team</span><span style={{textAlign:"center"}}>GRP</span>
+          <span style={{textAlign:"center"}}>GD</span>
+          <span style={{textAlign:"center"}}>PTS</span>
+        </div>
+        {thirdPlaces.map((row,i)=>(
+          <React.Fragment key={row.team}>
+            {i===8&&(
+              <div style={{padding:"3px 12px",background:`${RED}14`,borderTop:`1px solid ${RED}33`,borderBottom:`1px solid ${RED}33`,fontSize:9,color:RED,fontWeight:700,letterSpacing:1,textTransform:"uppercase",textAlign:"center"}}>
+                · · · Eliminated below · · ·
+              </div>
+            )}
+            <div style={{display:"grid",gridTemplateColumns:"24px 1fr 44px 36px 36px",gap:2,padding:"10px 12px",borderTop:i===8?"none":`1px solid rgba(255,255,255,0.04)`,background:i<8?`${PURPLE}12`:"transparent",alignItems:"center"}}>
+              <span style={{fontSize:11,fontWeight:700,color:i===0?GOLD:i<8?"#aaa":"#444"}}>{i+1}</span>
+              <div style={{display:"flex",flexDirection:"column",minWidth:0,gap:3}}>
+                <span style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}>
+                  <Flag team={row.team} size={16}/>
+                  <TeamName name={row.team} style={{fontWeight:i<8?700:400,color:i<8?"#fff":"#bbb",fontSize:13}}/>
+                </span>
+                <ResultDots results={row.results}/>
+              </div>
+              <span style={{textAlign:"center",fontSize:10,fontWeight:700,color:GOLD,background:"rgba(255,215,0,0.1)",borderRadius:4,padding:"1px 0"}}>{row.group}</span>
+              <span style={{textAlign:"center",color:row.gd>0?ACCENT:row.gd<0?RED:"#777",fontWeight:600,fontSize:13}}>{row.gd>0?`+${row.gd}`:row.gd}</span>
+              <span style={{textAlign:"center",fontWeight:900,fontSize:15,color:i<8?GOLD:"#e8eaf0"}}>{row.pts}</span>
+            </div>
+          </React.Fragment>
+        ))}
+        <div style={{padding:"6px 12px",borderTop:`1px solid rgba(255,255,255,0.05)`,display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#444"}}>
+          <span style={{width:7,height:7,borderRadius:2,background:PURPLE,display:"inline-block",flexShrink:0}}/>
+          Top 8 advance · sorted by Pts → GD → GF
+        </div>
+      </div>
+
     </div>
   );
 }
