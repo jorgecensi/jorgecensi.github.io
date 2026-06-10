@@ -123,7 +123,6 @@ const TRANSLATIONS = {
     legend_lost: "Lost",
     legend_next: "Next",
     // Fixtures
-    scored_badge: "{n} scored",
     played_count: "{n}/72 played",
     all_groups_option: "All Groups ({n} played)",
     group_option: "Group {g} ({n} played)",
@@ -325,7 +324,6 @@ const TRANSLATIONS = {
     legend_lost: "Derrota",
     legend_next: "Próximo",
     // Fixtures
-    scored_badge: "{n} marcados",
     played_count: "{n}/72 jogados",
     all_groups_option: "Todos os Grupos ({n} jogados)",
     group_option: "Grupo {g} ({n} jogados)",
@@ -2630,8 +2628,6 @@ function App(){
     };
   },[groupMatches,ko]);
 
-  const totalEntered=Object.values(groupMatches).flat().filter(m=>m.homeScore!==null).length;
-
   const NAV=[
     {v:"guesses",   Icon:IconGuesses,   label:t('nav_fantasy')},
     {v:"fixtures",  Icon:IconFixtures,  label:t('nav_fixtures')},
@@ -2726,11 +2722,6 @@ function App(){
             onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}
             onMouseLeave={e=>e.currentTarget.style.background="transparent"}
             >{lang==='en'?'🇦🇺':'🇧🇷'}</button>
-
-            {/* Mobile score badge */}
-            {isMobile&&totalEntered>0&&(
-              <div style={{background:`${ACCENT}22`,border:`1px solid ${ACCENT}55`,borderRadius:20,padding:"3px 9px",fontSize:12,color:ACCENT,fontWeight:700,flexShrink:0}}>{t('scored_badge').replace('{n}',totalEntered)}</div>
-            )}
           </div>
         </div>
       </div>
