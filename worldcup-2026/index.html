@@ -264,6 +264,15 @@ const TRANSLATIONS = {
     import_desc: "This will replace your current predictions on this device with the {n} picks from your other device.",
     import_confirm: "Import ✓",
     cancel_btn: "Cancel",
+    // Backup file export / import
+    share_mode_file: "💾 Backup file",
+    file_backup_title: "Backup & Restore",
+    file_backup_subtitle: "Export your picks & scores to a file, then import it on this device — e.g. from your mobile browser into the installed app",
+    export_file_btn: "⬇️ Export to File",
+    import_file_btn: "⬆️ Import from File",
+    file_import_invalid: "That file isn't a valid World Cup 2026 backup.",
+    file_import_title: "Restore backup?",
+    file_import_desc: "This will replace your data on this device with the backup: {n} picks, {s} scores, {r} rivals.",
     // Kick-off notifications
     notif_enable: "Enable kick-off notifications",
     notif_disable: "Disable kick-off notifications",
@@ -471,6 +480,15 @@ const TRANSLATIONS = {
     import_desc: "Isso vai substituir os palpites deste aparelho pelos {n} palpites do seu outro aparelho.",
     import_confirm: "Importar ✓",
     cancel_btn: "Cancelar",
+    // Exportar / importar arquivo de backup
+    share_mode_file: "💾 Arquivo de backup",
+    file_backup_title: "Backup e Restauração",
+    file_backup_subtitle: "Exporte seus palpites e placares para um arquivo e importe-o neste aparelho — ex: do navegador para o app instalado",
+    export_file_btn: "⬇️ Exportar para Arquivo",
+    import_file_btn: "⬆️ Importar de Arquivo",
+    file_import_invalid: "Esse arquivo não é um backup válido da Copa do Mundo 2026.",
+    file_import_title: "Restaurar backup?",
+    file_import_desc: "Isso vai substituir os dados deste aparelho pelo backup: {n} palpites, {s} placares, {r} rivais.",
     // Notificações de início de jogo
     notif_enable: "Ativar notificações de início dos jogos",
     notif_disable: "Desativar notificações de início dos jogos",
@@ -1037,21 +1055,25 @@ function buildInitialKO() {
   return ko;
 }
 
+function buildScoresPayload(groupMatches, ko) {
+  const group = {};
+  Object.values(groupMatches).flat().forEach(m => {
+    if (m.homeScore !== null || m.awayScore !== null) {
+      group[m.id] = { homeScore: m.homeScore, awayScore: m.awayScore };
+    }
+  });
+  const koScores = {};
+  [...ko.r32, ...ko.r16, ...ko.qf, ...ko.sf, ...ko.final, ...ko.third].forEach(m => {
+    if (m.scoreA !== null || m.scoreB !== null || m.penA !== null || m.penB !== null) {
+      koScores[m.id] = { scoreA: m.scoreA, scoreB: m.scoreB, penA: m.penA, penB: m.penB };
+    }
+  });
+  return { group, ko: koScores };
+}
+
 function saveScores(groupMatches, ko) {
   try {
-    const group = {};
-    Object.values(groupMatches).flat().forEach(m => {
-      if (m.homeScore !== null || m.awayScore !== null) {
-        group[m.id] = { homeScore: m.homeScore, awayScore: m.awayScore };
-      }
-    });
-    const koScores = {};
-    [...ko.r32, ...ko.r16, ...ko.qf, ...ko.sf, ...ko.final, ...ko.third].forEach(m => {
-      if (m.scoreA !== null || m.scoreB !== null || m.penA !== null || m.penB !== null) {
-        koScores[m.id] = { scoreA: m.scoreA, scoreB: m.scoreB, penA: m.penA, penB: m.penB };
-      }
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ group, ko: koScores }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(buildScoresPayload(groupMatches, ko)));
   } catch (e) { /* storage unavailable (e.g. private mode) — fail silently */ }
 }
 
@@ -1258,6 +1280,55 @@ function calcRivalPoints(rival, groupMatches, ko) {
   return calcPoints(groupMatches, ko, rival.predictions || { group: {}, ko: {} });
 }
 
+// ─── Backup file export / import ──────────────────────────────────────────────
+// Lets a user move their data (picks, scores, rivals) between two storage
+// contexts on the same device — e.g. a mobile browser tab and the installed
+// PWA, which iOS/Android keep in separate localStorage sandboxes.
+const BACKUP_APP_ID = "wc2026-bolao";
+const BACKUP_VERSION = 1;
+
+function buildBackupData(playerName, predictions, rivals, groupMatches, ko) {
+  return {
+    app: BACKUP_APP_ID,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    playerName: playerName || "",
+    predictions: predictions || { group: {}, ko: {} },
+    rivals: rivals || [],
+    scores: buildScoresPayload(groupMatches, ko),
+  };
+}
+
+function downloadBackupFile(data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `worldcup-2026-bolao-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function readBackupFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || data.app !== BACKUP_APP_ID || !data.predictions) {
+          reject(new Error('invalid backup file'));
+          return;
+        }
+        resolve(data);
+      } catch (e) { reject(e); }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
 // ─── QR Code component ────────────────────────────────────────────────────────
 function QRCodeView({ url }) {
   const ref = useRef(null);
@@ -1288,13 +1359,15 @@ function QRCodeView({ url }) {
 }
 
 // ─── Share Modal ──────────────────────────────────────────────────────────────
-function ShareModal({ playerName, predictions, onClose, onNameSave }) {
+function ShareModal({ playerName, predictions, rivals, groupMatches, ko, initialMode, onClose, onNameSave, onImportFile }) {
   const { t } = useLang();
   const [name, setName] = useState(playerName || '');
-  const [mode, setMode] = useState('rival'); // 'rival' | 'transfer'
-  const url = mode === 'rival' ? buildShareUrl(name, predictions) : buildTransferUrl(name, predictions);
+  const [mode, setMode] = useState(initialMode || 'rival'); // 'rival' | 'transfer' | 'file'
+  const url = mode === 'transfer' ? buildTransferUrl(name, predictions) : buildShareUrl(name, predictions);
   const [copied, setCopied] = useState(false);
   const hasShare = !!navigator.share;
+  const fileInputRef = useRef(null);
+  const [fileError, setFileError] = useState(false);
 
   const handleCopy = () => {
     const done = () => { setCopied(true); setTimeout(() => setCopied(false), 2500); };
@@ -1311,6 +1384,26 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
   };
 
   const handleNameBlur = () => { if (name.trim()) onNameSave(name.trim()); };
+
+  const handleExportFile = () => {
+    downloadBackupFile(buildBackupData(name, predictions, rivals, groupMatches, ko));
+  };
+
+  const handleImportClick = () => fileInputRef.current?.click();
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const data = await readBackupFile(file);
+      setFileError(false);
+      onImportFile(data);
+      onClose();
+    } catch (err) {
+      setFileError(true);
+    }
+  };
 
   // Count filled predictions
   const filledCount = Object.values(predictions.group || {}).filter(p => p && p.home != null).length
@@ -1334,7 +1427,7 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
 
         {/* Mode toggle */}
         <div style={{ display:'flex', gap:6, width:'100%' }}>
-          {['rival','transfer'].map(m => (
+          {['rival','transfer','file'].map(m => (
             <button key={m} onClick={() => setMode(m)} style={{
               flex:1, padding:'8px 6px', borderRadius:9,
               border:`1px solid ${mode===m?'rgba(167,139,250,0.5)':'rgba(255,255,255,0.08)'}`,
@@ -1342,16 +1435,16 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
               color:mode===m?PURPLE:'#666', fontSize:11, fontWeight:700,
               cursor:'pointer', fontFamily:'inherit',
             }}>
-              {t(m==='rival'?'share_mode_rival':'share_mode_transfer')}
+              {t(m==='rival'?'share_mode_rival':m==='transfer'?'share_mode_transfer':'share_mode_file')}
             </button>
           ))}
         </div>
 
         <div style={{ fontSize:11, color:PURPLE, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
-          {t(mode==='rival'?'share_predictions_title':'sync_device_title')}
+          {t(mode==='rival'?'share_predictions_title':mode==='transfer'?'sync_device_title':'file_backup_title')}
         </div>
         <div style={{ fontSize:11, color:'#666', textAlign:'center', lineHeight:1.5, marginTop:-6 }}>
-          {t(mode==='rival'?'share_predictions_subtitle':'sync_device_subtitle')}
+          {t(mode==='rival'?'share_predictions_subtitle':mode==='transfer'?'sync_device_subtitle':'file_backup_subtitle')}
         </div>
 
         {/* Name */}
@@ -1370,39 +1463,68 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
           />
         </div>
 
-        {/* QR + info */}
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
-          <div style={{
-            background:'#060c18', borderRadius:14, padding:12,
-            border:`1px solid rgba(167,139,250,0.2)`,
-            boxShadow:'0 4px 24px rgba(0,0,0,0.4)',
-          }}>
-            <QRCodeView url={url} />
-          </div>
-          <div style={{ fontSize:10, color:'#555' }}>
-            {(filledCount !== 1 ? t('predictions_encoded') : t('prediction_encoded')).replace('{n}',filledCount)}
-          </div>
-        </div>
+        {mode === 'file' ? (
+          <>
+            {/* Export / Import buttons */}
+            <div style={{ display:'flex', flexDirection:'column', gap:8, width:'100%' }}>
+              <button onClick={handleExportFile} style={{
+                width:'100%', padding:'12px', borderRadius:11,
+                background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
+                color:ACCENT, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+              }}>
+                {t('export_file_btn')}
+              </button>
+              <button onClick={handleImportClick} style={{
+                width:'100%', padding:'12px', borderRadius:11,
+                background:`rgba(167,139,250,0.1)`, border:`1px solid rgba(167,139,250,0.4)`,
+                color:PURPLE, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+              }}>
+                {t('import_file_btn')}
+              </button>
+              <input ref={fileInputRef} type="file" accept="application/json,.json"
+                style={{ display:'none' }} onChange={handleFileChange} />
+              {fileError && (
+                <div style={{ fontSize:11, color:'#ff6b6b', textAlign:'center' }}>{t('file_import_invalid')}</div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* QR + info */}
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+              <div style={{
+                background:'#060c18', borderRadius:14, padding:12,
+                border:`1px solid rgba(167,139,250,0.2)`,
+                boxShadow:'0 4px 24px rgba(0,0,0,0.4)',
+              }}>
+                <QRCodeView url={url} />
+              </div>
+              <div style={{ fontSize:10, color:'#555' }}>
+                {(filledCount !== 1 ? t('predictions_encoded') : t('prediction_encoded')).replace('{n}',filledCount)}
+              </div>
+            </div>
 
-        {/* Action buttons */}
-        <div style={{ display:'flex', flexDirection:'column', gap:8, width:'100%' }}>
-          {hasShare && (
-            <button onClick={handleShare} style={{
-              width:'100%', padding:'12px', borderRadius:11,
-              background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
-              color:ACCENT, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
-            }}>
-              {t('share_via')}
-            </button>
-          )}
-          <button onClick={handleCopy} style={{
-            width:'100%', padding:'12px', borderRadius:11,
-            background:`rgba(167,139,250,0.1)`, border:`1px solid rgba(167,139,250,0.4)`,
-            color:PURPLE, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
-          }}>
-            {copied ? t('copied') : t('copy_link')}
-          </button>
-        </div>
+            {/* Action buttons */}
+            <div style={{ display:'flex', flexDirection:'column', gap:8, width:'100%' }}>
+              {hasShare && (
+                <button onClick={handleShare} style={{
+                  width:'100%', padding:'12px', borderRadius:11,
+                  background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
+                  color:ACCENT, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+                }}>
+                  {t('share_via')}
+                </button>
+              )}
+              <button onClick={handleCopy} style={{
+                width:'100%', padding:'12px', borderRadius:11,
+                background:`rgba(167,139,250,0.1)`, border:`1px solid rgba(167,139,250,0.4)`,
+                color:PURPLE, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+              }}>
+                {copied ? t('copied') : t('copy_link')}
+              </button>
+            </div>
+          </>
+        )}
 
         <button onClick={onClose} style={{
           background:'transparent', border:'none', color:'#555',
@@ -1476,6 +1598,52 @@ function ImportPredictionsModal({ data, onAccept, onDecline }) {
           </div>
           <div style={{ fontSize:13, color:'#aaa', lineHeight:1.5 }}>
             {t('import_desc').replace('{n}', count)}
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:10 }}>
+          <button onClick={onDecline} style={{
+            flex:1, padding:'11px', borderRadius:10,
+            background:'transparent', border:`1px solid rgba(255,255,255,0.12)`,
+            color:'#666', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+          }}>{t('cancel_btn')}</button>
+          <button onClick={onAccept} style={{
+            flex:1, padding:'11px', borderRadius:10,
+            background:`rgba(167,139,250,0.14)`, border:`1px solid rgba(167,139,250,0.45)`,
+            color:PURPLE, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+          }}>{t('import_confirm')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Import Backup File Prompt ────────────────────────────────────────────────
+function ImportBackupModal({ data, onAccept, onDecline }) {
+  const { t } = useLang();
+  const predCount = Object.keys(data.predictions?.group || {}).length + Object.keys(data.predictions?.ko || {}).length;
+  const scoreCount = Object.keys(data.scores?.group || {}).length + Object.keys(data.scores?.ko || {}).length;
+  const rivalCount = (data.rivals || []).length;
+  return (
+    <div style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:500,
+      display:'flex', alignItems:'center', justifyContent:'center', padding:20,
+    }}>
+      <div style={{
+        background:'#0d1a2e', border:`1px solid rgba(167,139,250,0.45)`,
+        borderRadius:20, padding:'28px 24px', maxWidth:320, width:'100%',
+        textAlign:'center', display:'flex', flexDirection:'column', gap:16,
+        animation:'flashBounce 0.4s ease',
+      }}>
+        <div style={{ fontSize:36 }}>💾</div>
+        <div>
+          <div style={{ fontSize:15, fontWeight:900, color:'#fff', marginBottom:8 }}>
+            {t('file_import_title')}
+          </div>
+          <div style={{ fontSize:13, color:'#aaa', lineHeight:1.5 }}>
+            {t('file_import_desc')
+              .replace('{n}', predCount)
+              .replace('{s}', scoreCount)
+              .replace('{r}', rivalCount)}
           </div>
         </div>
         <div style={{ display:'flex', gap:10 }}>
@@ -2184,6 +2352,17 @@ function IconBell({ size=20, active=false }) {
   );
 }
 
+function IconBackup({ size=20 }) {
+  const c = "#888";
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      <rect x="6" y="8" width="36" height="32" rx="5" stroke={c} strokeWidth="2.5" fill="none"/>
+      <path d="M24 16v14M24 30l-6-6M24 30l6-6" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      <line x1="14" y1="35" x2="34" y2="35" stroke={c} strokeWidth="2.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 function GuessBadge({ pts }) {
   if (pts === null || pts === undefined) return null;
   const [col, text] = pts === 3 ? [ACCENT, '✓ 3'] : pts === 1 ? [GOLD, '~ 1'] : [RED, '✗ 0'];
@@ -2694,8 +2873,10 @@ function App(){
   const [rivals,setRivals]=useState(loadRivals);
   const [playerName,setPlayerName]=useState(loadPlayerName);
   const [showShareModal,setShowShareModal]=useState(false);
+  const [shareModalMode,setShareModalMode]=useState('rival');
   const [incomingRival,setIncomingRival]=useState(null);
   const [incomingTransfer,setIncomingTransfer]=useState(null);
+  const [incomingBackup,setIncomingBackup]=useState(null);
   const [flashData,setFlashData]=useState(null);
 
   // Kick-off notifications
@@ -2858,6 +3039,31 @@ function App(){
     setIncomingTransfer(null);
   },[]);
 
+  // Restore a backup file exported from this app (e.g. from the mobile
+  // browser into the installed PWA, which has its own localStorage).
+  const handleAcceptBackup=useCallback((data)=>{
+    const predictions=data.predictions||{group:{},ko:{}};
+    const rivals=data.rivals||[];
+    const scores=data.scores||{group:{},ko:{}};
+
+    try{ localStorage.setItem(PRED_KEY, JSON.stringify(predictions)); }catch(e){}
+    try{ localStorage.setItem(RIVALS_KEY, JSON.stringify(rivals)); }catch(e){}
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(scores)); }catch(e){}
+    if(data.playerName){
+      try{ localStorage.setItem(PLAYER_KEY, data.playerName); }catch(e){}
+    }
+
+    setPredictions(predictions);
+    setRivals(rivals);
+    if(data.playerName) setPlayerName(data.playerName);
+
+    const gm=buildInitialGroupMatches();
+    setGroupMatches(gm);
+    setKo(propagateKO(buildInitialKO(),gm));
+
+    setIncomingBackup(null);
+  },[]);
+
   const handleRemoveRival=useCallback((name)=>{
     setRivals(prev=>prev.filter(r=>r.n!==name));
   },[]);
@@ -2926,8 +3132,11 @@ function App(){
       {showShareModal && (
         <ShareModal
           playerName={playerName} predictions={predictions}
+          rivals={rivals} groupMatches={groupMatches} ko={ko}
+          initialMode={shareModalMode}
           onClose={()=>setShowShareModal(false)}
           onNameSave={n=>{setPlayerName(n);}}
+          onImportFile={data=>setIncomingBackup(data)}
         />
       )}
       {incomingRival && (
@@ -2942,6 +3151,13 @@ function App(){
           data={incomingTransfer}
           onAccept={()=>handleAcceptTransfer(incomingTransfer)}
           onDecline={()=>setIncomingTransfer(null)}
+        />
+      )}
+      {incomingBackup && (
+        <ImportBackupModal
+          data={incomingBackup}
+          onAccept={()=>handleAcceptBackup(incomingBackup)}
+          onDecline={()=>setIncomingBackup(null)}
         />
       )}
 
@@ -2993,6 +3209,17 @@ function App(){
               </div>
             )}
 
+            {/* Backup / restore (export-import file) */}
+            <button onClick={()=>{setShareModalMode('file');setShowShareModal(true);}} title={t('file_backup_title')} style={{
+              background:"transparent",border:"none",cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              padding:"2px 4px",flexShrink:0,
+              borderRadius:6,transition:"background 0.15s",
+            }}
+            onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}
+            onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+            ><IconBackup size={isMobile?17:19}/></button>
+
             {/* Kick-off notifications toggle */}
             {typeof Notification!=='undefined'&&(
               <button onClick={handleToggleNotif} title={notifEnabled?t('notif_disable'):t('notif_enable')} style={{
@@ -3026,7 +3253,7 @@ function App(){
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
         {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
-        {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>setShowShareModal(true)} onRemoveRival={handleRemoveRival}/>}
+        {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival}/>}
       </div>
 
       {/* MOBILE BOTTOM NAV */}
