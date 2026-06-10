@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2026061010';
+const CACHE_VERSION = '2026061011';
 const CACHE_NAME = `worldcup-2026-${CACHE_VERSION}`;
 const OFFLINE_URL = '/worldcup-2026/';
 const PRECACHE_URLS = ['/worldcup-2026/','/worldcup-2026/manifest.json','/worldcup-2026/icons/icon.svg'];
@@ -14,6 +14,21 @@ self.addEventListener('activate', (event) => {
 });
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/worldcup-2026/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          if ('navigate' in client) client.navigate(url);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
+  );
 });
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
