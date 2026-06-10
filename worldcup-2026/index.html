@@ -2266,7 +2266,10 @@ function App(){
   const { t, lang, toggle } = useLang();
   const [splash,setSplash]=useState(true);
   const [groupMatches,setGroupMatches]=useState(buildInitialGroupMatches);
-  const [ko,setKo]=useState(buildInitialKO);
+  // Pre-propagate so KO matches already have teamA/teamB resolved on the very
+  // first render — otherwise the flash-detection baseline below would miss
+  // already-scored KO matches and treat them as "new" once propagateKO runs.
+  const [ko,setKo]=useState(()=>propagateKO(buildInitialKO(),buildInitialGroupMatches()));
   const [view,setView]=useState("guesses");
   const [fixtureFilter,setFixtureFilter]=useState(null); // group letter to pre-filter fixtures
   const [predictions,setPredictions]=useState(loadPredictions);
@@ -2330,8 +2333,15 @@ function App(){
   useEffect(()=>{saveScores(groupMatches,ko);},[groupMatches,ko]);
   useEffect(()=>{savePredictions(predictions);},[predictions]);
 
-  // Flash detection: compare snapshot of all scores before/after changes
+  // Flash detection: compare snapshot of all scores before/after changes.
+  // Newly-completed/changed scores are debounced so a flash only fires once
+  // the score has settled — otherwise an in-progress edit (e.g. briefly
+  // passing through 0-0 while dialing in the real result) could coincidentally
+  // match someone's prediction and pop the celebration prematurely.
+  const FLASH_DEBOUNCE_MS=2500;
   const prevScoresRef=useRef(null);
+  const pendingFlashRef=useRef({});
+
   useEffect(()=>{
     // Build current score snapshot
     const snap={};
@@ -2343,36 +2353,58 @@ function App(){
     });
 
     const prev=prevScoresRef.current;
-    if(prev===null){prevScoresRef.current=snap;return;}
+    prevScoresRef.current=snap;
 
-    // Find matches that just became fully scored
-    Object.entries(snap).forEach(([id,{h,a,hn,an}])=>{
-      if(prev[id]) return; // already had a score
-      const winners=[];
-      const preds=predictionsRef.current;
-      const myG=preds.group?.[id]; const myK=preds.ko?.[id];
-      const myH=myG?myG.home:myK?myK.a:undefined;
-      const myA=myG?myG.away:myK?myK.b:undefined;
-      if(myH!=null&&myA!=null){
-        const pts=scorePrediction(myH,myA,h,a);
-        if(pts>0) winners.push({name:playerNameRef.current||'You',pts,isMe:true});
-      }
-      rivalsRef.current.forEach(r=>{
-        const rG=r.predictions?.group?.[id]; const rK=r.predictions?.ko?.[id];
-        const rH=rG?rG.home:rK?rK.a:undefined;
-        const rA=rG?rG.away:rK?rK.b:undefined;
-        if(rH!=null&&rA!=null){
-          const pts=scorePrediction(rH,rA,h,a);
-          if(pts>0) winners.push({name:r.n,pts,isMe:false});
-        }
-      });
-      if(winners.length>0){
-        setFlashData({matchId:id,scoreH:h,scoreA:a,home:hn,away:an,winners});
+    // Cancel pending flashes for matches whose score was cleared/changed away again
+    Object.keys(pendingFlashRef.current).forEach(id=>{
+      const p=pendingFlashRef.current[id];
+      if(!snap[id]||snap[id].h!==p.h||snap[id].a!==p.a){
+        clearTimeout(p.timeoutId);
+        delete pendingFlashRef.current[id];
       }
     });
 
-    prevScoresRef.current=snap;
+    if(prev===null) return; // first run: just establish the baseline
+
+    // Find matches whose score is newly complete or has changed since last run
+    Object.entries(snap).forEach(([id,{h,a,hn,an}])=>{
+      const prevEntry=prev[id];
+      if(prevEntry&&prevEntry.h===h&&prevEntry.a===a) return; // unchanged
+      if(pendingFlashRef.current[id]) return; // already debouncing this exact score
+
+      const timeoutId=setTimeout(()=>{
+        delete pendingFlashRef.current[id];
+        const winners=[];
+        const preds=predictionsRef.current;
+        const myG=preds.group?.[id]; const myK=preds.ko?.[id];
+        const myH=myG?myG.home:myK?myK.a:undefined;
+        const myA=myG?myG.away:myK?myK.b:undefined;
+        if(myH!=null&&myA!=null){
+          const pts=scorePrediction(myH,myA,h,a);
+          if(pts>0) winners.push({name:playerNameRef.current||'You',pts,isMe:true});
+        }
+        rivalsRef.current.forEach(r=>{
+          const rG=r.predictions?.group?.[id]; const rK=r.predictions?.ko?.[id];
+          const rH=rG?rG.home:rK?rK.a:undefined;
+          const rA=rG?rG.away:rK?rK.b:undefined;
+          if(rH!=null&&rA!=null){
+            const pts=scorePrediction(rH,rA,h,a);
+            if(pts>0) winners.push({name:r.n,pts,isMe:false});
+          }
+        });
+        if(winners.length>0){
+          setFlashData({matchId:id,scoreH:h,scoreA:a,home:hn,away:an,winners});
+        }
+      },FLASH_DEBOUNCE_MS);
+
+      pendingFlashRef.current[id]={h,a,timeoutId};
+    });
   },[groupMatches,ko]);
+
+  // Cancel any pending flash timers on unmount
+  useEffect(()=>()=>{
+    Object.values(pendingFlashRef.current).forEach(p=>clearTimeout(p.timeoutId));
+  },[]);
 
   const updateGroupScore=useCallback((group,matchId,side,val)=>{
     setGroupMatches(prev=>({...prev,[group]:prev[group].map(m=>m.id===matchId?{...m,[side]:val}:m)}));
