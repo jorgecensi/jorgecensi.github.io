@@ -535,30 +535,18 @@ function ccToFlagEmoji(cc){
 }
 
 // Not every platform renders flag emoji as flags — desktop Windows (Segoe UI
-// Emoji) shows the two-letter country code instead. Detect support once by
-// drawing a flag to a canvas and checking for colour: a real flag glyph has
-// non-grayscale pixels, whereas letter fallbacks are monochrome text. When
-// unsupported we fall back to flag images (those clients are effectively
-// always online, so the offline-PWA concern doesn't apply there).
+// Emoji) only has full-colour art for a handful of flags (e.g. the US) and
+// falls back to the plain two-letter country code for the rest. A canvas
+// probe for a single flag (🇺🇸) therefore reports "supported" on Windows even
+// though most other flags still render as letters. Since support is this
+// inconsistent, treat Windows as unsupported across the board and use flag
+// images there instead (Windows desktops are effectively always online, so
+// the offline-PWA concern doesn't apply).
 let _flagEmojiSupport;
 function supportsFlagEmoji(){
   if (_flagEmojiSupport !== undefined) return _flagEmojiSupport;
-  _flagEmojiSupport = false;
-  try {
-    const c = document.createElement("canvas");
-    c.width = c.height = 16;
-    const ctx = c.getContext("2d");
-    if (ctx) {
-      ctx.textBaseline = "top";
-      ctx.font = "16px " + EMOJI_FONT;
-      ctx.fillStyle = "#000";
-      ctx.fillText("\u{1F1FA}\u{1F1F8}", 0, 0); // 🇺🇸
-      const d = ctx.getImageData(0, 0, 16, 16).data;
-      for (let i = 0; i < d.length; i += 4) {
-        if (d[i+3] > 0 && (d[i] !== d[i+1] || d[i+1] !== d[i+2])) { _flagEmojiSupport = true; break; }
-      }
-    }
-  } catch (e) { _flagEmojiSupport = false; }
+  const ua = (typeof navigator !== "undefined" && (navigator.userAgent || navigator.platform)) || "";
+  _flagEmojiSupport = !/Windows/i.test(ua);
   return _flagEmojiSupport;
 }
 
@@ -584,10 +572,12 @@ function Flag({ team, size=15, faded=false, style={} }) {
     );
   }
   // Fallback for platforms that don't render flag emoji (e.g. desktop Windows).
+  // Bundled locally (rather than a CDN) so it works offline and isn't
+  // affected by ad/privacy blockers.
   const h = Math.round(size * 0.75);
   return (
     <img
-      src={`https://flagcdn.com/w40/${cc}.png`}
+      src={`/worldcup-2026/icons/flags/${cc}.svg`}
       alt={team}
       width={size}
       height={h}
@@ -2716,12 +2706,13 @@ function App(){
             {/* Language toggle */}
             <button onClick={toggle} title={lang==='en'?"Switch to Portuguese":"Mudar para Inglês"} style={{
               background:"transparent",border:"none",cursor:"pointer",
-              fontSize:isMobile?18:20,lineHeight:1,padding:"2px 4px",flexShrink:0,
-              borderRadius:6,transition:"background 0.15s",fontFamily:EMOJI_FONT,
+              display:"flex",alignItems:"center",justifyContent:"center",
+              padding:"2px 4px",flexShrink:0,
+              borderRadius:6,transition:"background 0.15s",
             }}
             onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}
             onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-            >{lang==='en'?'🇦🇺':'🇧🇷'}</button>
+            ><Flag team={lang==='en'?'Australia':'Brazil'} size={isMobile?15:17}/></button>
           </div>
         </div>
       </div>
