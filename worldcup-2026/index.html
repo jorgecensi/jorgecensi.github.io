@@ -149,8 +149,8 @@ const TRANSLATIONS = {
     share_phase: "📋 Copy Phase",
     share_locked_hint: "Fill in all your guesses to unlock copying",
     pts_earned: "{pts} pts earned this phase",
-    locked_enter_results: "🔒 Enter results for the previous round first",
     enter_prev_round: "Enter previous round results to unlock",
+    phase_locked_reason: "🔒 Unlocks once the previous stage finishes: {phase}",
     actual_score: "Actual: {a}–{b}",
     // Stats
     stat_host_cities: "Host Cities",
@@ -365,8 +365,8 @@ const TRANSLATIONS = {
     share_phase: "📋 Copiar Fase",
     share_locked_hint: "Preencha todos os seus palpites para liberar a cópia",
     pts_earned: "{pts} pts nesta fase",
-    locked_enter_results: "🔒 Insira os resultados da fase anterior primeiro",
     enter_prev_round: "Insira os resultados da rodada anterior para desbloquear",
+    phase_locked_reason: "🔒 Libera quando a fase anterior terminar: {phase}",
     actual_score: "Real: {a}–{b}",
     // Stats
     stat_host_cities: "Cidades-Sede",
@@ -2580,13 +2580,13 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
           const unlocked = isUnlocked(p.key);
           const active = phase === p.key;
           return (
-            <button key={p.key} onClick={()=>unlocked&&setPhase(p.key)} style={{
+            <button key={p.key} onClick={()=>setPhase(p.key)} style={{
               padding:"6px 12px", borderRadius:20, fontSize:11, fontWeight:700,
               letterSpacing:0.5, whiteSpace:"nowrap", flexShrink:0,
               border:`1px solid ${active?PURPLE:unlocked?'rgba(167,139,250,0.3)':BORDER}`,
               background:active?`rgba(167,139,250,0.2)`:"transparent",
               color:active?PURPLE:unlocked?"#888":"#444",
-              cursor:unlocked?"pointer":"default",
+              cursor:"pointer",
             }}>
               {unlocked?'':'🔒 '}{p.label}
             </button>
@@ -2616,7 +2616,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
       {/* Match list */}
       {!isUnlocked(phase) ? (
         <div style={{textAlign:"center", padding:"32px 0", color:"#555", fontSize:13}}>
-          {t('locked_enter_results')}
+          {t('phase_locked_reason').replace('{phase}', PHASES[PHASES.findIndex(ph=>ph.key===phase)-1]?.label || '')}
         </div>
       ) : (
         <div style={{display:"flex", flexDirection:"column", gap:8}}>
