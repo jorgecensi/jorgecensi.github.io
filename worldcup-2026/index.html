@@ -264,6 +264,12 @@ const TRANSLATIONS = {
     import_desc: "This will replace your current predictions on this device with the {n} picks from your other device.",
     import_confirm: "Import ✓",
     cancel_btn: "Cancel",
+    // Kick-off notifications
+    notif_enable: "Enable kick-off notifications",
+    notif_disable: "Disable kick-off notifications",
+    notif_denied: "Notifications are blocked. Enable them in your browser/app settings to get kick-off alerts.",
+    notif_kickoff_title: "⚽ Kick-off!",
+    notif_kickoff_body: "{home} vs {away} just kicked off in {city}!",
   },
   'pt-BR': {
     // Header
@@ -465,6 +471,12 @@ const TRANSLATIONS = {
     import_desc: "Isso vai substituir os palpites deste aparelho pelos {n} palpites do seu outro aparelho.",
     import_confirm: "Importar ✓",
     cancel_btn: "Cancelar",
+    // Notificações de início de jogo
+    notif_enable: "Ativar notificações de início dos jogos",
+    notif_disable: "Desativar notificações de início dos jogos",
+    notif_denied: "As notificações estão bloqueadas. Ative-as nas configurações do navegador/app para receber alertas de início de jogo.",
+    notif_kickoff_title: "⚽ Bola rolando!",
+    notif_kickoff_body: "{home} x {away} começou agora em {city}!",
   },
 };
 
@@ -520,6 +532,36 @@ const FLAG = {
   "Czechoslovakia":"cz","Yugoslavia":"rs","USA":"us","Korea/Japan":"kr",
   "S. Africa":"za","S. Korea":"kr",
 };
+
+// Two representative colours per team (kit/flag colours), used to paint the
+// gradient background of generated kick-off notification banners.
+const TEAM_COLORS = {
+  "Mexico":["#006847","#ce1126"], "South Africa":["#007a4d","#ffb612"],
+  "South Korea":["#c60c30","#003478"], "Czechia":["#11457e","#d7141a"],
+  "Canada":["#d52b1e","#7a0c19"], "Bosnia":["#002395","#fecb00"],
+  "Qatar":["#8a1538","#5c0e26"], "Switzerland":["#da291c","#a3201a"],
+  "Brazil":["#009c3b","#ffdf00"], "Morocco":["#c1272d","#006233"],
+  "Haiti":["#00209f","#d21034"], "Scotland":["#0065bf","#1c3f94"],
+  "United States":["#3c3b6e","#b22234"], "Paraguay":["#0038a8","#da121a"],
+  "Australia":["#00843d","#ffcd00"], "Turkey":["#e30a17","#a3070f"],
+  "Germany":["#000000","#dd0000"], "Curacao":["#0033a0","#f1d22e"],
+  "Ivory Coast":["#f77f00","#009e60"], "Ecuador":["#ffd100","#034ea2"],
+  "Netherlands":["#ff6c00","#21468b"], "Japan":["#bc002d","#7d0019"],
+  "Sweden":["#006aa7","#fecc02"], "Tunisia":["#e70013","#a3000d"],
+  "Belgium":["#fdda24","#ed2939"], "Egypt":["#c09a3e","#ce1126"],
+  "Iran":["#239f40","#da0000"], "New Zealand":["#000000","#c8102e"],
+  "Spain":["#aa151b","#f1bf00"], "Cape Verde":["#003893","#f7d116"],
+  "Saudi Arabia":["#006c35","#0e4e2c"], "Uruguay":["#75aadb","#0038a8"],
+  "France":["#0055a4","#ef4135"], "Senegal":["#00853f","#e31b23"],
+  "Iraq":["#ce1126","#007a3d"], "Norway":["#ba0c2f","#00205b"],
+  "Argentina":["#75aadb","#f6b40e"], "Algeria":["#006233","#d21034"],
+  "Austria":["#ed2939","#a01a25"], "Jordan":["#007a3d","#ce1126"],
+  "Portugal":["#006600","#ff0000"], "DR Congo":["#007fff","#ce1021"],
+  "Uzbekistan":["#0099b5","#1eb53a"], "Colombia":["#fcd116","#ce1126"],
+  "England":["#012169","#c8102e"], "Croatia":["#171796","#ff0000"],
+  "Ghana":["#006b3f","#fcd116"], "Panama":["#da121a","#0033a0"],
+};
+const DEFAULT_TEAM_COLORS = ["#1a2332","#00d084"];
 
 // Country flags are rendered as native emoji rather than from an external image
 // CDN, so they display correctly on phones AND keep working offline (this app is
@@ -2129,6 +2171,19 @@ function IconGuesses({ size=22, active=false }) {
   );
 }
 
+function IconBell({ size=20, active=false }) {
+  const c = active ? ACCENT : "#888";
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      <path d="M24 6c-7.5 0-13 5.8-13 14v5.5L7 33h34l-4-7.5V20c0-8.2-5.5-14-13-14z"
+        stroke={c} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"
+        fill={active?"rgba(0,208,132,0.12)":"none"}/>
+      <path d="M19 38a5 5 0 0 0 10 0" stroke={c} strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+      {active && <circle cx="36" cy="9" r="6" fill={GOLD}/>}
+    </svg>
+  );
+}
+
 function GuessBadge({ pts }) {
   if (pts === null || pts === undefined) return null;
   const [col, text] = pts === 3 ? [ACCENT, '✓ 3'] : pts === 1 ? [GOLD, '~ 1'] : [RED, '✗ 0'];
@@ -2415,6 +2470,211 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
   );
 }
 
+// ─── Match Kick-off Notifications ──────────────────────────────────────────────
+const NOTIF_KEY = "wc2026:notify:v1";
+
+function loadNotifState() {
+  try {
+    const raw = localStorage.getItem(NOTIF_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return { enabled: !!parsed?.enabled, notified: parsed?.notified || {} };
+  } catch (e) {
+    return { enabled: false, notified: {} };
+  }
+}
+function saveNotifState(state) {
+  try { localStorage.setItem(NOTIF_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+// Flatten group + knockout fixtures into a single list of matches with both
+// teams known and a UTC kick-off Date, ready to be checked against "now".
+function getNotifiableMatches(groupMatches, ko) {
+  const list = [];
+  Object.values(groupMatches).flat().forEach(m => {
+    list.push({ id:`g-${m.id}`, home:m.home, away:m.away, city:m.city, kickoff:matchToUTC(m.date,m.time) });
+  });
+  [...ko.r32,...ko.r16,...ko.qf,...ko.sf,...ko.final,...ko.third].forEach(m => {
+    if (!m.teamA || !m.teamB || m.date==="TBD") return;
+    list.push({ id:`k-${m.id}`, home:m.teamA, away:m.teamB, city:m.city, kickoff:matchToUTC(m.date,m.time) });
+  });
+  return list;
+}
+
+function roundRectPath(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+// Shrink the font size until `text` fits within `maxWidth`
+function fitFontSize(ctx,text,maxWidth,startSize){
+  let size=startSize;
+  ctx.font=`900 ${size}px Arial,sans-serif`;
+  while(ctx.measureText(text).width>maxWidth && size>14){
+    size-=2;
+    ctx.font=`900 ${size}px Arial,sans-serif`;
+  }
+  return size;
+}
+
+// Bundled SVG flags load fast and work offline; cache them so repeat
+// notifications (e.g. multiple kick-offs in the same minute) don't refetch.
+const _flagImgCache={};
+function loadFlagImg(team){
+  const cc=FLAG[team];
+  if(!cc) return Promise.resolve(null);
+  if(_flagImgCache[cc]) return _flagImgCache[cc];
+  const p=new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=()=>resolve(null);
+    img.src=`/worldcup-2026/icons/flags/${cc}.svg`;
+  });
+  _flagImgCache[cc]=p;
+  return p;
+}
+
+// Build a "VS" banner (team flags on each team's colours) used as the
+// notification's big-picture `image`.
+async function buildMatchBanner(home,away){
+  const W=800,H=400;
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+
+  const [hc1,hc2]=TEAM_COLORS[home]||DEFAULT_TEAM_COLORS;
+  const [ac1,ac2]=TEAM_COLORS[away]||DEFAULT_TEAM_COLORS;
+
+  // Diagonal split: home team's colours on the left, away team's on the right
+  const gLeft=ctx.createLinearGradient(0,0,W*0.6,H);
+  gLeft.addColorStop(0,hc1); gLeft.addColorStop(1,hc2);
+  ctx.fillStyle=gLeft;
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(W*0.56,0); ctx.lineTo(W*0.44,H); ctx.lineTo(0,H);
+  ctx.closePath(); ctx.fill();
+
+  const gRight=ctx.createLinearGradient(W*0.4,0,W,H);
+  gRight.addColorStop(0,ac2); gRight.addColorStop(1,ac1);
+  ctx.fillStyle=gRight;
+  ctx.beginPath();
+  ctx.moveTo(W*0.56,0); ctx.lineTo(W,0); ctx.lineTo(W,H); ctx.lineTo(W*0.44,H);
+  ctx.closePath(); ctx.fill();
+
+  // Dark gradient at the bottom so the team names stay legible
+  const gOverlay=ctx.createLinearGradient(0,H*0.5,0,H);
+  gOverlay.addColorStop(0,"rgba(8,13,22,0)");
+  gOverlay.addColorStop(1,"rgba(8,13,22,0.88)");
+  ctx.fillStyle=gOverlay;
+  ctx.fillRect(0,0,W,H);
+
+  // Flags
+  const [homeImg,awayImg]=await Promise.all([loadFlagImg(home),loadFlagImg(away)]);
+  const flagW=210,flagH=148,flagY=H*0.36;
+  function drawFlag(img,cx){
+    if(!img) return;
+    ctx.save();
+    ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=20; ctx.shadowOffsetY=8;
+    roundRectPath(ctx,cx-flagW/2,flagY-flagH/2,flagW,flagH,12);
+    ctx.fillStyle="#000"; ctx.fill();
+    ctx.restore();
+    ctx.save();
+    roundRectPath(ctx,cx-flagW/2,flagY-flagH/2,flagW,flagH,12);
+    ctx.clip();
+    ctx.drawImage(img,cx-flagW/2,flagY-flagH/2,flagW,flagH);
+    ctx.restore();
+    ctx.save();
+    roundRectPath(ctx,cx-flagW/2,flagY-flagH/2,flagW,flagH,12);
+    ctx.lineWidth=4; ctx.strokeStyle="rgba(255,255,255,0.85)"; ctx.stroke();
+    ctx.restore();
+  }
+  drawFlag(homeImg,W*0.255);
+  drawFlag(awayImg,W*0.745);
+
+  // "VS" badge
+  ctx.save();
+  ctx.fillStyle="rgba(8,13,22,0.9)";
+  ctx.beginPath(); ctx.arc(W/2,flagY,40,0,Math.PI*2); ctx.fill();
+  ctx.lineWidth=3; ctx.strokeStyle=GOLD; ctx.stroke();
+  ctx.fillStyle=GOLD; ctx.font="900 34px Arial,sans-serif";
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText("VS",W/2,flagY+2);
+  ctx.restore();
+
+  // Team names
+  ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.textBaseline="alphabetic";
+  ctx.shadowColor="rgba(0,0,0,0.6)"; ctx.shadowBlur=6; ctx.shadowOffsetY=2;
+  const maxNameWidth=W*0.42;
+  [[home,W*0.255],[away,W*0.745]].forEach(([name,cx])=>{
+    const size=fitFontSize(ctx,name.toUpperCase(),maxNameWidth,32);
+    ctx.font=`900 ${size}px Arial,sans-serif`;
+    ctx.fillText(name.toUpperCase(),cx,H*0.86);
+  });
+
+  // Header label
+  ctx.shadowBlur=0; ctx.fillStyle=ACCENT;
+  ctx.font="900 24px Arial,sans-serif";
+  ctx.fillText("⚽ KICK-OFF!",W/2,40);
+
+  return canvas.toDataURL('image/png');
+}
+
+// Show the rich kick-off notification via the service worker
+async function showKickoffNotification(match,t){
+  if(typeof Notification==='undefined'||Notification.permission!=='granted') return;
+  if(!('serviceWorker' in navigator)) return;
+  let image;
+  try { image=await buildMatchBanner(match.home,match.away); } catch(e) {}
+  const reg=await navigator.serviceWorker.ready;
+  reg.showNotification(t('notif_kickoff_title'), {
+    body:t('notif_kickoff_body').replace('{home}',match.home).replace('{away}',match.away).replace('{city}',match.city),
+    icon:'/worldcup-2026/icons/icon-192.png',
+    badge:'/worldcup-2026/icons/icon-192.png',
+    image,
+    tag:`kickoff-${match.id}`,
+    vibrate:[200,100,200],
+    data:{ url:'/worldcup-2026/#fixtures' },
+  });
+}
+
+// Polls the upcoming-matches list while notifications are enabled and fires a
+// kick-off notification the moment a match's kick-off time is reached.
+const NOTIF_CHECK_MS=30000;
+const NOTIF_WINDOW_MS=2*60*1000; // grace window so a missed tick doesn't skip a kick-off
+function useGameNotifications(matches,enabled,t){
+  const matchesRef=useRef(matches);
+  matchesRef.current=matches;
+  const tRef=useRef(t);
+  tRef.current=t;
+
+  useEffect(()=>{
+    if(!enabled) return;
+    if(typeof Notification==='undefined'||Notification.permission!=='granted') return;
+
+    const check=()=>{
+      const now=Date.now();
+      const state=loadNotifState();
+      let changed=false;
+      matchesRef.current.forEach(m=>{
+        const ts=m.kickoff.getTime();
+        if(now>=ts && now-ts<NOTIF_WINDOW_MS && !state.notified[m.id]){
+          state.notified[m.id]=true;
+          changed=true;
+          showKickoffNotification(m,tRef.current);
+        }
+      });
+      if(changed) saveNotifState(state);
+    };
+
+    check();
+    const interval=setInterval(check,NOTIF_CHECK_MS);
+    return ()=>clearInterval(interval);
+  },[enabled,matches]);
+}
+
 function App(){
   const { t, lang, toggle } = useLang();
   const [splash,setSplash]=useState(true);
@@ -2437,6 +2697,9 @@ function App(){
   const [incomingRival,setIncomingRival]=useState(null);
   const [incomingTransfer,setIncomingTransfer]=useState(null);
   const [flashData,setFlashData]=useState(null);
+
+  // Kick-off notifications
+  const [notifEnabled,setNotifEnabled]=useState(()=>loadNotifState().enabled);
 
   // Refs to read current state inside effects without re-running them
   const predictionsRef=useRef(predictions);
@@ -2599,6 +2862,33 @@ function App(){
     setRivals(prev=>prev.filter(r=>r.n!==name));
   },[]);
 
+  // Kick-off notifications
+  const notifiableMatches=useMemo(()=>getNotifiableMatches(groupMatches,ko),[groupMatches,ko]);
+  useGameNotifications(notifiableMatches,notifEnabled,t);
+
+  const handleToggleNotif=useCallback(async()=>{
+    if(typeof Notification==='undefined') return;
+    if(notifEnabled){
+      const state=loadNotifState();
+      state.enabled=false;
+      saveNotifState(state);
+      setNotifEnabled(false);
+      return;
+    }
+    if(Notification.permission==='denied'){
+      alert(t('notif_denied'));
+      return;
+    }
+    let permission=Notification.permission;
+    if(permission==='default') permission=await Notification.requestPermission();
+    if(permission==='granted'){
+      const state=loadNotifState();
+      state.enabled=true;
+      saveNotifState(state);
+      setNotifEnabled(true);
+    }
+  },[notifEnabled,t]);
+
   const champion = React.useMemo(()=>koWinner(ko.final[0]),[ko]);
 
   const globalStats=useMemo(()=>{
@@ -2701,6 +2991,19 @@ function App(){
                   );
                 })}
               </div>
+            )}
+
+            {/* Kick-off notifications toggle */}
+            {typeof Notification!=='undefined'&&(
+              <button onClick={handleToggleNotif} title={notifEnabled?t('notif_disable'):t('notif_enable')} style={{
+                background:"transparent",border:"none",cursor:"pointer",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                padding:"2px 4px",flexShrink:0,
+                borderRadius:6,transition:"background 0.15s",
+              }}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+              ><IconBell size={isMobile?17:19} active={notifEnabled}/></button>
             )}
 
             {/* Language toggle */}
