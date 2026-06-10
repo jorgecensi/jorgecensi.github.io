@@ -1064,20 +1064,20 @@ function isPhaseUnlocked(key, ko) {
   return koPhaseBucket(key, ko).some(m => !!m.teamA || !!m.teamB);
 }
 
-// True once every guess for the group stage and every currently-unlocked KO phase is filled in
-function allGuessesEntered(groupMatches, ko, predictions) {
-  const groupFilled = Object.values(groupMatches).flat().every(m => {
-    const p = predictions.group?.[m.id];
-    return p && p.home != null && p.away != null;
-  });
-  if (!groupFilled) return false;
-
-  return ['r32','r16','qf','sf','final'].every(key => {
-    if (!isPhaseUnlocked(key, ko)) return true;
-    return koPhaseBucket(key, ko).every(m => {
-      const p = predictions.ko?.[m.id];
-      return p && p.a != null && p.b != null;
+// True once every guess for a single phase (group, or an unlocked KO round) is filled in.
+// Each phase is judged independently, so a completed phase stays shareable even
+// while a later phase is still being filled in.
+function isPhaseGuessesComplete(key, groupMatches, ko, predictions) {
+  if (key === 'group') {
+    return Object.values(groupMatches).flat().every(m => {
+      const p = predictions.group?.[m.id];
+      return p && p.home != null && p.away != null;
     });
+  }
+  if (!isPhaseUnlocked(key, ko)) return false;
+  return koPhaseBucket(key, ko).every(m => {
+    const p = predictions.ko?.[m.id];
+    return p && p.a != null && p.b != null;
   });
 }
 
@@ -2204,7 +2204,10 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
 
   const [phase, setPhase] = useState('group');
   const pts = useMemo(()=>calcPoints(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
-  const canShare = useMemo(()=>allGuessesEntered(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
+  // Group stage being complete unlocks "Copy All" / proximity sharing for good —
+  // a later phase still in progress doesn't re-lock it.
+  const canShare = useMemo(()=>isPhaseGuessesComplete('group',groupMatches,ko,predictions),[groupMatches,ko,predictions]);
+  const canSharePhase = useMemo(()=>isPhaseGuessesComplete(phase,groupMatches,ko,predictions),[phase,groupMatches,ko,predictions]);
   const [copied, setCopied] = useState(null); // null | 'all' | 'phase'
 
   // Compare picks with a selected rival, match-by-match
@@ -2295,7 +2298,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
             <div style={{fontSize:10, color:PURPLE, marginTop:2}}>{t('pts_earned').replace('{pts}',pts.byPhase[phase])}</div>
           )}
         </div>
-        {canShare && (
+        {canSharePhase && (
           <button
             onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,phase,t),'phase')}
             style={{background:"transparent", border:`1px solid rgba(167,139,250,0.3)`,
