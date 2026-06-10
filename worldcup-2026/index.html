@@ -148,6 +148,7 @@ const TRANSLATIONS = {
     share_all: "📋 Share All",
     copied: "✓ Copied!",
     share_phase: "📋 Share Phase",
+    share_locked_hint: "Fill in all your guesses to unlock sharing",
     pts_earned: "{pts} pts earned this phase",
     locked_enter_results: "🔒 Enter results for the previous round first",
     enter_prev_round: "Enter previous round results to unlock",
@@ -227,7 +228,7 @@ const TRANSLATIONS = {
     remove_rival: "Remove rival",
     compete_friends: "Compete with friends",
     compete_friends_desc: "Share your QR — anyone who scans it joins your leaderboard. The app flashes when someone nails a score.",
-    share_qr_nfc: "📲 Share via QR / NFC",
+    share_qr_nfc: "📲 Share via QR / Link",
     share_predictions_title: "Share Predictions",
     share_predictions_subtitle: "Show this QR to a friend — they scan & add you as a rival",
     your_name_label: "Your name in the bolão",
@@ -236,10 +237,6 @@ const TRANSLATIONS = {
     predictions_encoded: "{n} predictions encoded",
     share_via: "📤 Share via…",
     copy_link: "📋 Copy Link",
-    nfc_hold_phones: "📡 Hold phones back-to-back…",
-    nfc_written: "✓ Written to NFC tag!",
-    nfc_failed: "⚠ NFC failed — use QR instead",
-    nfc_write_tag: "📡 Write to NFC Tag",
     close_btn: "✕ Close",
     qr_unavailable: "QR unavailable",
     qr_needs_network: "QR needs network<br/>Use Copy Link instead",
@@ -337,6 +334,7 @@ const TRANSLATIONS = {
     share_all: "📋 Compartilhar Tudo",
     copied: "✓ Copiado!",
     share_phase: "📋 Compartilhar Fase",
+    share_locked_hint: "Preencha todos os seus palpites para liberar o compartilhamento",
     pts_earned: "{pts} pts nesta fase",
     locked_enter_results: "🔒 Insira os resultados da fase anterior primeiro",
     enter_prev_round: "Insira os resultados da rodada anterior para desbloquear",
@@ -416,7 +414,7 @@ const TRANSLATIONS = {
     remove_rival: "Remover rival",
     compete_friends: "Compita com amigos",
     compete_friends_desc: "Compartilhe seu QR — quem escanear entra no seu ranking. O app pisca quando alguém acerta um placar.",
-    share_qr_nfc: "📲 Compartilhar via QR / NFC",
+    share_qr_nfc: "📲 Compartilhar via QR / Link",
     share_predictions_title: "Compartilhar Palpites",
     share_predictions_subtitle: "Mostre este QR para um amigo — ele escaneia e te adiciona como rival",
     your_name_label: "Seu nome no bolão",
@@ -425,10 +423,6 @@ const TRANSLATIONS = {
     predictions_encoded: "{n} palpites codificados",
     share_via: "📤 Compartilhar via…",
     copy_link: "📋 Copiar Link",
-    nfc_hold_phones: "📡 Aproxime os celulares…",
-    nfc_written: "✓ Gravado na tag NFC!",
-    nfc_failed: "⚠ Falha no NFC — use o QR",
-    nfc_write_tag: "📡 Gravar na Tag NFC",
     close_btn: "✕ Fechar",
     qr_unavailable: "QR indisponível",
     qr_needs_network: "QR precisa de internet<br/>Use Copiar Link",
@@ -1047,6 +1041,34 @@ function calcPoints(groupMatches, ko, predictions) {
   return { total, byPhase, exact, correct, wrong, played };
 }
 
+// Bucket of KO matches for a given phase key ('final' also includes the third-place match)
+function koPhaseBucket(key, ko) {
+  return [...(ko[key]||[]), ...(key==='final'?ko.third||[]:[])];
+}
+
+// A phase becomes guessable once at least one of its matches has known teams
+function isPhaseUnlocked(key, ko) {
+  if (key === 'group') return true;
+  return koPhaseBucket(key, ko).some(m => !!m.teamA || !!m.teamB);
+}
+
+// True once every guess for the group stage and every currently-unlocked KO phase is filled in
+function allGuessesEntered(groupMatches, ko, predictions) {
+  const groupFilled = Object.values(groupMatches).flat().every(m => {
+    const p = predictions.group?.[m.id];
+    return p && p.home != null && p.away != null;
+  });
+  if (!groupFilled) return false;
+
+  return ['r32','r16','qf','sf','final'].every(key => {
+    if (!isPhaseUnlocked(key, ko)) return true;
+    return koPhaseBucket(key, ko).every(m => {
+      const p = predictions.ko?.[m.id];
+      return p && p.a != null && p.b != null;
+    });
+  });
+}
+
 function buildShareText(groupMatches, ko, predictions, pts, phaseKey, tFn) {
   const t = tFn || (k => TRANSLATIONS['en'][k] || k);
   const phaseLabels = {
@@ -1205,9 +1227,7 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
   const [name, setName] = useState(playerName || '');
   const url = buildShareUrl(name, predictions);
   const [copied, setCopied] = useState(false);
-  const [nfcStatus, setNfcStatus] = useState(null); // null | 'writing' | 'done' | 'error' | 'unsupported'
   const hasShare = !!navigator.share;
-  const hasNFC   = 'NDEFReader' in window;
 
   const handleCopy = () => {
     const done = () => { setCopied(true); setTimeout(() => setCopied(false), 2500); };
@@ -1220,20 +1240,6 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
 
   const handleShare = () => {
     navigator.share({ title: t('share_title_native'), url }).catch(() => {});
-  };
-
-  const handleNFC = async () => {
-    if (!hasNFC) { setNfcStatus('unsupported'); return; }
-    try {
-      setNfcStatus('writing');
-      const ndef = new window.NDEFReader();
-      await ndef.write({ records: [{ recordType: 'url', data: url }] });
-      setNfcStatus('done');
-      setTimeout(() => setNfcStatus(null), 3000);
-    } catch(e) {
-      setNfcStatus(e.name === 'NotAllowedError' ? 'error' : 'error');
-      setTimeout(() => setNfcStatus(null), 3000);
-    }
   };
 
   const handleNameBlur = () => { if (name.trim()) onNameSave(name.trim()); };
@@ -1313,20 +1319,6 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
           }}>
             {copied ? t('copied') : t('copy_link')}
           </button>
-          {hasNFC && (
-            <button onClick={handleNFC} style={{
-              width:'100%', padding:'12px', borderRadius:11,
-              background: nfcStatus==='done' ? `rgba(0,208,132,0.14)` : `rgba(255,215,0,0.08)`,
-              border: `1px solid ${nfcStatus==='done' ? `rgba(0,208,132,0.45)` : 'rgba(255,215,0,0.3)'}`,
-              color: nfcStatus==='done' ? ACCENT : nfcStatus==='error' ? RED : GOLD,
-              fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
-            }}>
-              {nfcStatus === 'writing' ? t('nfc_hold_phones')
-               : nfcStatus === 'done'  ? t('nfc_written')
-               : nfcStatus === 'error' ? t('nfc_failed')
-               : t('nfc_write_tag')}
-            </button>
-          )}
         </div>
 
         <button onClick={onClose} style={{
@@ -1455,7 +1447,7 @@ function WinnerFlash({ data, onDismiss }) {
 }
 
 // ─── Rivals Leaderboard ───────────────────────────────────────────────────────
-function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, onShare, onRemove }) {
+function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, onShare, onRemove }) {
   const { t } = useLang();
   const allPlayers = [
     { n: myName || t('you_default'), pts: myPts, isMe: true },
@@ -1463,6 +1455,7 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, onShare, o
   ].sort((a, b) => b.pts.total - a.pts.total);
 
   if (rivals.length === 0) {
+    if (!canShare) return null;
     return (
       <div style={{
         background: CARD, border:`1px solid rgba(0,208,132,0.2)`,
@@ -1495,11 +1488,13 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, onShare, o
         <div style={{ fontSize:9, color:ACCENT, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
           {t('leaderboard_title')}
         </div>
-        <button onClick={onShare} style={{
-          background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
-          color:ACCENT, borderRadius:7, padding:'4px 10px',
-          fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-        }}>{t('add_rival_btn')}</button>
+        {canShare && (
+          <button onClick={onShare} style={{
+            background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
+            color:ACCENT, borderRadius:7, padding:'4px 10px',
+            fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+          }}>{t('add_rival_btn')}</button>
+        )}
       </div>
 
       {allPlayers.map((p, i) => (
@@ -2138,14 +2133,11 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
     { key:'final', label:t('phase_final'),          matches:[...ko.third,...ko.final] },
   ];
 
-  const isUnlocked = key => {
-    if (key === 'group') return true;
-    const bucket = key === 'final' ? [...ko.final,...ko.third] : (ko[key]||[]);
-    return bucket.some(m => !!m.teamA || !!m.teamB);
-  };
+  const isUnlocked = key => isPhaseUnlocked(key, ko);
 
   const [phase, setPhase] = useState('group');
   const pts = useMemo(()=>calcPoints(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
+  const canShare = useMemo(()=>allGuessesEntered(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
   const [copied, setCopied] = useState(null); // null | 'all' | 'phase'
 
   const copyText = (text, which) => {
@@ -2164,7 +2156,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
       {/* Rivals Leaderboard */}
       <RivalsLeaderboard
         rivals={rivals} myName={playerName} myPts={pts}
-        groupMatches={groupMatches} ko={ko}
+        groupMatches={groupMatches} ko={ko} canShare={canShare}
         onShare={onShare} onRemove={onRemoveRival}
       />
 
@@ -2182,14 +2174,18 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
               </div>
             )}
           </div>
-          <button
-            onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,null,t),'all')}
-            style={{background:`rgba(167,139,250,0.15)`, border:`1px solid rgba(167,139,250,0.4)`,
-              color:PURPLE, borderRadius:10, padding:"8px 14px", fontSize:12, fontWeight:700,
-              cursor:"pointer", display:"flex", alignItems:"center", gap:6}}
-          >
-            {copied==='all' ? t('copied') : t('share_all')}
-          </button>
+          {canShare ? (
+            <button
+              onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,null,t),'all')}
+              style={{background:`rgba(167,139,250,0.15)`, border:`1px solid rgba(167,139,250,0.4)`,
+                color:PURPLE, borderRadius:10, padding:"8px 14px", fontSize:12, fontWeight:700,
+                cursor:"pointer", display:"flex", alignItems:"center", gap:6}}
+            >
+              {copied==='all' ? t('copied') : t('share_all')}
+            </button>
+          ) : (
+            <div style={{fontSize:10, color:"#555", maxWidth:160, textAlign:"right"}}>{t('share_locked_hint')}</div>
+          )}
         </div>
       </div>
 
@@ -2221,13 +2217,15 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
             <div style={{fontSize:10, color:PURPLE, marginTop:2}}>{t('pts_earned').replace('{pts}',pts.byPhase[phase])}</div>
           )}
         </div>
-        <button
-          onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,phase,t),'phase')}
-          style={{background:"transparent", border:`1px solid rgba(167,139,250,0.3)`,
-            color:"#888", borderRadius:8, padding:"5px 10px", fontSize:10, fontWeight:700, cursor:"pointer"}}
-        >
-          {copied==='phase' ? t('copied') : t('share_phase')}
-        </button>
+        {canShare && (
+          <button
+            onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,phase,t),'phase')}
+            style={{background:"transparent", border:`1px solid rgba(167,139,250,0.3)`,
+              color:"#888", borderRadius:8, padding:"5px 10px", fontSize:10, fontWeight:700, cursor:"pointer"}}
+          >
+            {copied==='phase' ? t('copied') : t('share_phase')}
+          </button>
+        )}
       </div>
 
       {/* Match list */}
