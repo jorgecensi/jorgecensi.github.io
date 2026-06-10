@@ -219,6 +219,39 @@ const TRANSLATIONS = {
     share_header: "⚽ *World Cup 2026 – My Guesses*",
     share_header_phase: "⚽ *World Cup 2026 – My {phase} Guesses*",
     share_total: "*🏆 Total: {total} pts* ({played} played · 🎯 {exact} exact · ✅ {correct} right · ❌ {wrong} wrong)",
+    // Proximity sharing / Rivals
+    you_default: "You",
+    you_suffix: " (you)",
+    leaderboard_title: "🏆 Leaderboard",
+    add_rival_btn: "+ Add Rival",
+    remove_rival: "Remove rival",
+    compete_friends: "Compete with friends",
+    compete_friends_desc: "Share your QR — anyone who scans it joins your leaderboard. The app flashes when someone nails a score.",
+    share_qr_nfc: "📲 Share via QR / NFC",
+    share_predictions_title: "Share Predictions",
+    share_predictions_subtitle: "Show this QR to a friend — they scan & add you as a rival",
+    your_name_label: "Your name in the bolão",
+    name_placeholder: "e.g. John",
+    prediction_encoded: "{n} prediction encoded",
+    predictions_encoded: "{n} predictions encoded",
+    share_via: "📤 Share via…",
+    copy_link: "📋 Copy Link",
+    nfc_hold_phones: "📡 Hold phones back-to-back…",
+    nfc_written: "✓ Written to NFC tag!",
+    nfc_failed: "⚠ NFC failed — use QR instead",
+    nfc_write_tag: "📡 Write to NFC Tag",
+    close_btn: "✕ Close",
+    qr_unavailable: "QR unavailable",
+    qr_needs_network: "QR needs network<br/>Use Copy Link instead",
+    share_title_native: "My WC 2026 Bolão Predictions",
+    add_rival_title: "Add rival?",
+    add_rival_desc: " wants to compete in your bolão. Their predictions are included — you'll see who's ahead as results come in.",
+    ignore_btn: "Ignore",
+    add_rival_confirm: "Add Rival ✓",
+    exact_scores: "Exact scores!",
+    exact_score: "Exact score!",
+    right_result: "Right result!",
+    tap_to_dismiss: "tap to dismiss",
   },
   'pt-BR': {
     // Header
@@ -375,6 +408,39 @@ const TRANSLATIONS = {
     share_header: "⚽ *Copa do Mundo 2026 – Meus Palpites*",
     share_header_phase: "⚽ *Copa do Mundo 2026 – Meus Palpites: {phase}*",
     share_total: "*🏆 Total: {total} pts* ({played} jogados · 🎯 {exact} exatos · ✅ {correct} certos · ❌ {wrong} errados)",
+    // Proximity sharing / Rivals
+    you_default: "Você",
+    you_suffix: " (você)",
+    leaderboard_title: "🏆 Ranking",
+    add_rival_btn: "+ Add. Rival",
+    remove_rival: "Remover rival",
+    compete_friends: "Compita com amigos",
+    compete_friends_desc: "Compartilhe seu QR — quem escanear entra no seu ranking. O app pisca quando alguém acerta um placar.",
+    share_qr_nfc: "📲 Compartilhar via QR / NFC",
+    share_predictions_title: "Compartilhar Palpites",
+    share_predictions_subtitle: "Mostre este QR para um amigo — ele escaneia e te adiciona como rival",
+    your_name_label: "Seu nome no bolão",
+    name_placeholder: "ex: João",
+    prediction_encoded: "{n} palpite codificado",
+    predictions_encoded: "{n} palpites codificados",
+    share_via: "📤 Compartilhar via…",
+    copy_link: "📋 Copiar Link",
+    nfc_hold_phones: "📡 Aproxime os celulares…",
+    nfc_written: "✓ Gravado na tag NFC!",
+    nfc_failed: "⚠ Falha no NFC — use o QR",
+    nfc_write_tag: "📡 Gravar na Tag NFC",
+    close_btn: "✕ Fechar",
+    qr_unavailable: "QR indisponível",
+    qr_needs_network: "QR precisa de internet<br/>Use Copiar Link",
+    share_title_native: "Meus Palpites da Copa 2026",
+    add_rival_title: "Adicionar rival?",
+    add_rival_desc: " quer competir no seu bolão. Os palpites dele(a) estão incluídos — você verá quem está na frente conforme os resultados forem saindo.",
+    ignore_btn: "Ignorar",
+    add_rival_confirm: "Adicionar Rival ✓",
+    exact_scores: "Placares exatos!",
+    exact_score: "Placar exato!",
+    right_result: "Resultado certo!",
+    tap_to_dismiss: "toque para fechar",
   },
 };
 
@@ -1107,6 +1173,7 @@ function calcRivalPoints(rival, groupMatches, ko) {
 // ─── QR Code component ────────────────────────────────────────────────────────
 function QRCodeView({ url }) {
   const ref = useRef(null);
+  const { t, lang } = useLang();
   useEffect(() => {
     if (!ref.current) return;
     ref.current.innerHTML = '';
@@ -1118,12 +1185,12 @@ function QRCodeView({ url }) {
           correctLevel: window.QRCode.CorrectLevel?.M,
         });
       } catch(e) {
-        ref.current.innerHTML = '<div style="color:#666;font-size:11px;padding:20px;text-align:center">QR unavailable</div>';
+        ref.current.innerHTML = `<div style="color:#666;font-size:11px;padding:20px;text-align:center">${t('qr_unavailable')}</div>`;
       }
     } else {
-      ref.current.innerHTML = '<div style="color:#666;font-size:11px;padding:20px;text-align:center;line-height:1.5">QR needs network<br/>Use Copy Link instead</div>';
+      ref.current.innerHTML = `<div style="color:#666;font-size:11px;padding:20px;text-align:center;line-height:1.5">${t('qr_needs_network')}</div>`;
     }
-  }, [url]);
+  }, [url, lang]);
   return (
     <div ref={ref} style={{
       display:'flex', justifyContent:'center', alignItems:'center',
@@ -1134,6 +1201,7 @@ function QRCodeView({ url }) {
 
 // ─── Share Modal ──────────────────────────────────────────────────────────────
 function ShareModal({ playerName, predictions, onClose, onNameSave }) {
+  const { t } = useLang();
   const [name, setName] = useState(playerName || '');
   const url = buildShareUrl(name, predictions);
   const [copied, setCopied] = useState(false);
@@ -1151,7 +1219,7 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
   };
 
   const handleShare = () => {
-    navigator.share({ title: 'My WC 2026 Bolão Predictions', url }).catch(() => {});
+    navigator.share({ title: t('share_title_native'), url }).catch(() => {});
   };
 
   const handleNFC = async () => {
@@ -1191,20 +1259,20 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
         <div style={{ width:36, height:4, borderRadius:2, background:'rgba(255,255,255,0.12)', marginBottom:2 }}/>
 
         <div style={{ fontSize:11, color:PURPLE, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
-          Share Predictions
+          {t('share_predictions_title')}
         </div>
         <div style={{ fontSize:11, color:'#666', textAlign:'center', lineHeight:1.5, marginTop:-6 }}>
-          Show this QR to a friend — they scan &amp; add you as a rival
+          {t('share_predictions_subtitle')}
         </div>
 
         {/* Name */}
         <div style={{ width:'100%' }}>
-          <div style={{ fontSize:9, color:'#888', marginBottom:5, fontWeight:700, letterSpacing:1, textTransform:'uppercase' }}>Your name in the bolão</div>
+          <div style={{ fontSize:9, color:'#888', marginBottom:5, fontWeight:700, letterSpacing:1, textTransform:'uppercase' }}>{t('your_name_label')}</div>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
             onBlur={handleNameBlur}
-            placeholder="e.g. João"
+            placeholder={t('name_placeholder')}
             style={{
               width:'100%', padding:'9px 12px', borderRadius:9,
               border:`1.5px solid rgba(167,139,250,0.4)`, background:'rgba(255,255,255,0.05)',
@@ -1223,7 +1291,7 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
             <QRCodeView url={url} />
           </div>
           <div style={{ fontSize:10, color:'#555' }}>
-            {filledCount} prediction{filledCount !== 1 ? 's' : ''} encoded
+            {(filledCount !== 1 ? t('predictions_encoded') : t('prediction_encoded')).replace('{n}',filledCount)}
           </div>
         </div>
 
@@ -1235,7 +1303,7 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
               background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
               color:ACCENT, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
             }}>
-              📤 Share via…
+              {t('share_via')}
             </button>
           )}
           <button onClick={handleCopy} style={{
@@ -1243,7 +1311,7 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
             background:`rgba(167,139,250,0.1)`, border:`1px solid rgba(167,139,250,0.4)`,
             color:PURPLE, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
           }}>
-            {copied ? '✓ Copied!' : '📋 Copy Link'}
+            {copied ? t('copied') : t('copy_link')}
           </button>
           {hasNFC && (
             <button onClick={handleNFC} style={{
@@ -1253,10 +1321,10 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
               color: nfcStatus==='done' ? ACCENT : nfcStatus==='error' ? RED : GOLD,
               fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
             }}>
-              {nfcStatus === 'writing' ? '📡 Hold phones back-to-back…'
-               : nfcStatus === 'done'  ? '✓ Written to NFC tag!'
-               : nfcStatus === 'error' ? '⚠ NFC failed — use QR instead'
-               : '📡 Write to NFC Tag'}
+              {nfcStatus === 'writing' ? t('nfc_hold_phones')
+               : nfcStatus === 'done'  ? t('nfc_written')
+               : nfcStatus === 'error' ? t('nfc_failed')
+               : t('nfc_write_tag')}
             </button>
           )}
         </div>
@@ -1264,7 +1332,7 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
         <button onClick={onClose} style={{
           background:'transparent', border:'none', color:'#555',
           fontSize:12, cursor:'pointer', paddingTop:4, fontFamily:'inherit',
-        }}>✕ Close</button>
+        }}>{t('close_btn')}</button>
       </div>
     </div>
   );
@@ -1272,6 +1340,7 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
 
 // ─── Add Rival Prompt ─────────────────────────────────────────────────────────
 function AddRivalModal({ rival, onAccept, onDecline }) {
+  const { t } = useLang();
   return (
     <div style={{
       position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:500,
@@ -1286,12 +1355,11 @@ function AddRivalModal({ rival, onAccept, onDecline }) {
         <div style={{ fontSize:36 }}>🤝</div>
         <div>
           <div style={{ fontSize:15, fontWeight:900, color:'#fff', marginBottom:8 }}>
-            Add rival?
+            {t('add_rival_title')}
           </div>
           <div style={{ fontSize:13, color:'#aaa', lineHeight:1.5 }}>
             <span style={{ color:ACCENT, fontWeight:700 }}>{rival.n}</span>
-            {' '}wants to compete in your bolão.
-            Their predictions are included — you'll see who's ahead as results come in.
+            {t('add_rival_desc')}
           </div>
         </div>
         <div style={{ display:'flex', gap:10 }}>
@@ -1299,12 +1367,12 @@ function AddRivalModal({ rival, onAccept, onDecline }) {
             flex:1, padding:'11px', borderRadius:10,
             background:'transparent', border:`1px solid rgba(255,255,255,0.12)`,
             color:'#666', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-          }}>Ignore</button>
+          }}>{t('ignore_btn')}</button>
           <button onClick={() => onAccept(rival)} style={{
             flex:1, padding:'11px', borderRadius:10,
             background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
             color:ACCENT, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
-          }}>Add Rival ✓</button>
+          }}>{t('add_rival_confirm')}</button>
         </div>
       </div>
     </div>
@@ -1322,14 +1390,15 @@ const CONFETTI_CFG = Array.from({length:22}, (_,i) => ({
 }));
 
 function WinnerFlash({ data, onDismiss }) {
+  const { t } = useLang();
   const exact = data.winners.filter(w => w.pts === 3);
   const right = data.winners.filter(w => w.pts === 1);
   const best  = exact.length > 0 ? exact : right;
   const isExact = exact.length > 0;
 
   useEffect(() => {
-    const t = setTimeout(onDismiss, 4500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onDismiss, 4500);
+    return () => clearTimeout(timer);
   }, [onDismiss]);
 
   return (
@@ -1364,14 +1433,14 @@ function WinnerFlash({ data, onDismiss }) {
       }}>
         <div style={{ fontSize:54, marginBottom:10, lineHeight:1 }}>{isExact ? '🎯' : '✅'}</div>
         <div style={{ fontSize:13, fontWeight:900, color:isExact?ACCENT:PURPLE, letterSpacing:1.5, textTransform:'uppercase', marginBottom:10 }}>
-          {isExact ? (best.length > 1 ? 'Exact scores!' : 'Exact score!') : 'Right result!'}
+          {isExact ? (best.length > 1 ? t('exact_scores') : t('exact_score')) : t('right_result')}
         </div>
         {best.map((w, i) => (
           <div key={i} style={{
             fontSize: best.length > 1 ? 18 : 22,
             fontWeight:900, color:'#fff', marginBottom:4,
           }}>
-            {w.isMe ? `${w.name} (you)` : w.name}
+            {w.isMe ? `${w.name}${t('you_suffix')}` : w.name}
           </div>
         ))}
         {data.score && (
@@ -1379,7 +1448,7 @@ function WinnerFlash({ data, onDismiss }) {
             {data.home} {data.scoreH}–{data.scoreA} {data.away}
           </div>
         )}
-        <div style={{ fontSize:10, color:'#444', marginTop:14 }}>tap to dismiss</div>
+        <div style={{ fontSize:10, color:'#444', marginTop:14 }}>{t('tap_to_dismiss')}</div>
       </div>
     </div>
   );
@@ -1387,8 +1456,9 @@ function WinnerFlash({ data, onDismiss }) {
 
 // ─── Rivals Leaderboard ───────────────────────────────────────────────────────
 function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, onShare, onRemove }) {
+  const { t } = useLang();
   const allPlayers = [
-    { n: myName || 'You', pts: myPts, isMe: true },
+    { n: myName || t('you_default'), pts: myPts, isMe: true },
     ...rivals.map(r => ({ n: r.n, pts: calcRivalPoints(r, groupMatches, ko), isMe: false })),
   ].sort((a, b) => b.pts.total - a.pts.total);
 
@@ -1399,17 +1469,16 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, onShare, o
         borderRadius:14, padding:'18px 16px', marginBottom:14, textAlign:'center',
       }}>
         <div style={{ fontSize:26, marginBottom:8 }}>📲</div>
-        <div style={{ fontSize:12, fontWeight:800, color:'#ccc', marginBottom:4 }}>Compete with friends</div>
+        <div style={{ fontSize:12, fontWeight:800, color:'#ccc', marginBottom:4 }}>{t('compete_friends')}</div>
         <div style={{ fontSize:11, color:'#555', marginBottom:14, lineHeight:1.5 }}>
-          Share your QR — anyone who scans it joins your leaderboard.
-          The app flashes when someone nails a score.
+          {t('compete_friends_desc')}
         </div>
         <button onClick={onShare} style={{
           background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
           color:ACCENT, borderRadius:10, padding:'9px 20px',
           fontSize:12, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
         }}>
-          📲 Share via QR / NFC
+          {t('share_qr_nfc')}
         </button>
       </div>
     );
@@ -1424,13 +1493,13 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, onShare, o
     }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
         <div style={{ fontSize:9, color:ACCENT, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
-          🏆 Leaderboard
+          {t('leaderboard_title')}
         </div>
         <button onClick={onShare} style={{
           background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
           color:ACCENT, borderRadius:7, padding:'4px 10px',
           fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-        }}>+ Add Rival</button>
+        }}>{t('add_rival_btn')}</button>
       </div>
 
       {allPlayers.map((p, i) => (
@@ -1448,11 +1517,11 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, onShare, o
             {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i+1}
           </div>
           <div style={{ flex:1, fontSize:13, fontWeight:700, color:p.isMe?ACCENT:'#ccc', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {p.n}{p.isMe ? ' (you)' : ''}
+            {p.n}{p.isMe ? t('you_suffix') : ''}
           </div>
           <div style={{ display:'flex', alignItems:'baseline', gap:3 }}>
             <span style={{ fontSize:16, fontWeight:900, color:'#fff' }}>{p.pts.total}</span>
-            <span style={{ fontSize:9, color:'#555' }}>pts</span>
+            <span style={{ fontSize:9, color:'#555' }}>{t('pts_label')}</span>
           </div>
           {p.pts.played > 0 && (
             <div style={{ fontSize:9, color:'#444', flexShrink:0 }}>
@@ -1463,7 +1532,7 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, onShare, o
             <button onClick={() => onRemove(p.n)} style={{
               background:'transparent', border:'none', color:'#333',
               fontSize:13, cursor:'pointer', padding:'0 2px', flexShrink:0, lineHeight:1,
-            }} title="Remove rival">✕</button>
+            }} title={t('remove_rival')}>✕</button>
           )}
         </div>
       ))}
