@@ -1158,14 +1158,14 @@ function buildShareText(groupMatches, ko, predictions, pts, phaseKey, tFn) {
     lines.push(totalLine);
     lines.push('');
   }
-  lines.push('jorgecensi.github.io/worldcup-2026');
+  lines.push('jorgecensi.com/worldcup-2026');
   return lines.join('\n');
 }
 
 // ─── Proximity / Rival sharing ────────────────────────────────────────────────
 const RIVALS_KEY  = "wc2026:rivals:v1";
 const PLAYER_KEY  = "wc2026:player:v1";
-const SHARE_BASE  = "https://jorgecensi.github.io/worldcup-2026/";
+const SHARE_BASE  = "https://jorgecensi.com/worldcup-2026/";
 
 function loadRivals() {
   try { const r = localStorage.getItem(RIVALS_KEY); return r ? JSON.parse(r) : []; }
