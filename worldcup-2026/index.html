@@ -255,6 +255,16 @@ const TRANSLATIONS = {
     stop_comparing: "✕ Stop comparing",
     rival_pick: "{name}'s pick",
     no_pick: "No pick",
+    // Transfer / sync to another device
+    share_mode_rival: "👥 Share with a friend",
+    share_mode_transfer: "🔄 Sync my device",
+    sync_device_title: "Sync to Another Device",
+    sync_device_subtitle: "Scan this QR on your other device to load your picks there",
+    sync_title_native: "My WC 2026 Bolão Picks",
+    import_title: "Import your picks?",
+    import_desc: "This will replace your current predictions on this device with the {n} picks from your other device.",
+    import_confirm: "Import ✓",
+    cancel_btn: "Cancel",
   },
   'pt-BR': {
     // Header
@@ -447,6 +457,16 @@ const TRANSLATIONS = {
     stop_comparing: "✕ Parar comparação",
     rival_pick: "Palpite de {name}",
     no_pick: "Sem palpite",
+    // Transfer / sync to another device
+    share_mode_rival: "👥 Compartilhar com amigo",
+    share_mode_transfer: "🔄 Sincronizar meu aparelho",
+    sync_device_title: "Sincronizar com Outro Aparelho",
+    sync_device_subtitle: "Escaneie este QR no seu outro aparelho para carregar seus palpites lá",
+    sync_title_native: "Meus Palpites da Copa 2026",
+    import_title: "Importar seus palpites?",
+    import_desc: "Isso vai substituir os palpites deste aparelho pelos {n} palpites do seu outro aparelho.",
+    import_confirm: "Importar ✓",
+    cancel_btn: "Cancelar",
   },
 };
 
@@ -1200,6 +1220,10 @@ function buildShareUrl(name, predictions) {
   return SHARE_BASE + "?rival=" + encodeURIComponent(encodePreds(name, predictions));
 }
 
+function buildTransferUrl(name, predictions) {
+  return SHARE_BASE + "?transfer=" + encodeURIComponent(encodePreds(name, predictions));
+}
+
 function calcRivalPoints(rival, groupMatches, ko) {
   return calcPoints(groupMatches, ko, rival.predictions || { group: {}, ko: {} });
 }
@@ -1237,7 +1261,8 @@ function QRCodeView({ url }) {
 function ShareModal({ playerName, predictions, onClose, onNameSave }) {
   const { t } = useLang();
   const [name, setName] = useState(playerName || '');
-  const url = buildShareUrl(name, predictions);
+  const [mode, setMode] = useState('rival'); // 'rival' | 'transfer'
+  const url = mode === 'rival' ? buildShareUrl(name, predictions) : buildTransferUrl(name, predictions);
   const [copied, setCopied] = useState(false);
   const hasShare = !!navigator.share;
 
@@ -1251,7 +1276,8 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
   };
 
   const handleShare = () => {
-    navigator.share({ title: t('share_title_native'), url }).catch(() => {});
+    const title = mode === 'rival' ? t('share_title_native') : t('sync_title_native');
+    navigator.share({ title, url }).catch(() => {});
   };
 
   const handleNameBlur = () => { if (name.trim()) onNameSave(name.trim()); };
@@ -1276,11 +1302,26 @@ function ShareModal({ playerName, predictions, onClose, onNameSave }) {
         {/* drag handle */}
         <div style={{ width:36, height:4, borderRadius:2, background:'rgba(255,255,255,0.12)', marginBottom:2 }}/>
 
+        {/* Mode toggle */}
+        <div style={{ display:'flex', gap:6, width:'100%' }}>
+          {['rival','transfer'].map(m => (
+            <button key={m} onClick={() => setMode(m)} style={{
+              flex:1, padding:'8px 6px', borderRadius:9,
+              border:`1px solid ${mode===m?'rgba(167,139,250,0.5)':'rgba(255,255,255,0.08)'}`,
+              background:mode===m?'rgba(167,139,250,0.15)':'transparent',
+              color:mode===m?PURPLE:'#666', fontSize:11, fontWeight:700,
+              cursor:'pointer', fontFamily:'inherit',
+            }}>
+              {t(m==='rival'?'share_mode_rival':'share_mode_transfer')}
+            </button>
+          ))}
+        </div>
+
         <div style={{ fontSize:11, color:PURPLE, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
-          {t('share_predictions_title')}
+          {t(mode==='rival'?'share_predictions_title':'sync_device_title')}
         </div>
         <div style={{ fontSize:11, color:'#666', textAlign:'center', lineHeight:1.5, marginTop:-6 }}>
-          {t('share_predictions_subtitle')}
+          {t(mode==='rival'?'share_predictions_subtitle':'sync_device_subtitle')}
         </div>
 
         {/* Name */}
@@ -1377,6 +1418,47 @@ function AddRivalModal({ rival, onAccept, onDecline }) {
             background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
             color:ACCENT, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
           }}>{t('add_rival_confirm')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Import Predictions Prompt (sync from another device) ────────────────────
+function ImportPredictionsModal({ data, onAccept, onDecline }) {
+  const { t } = useLang();
+  const count = Object.keys(data.predictions.group || {}).length + Object.keys(data.predictions.ko || {}).length;
+  return (
+    <div style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:500,
+      display:'flex', alignItems:'center', justifyContent:'center', padding:20,
+    }}>
+      <div style={{
+        background:'#0d1a2e', border:`1px solid rgba(167,139,250,0.45)`,
+        borderRadius:20, padding:'28px 24px', maxWidth:320, width:'100%',
+        textAlign:'center', display:'flex', flexDirection:'column', gap:16,
+        animation:'flashBounce 0.4s ease',
+      }}>
+        <div style={{ fontSize:36 }}>🔄</div>
+        <div>
+          <div style={{ fontSize:15, fontWeight:900, color:'#fff', marginBottom:8 }}>
+            {t('import_title')}
+          </div>
+          <div style={{ fontSize:13, color:'#aaa', lineHeight:1.5 }}>
+            {t('import_desc').replace('{n}', count)}
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:10 }}>
+          <button onClick={onDecline} style={{
+            flex:1, padding:'11px', borderRadius:10,
+            background:'transparent', border:`1px solid rgba(255,255,255,0.12)`,
+            color:'#666', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+          }}>{t('cancel_btn')}</button>
+          <button onClick={onAccept} style={{
+            flex:1, padding:'11px', borderRadius:10,
+            background:`rgba(167,139,250,0.14)`, border:`1px solid rgba(167,139,250,0.45)`,
+            color:PURPLE, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+          }}>{t('import_confirm')}</button>
         </div>
       </div>
     </div>
@@ -2365,6 +2447,7 @@ function App(){
   const [playerName,setPlayerName]=useState(loadPlayerName);
   const [showShareModal,setShowShareModal]=useState(false);
   const [incomingRival,setIncomingRival]=useState(null);
+  const [incomingTransfer,setIncomingTransfer]=useState(null);
   const [flashData,setFlashData]=useState(null);
 
   // Refs to read current state inside effects without re-running them
@@ -2390,6 +2473,17 @@ function App(){
     const alreadyExists=loadRivals().some(r=>r.n===decoded.n);
     if(alreadyExists){ window.history.replaceState({},'',window.location.pathname); return; }
     setIncomingRival(decoded);
+    window.history.replaceState({},'',window.location.pathname);
+  },[]);
+
+  // Detect ?transfer= URL param on first load — offer to import predictions from another device
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const transferParam=params.get('transfer');
+    if(!transferParam) return;
+    const decoded=decodePreds(transferParam);
+    if(!decoded) return;
+    setIncomingTransfer(decoded);
     window.history.replaceState({},'',window.location.pathname);
   },[]);
 
@@ -2507,6 +2601,12 @@ function App(){
     setIncomingRival(null);
   },[]);
 
+  const handleAcceptTransfer=useCallback((data)=>{
+    setPredictions(data.predictions);
+    if(data.n && data.n!=='Anonymous') setPlayerName(data.n);
+    setIncomingTransfer(null);
+  },[]);
+
   const handleRemoveRival=useCallback((name)=>{
     setRivals(prev=>prev.filter(r=>r.n!==name));
   },[]);
@@ -2559,6 +2659,13 @@ function App(){
           rival={incomingRival}
           onAccept={handleAcceptRival}
           onDecline={()=>setIncomingRival(null)}
+        />
+      )}
+      {incomingTransfer && (
+        <ImportPredictionsModal
+          data={incomingTransfer}
+          onAccept={()=>handleAcceptTransfer(incomingTransfer)}
+          onDecline={()=>setIncomingTransfer(null)}
         />
       )}
 
