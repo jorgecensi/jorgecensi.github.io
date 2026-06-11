@@ -1138,6 +1138,13 @@ function isPhaseUnlocked(key, ko) {
   return koPhaseBucket(key, ko).some(m => !!m.teamA || !!m.teamB);
 }
 
+// True once every group-stage match has a real result. Lets people who join
+// after the group stage already happened skip those (now-moot) guesses and
+// jump straight into the fantasy leaderboard from the knockout rounds onward.
+function isGroupStageComplete(groupMatches) {
+  return Object.values(groupMatches).flat().every(m => m.homeScore !== null && m.awayScore !== null);
+}
+
 // True once every guess for a single phase (group, or an unlocked KO round) is filled in.
 // Each phase is judged independently, so a completed phase stays shareable even
 // while a later phase is still being filled in.
@@ -2526,8 +2533,9 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
   const [phase, setPhase] = useState('group');
   const pts = useMemo(()=>calcPoints(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
   // Group stage being complete unlocks "Copy All" / proximity sharing for good —
-  // a later phase still in progress doesn't re-lock it.
-  const canShare = useMemo(()=>isPhaseGuessesComplete('group',groupMatches,ko,predictions),[groupMatches,ko,predictions]);
+  // a later phase still in progress doesn't re-lock it. Late joiners who missed
+  // the (now-moot) group stage in real life don't need to back-fill those guesses.
+  const canShare = useMemo(()=>isPhaseGuessesComplete('group',groupMatches,ko,predictions) || isGroupStageComplete(groupMatches),[groupMatches,ko,predictions]);
   const canSharePhase = useMemo(()=>isPhaseGuessesComplete(phase,groupMatches,ko,predictions),[phase,groupMatches,ko,predictions]);
   const [copied, setCopied] = useState(null); // null | 'all' | 'phase'
 
