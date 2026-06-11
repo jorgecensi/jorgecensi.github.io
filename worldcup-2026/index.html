@@ -2849,9 +2849,12 @@ async function showKickoffNotification(match,t){
 }
 
 // Polls the upcoming-matches list while notifications are enabled and fires a
-// kick-off notification the moment a match's kick-off time is reached.
+// kick-off notification once a match's kick-off time is reached. Also
+// re-checks whenever the app regains visibility/focus, so a kick-off that
+// happened while the phone was locked or the app was backgrounded still
+// surfaces a notification as soon as the user comes back.
 const NOTIF_CHECK_MS=30000;
-const NOTIF_WINDOW_MS=2*60*1000; // grace window so a missed tick doesn't skip a kick-off
+const NOTIF_CATCHUP_MS=3*60*60*1000; // how late a kick-off can still trigger a notification
 function useGameNotifications(matches,enabled,t){
   const matchesRef=useRef(matches);
   matchesRef.current=matches;
@@ -2867,19 +2870,28 @@ function useGameNotifications(matches,enabled,t){
       const state=loadNotifState();
       let changed=false;
       matchesRef.current.forEach(m=>{
+        if(state.notified[m.id]) return;
         const ts=m.kickoff.getTime();
-        if(now>=ts && now-ts<NOTIF_WINDOW_MS && !state.notified[m.id]){
-          state.notified[m.id]=true;
-          changed=true;
-          showKickoffNotification(m,tRef.current);
-        }
+        if(now<ts) return;
+        if(now-ts<NOTIF_CATCHUP_MS) showKickoffNotification(m,tRef.current);
+        state.notified[m.id]=true;
+        changed=true;
       });
       if(changed) saveNotifState(state);
     };
 
     check();
     const interval=setInterval(check,NOTIF_CHECK_MS);
-    return ()=>clearInterval(interval);
+    const onVisible=()=>{ if(document.visibilityState==='visible') check(); };
+    document.addEventListener('visibilitychange',onVisible);
+    window.addEventListener('focus',check);
+    window.addEventListener('pageshow',check);
+    return ()=>{
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange',onVisible);
+      window.removeEventListener('focus',check);
+      window.removeEventListener('pageshow',check);
+    };
   },[enabled,matches]);
 }
 
