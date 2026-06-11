@@ -148,9 +148,9 @@ const TRANSLATIONS = {
     copied: "✓ Copied!",
     share_phase: "📋 Copy Phase",
     share_locked_hint: "Fill in all your guesses to unlock copying",
+    share_phase_locked_hint: "Fill in all picks for this phase to unlock copying",
     pts_earned: "{pts} pts earned this phase",
-    locked_enter_results: "🔒 Enter results for the previous round first",
-    enter_prev_round: "Enter previous round results to unlock",
+    phase_locked_reason: "🔒 Unlocks once the previous stage finishes: {phase}",
     actual_score: "Actual: {a}–{b}",
     // Stats
     stat_host_cities: "Host Cities",
@@ -364,9 +364,9 @@ const TRANSLATIONS = {
     copied: "✓ Copiado!",
     share_phase: "📋 Copiar Fase",
     share_locked_hint: "Preencha todos os seus palpites para liberar a cópia",
+    share_phase_locked_hint: "Preencha todos os palpites desta fase para liberar a cópia",
     pts_earned: "{pts} pts nesta fase",
-    locked_enter_results: "🔒 Insira os resultados da fase anterior primeiro",
-    enter_prev_round: "Insira os resultados da rodada anterior para desbloquear",
+    phase_locked_reason: "🔒 Libera quando a fase anterior terminar: {phase}",
     actual_score: "Real: {a}–{b}",
     // Stats
     stat_host_cities: "Cidades-Sede",
@@ -2429,7 +2429,7 @@ function GuessGroupMatchCard({ match, prediction, onPred, isMobile, rivalName, r
   );
 }
 
-function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, rivalName, rivalPrediction }) {
+function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, prevPhaseLabel, rivalName, rivalPrediction }) {
   const { t } = useLang();
   const hasTeams = !!match.teamA && !!match.teamB;
   const predA = prediction?.a ?? null;
@@ -2466,7 +2466,9 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, riv
       {teamRow(match.teamA, predA, "a", true)}
       {teamRow(match.teamB, predB, "b", false)}
       {!hasTeams && (
-        <div style={{marginTop:6, fontSize:9, color:"#555", textAlign:"center"}}>{t('enter_prev_round')}</div>
+        <div style={{marginTop:6, fontSize:9, color:"#555", textAlign:"center"}}>
+          {t('phase_locked_reason').replace('{phase}', prevPhaseLabel)}
+        </div>
       )}
       {actual && hasPred && hasTeams && (
         <div style={{marginTop:5, fontSize:9, color:"#555", textAlign:"center"}}>
@@ -2534,6 +2536,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
   };
 
   const currentPhase = PHASES.find(p => p.key === phase);
+  const prevPhaseLabel = PHASES[PHASES.findIndex(p => p.key === phase) - 1]?.label || '';
 
   return (
     <div>
@@ -2580,13 +2583,13 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
           const unlocked = isUnlocked(p.key);
           const active = phase === p.key;
           return (
-            <button key={p.key} onClick={()=>unlocked&&setPhase(p.key)} style={{
+            <button key={p.key} onClick={()=>setPhase(p.key)} style={{
               padding:"6px 12px", borderRadius:20, fontSize:11, fontWeight:700,
               letterSpacing:0.5, whiteSpace:"nowrap", flexShrink:0,
               border:`1px solid ${active?PURPLE:unlocked?'rgba(167,139,250,0.3)':BORDER}`,
               background:active?`rgba(167,139,250,0.2)`:"transparent",
               color:active?PURPLE:unlocked?"#888":"#444",
-              cursor:unlocked?"pointer":"default",
+              cursor:"pointer",
             }}>
               {unlocked?'':'🔒 '}{p.label}
             </button>
@@ -2602,7 +2605,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
             <div style={{fontSize:10, color:PURPLE, marginTop:2}}>{t('pts_earned').replace('{pts}',pts.byPhase[phase])}</div>
           )}
         </div>
-        {canSharePhase && (
+        {canSharePhase ? (
           <button
             onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,phase,t),'phase')}
             style={{background:"transparent", border:`1px solid rgba(167,139,250,0.3)`,
@@ -2610,13 +2613,15 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
           >
             {copied==='phase' ? t('copied') : t('share_phase')}
           </button>
+        ) : isUnlocked(phase) && (
+          <div style={{fontSize:10, color:"#555", maxWidth:140, textAlign:"right"}}>{t('share_phase_locked_hint')}</div>
         )}
       </div>
 
       {/* Match list */}
       {!isUnlocked(phase) ? (
         <div style={{textAlign:"center", padding:"32px 0", color:"#555", fontSize:13}}>
-          {t('locked_enter_results')}
+          {t('phase_locked_reason').replace('{phase}', prevPhaseLabel)}
         </div>
       ) : (
         <div style={{display:"flex", flexDirection:"column", gap:8}}>
@@ -2638,6 +2643,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
                   prediction={predictions.ko?.[m.id]}
                   onPred={onKOPred} isMobile={isMobile}
                   matchLabel={label}
+                  prevPhaseLabel={prevPhaseLabel}
                   rivalName={compareRival}
                   rivalPrediction={compareRivalObj?.predictions?.ko?.[m.id]}/>
               );
