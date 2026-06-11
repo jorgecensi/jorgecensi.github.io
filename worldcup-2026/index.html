@@ -227,6 +227,7 @@ const TRANSLATIONS = {
     remove_rival: "Remove rival",
     compete_friends: "Compete with friends",
     compete_friends_desc: "Share your QR — anyone who scans it joins your leaderboard. The app flashes when someone nails a score.",
+    leaderboard_locked_hint: "Fill in all your group stage picks to unlock the leaderboard and compare with friends",
     share_qr_nfc: "📲 Share via QR / Link",
     share_predictions_title: "Share Predictions",
     share_predictions_subtitle: "Show this QR to a friend — they scan & add you as a rival",
@@ -249,7 +250,7 @@ const TRANSLATIONS = {
     right_result: "Right result!",
     tap_to_dismiss: "tap to dismiss",
     // Compare with rival
-    compare_hint: "Tap a player to compare picks",
+    compare_hint: "👆 Tap a player to compare picks",
     comparing_with: "Comparing with {name}",
     stop_comparing: "✕ Stop comparing",
     rival_pick: "{name}'s pick",
@@ -443,6 +444,7 @@ const TRANSLATIONS = {
     remove_rival: "Remover rival",
     compete_friends: "Compita com amigos",
     compete_friends_desc: "Compartilhe seu QR — quem escanear entra no seu ranking. O app pisca quando alguém acerta um placar.",
+    leaderboard_locked_hint: "Preencha todos os seus palpites da fase de grupos para liberar o ranking e a comparação com amigos",
     share_qr_nfc: "📲 Compartilhar via QR / Link",
     share_predictions_title: "Compartilhar Palpites",
     share_predictions_subtitle: "Mostre este QR para um amigo — ele escaneia e te adiciona como rival",
@@ -465,7 +467,7 @@ const TRANSLATIONS = {
     right_result: "Resultado certo!",
     tap_to_dismiss: "toque para fechar",
     // Compare with rival
-    compare_hint: "Toque em um jogador para comparar palpites",
+    compare_hint: "👆 Toque em um jogador para comparar palpites",
     comparing_with: "Comparando com {name}",
     stop_comparing: "✕ Parar comparação",
     rival_pick: "Palpite de {name}",
@@ -1747,7 +1749,20 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
   ].sort((a, b) => b.pts.total - a.pts.total);
 
   if (rivals.length === 0) {
-    if (!canShare) return null;
+    if (!canShare) {
+      return (
+        <div style={{
+          background: CARD, border:`1px solid ${BORDER}`,
+          borderRadius:14, padding:'18px 16px', marginBottom:14, textAlign:'center',
+        }}>
+          <div style={{ fontSize:26, marginBottom:8 }}>🔒</div>
+          <div style={{ fontSize:12, fontWeight:800, color:'#ccc', marginBottom:4 }}>{t('leaderboard_title')}</div>
+          <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>
+            {t('leaderboard_locked_hint')}
+          </div>
+        </div>
+      );
+    }
     return (
       <div style={{
         background: CARD, border:`1px solid rgba(0,208,132,0.2)`,
@@ -1790,7 +1805,7 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
       </div>
 
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:6, marginBottom:8 }}>
-        <span style={{ fontSize:9, color: compareRival ? PURPLE : '#555' }}>
+        <span style={{ fontSize:10, color: compareRival ? PURPLE : '#555' }}>
           {compareRival ? t('comparing_with').replace('{name}', compareRival) : t('compare_hint')}
         </span>
         {compareRival && (
