@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Interactive FIFA World Cup 2026 scorecard — track all 48 teams, group standings, knockout bracket with penalties, and live stats. All times in your local timezone."/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -2954,7 +2954,7 @@ function App(){
   useEffect(()=>{
     let meta=document.querySelector('meta[name="viewport"]');
     if(!meta){meta=document.createElement("meta");meta.name="viewport";document.head.appendChild(meta);}
-    meta.content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no";
+    meta.content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
   },[]);
 
   useEffect(()=>{setKo(prev=>propagateKO(prev,groupMatches));},[groupMatches]);
@@ -3147,7 +3147,7 @@ function App(){
 
   return(
     <ChampionContext.Provider value={champion}>
-    <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${BG} 0%,#0d1a2e 60%,${BG} 100%)`,fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",color:"#e8eaf0",paddingBottom:isMobile?68:0}}>
+    <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${BG} 0%,#0d1a2e 60%,${BG} 100%)`,fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",color:"#e8eaf0",paddingBottom:isMobile?"calc(78px + env(safe-area-inset-bottom, 0px))":0}}>
       {splash && <SplashScreen onDone={()=>setSplash(false)}/>}
       {flashData && <WinnerFlash data={flashData} onDismiss={()=>setFlashData(null)}/>}
       {showShareModal && (
@@ -3279,9 +3279,9 @@ function App(){
 
       {/* MOBILE BOTTOM NAV */}
       {isMobile&&(
-        <div ref={navRef} style={{position:"fixed",bottom:0,left:0,right:0,background:"#0a1020",borderTop:`2px solid ${ACCENT}33`,display:"flex",zIndex:200}}>
+        <div ref={navRef} style={{position:"fixed",bottom:0,left:0,right:0,background:"#0a1020",borderTop:`2px solid ${ACCENT}33`,display:"flex",zIndex:200,paddingBottom:"env(safe-area-inset-bottom, 0px)"}}>
           {NAV.map(({v,Icon,label})=>(
-            <button key={v} onClick={()=>setView(v)} style={{flex:1,padding:"9px 0 7px",border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <button key={v} onClick={()=>setView(v)} style={{flex:1,padding:"14px 0 12px",border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <Icon size={22} active={view===v}/>
               <span style={{fontSize:10,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:view===v?ACCENT:"#555"}}>{label}</span>
               {view===v&&<span style={{width:18,height:2,background:ACCENT,borderRadius:2,marginTop:1}}/>}
@@ -3408,7 +3408,7 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
   },[closestDate, filter]);
 
   return(
-    <div ref={containerRef} style={{paddingBottom:isMobile?130:0}}>
+    <div ref={containerRef} style={{paddingBottom:isMobile?170:0}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <span style={{fontSize:10,color:"#555"}}>{t('played_count').replace('{n}',scored)}</span>
       </div>
@@ -3642,7 +3642,7 @@ function KnockoutView({ko,onScore,isMobile,navHeight}){
   },[closestDate, round]);
 
   return(
-    <div style={{paddingBottom:isMobile?130:0}}>
+    <div style={{paddingBottom:isMobile?170:0}}>
       <SLabel>{currentRound?.fullLabel}</SLabel>      {round==="final"&&ko.final[0].teamA&&(
         <div style={{textAlign:"center",marginBottom:16}}>
           <div style={{fontSize:30}}>🏆</div>
