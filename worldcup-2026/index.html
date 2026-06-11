@@ -730,6 +730,14 @@ function matchToUTC(date, time) {
   if (ap === "AM" && h === 12) h = 0;
   return new Date(Date.UTC(2026, month, day, h - 10, m));
 }
+// dateKey()/dk values are derived from the AEST-labeled date strings above, so
+// "today" must be expressed in that same AEST reference frame (UTC+10) to stay
+// comparable — otherwise sections keep being flagged as "now" for up to a day
+// after every match in them has already kicked off.
+function todayDk() {
+  const aest = new Date(Date.now() + 10 * 60 * 60 * 1000);
+  return (aest.getUTCMonth() + 1) * 100 + aest.getUTCDate();
+}
 
 // [homeIdx, awayIdx, date, time, city]
 const GROUP_SCHEDULE = {
@@ -3406,12 +3414,11 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 
   const scored=Object.values(groupMatches).flat().filter(m=>m.homeScore!==null).length;
 
-  // Find the date section closest to today (local device time)
+  // Find the date section closest to today
   const closestDate=useMemo(()=>{
     if(byDate.length===0) return null;
-    const now=new Date();
-    const todayDk=(now.getMonth()+1)*100+now.getDate();
-    const future=byDate.filter(d=>d.dk>=todayDk);
+    const dk=todayDk();
+    const future=byDate.filter(d=>d.dk>=dk);
     return future.length>0 ? future[0].date : byDate[byDate.length-1].date;
   },[byDate]);
 
@@ -3641,12 +3648,11 @@ function KnockoutView({ko,onScore,isMobile,navHeight}){
     return Object.values(map).sort((a,b)=>a.dk-b.dk);
   },[matches]);
 
-  // Find the date section closest to today (local device time)
+  // Find the date section closest to today
   const closestDate=useMemo(()=>{
     if(byDate.length===0) return null;
-    const now=new Date();
-    const todayDk=(now.getMonth()+1)*100+now.getDate();
-    const future=byDate.filter(d=>d.dk>0&&d.dk>=todayDk);
+    const dk=todayDk();
+    const future=byDate.filter(d=>d.dk>0&&d.dk>=dk);
     return future.length>0 ? future[0].date : byDate[byDate.length-1].date;
   },[byDate]);
 
