@@ -1138,25 +1138,24 @@ function isPhaseUnlocked(key, ko) {
   return koPhaseBucket(key, ko).some(m => !!m.teamA || !!m.teamB);
 }
 
-// True once every group-stage match has a real result. Lets people who join
-// after the group stage already happened skip those (now-moot) guesses and
-// jump straight into the fantasy leaderboard from the knockout rounds onward.
-function isGroupStageComplete(groupMatches) {
-  return Object.values(groupMatches).flat().every(m => m.homeScore !== null && m.awayScore !== null);
-}
-
 // True once every guess for a single phase (group, or an unlocked KO round) is filled in.
+// Matches that have already been played in real life are skipped — their guess
+// inputs are locked, so they can't be filled in and shouldn't block the phase
+// from being considered complete. This lets people who join after some (or all)
+// of a phase already happened in real life still unlock sharing for it.
 // Each phase is judged independently, so a completed phase stays shareable even
 // while a later phase is still being filled in.
 function isPhaseGuessesComplete(key, groupMatches, ko, predictions) {
   if (key === 'group') {
     return Object.values(groupMatches).flat().every(m => {
+      if (m.homeScore !== null && m.awayScore !== null) return true;
       const p = predictions.group?.[m.id];
       return p && p.home != null && p.away != null;
     });
   }
   if (!isPhaseUnlocked(key, ko)) return false;
   return koPhaseBucket(key, ko).every(m => {
+    if (m.scoreA !== null && m.scoreB !== null) return true;
     const p = predictions.ko?.[m.id];
     return p && p.a != null && p.b != null;
   });
@@ -2420,14 +2419,14 @@ function GuessGroupMatchCard({ match, prediction, onPred, isMobile, rivalName, r
       <div style={{display:"flex", alignItems:"center", gap:7, paddingBottom:5, borderBottom:`1px solid ${BORDER}`}}>
         <Flag team={match.home} size={isMobile?21:19}/>
         <span style={{flex:1, fontSize:12, fontWeight:500, color:"#ccc", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}><TeamName name={match.home}/></span>
-        <Stepper value={predH} onChange={v=>onPred(match.id,"home",v)} color={PURPLE}/>
+        <Stepper value={predH} onChange={v=>onPred(match.id,"home",v)} color={PURPLE} disabled={actual}/>
       </div>
       <div style={{display:"flex", alignItems:"center", gap:7, paddingTop:5}}>
         <Flag team={match.away} size={isMobile?21:19}/>
         <span style={{flex:1, fontSize:12, fontWeight:500, color:"#ccc", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}><TeamName name={match.away}/></span>
-        <Stepper value={predA} onChange={v=>onPred(match.id,"away",v)} color={PURPLE}/>
+        <Stepper value={predA} onChange={v=>onPred(match.id,"away",v)} color={PURPLE} disabled={actual}/>
       </div>
-      {actual && hasPred && (
+      {actual && (
         <div style={{marginTop:5, fontSize:9, color:"#555", textAlign:"center"}}>
           {t('actual_score').replace('{a}',match.homeScore).replace('{b}',match.awayScore)}
         </div>
@@ -2472,7 +2471,7 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, pre
         fontStyle:team?"normal":"italic", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
         {team ? <TeamName name={team}/> : t('tbd')}
       </span>
-      <Stepper value={val} onChange={v=>onPred(match.id,field,v)} color={PURPLE} disabled={!hasTeams}/>
+      <Stepper value={val} onChange={v=>onPred(match.id,field,v)} color={PURPLE} disabled={!hasTeams||actual}/>
     </div>
   );
 
@@ -2492,7 +2491,7 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, pre
           {t('phase_locked_reason').replace('{phase}', prevPhaseLabel)}
         </div>
       )}
-      {actual && hasPred && hasTeams && (
+      {actual && hasTeams && (
         <div style={{marginTop:5, fontSize:9, color:"#555", textAlign:"center"}}>
           {t('actual_score').replace('{a}',match.scoreA).replace('{b}',match.scoreB)}
         </div>
@@ -2534,8 +2533,9 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
   const pts = useMemo(()=>calcPoints(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
   // Group stage being complete unlocks "Copy All" / proximity sharing for good —
   // a later phase still in progress doesn't re-lock it. Late joiners who missed
-  // the (now-moot) group stage in real life don't need to back-fill those guesses.
-  const canShare = useMemo(()=>isPhaseGuessesComplete('group',groupMatches,ko,predictions) || isGroupStageComplete(groupMatches),[groupMatches,ko,predictions]);
+  // the (now-moot) group stage in real life don't need to back-fill those guesses,
+  // since already-played matches are skipped by isPhaseGuessesComplete.
+  const canShare = useMemo(()=>isPhaseGuessesComplete('group',groupMatches,ko,predictions),[groupMatches,ko,predictions]);
   const canSharePhase = useMemo(()=>isPhaseGuessesComplete(phase,groupMatches,ko,predictions),[phase,groupMatches,ko,predictions]);
   const [copied, setCopied] = useState(null); // null | 'all' | 'phase'
 
