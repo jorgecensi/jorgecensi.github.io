@@ -245,6 +245,14 @@ const TRANSLATIONS = {
     add_rival_desc: " wants to compete in your bolão. Their predictions are included — you'll see who's ahead as results come in.",
     ignore_btn: "Ignore",
     add_rival_confirm: "Add Rival ✓",
+    // Sync rival to installed app
+    sync_hint_desc: "Added {name}! 📲 Also use the installed app? Copy this link and paste it there to sync.",
+    sync_hint_copy: "📋 Copy sync link",
+    paste_sync_link_btn: "📋 Got a sync link? Paste it",
+    paste_sync_link_placeholder: "Paste link here…",
+    paste_sync_link_confirm: "Add",
+    paste_sync_link_invalid: "That doesn't look like a valid sync link.",
+    paste_sync_link_duplicate: "Already added.",
     exact_scores: "Exact scores!",
     exact_score: "Exact score!",
     right_result: "Right result!",
@@ -462,6 +470,14 @@ const TRANSLATIONS = {
     add_rival_desc: " quer competir no seu bolão. Os palpites dele(a) estão incluídos — você verá quem está na frente conforme os resultados forem saindo.",
     ignore_btn: "Ignorar",
     add_rival_confirm: "Adicionar Rival ✓",
+    // Sincronizar rival com o app instalado
+    sync_hint_desc: "{name} adicionado! 📲 Também usa o app instalado? Copie este link e cole nele para sincronizar.",
+    sync_hint_copy: "📋 Copiar link de sincronização",
+    paste_sync_link_btn: "📋 Tem um link de sincronização? Cole aqui",
+    paste_sync_link_placeholder: "Cole o link aqui…",
+    paste_sync_link_confirm: "Adicionar",
+    paste_sync_link_invalid: "Isso não parece um link de sincronização válido.",
+    paste_sync_link_duplicate: "Já adicionado.",
     exact_scores: "Placares exatos!",
     exact_score: "Placar exato!",
     right_result: "Resultado certo!",
@@ -1284,6 +1300,18 @@ function buildTransferUrl(name, predictions) {
   return SHARE_BASE + "?transfer=" + encodeURIComponent(encodePreds(name, predictions));
 }
 
+// Pull a `rival=`/`transfer=` value out of a pasted share link — accepts a
+// full URL or just a raw query string fragment.
+function extractLinkParam(text, name) {
+  try {
+    const url = new URL(text.trim());
+    const v = url.searchParams.get(name);
+    if (v) return v;
+  } catch (e) {}
+  const m = text.match(new RegExp('[?&]' + name + '=([^&\\s]+)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 function calcRivalPoints(rival, groupMatches, ko) {
   return calcPoints(groupMatches, ko, rival.predictions || { group: {}, ko: {} });
 }
@@ -1580,6 +1608,113 @@ function AddRivalModal({ rival, onAccept, onDecline }) {
           }}>{t('add_rival_confirm')}</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Sync-to-installed-app hint ────────────────────────────────────────────────
+// Shown after accepting a rival from a shared link — offers the same link as
+// a copyable "sync link" so the user can paste it into the installed PWA too,
+// since browser and home-screen-app storage can be separate sandboxes (iOS).
+function SyncHintToast({ hint, isMobile, onDismiss }) {
+  const { t } = useLang();
+  const [copied, setCopied] = useState(false);
+  const url = SHARE_BASE + "?rival=" + encodeURIComponent(hint.raw);
+
+  const handleCopy = () => {
+    const done = () => { setCopied(true); setTimeout(onDismiss, 1500); };
+    navigator.clipboard?.writeText(url).then(done).catch(() => {
+      const el = document.createElement('textarea');
+      el.value = url; document.body.appendChild(el); el.select();
+      document.execCommand('copy'); document.body.removeChild(el); done();
+    });
+  };
+
+  return (
+    <div style={{
+      position:'fixed', left:12, right:12,
+      bottom: isMobile ? 'calc(86px + env(safe-area-inset-bottom, 0px))' : 16,
+      zIndex:400, maxWidth:440, margin:'0 auto',
+      background:'#0d1a2e', border:`1px solid rgba(0,208,132,0.4)`,
+      borderRadius:14, padding:'12px 12px', boxShadow:'0 8px 24px rgba(0,0,0,0.45)',
+      display:'flex', alignItems:'center', gap:10,
+      animation:'flashBounce 0.4s ease',
+    }}>
+      <div style={{ fontSize:22, flexShrink:0 }}>📲</div>
+      <div style={{ flex:1, fontSize:11, color:'#ccc', lineHeight:1.4 }}>
+        {t('sync_hint_desc').replace('{name}', hint.name)}
+      </div>
+      <button onClick={handleCopy} style={{
+        background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
+        color:ACCENT, borderRadius:8, padding:'7px 10px', fontSize:11, fontWeight:800,
+        cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap', flexShrink:0,
+      }}>{copied ? t('copied') : t('sync_hint_copy')}</button>
+      <button onClick={onDismiss} style={{
+        background:'transparent', border:'none', color:'#555',
+        fontSize:18, lineHeight:1, cursor:'pointer', padding:0, flexShrink:0, fontFamily:'inherit',
+      }}>×</button>
+    </div>
+  );
+}
+
+// ─── Paste a sync link (rival / transfer) ──────────────────────────────────────
+// Lets the user paste a previously-received share link directly — useful when
+// the same link was already opened in a different storage context (e.g. browser
+// vs. installed PWA) and needs to be re-applied here.
+function PasteSyncLink({ onResolve }) {
+  const { t } = useLang();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('');
+  const [status, setStatus] = useState(null); // null | 'invalid' | 'duplicate'
+
+  const handleSubmit = () => {
+    const text = value.trim();
+    if (!text) return;
+    const result = onResolve(text);
+    if (result === 'ok') { setValue(''); setOpen(false); setStatus(null); }
+    else setStatus(result);
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => { setOpen(true); setStatus(null); }} style={{
+        display:'block', margin:'0 auto 14px', background:'transparent', border:'none',
+        color:'#555', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+        textDecoration:'underline',
+      }}>
+        {t('paste_sync_link_btn')}
+      </button>
+    );
+  }
+
+  return (
+    <div style={{
+      background:CARD, border:`1px solid ${BORDER}`, borderRadius:14,
+      padding:'12px 14px', marginBottom:14,
+    }}>
+      <div style={{ display:'flex', gap:6 }}>
+        <input
+          value={value}
+          onChange={e => { setValue(e.target.value); setStatus(null); }}
+          onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
+          placeholder={t('paste_sync_link_placeholder')}
+          style={{
+            flex:1, minWidth:0, background:'rgba(255,255,255,0.04)', border:`1px solid ${BORDER}`,
+            borderRadius:8, padding:'9px 10px', color:'#eee', fontSize:12, fontFamily:'inherit',
+          }}
+        />
+        <button onClick={handleSubmit} style={{
+          background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
+          color:ACCENT, borderRadius:8, padding:'9px 14px', fontSize:12, fontWeight:800,
+          cursor:'pointer', fontFamily:'inherit', flexShrink:0,
+        }}>{t('paste_sync_link_confirm')}</button>
+      </div>
+      {status === 'invalid' && (
+        <div style={{ fontSize:10, color:'#ff6b6b', marginTop:6 }}>{t('paste_sync_link_invalid')}</div>
+      )}
+      {status === 'duplicate' && (
+        <div style={{ fontSize:10, color:'#666', marginTop:6 }}>{t('paste_sync_link_duplicate')}</div>
+      )}
     </div>
   );
 }
@@ -2516,7 +2651,7 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, pre
 }
 
 function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isMobile,
-                        rivals, playerName, onShare, onRemoveRival }) {
+                        rivals, playerName, onShare, onRemoveRival, onResolveLink }) {
   const { t } = useLang();
   const PHASES = [
     { key:'group', label:t('phase_group'),    matches:Object.values(groupMatches).flat().sort((a,b)=>a.group.localeCompare(b.group)||(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
@@ -2570,6 +2705,9 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         onShare={onShare} onRemove={onRemoveRival}
         compareRival={compareRival} onToggleCompare={toggleCompare}
       />
+
+      {/* Paste a sync link received in another storage context (e.g. browser vs. installed PWA) */}
+      <PasteSyncLink onResolve={onResolveLink} />
 
       {/* Summary + Share All */}
       <div style={{background:CARD, border:`1px solid rgba(167,139,250,0.3)`, borderRadius:14, padding:"14px 16px", marginBottom:14}}>
@@ -2907,6 +3045,7 @@ function App(){
   const [incomingTransfer,setIncomingTransfer]=useState(null);
   const [incomingBackup,setIncomingBackup]=useState(null);
   const [flashData,setFlashData]=useState(null);
+  const [syncHint,setSyncHint]=useState(null);
 
   // Kick-off notifications
   const [notifEnabled,setNotifEnabled]=useState(()=>loadNotifState().enabled);
@@ -2933,7 +3072,7 @@ function App(){
     // Don't add yourself or a duplicate
     const alreadyExists=loadRivals().some(r=>r.n===decoded.n);
     if(alreadyExists){ window.history.replaceState({},'',window.location.pathname); return; }
-    setIncomingRival(decoded);
+    setIncomingRival({...decoded,_raw:rivalParam});
     window.history.replaceState({},'',window.location.pathname);
   },[]);
 
@@ -3058,14 +3197,37 @@ function App(){
   },[]);
 
   const handleAcceptRival=useCallback((rival)=>{
-    setRivals(prev=>[...prev,{...rival,addedAt:Date.now()}]);
+    const {_raw,...rivalData}=rival;
+    setRivals(prev=>[...prev,{...rivalData,addedAt:Date.now()}]);
     setIncomingRival(null);
+    if(_raw) setSyncHint({name:rivalData.n,raw:_raw});
   },[]);
 
   const handleAcceptTransfer=useCallback((data)=>{
     setPredictions(data.predictions);
     if(data.n && data.n!=='Anonymous') setPlayerName(data.n);
     setIncomingTransfer(null);
+  },[]);
+
+  // Resolve a pasted share link (rival or transfer) — reuses the same
+  // incoming-prompt flow as a `?rival=`/`?transfer=` URL param.
+  const handleResolvePastedLink=useCallback((text)=>{
+    const rivalParam=extractLinkParam(text,'rival');
+    if(rivalParam){
+      const decoded=decodePreds(rivalParam);
+      if(!decoded) return 'invalid';
+      if(rivalsRef.current.some(r=>r.n===decoded.n)) return 'duplicate';
+      setIncomingRival({...decoded,_raw:rivalParam});
+      return 'ok';
+    }
+    const transferParam=extractLinkParam(text,'transfer');
+    if(transferParam){
+      const decoded=decodePreds(transferParam);
+      if(!decoded) return 'invalid';
+      setIncomingTransfer(decoded);
+      return 'ok';
+    }
+    return 'invalid';
   },[]);
 
   // Restore a backup file exported from this app (e.g. from the mobile
@@ -3189,6 +3351,13 @@ function App(){
           onDecline={()=>setIncomingBackup(null)}
         />
       )}
+      {syncHint && (
+        <SyncHintToast
+          hint={syncHint}
+          isMobile={isMobile}
+          onDismiss={()=>setSyncHint(null)}
+        />
+      )}
 
       {/* HEADER */}
       <div style={{background:"linear-gradient(90deg,#0a1020,#162035,#0a1020)",borderBottom:`2px solid ${ACCENT}`,position:"sticky",top:0,zIndex:100,boxShadow:`0 4px 24px rgba(0,208,132,0.18)`,overflow:"hidden"}}>
@@ -3282,7 +3451,7 @@ function App(){
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
         {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
-        {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival}/>}
+        {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
       </div>
 
       {/* MOBILE BOTTOM NAV */}
