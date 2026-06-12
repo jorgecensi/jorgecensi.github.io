@@ -746,6 +746,14 @@ function matchToUTC(date, time) {
   if (ap === "AM" && h === 12) h = 0;
   return new Date(Date.UTC(2026, month, day, h - 10, m));
 }
+// dateKey()/dk values are derived from the AEST-labeled date strings above, so
+// "today" must be expressed in that same AEST reference frame (UTC+10) to stay
+// comparable — otherwise sections keep being flagged as "now" for up to a day
+// after every match in them has already kicked off.
+function todayDk() {
+  const aest = new Date(Date.now() + 10 * 60 * 60 * 1000);
+  return (aest.getUTCMonth() + 1) * 100 + aest.getUTCDate();
+}
 
 // [homeIdx, awayIdx, date, time, city]
 const GROUP_SCHEDULE = {
@@ -2987,9 +2995,12 @@ async function showKickoffNotification(match,t){
 }
 
 // Polls the upcoming-matches list while notifications are enabled and fires a
-// kick-off notification the moment a match's kick-off time is reached.
+// kick-off notification once a match's kick-off time is reached. Also
+// re-checks whenever the app regains visibility/focus, so a kick-off that
+// happened while the phone was locked or the app was backgrounded still
+// surfaces a notification as soon as the user comes back.
 const NOTIF_CHECK_MS=30000;
-const NOTIF_WINDOW_MS=2*60*1000; // grace window so a missed tick doesn't skip a kick-off
+const NOTIF_CATCHUP_MS=3*60*60*1000; // how late a kick-off can still trigger a notification
 function useGameNotifications(matches,enabled,t){
   const matchesRef=useRef(matches);
   matchesRef.current=matches;
@@ -3005,19 +3016,28 @@ function useGameNotifications(matches,enabled,t){
       const state=loadNotifState();
       let changed=false;
       matchesRef.current.forEach(m=>{
+        if(state.notified[m.id]) return;
         const ts=m.kickoff.getTime();
-        if(now>=ts && now-ts<NOTIF_WINDOW_MS && !state.notified[m.id]){
-          state.notified[m.id]=true;
-          changed=true;
-          showKickoffNotification(m,tRef.current);
-        }
+        if(now<ts) return;
+        if(now-ts<NOTIF_CATCHUP_MS) showKickoffNotification(m,tRef.current);
+        state.notified[m.id]=true;
+        changed=true;
       });
       if(changed) saveNotifState(state);
     };
 
     check();
     const interval=setInterval(check,NOTIF_CHECK_MS);
-    return ()=>clearInterval(interval);
+    const onVisible=()=>{ if(document.visibilityState==='visible') check(); };
+    document.addEventListener('visibilitychange',onVisible);
+    window.addEventListener('focus',check);
+    window.addEventListener('pageshow',check);
+    return ()=>{
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange',onVisible);
+      window.removeEventListener('focus',check);
+      window.removeEventListener('pageshow',check);
+    };
   },[enabled,matches]);
 }
 
@@ -3360,7 +3380,7 @@ function App(){
       )}
 
       {/* HEADER */}
-      <div style={{background:"linear-gradient(90deg,#0a1020,#162035,#0a1020)",borderBottom:`2px solid ${ACCENT}`,position:"sticky",top:0,zIndex:100,boxShadow:`0 4px 24px rgba(0,208,132,0.18)`,overflow:"hidden"}}>
+      <div style={{background:"linear-gradient(90deg,#0a1020,#162035,#0a1020)",borderBottom:`2px solid ${ACCENT}`,position:"sticky",top:0,zIndex:100,boxShadow:`0 4px 24px rgba(0,208,132,0.18)`,overflow:"hidden",paddingTop:"env(safe-area-inset-top, 0px)"}}>
         <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"0 12px":"0 24px",height:isMobile?56:62,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
 
           {/* LEFT: emblem + wordmark */}
@@ -3563,12 +3583,11 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 
   const scored=Object.values(groupMatches).flat().filter(m=>m.homeScore!==null).length;
 
-  // Find the date section closest to today (local device time)
+  // Find the date section closest to today
   const closestDate=useMemo(()=>{
     if(byDate.length===0) return null;
-    const now=new Date();
-    const todayDk=(now.getMonth()+1)*100+now.getDate();
-    const future=byDate.filter(d=>d.dk>=todayDk);
+    const dk=todayDk();
+    const future=byDate.filter(d=>d.dk>=dk);
     return future.length>0 ? future[0].date : byDate[byDate.length-1].date;
   },[byDate]);
 
@@ -3798,12 +3817,11 @@ function KnockoutView({ko,onScore,isMobile,navHeight}){
     return Object.values(map).sort((a,b)=>a.dk-b.dk);
   },[matches]);
 
-  // Find the date section closest to today (local device time)
+  // Find the date section closest to today
   const closestDate=useMemo(()=>{
     if(byDate.length===0) return null;
-    const now=new Date();
-    const todayDk=(now.getMonth()+1)*100+now.getDate();
-    const future=byDate.filter(d=>d.dk>0&&d.dk>=todayDk);
+    const dk=todayDk();
+    const future=byDate.filter(d=>d.dk>0&&d.dk>=dk);
     return future.length>0 ? future[0].date : byDate[byDate.length-1].date;
   },[byDate]);
 
