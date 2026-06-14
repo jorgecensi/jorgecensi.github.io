@@ -240,6 +240,7 @@ const TRANSLATIONS = {
     share_predictions_subtitle: "Show this QR to a friend — they scan & add you as a rival",
     your_name_label: "Your name in the bolão",
     name_placeholder: "e.g. John",
+    name_required_hint: "Enter your name above to generate your sharing link",
     prediction_encoded: "{n} prediction encoded",
     predictions_encoded: "{n} predictions encoded",
     share_via: "📤 Share via…",
@@ -472,6 +473,7 @@ const TRANSLATIONS = {
     share_predictions_subtitle: "Mostre este QR para um amigo — ele escaneia e te adiciona como rival",
     your_name_label: "Seu nome no bolão",
     name_placeholder: "ex: João",
+    name_required_hint: "Digite seu nome acima para gerar seu link de compartilhamento",
     prediction_encoded: "{n} palpite codificado",
     predictions_encoded: "{n} palpites codificados",
     share_via: "📤 Compartilhar via…",
@@ -1463,6 +1465,9 @@ function ShareModal({ playerName, predictions, rivals, groupMatches, ko, initial
 
   const handleNameBlur = () => { if (name.trim()) onNameSave(name.trim()); };
 
+  const nameRequired = mode !== 'file';
+  const nameMissing = nameRequired && !name.trim();
+
   const handleExportFile = () => {
     downloadBackupFile(buildBackupData(name, predictions, rivals, groupMatches, ko));
   };
@@ -1527,7 +1532,9 @@ function ShareModal({ playerName, predictions, rivals, groupMatches, ko, initial
 
         {/* Name */}
         <div style={{ width:'100%' }}>
-          <div style={{ fontSize:9, color:'#888', marginBottom:5, fontWeight:700, letterSpacing:1, textTransform:'uppercase' }}>{t('your_name_label')}</div>
+          <div style={{ fontSize:9, color:'#888', marginBottom:5, fontWeight:700, letterSpacing:1, textTransform:'uppercase' }}>
+            {t('your_name_label')}{nameRequired && <span style={{ color:'#ff6b6b' }}> *</span>}
+          </div>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
@@ -1535,7 +1542,7 @@ function ShareModal({ playerName, predictions, rivals, groupMatches, ko, initial
             placeholder={t('name_placeholder')}
             style={{
               width:'100%', padding:'9px 12px', borderRadius:9,
-              border:`1.5px solid rgba(167,139,250,0.4)`, background:'rgba(255,255,255,0.05)',
+              border:`1.5px solid ${nameMissing ? 'rgba(255,107,107,0.6)' : 'rgba(167,139,250,0.4)'}`, background:'rgba(255,255,255,0.05)',
               color:'#fff', fontSize:14, fontFamily:'inherit', outline:'none',
             }}
           />
@@ -1566,6 +1573,14 @@ function ShareModal({ playerName, predictions, rivals, groupMatches, ko, initial
               )}
             </div>
           </>
+        ) : nameMissing ? (
+          <div style={{
+            width:'100%', textAlign:'center', fontSize:12, color:'#888',
+            padding:'24px 16px', borderRadius:14, lineHeight:1.5,
+            border:'1px dashed rgba(255,255,255,0.15)',
+          }}>
+            {t('name_required_hint')}
+          </div>
         ) : (
           <>
             {/* QR + info */}
