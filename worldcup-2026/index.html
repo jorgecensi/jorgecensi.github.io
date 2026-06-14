@@ -143,6 +143,9 @@ const TRANSLATIONS = {
     win_pen: "WIN (PEN)",
     advance: "ADVANCE",
     tbd: "TBD",
+    slot_group_winner: "Winner Group {g}",
+    slot_group_runnerup: "Runner-up Group {g}",
+    slot_best_third: "Best 3rd: {g}",
     // KO view
     the_wc_final: "The World Cup Final",
     // Fantasy / GuessesView
@@ -376,6 +379,9 @@ const TRANSLATIONS = {
     win_pen: "VITÓRIA (PEN)",
     advance: "AVANÇA",
     tbd: "A DEF.",
+    slot_group_winner: "1º Grupo {g}",
+    slot_group_runnerup: "2º Grupo {g}",
+    slot_best_third: "Melhor 3º: {g}",
     // KO view
     the_wc_final: "A Grande Final",
     // Fantasy / GuessesView
@@ -933,8 +939,26 @@ const R32_BRACKET = [
   {id:"r32-14",slotA:"1B", thirdB:1},  // M85: 1B vs best-3rd (E/F/G/I/J)
   {id:"r32-15",slotA:"1K", thirdB:6},  // M87: 1K vs best-3rd (D/E/I/J/L)
 ];
-const R16_PAIRS=[[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13],[14,15]];
-const QF_PAIRS=[[0,1],[2,3],[4,5],[6,7]];
+// For each "best 3rd" slot (indexed by thirdB, winner order A,B,D,E,G,I,K,L), the
+// five groups whose 3rd-placed team could end up there — used to preview that
+// bracket slot before the full group stage (and THIRD_PLACE_TABLE) is decided.
+const THIRD_PLACE_ELIGIBLE_GROUPS = [
+  ["C","E","F","H","I"], // thirdB 0 (1A)
+  ["E","F","G","I","J"], // thirdB 1 (1B)
+  ["B","E","F","I","J"], // thirdB 2 (1D)
+  ["A","B","C","D","F"], // thirdB 3 (1E)
+  ["A","E","H","I","J"], // thirdB 4 (1G)
+  ["C","D","F","G","H"], // thirdB 5 (1I)
+  ["D","E","I","J","L"], // thirdB 6 (1K)
+  ["E","H","I","J","K"], // thirdB 7 (1L)
+];
+// R16_PAIRS[i] gives the R32_BRACKET indices whose winners meet in r16[i]. KO_SCHEDULE.r16
+// is ordered [M90,M89,M91,M92,M93,M94,M95,M96] (by venue/date), so e.g. r16[0] (Houston/M90
+// = Winner M73 v Winner M75) pairs r32 indices 2 (M73) and 3 (M75).
+// QF_PAIRS[i] gives the r16 indices feeding qf[i]; KO_SCHEDULE.qf is ordered [M97,M98,M99,M100].
+// SF_PAIRS[i] gives the qf indices feeding sf[i]; KO_SCHEDULE.sf is ordered [M101,M102].
+const R16_PAIRS=[[2,3],[0,1],[8,9],[10,11],[4,5],[6,7],[12,13],[14,15]];
+const QF_PAIRS=[[0,1],[4,5],[2,3],[6,7]];
 const SF_PAIRS=[[0,1],[2,3]];
 
 // ─── Third-placed team allocation (FIFA Annex C) ────────────────────────────────
@@ -3613,7 +3637,7 @@ function App(){
       <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden",zoom:isMobile?1.2:1}}>
         {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
-        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight}/>}
+        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
         {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
       </div>
@@ -4047,7 +4071,7 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
 }
 
 // ─── KNOCKOUT VIEW ─────────────────────────────────────────────────────────────
-function KnockoutView({ko,onScore,isMobile,navHeight}){
+function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches}){
   const { t } = useLang();
   const [round,setRound]=useState("r32");
   const ROUNDS=[
@@ -4122,7 +4146,7 @@ function KnockoutView({ko,onScore,isMobile,navHeight}){
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:9}}>
               {dayMatches.map(m=>{
                 const matchIdx=matches.indexOf(m);
-                return <KOMatchCard key={m.id} match={m} matchIdx={matchIdx} round={round} onScore={onScore} isMobile={isMobile}/>;
+                return <KOMatchCard key={m.id} match={m} matchIdx={matchIdx} round={round} onScore={onScore} isMobile={isMobile} groupMatches={groupMatches}/>;
               })}
             </div>
           </div>
@@ -4145,24 +4169,51 @@ function KnockoutView({ko,onScore,isMobile,navHeight}){
 }
 
 // ─── KO MATCH CARD ─────────────────────────────────────────────────────────────
-function KOMatchCard({match,matchIdx,round,onScore,isMobile}){
+// For an unresolved R32 slot, describe which group it comes from (and a flag
+// preview of the candidate teams) instead of a bare "TBD". `slot` is a "1X"/"2X"
+// group-position label; `thirdB` (teamB only) is the index into
+// THIRD_PLACE_ELIGIBLE_GROUPS for "best 3rd place" slots.
+function r32SlotInfo(t, slot, thirdB, groupMatches) {
+  if (thirdB != null) {
+    const groups = THIRD_PLACE_ELIGIBLE_GROUPS[thirdB];
+    return {
+      label: t('slot_best_third').replace('{g}', groups.join('/')),
+      flags: groups.map(g => computeStandings(GROUPS[g], groupMatches[g])[2]?.team || null),
+    };
+  }
+  if (!slot) return null;
+  const pos = slot[0], g = slot.slice(1);
+  return {
+    label: t(pos === '1' ? 'slot_group_winner' : 'slot_group_runnerup').replace('{g}', g),
+    flags: GROUPS[g],
+  };
+}
+
+function KOMatchCard({match,matchIdx,round,onScore,isMobile,groupMatches}){
   const { t } = useLang();
   const winner=koWinner(match);
   const draw=match.scoreA!==null&&match.scoreB!==null&&+match.scoreA===+match.scoreB;
   const penWinner=draw&&match.penA!==null&&match.penB!==null
     ?(+match.penA>+match.penB?match.teamA:+match.penB>+match.penA?match.teamB:null):null;
 
-  const row=(team,score,pen,scoreField,penField,isWinner)=>{
+  const row=(team,score,pen,scoreField,penField,isWinner,slot)=>{
     const has=!!team;
     return(
-      <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 0"}}>
-        <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0}}>
-          <Flag team={has?team:null} size={isMobile?21:19} faded={!has} />
-          <span style={{fontSize:12,fontWeight:isWinner?800:400,color:isWinner?"#fff":has?"#aaa":"#444",fontStyle:has?"normal":"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{has?<TeamName name={team}/>:t('tbd')}</span>
+      <div style={{padding:"9px 0"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0}}>
+            <Flag team={has?team:null} size={isMobile?21:19} faded={!has} />
+            <span style={{fontSize:12,fontWeight:isWinner?800:400,color:isWinner?"#fff":has?"#aaa":"#444",fontStyle:has?"normal":"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{has?<TeamName name={team}/>:slot?slot.label:t('tbd')}</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+            <Stepper value={score} onChange={v=>onScore(round,matchIdx,scoreField,v)} highlight={isWinner&&!draw} disabled={!has}/>
+          </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
-          <Stepper value={score} onChange={v=>onScore(round,matchIdx,scoreField,v)} highlight={isWinner&&!draw} disabled={!has}/>
-        </div>
+        {!has&&slot&&(
+          <div style={{display:"flex",gap:3,marginTop:3,paddingLeft:isMobile?27:25,flexWrap:"wrap"}}>
+            {slot.flags.map((tm,i)=>tm&&<Flag key={tm+i} team={tm} size={13}/>)}
+          </div>
+        )}
       </div>
     );
   };
@@ -4180,8 +4231,8 @@ function KOMatchCard({match,matchIdx,round,onScore,isMobile}){
   return(
     <div style={{background:winner?"linear-gradient(135deg,rgba(0,208,132,0.07),rgba(255,255,255,0.02))":CARD,border:`1px solid ${winner?"rgba(0,208,132,0.22)":draw&&(match.penA!==null||match.penB!==null)?`rgba(167,139,250,0.3)`:BORDER}`,borderRadius:12,padding:"11px 13px"}}>
       <div style={{marginBottom:7}}><TimeBadge date={match.date} time={match.time} city={match.city}/></div>
-      <div style={{borderBottom:`1px solid ${BORDER}`,paddingBottom:2,marginBottom:2}}>{row(match.teamA,match.scoreA,match.penA,"scoreA","penA",winner===match.teamA)}</div>
-      {row(match.teamB,match.scoreB,match.penB,"scoreB","penB",winner===match.teamB)}
+      <div style={{borderBottom:`1px solid ${BORDER}`,paddingBottom:2,marginBottom:2}}>{row(match.teamA,match.scoreA,match.penA,"scoreA","penA",winner===match.teamA,round==='r32'?r32SlotInfo(t,match.slotA,null,groupMatches):null)}</div>
+      {row(match.teamB,match.scoreB,match.penB,"scoreB","penB",winner===match.teamB,round==='r32'?r32SlotInfo(t,match.slotB,match.thirdB,groupMatches):null)}
       {draw&&(
         <div style={{marginTop:8,padding:"9px 10px 11px",borderRadius:10,
           background:"linear-gradient(135deg, rgba(167,139,250,0.12), rgba(167,139,250,0.03))",
