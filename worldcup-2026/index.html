@@ -3781,6 +3781,40 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
         <span style={{fontSize:10,color:"#555"}}>{t('played_count').replace('{n}',scored)}</span>
       </div>
 
+      {/* Played matches — collapsed by default, shown up top so it doesn't get
+          buried below a long list of upcoming fixtures on mobile */}
+      {playedMatches.length>0&&(
+        <div style={{marginBottom:22}}>
+          <button onClick={()=>setShowPlayed(p=>!p)} style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:"transparent", border:`1px solid ${BORDER}`, borderRadius:10,
+            padding:"8px 12px", color:"#888", fontSize:11, fontWeight:700, cursor:"pointer",
+            animation: togglePulse ? "collapsedPulse 0.9s ease-out" : undefined,
+          }}>
+            <span>
+              {showPlayed ? t('hide_played_matches') : t('show_played_matches')}
+              {' · '}
+              {playedMatches.length===1 ? t('match_count').replace('{n}',playedMatches.length) : t('matches_count').replace('{n}',playedMatches.length)}
+            </span>
+            <span style={{fontSize:9}}>{showPlayed ? '▲' : '▼'}</span>
+          </button>
+          {showPlayed&&playedByDate.map(({date,matches:dayMatches})=>(
+            <div key={date} style={{marginTop:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:"#fff"}}>{date}</div>
+                <div style={{flex:1,height:1,background:BORDER}}/>
+                <div style={{fontSize:9,color:"#555"}}>{dayMatches.length===1?t('match_count').replace('{n}',1):t('matches_count').replace('{n}',dayMatches.length)}</div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:8}}>
+                {dayMatches.map(m=>(
+                  <GroupMatchCard key={m.id} match={m} onScore={(side,val)=>onScore(m.group,m.id,side,val)} isMobile={isMobile}/>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Date sections */}
       {byDate.map(({date,matches:dayMatches})=>{
         const isToday=date===closestDate;
@@ -3813,39 +3847,6 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
           </div>
         );
       })}
-
-      {/* Played matches — collapsed by default */}
-      {playedMatches.length>0&&(
-        <div style={{marginBottom:22}}>
-          <button onClick={()=>setShowPlayed(p=>!p)} style={{
-            width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
-            background:"transparent", border:`1px solid ${BORDER}`, borderRadius:10,
-            padding:"8px 12px", color:"#888", fontSize:11, fontWeight:700, cursor:"pointer",
-            animation: togglePulse ? "collapsedPulse 0.9s ease-out" : undefined,
-          }}>
-            <span>
-              {showPlayed ? t('hide_played_matches') : t('show_played_matches')}
-              {' · '}
-              {playedMatches.length===1 ? t('match_count').replace('{n}',playedMatches.length) : t('matches_count').replace('{n}',playedMatches.length)}
-            </span>
-            <span style={{fontSize:9}}>{showPlayed ? '▲' : '▼'}</span>
-          </button>
-          {showPlayed&&playedByDate.map(({date,matches:dayMatches})=>(
-            <div key={date} style={{marginTop:14}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:"#fff"}}>{date}</div>
-                <div style={{flex:1,height:1,background:BORDER}}/>
-                <div style={{fontSize:9,color:"#555"}}>{dayMatches.length===1?t('match_count').replace('{n}',1):t('matches_count').replace('{n}',dayMatches.length)}</div>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:8}}>
-                {dayMatches.map(m=>(
-                  <GroupMatchCard key={m.id} match={m} onScore={(side,val)=>onScore(m.group,m.id,side,val)} isMobile={isMobile}/>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Group filter dropdown — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
       <FixedFilterBar isMobile={isMobile} navHeight={navHeight} marginTop={8}>
