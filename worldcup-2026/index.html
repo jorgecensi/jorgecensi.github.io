@@ -933,8 +933,13 @@ const R32_BRACKET = [
   {id:"r32-14",slotA:"1B", thirdB:1},  // M85: 1B vs best-3rd (E/F/G/I/J)
   {id:"r32-15",slotA:"1K", thirdB:6},  // M87: 1K vs best-3rd (D/E/I/J/L)
 ];
-const R16_PAIRS=[[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13],[14,15]];
-const QF_PAIRS=[[0,1],[2,3],[4,5],[6,7]];
+// R16_PAIRS[i] gives the R32_BRACKET indices whose winners meet in r16[i]. KO_SCHEDULE.r16
+// is ordered [M90,M89,M91,M92,M93,M94,M95,M96] (by venue/date), so e.g. r16[0] (Houston/M90
+// = Winner M73 v Winner M75) pairs r32 indices 2 (M73) and 3 (M75).
+// QF_PAIRS[i] gives the r16 indices feeding qf[i]; KO_SCHEDULE.qf is ordered [M97,M98,M99,M100].
+// SF_PAIRS[i] gives the qf indices feeding sf[i]; KO_SCHEDULE.sf is ordered [M101,M102].
+const R16_PAIRS=[[2,3],[0,1],[8,9],[10,11],[4,5],[6,7],[12,13],[14,15]];
+const QF_PAIRS=[[0,1],[4,5],[2,3],[6,7]];
 const SF_PAIRS=[[0,1],[2,3]];
 
 // ─── Third-placed team allocation (FIFA Annex C) ────────────────────────────────
