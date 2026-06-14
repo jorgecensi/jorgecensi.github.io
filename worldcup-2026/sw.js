@@ -1,7 +1,15 @@
-const CACHE_VERSION = '2026061100';
+const CACHE_VERSION = '2026061400';
 const CACHE_NAME = `worldcup-2026-${CACHE_VERSION}`;
 const OFFLINE_URL = '/worldcup-2026/';
-const PRECACHE_URLS = ['/worldcup-2026/','/worldcup-2026/manifest.json','/worldcup-2026/icons/icon.svg'];
+const PRECACHE_URLS = [
+  '/worldcup-2026/',
+  '/worldcup-2026/manifest.json',
+  '/worldcup-2026/icons/icon.svg',
+  'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS.map((url) => new Request(url, { cache: 'reload' })))));
@@ -32,14 +40,10 @@ self.addEventListener('notificationclick', (event) => {
 });
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  const requestUrl = new URL(event.request.url);
   const isNav = event.request.mode === 'navigate';
-  const isSame = requestUrl.origin === self.location.origin;
   if (isNav) {
     event.respondWith(fetch(event.request).then((r) => { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)); return r; }).catch(() => caches.match(event.request).then((c) => c || caches.match(OFFLINE_URL))));
     return;
   }
-  if (isSame) {
-    event.respondWith(caches.match(event.request).then((cached) => { const nf = fetch(event.request).then((r) => { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)); return r; }).catch(() => cached); return cached || nf; }));
-  }
+  event.respondWith(caches.match(event.request).then((cached) => { const nf = fetch(event.request).then((r) => { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)); return r; }).catch(() => cached); return cached || nf; }));
 });
