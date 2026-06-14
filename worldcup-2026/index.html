@@ -51,6 +51,11 @@
       0%   { opacity: 0; transform: translateY(20px) scale(0.96); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
     }
+    @keyframes collapsedPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(0,208,132,0); border-color: rgba(255,255,255,0.08); }
+      30%  { box-shadow: 0 0 0 5px rgba(0,208,132,0.18); border-color: rgba(0,208,132,0.5); }
+      100% { box-shadow: 0 0 0 0 rgba(0,208,132,0); border-color: rgba(255,255,255,0.08); }
+    }
   </style>
 </head>
 <body>
@@ -152,6 +157,8 @@ const TRANSLATIONS = {
     pts_earned: "{pts} pts earned this phase",
     phase_locked_reason: "🔒 Unlocks once the previous stage finishes: {phase}",
     actual_score: "Actual: {a}–{b}",
+    show_played_matches: "Show played",
+    hide_played_matches: "Hide played",
     // Stats
     stat_host_cities: "Host Cities",
     stat_farthest_trip: "Farthest Trip",
@@ -377,6 +384,8 @@ const TRANSLATIONS = {
     pts_earned: "{pts} pts nesta fase",
     phase_locked_reason: "🔒 Libera quando a fase anterior terminar: {phase}",
     actual_score: "Real: {a}–{b}",
+    show_played_matches: "Mostrar jogados",
+    hide_played_matches: "Ocultar jogados",
     // Stats
     stat_host_cities: "Cidades-Sede",
     stat_farthest_trip: "Viagem Mais Longa",
@@ -549,6 +558,9 @@ const PURPLE = "#a78bfa";
 const BG     = "#080d16";
 const CARD   = "rgba(255,255,255,0.04)";
 const BORDER = "rgba(255,255,255,0.08)";
+// How long the WinnerFlash celebration overlay stays on screen — other UI
+// animations (e.g. a match collapsing into "played") wait until it's gone.
+const WINNER_FLASH_MS = 4500;
 
 const FLAG = {
   "Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz",
@@ -1832,7 +1844,7 @@ function WinnerFlash({ data, onDismiss }) {
   const isExact = exact.length > 0;
 
   useEffect(() => {
-    const timer = setTimeout(onDismiss, 4500);
+    const timer = setTimeout(onDismiss, WINNER_FLASH_MS);
     return () => clearTimeout(timer);
   }, [onDismiss]);
 
@@ -2112,6 +2124,7 @@ function koWinner(m) {
   return null;
 }
 function koLoser(m){const w=koWinner(m);if(!w)return null;return w===m.teamA?m.teamB:m.teamA;}
+const isMatchScored = m => m.homeScore!==null && m.homeScore!==undefined && m.awayScore!==null && m.awayScore!==undefined;
 function propagateKO(ko,gm){
   const slots=getGroupQualifiers(gm);
   const thirds=getThirdPlaceTeams(gm);
@@ -2662,7 +2675,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
                         rivals, playerName, onShare, onRemoveRival, onResolveLink }) {
   const { t } = useLang();
   const PHASES = [
-    { key:'group', label:t('phase_group'),    matches:Object.values(groupMatches).flat().sort((a,b)=>a.group.localeCompare(b.group)||(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
+    { key:'group', label:t('phase_group'),    matches:Object.values(groupMatches).flat().sort((a,b)=>(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
     { key:'r32',   label:t('phase_r32'),   matches:ko.r32 },
     { key:'r16',   label:t('phase_r16'),   matches:ko.r16 },
     { key:'qf',    label:t('phase_qf'), matches:ko.qf },
@@ -2703,6 +2716,45 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
 
   const currentPhase = PHASES.find(p => p.key === phase);
   const prevPhaseLabel = PHASES[PHASES.findIndex(p => p.key === phase) - 1]?.label || '';
+
+  // Already-played matches are collapsed by default so the list opens on
+  // the next upcoming match instead of a long scroll of locked results.
+  const [showPlayed, setShowPlayed] = useState(false);
+  useEffect(()=>{ setShowPlayed(false); }, [phase]);
+
+  const isMatchPlayed = m => phase === 'group'
+    ? (m.homeScore !== null && m.awayScore !== null)
+    : (m.scoreA !== null && m.scoreB !== null);
+
+  const { playedMatches, upcomingMatches } = useMemo(()=>{
+    const played = [], upcoming = [];
+    (currentPhase?.matches||[]).forEach(m=>(isMatchPlayed(m)?played:upcoming).push(m));
+    return { playedMatches:played, upcomingMatches:upcoming };
+  },[currentPhase, phase]);
+
+  const renderMatchCard = m => {
+    if (phase === 'group') {
+      return (
+        <GuessGroupMatchCard key={m.id} match={m}
+          prediction={predictions.group?.[m.id]}
+          onPred={onGroupPred} isMobile={isMobile}
+          rivalName={compareRival}
+          rivalPrediction={compareRivalObj?.predictions?.group?.[m.id]}/>
+      );
+    }
+    const label = phase === 'final'
+      ? (m.id === 'third' ? t('match_label_third') : t('match_label_final'))
+      : undefined;
+    return (
+      <GuessKOMatchCard key={m.id} match={m}
+        prediction={predictions.ko?.[m.id]}
+        onPred={onKOPred} isMobile={isMobile}
+        matchLabel={label}
+        prevPhaseLabel={prevPhaseLabel}
+        rivalName={compareRival}
+        rivalPrediction={compareRivalObj?.predictions?.ko?.[m.id]}/>
+    );
+  };
 
   return (
     <div>
@@ -2794,30 +2846,28 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         </div>
       ) : (
         <div style={{display:"flex", flexDirection:"column", gap:8}}>
-          {phase === 'group' ? (
-            currentPhase.matches.map(m => (
-              <GuessGroupMatchCard key={m.id} match={m}
-                prediction={predictions.group?.[m.id]}
-                onPred={onGroupPred} isMobile={isMobile}
-                rivalName={compareRival}
-                rivalPrediction={compareRivalObj?.predictions?.group?.[m.id]}/>
-            ))
-          ) : (
-            currentPhase.matches.map(m => {
-              const label = phase === 'final'
-                ? (m.id === 'third' ? t('match_label_third') : t('match_label_final'))
-                : undefined;
-              return (
-                <GuessKOMatchCard key={m.id} match={m}
-                  prediction={predictions.ko?.[m.id]}
-                  onPred={onKOPred} isMobile={isMobile}
-                  matchLabel={label}
-                  prevPhaseLabel={prevPhaseLabel}
-                  rivalName={compareRival}
-                  rivalPrediction={compareRivalObj?.predictions?.ko?.[m.id]}/>
-              );
-            })
+          {playedMatches.length > 0 && (
+            <div>
+              <button onClick={()=>setShowPlayed(p=>!p)} style={{
+                width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+                background:"transparent", border:`1px solid ${BORDER}`, borderRadius:10,
+                padding:"8px 12px", color:"#888", fontSize:11, fontWeight:700, cursor:"pointer",
+              }}>
+                <span>
+                  {showPlayed ? t('hide_played_matches') : t('show_played_matches')}
+                  {' · '}
+                  {playedMatches.length===1 ? t('match_count').replace('{n}',playedMatches.length) : t('matches_count').replace('{n}',playedMatches.length)}
+                </span>
+                <span style={{fontSize:9}}>{showPlayed ? '▲' : '▼'}</span>
+              </button>
+              {showPlayed && (
+                <div style={{display:"flex", flexDirection:"column", gap:8, marginTop:8}}>
+                  {playedMatches.map(renderMatchCard)}
+                </div>
+              )}
+            </div>
           )}
+          {upcomingMatches.map(renderMatchCard)}
         </div>
       )}
     </div>
@@ -3065,6 +3115,8 @@ function App(){
   const [incomingTransfer,setIncomingTransfer]=useState(null);
   const [incomingBackup,setIncomingBackup]=useState(null);
   const [flashData,setFlashData]=useState(null);
+  // ID of the group match currently animating into the Fixtures "played" section
+  const [collapsingMatchId,setCollapsingMatchId]=useState(null);
   const [syncHint,setSyncHint]=useState(null);
 
   // Kick-off notifications
@@ -3138,15 +3190,17 @@ function App(){
   const FLASH_DEBOUNCE_MS=2500;
   const prevScoresRef=useRef(null);
   const pendingFlashRef=useRef({});
+  const collapseTimeoutRef=useRef({});
+  const collapseFallbackRef=useRef({});
 
   useEffect(()=>{
     // Build current score snapshot
     const snap={};
     Object.values(groupMatches).flat().forEach(m=>{
-      if(m.homeScore!==null&&m.awayScore!==null) snap[m.id]={h:m.homeScore,a:m.awayScore,hn:m.home,an:m.away};
+      if(m.homeScore!==null&&m.awayScore!==null) snap[m.id]={h:m.homeScore,a:m.awayScore,hn:m.home,an:m.away,kind:'group'};
     });
     [...ko.r32,...ko.r16,...ko.qf,...ko.sf,...ko.final,...ko.third].forEach(m=>{
-      if(m.scoreA!==null&&m.scoreB!==null&&m.teamA&&m.teamB) snap[m.id]={h:m.scoreA,a:m.scoreB,hn:m.teamA,an:m.teamB};
+      if(m.scoreA!==null&&m.scoreB!==null&&m.teamA&&m.teamB) snap[m.id]={h:m.scoreA,a:m.scoreB,hn:m.teamA,an:m.teamB,kind:'ko'};
     });
 
     const prev=prevScoresRef.current;
@@ -3161,10 +3215,20 @@ function App(){
       }
     });
 
+    // Cancel pending/scheduled collapses for matches whose score was cleared/changed away again
+    Object.keys(collapseTimeoutRef.current).forEach(id=>{
+      if(!snap[id]){
+        clearTimeout(collapseTimeoutRef.current[id]);
+        delete collapseTimeoutRef.current[id];
+        clearTimeout(collapseFallbackRef.current[id]);
+        delete collapseFallbackRef.current[id];
+      }
+    });
+
     if(prev===null) return; // first run: just establish the baseline
 
     // Find matches whose score is newly complete or has changed since last run
-    Object.entries(snap).forEach(([id,{h,a,hn,an}])=>{
+    Object.entries(snap).forEach(([id,{h,a,hn,an,kind}])=>{
       const prevEntry=prev[id];
       if(prevEntry&&prevEntry.h===h&&prevEntry.a===a) return; // unchanged
       if(pendingFlashRef.current[id]) return; // already debouncing this exact score
@@ -3192,15 +3256,44 @@ function App(){
         if(winners.length>0){
           setFlashData({matchId:id,scoreH:h,scoreA:a,home:hn,away:an,winners});
         }
+
+        // Schedule this match's collapse into the Fixtures "played" section.
+        // If a WinnerFlash celebration is about to show, wait for it to finish
+        // (plus a short buffer) so the collapse animation doesn't compete with it.
+        if(kind==='group'){
+          clearTimeout(collapseTimeoutRef.current[id]);
+          clearTimeout(collapseFallbackRef.current[id]);
+          const delay = winners.length>0 ? WINNER_FLASH_MS+300 : 400;
+          collapseTimeoutRef.current[id]=setTimeout(()=>{
+            delete collapseTimeoutRef.current[id];
+            setCollapsingMatchId(id);
+          },delay);
+          // Fallback: if FixturesView never reports the animation as done
+          // (e.g. it's not mounted, or the match is hidden by a group filter),
+          // make sure collapsingMatchId doesn't get stuck forever.
+          collapseFallbackRef.current[id]=setTimeout(()=>{
+            delete collapseFallbackRef.current[id];
+            handleCollapseAnimEnd(id);
+          },delay+1500);
+        }
       },FLASH_DEBOUNCE_MS);
 
       pendingFlashRef.current[id]={h,a,timeoutId};
     });
   },[groupMatches,ko]);
 
-  // Cancel any pending flash timers on unmount
+  // Cancel any pending flash/collapse timers on unmount
   useEffect(()=>()=>{
     Object.values(pendingFlashRef.current).forEach(p=>clearTimeout(p.timeoutId));
+    Object.values(collapseTimeoutRef.current).forEach(clearTimeout);
+    Object.values(collapseFallbackRef.current).forEach(clearTimeout);
+  },[]);
+
+  // Marks a Fixtures "collapse into played" animation as finished (called by
+  // FixturesView when the CollapseTransition completes, or by the fallback
+  // timer above if it never gets the chance to run).
+  const handleCollapseAnimEnd=useCallback((id)=>{
+    setCollapsingMatchId(prev=>prev===id?null:prev);
   },[]);
 
   const updateGroupScore=useCallback((group,matchId,side,val)=>{
@@ -3467,7 +3560,7 @@ function App(){
 
       {/* MAIN */}
       <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden",zoom:isMobile?1.2:1}}>
-        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)}/>}
+        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
         {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
@@ -3551,9 +3644,34 @@ function FixedFilterBar({isMobile,navHeight,marginTop,children}){
   );
 }
 
+// ─── COLLAPSE TRANSITION ────────────────────────────────────────────────────────
+// Animates a match card shrinking away when it's collapsed into "played".
+function CollapseTransition({onDone, children}){
+  const [collapsed,setCollapsed]=useState(false);
+  useEffect(()=>{
+    const raf=requestAnimationFrame(()=>setCollapsed(true));
+    return ()=>cancelAnimationFrame(raf);
+  },[]);
+  return (
+    <div
+      onTransitionEnd={e=>{if(e.propertyName==='opacity') onDone&&onDone();}}
+      style={{
+        overflow:"hidden",
+        transition:"max-height 0.45s ease, opacity 0.45s ease, transform 0.45s ease",
+        maxHeight: collapsed?0:320,
+        opacity: collapsed?0:1,
+        transform: collapsed?"scale(0.9)":"scale(1)",
+        transformOrigin:"top center",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // ─── FIXTURES VIEW ─────────────────────────────────────────────────────────────
 // All 72 group matches sorted chronologically, grouped by date
-function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed}){
+function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd}){
   const { t } = useLang();
   const [filter,setFilter]=useState(initialFilter||"ALL");
   const dateRefs=useRef({});
@@ -3571,15 +3689,61 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 
   const filtered=filter==="ALL"?allMatches:allMatches.filter(m=>m.group===filter);
 
+  // Matches that already have a final score collapse behind a "Show played"
+  // toggle. A match that just finished stays in its normal slot — animating
+  // into the collapsed section — until the CollapseTransition reports it's done.
+  const [collapsedIds,setCollapsedIds]=useState(()=>{
+    const ids=new Set();
+    Object.values(groupMatches).flat().forEach(m=>{ if(isMatchScored(m)) ids.add(m.id); });
+    return ids;
+  });
+  const [showPlayed,setShowPlayed]=useState(false);
+  const [togglePulse,setTogglePulse]=useState(false);
+
+  const handleCardCollapseEnd=useCallback((id)=>{
+    setCollapsedIds(prev=>prev.has(id) ? prev : new Set(prev).add(id));
+    onCollapseAnimEnd&&onCollapseAnimEnd(id);
+  },[onCollapseAnimEnd]);
+
+  const activeMatches=useMemo(
+    ()=>filtered.filter(m=>!collapsedIds.has(m.id)||m.id===collapsingMatchId),
+    [filtered,collapsedIds,collapsingMatchId]
+  );
+  const playedMatches=useMemo(
+    ()=>filtered.filter(m=>collapsedIds.has(m.id)&&m.id!==collapsingMatchId),
+    [filtered,collapsedIds,collapsingMatchId]
+  );
+
+  // Briefly pulse the "Show played" toggle whenever a match collapses into it
+  const prevPlayedCountRef=useRef(playedMatches.length);
+  useEffect(()=>{
+    if(playedMatches.length>prevPlayedCountRef.current){
+      setTogglePulse(true);
+      const timer=setTimeout(()=>setTogglePulse(false),900);
+      prevPlayedCountRef.current=playedMatches.length;
+      return ()=>clearTimeout(timer);
+    }
+    prevPlayedCountRef.current=playedMatches.length;
+  },[playedMatches.length]);
+
   // Group by date
   const byDate=useMemo(()=>{
     const map={};
-    filtered.forEach(m=>{
+    activeMatches.forEach(m=>{
       if(!map[m.date]) map[m.date]={date:m.date,dk:m.dk,matches:[]};
       map[m.date].matches.push(m);
     });
     return Object.values(map).sort((a,b)=>a.dk-b.dk);
-  },[filtered]);
+  },[activeMatches]);
+
+  const playedByDate=useMemo(()=>{
+    const map={};
+    playedMatches.forEach(m=>{
+      if(!map[m.date]) map[m.date]={date:m.date,dk:m.dk,matches:[]};
+      map[m.date].matches.push(m);
+    });
+    return Object.values(map).sort((a,b)=>a.dk-b.dk);
+  },[playedMatches]);
 
   const scored=Object.values(groupMatches).flat().filter(m=>m.homeScore!==null).length;
 
@@ -3602,6 +3766,14 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
     },120);
     return ()=>clearTimeout(timer);
   },[closestDate, filter]);
+
+  const renderCard = m => {
+    const card = <GroupMatchCard key={m.id} match={m} onScore={(side,val)=>onScore(m.group,m.id,side,val)} isMobile={isMobile}/>;
+    if(m.id===collapsingMatchId){
+      return <CollapseTransition key={m.id} onDone={()=>handleCardCollapseEnd(m.id)}>{card}</CollapseTransition>;
+    }
+    return card;
+  };
 
   return(
     <div ref={containerRef} style={{paddingBottom:isMobile?170:0}}>
@@ -3636,13 +3808,44 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
             </div>
             {/* Matches grid: 1 col mobile, 2 col desktop */}
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:8}}>
-              {dayMatches.map(m=>(
-                <GroupMatchCard key={m.id} match={m} onScore={(side,val)=>onScore(m.group,m.id,side,val)} isMobile={isMobile}/>
-              ))}
+              {dayMatches.map(renderCard)}
             </div>
           </div>
         );
       })}
+
+      {/* Played matches — collapsed by default */}
+      {playedMatches.length>0&&(
+        <div style={{marginBottom:22}}>
+          <button onClick={()=>setShowPlayed(p=>!p)} style={{
+            width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+            background:"transparent", border:`1px solid ${BORDER}`, borderRadius:10,
+            padding:"8px 12px", color:"#888", fontSize:11, fontWeight:700, cursor:"pointer",
+            animation: togglePulse ? "collapsedPulse 0.9s ease-out" : undefined,
+          }}>
+            <span>
+              {showPlayed ? t('hide_played_matches') : t('show_played_matches')}
+              {' · '}
+              {playedMatches.length===1 ? t('match_count').replace('{n}',playedMatches.length) : t('matches_count').replace('{n}',playedMatches.length)}
+            </span>
+            <span style={{fontSize:9}}>{showPlayed ? '▲' : '▼'}</span>
+          </button>
+          {showPlayed&&playedByDate.map(({date,matches:dayMatches})=>(
+            <div key={date} style={{marginTop:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:"#fff"}}>{date}</div>
+                <div style={{flex:1,height:1,background:BORDER}}/>
+                <div style={{fontSize:9,color:"#555"}}>{dayMatches.length===1?t('match_count').replace('{n}',1):t('matches_count').replace('{n}',dayMatches.length)}</div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:8}}>
+                {dayMatches.map(m=>(
+                  <GroupMatchCard key={m.id} match={m} onScore={(side,val)=>onScore(m.group,m.id,side,val)} isMobile={isMobile}/>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Group filter dropdown — fixed above the bottom tab bar on phones so it's always within thumb's reach */}
       <FixedFilterBar isMobile={isMobile} navHeight={navHeight} marginTop={8}>
