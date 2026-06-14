@@ -152,6 +152,8 @@ const TRANSLATIONS = {
     pts_earned: "{pts} pts earned this phase",
     phase_locked_reason: "🔒 Unlocks once the previous stage finishes: {phase}",
     actual_score: "Actual: {a}–{b}",
+    show_played_matches: "Show played",
+    hide_played_matches: "Hide played",
     // Stats
     stat_host_cities: "Host Cities",
     stat_farthest_trip: "Farthest Trip",
@@ -377,6 +379,8 @@ const TRANSLATIONS = {
     pts_earned: "{pts} pts nesta fase",
     phase_locked_reason: "🔒 Libera quando a fase anterior terminar: {phase}",
     actual_score: "Real: {a}–{b}",
+    show_played_matches: "Mostrar jogados",
+    hide_played_matches: "Ocultar jogados",
     // Stats
     stat_host_cities: "Cidades-Sede",
     stat_farthest_trip: "Viagem Mais Longa",
@@ -2662,7 +2666,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
                         rivals, playerName, onShare, onRemoveRival, onResolveLink }) {
   const { t } = useLang();
   const PHASES = [
-    { key:'group', label:t('phase_group'),    matches:Object.values(groupMatches).flat().sort((a,b)=>a.group.localeCompare(b.group)||(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
+    { key:'group', label:t('phase_group'),    matches:Object.values(groupMatches).flat().sort((a,b)=>(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
     { key:'r32',   label:t('phase_r32'),   matches:ko.r32 },
     { key:'r16',   label:t('phase_r16'),   matches:ko.r16 },
     { key:'qf',    label:t('phase_qf'), matches:ko.qf },
@@ -2703,6 +2707,45 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
 
   const currentPhase = PHASES.find(p => p.key === phase);
   const prevPhaseLabel = PHASES[PHASES.findIndex(p => p.key === phase) - 1]?.label || '';
+
+  // Already-played matches are collapsed by default so the list opens on
+  // the next upcoming match instead of a long scroll of locked results.
+  const [showPlayed, setShowPlayed] = useState(false);
+  useEffect(()=>{ setShowPlayed(false); }, [phase]);
+
+  const isMatchPlayed = m => phase === 'group'
+    ? (m.homeScore !== null && m.awayScore !== null)
+    : (m.scoreA !== null && m.scoreB !== null);
+
+  const { playedMatches, upcomingMatches } = useMemo(()=>{
+    const played = [], upcoming = [];
+    (currentPhase?.matches||[]).forEach(m=>(isMatchPlayed(m)?played:upcoming).push(m));
+    return { playedMatches:played, upcomingMatches:upcoming };
+  },[currentPhase, phase]);
+
+  const renderMatchCard = m => {
+    if (phase === 'group') {
+      return (
+        <GuessGroupMatchCard key={m.id} match={m}
+          prediction={predictions.group?.[m.id]}
+          onPred={onGroupPred} isMobile={isMobile}
+          rivalName={compareRival}
+          rivalPrediction={compareRivalObj?.predictions?.group?.[m.id]}/>
+      );
+    }
+    const label = phase === 'final'
+      ? (m.id === 'third' ? t('match_label_third') : t('match_label_final'))
+      : undefined;
+    return (
+      <GuessKOMatchCard key={m.id} match={m}
+        prediction={predictions.ko?.[m.id]}
+        onPred={onKOPred} isMobile={isMobile}
+        matchLabel={label}
+        prevPhaseLabel={prevPhaseLabel}
+        rivalName={compareRival}
+        rivalPrediction={compareRivalObj?.predictions?.ko?.[m.id]}/>
+    );
+  };
 
   return (
     <div>
@@ -2794,30 +2837,28 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         </div>
       ) : (
         <div style={{display:"flex", flexDirection:"column", gap:8}}>
-          {phase === 'group' ? (
-            currentPhase.matches.map(m => (
-              <GuessGroupMatchCard key={m.id} match={m}
-                prediction={predictions.group?.[m.id]}
-                onPred={onGroupPred} isMobile={isMobile}
-                rivalName={compareRival}
-                rivalPrediction={compareRivalObj?.predictions?.group?.[m.id]}/>
-            ))
-          ) : (
-            currentPhase.matches.map(m => {
-              const label = phase === 'final'
-                ? (m.id === 'third' ? t('match_label_third') : t('match_label_final'))
-                : undefined;
-              return (
-                <GuessKOMatchCard key={m.id} match={m}
-                  prediction={predictions.ko?.[m.id]}
-                  onPred={onKOPred} isMobile={isMobile}
-                  matchLabel={label}
-                  prevPhaseLabel={prevPhaseLabel}
-                  rivalName={compareRival}
-                  rivalPrediction={compareRivalObj?.predictions?.ko?.[m.id]}/>
-              );
-            })
+          {playedMatches.length > 0 && (
+            <div>
+              <button onClick={()=>setShowPlayed(p=>!p)} style={{
+                width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+                background:"transparent", border:`1px solid ${BORDER}`, borderRadius:10,
+                padding:"8px 12px", color:"#888", fontSize:11, fontWeight:700, cursor:"pointer",
+              }}>
+                <span>
+                  {showPlayed ? t('hide_played_matches') : t('show_played_matches')}
+                  {' · '}
+                  {playedMatches.length===1 ? t('match_count').replace('{n}',playedMatches.length) : t('matches_count').replace('{n}',playedMatches.length)}
+                </span>
+                <span style={{fontSize:9}}>{showPlayed ? '▲' : '▼'}</span>
+              </button>
+              {showPlayed && (
+                <div style={{display:"flex", flexDirection:"column", gap:8, marginTop:8}}>
+                  {playedMatches.map(renderMatchCard)}
+                </div>
+              )}
+            </div>
           )}
+          {upcomingMatches.map(renderMatchCard)}
         </div>
       )}
     </div>
