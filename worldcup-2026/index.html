@@ -264,6 +264,11 @@ const TRANSLATIONS = {
     exact_score: "Exact score!",
     right_result: "Right result!",
     tap_to_dismiss: "tap to dismiss",
+    milestone_5: "🔮 5 exact scores?! Who let you near a crystal ball?",
+    milestone_10: "🐙 10 exact scores! Are you secretly an octopus named Paul?",
+    milestone_15: "🧙 15 exact scores?! Okay wizard, teach us your spells.",
+    milestone_20: "🔮 20 exact scores?! Nostradamus called, he wants his job back.",
+    milestone_more: "🤯 {count} exact scores?! At this point you should be coaching a national team.",
     // Compare with rival
     compare_hint: "👆 Tap a player to compare picks",
     comparing_with: "Comparing with {name}",
@@ -491,6 +496,11 @@ const TRANSLATIONS = {
     exact_score: "Placar exato!",
     right_result: "Resultado certo!",
     tap_to_dismiss: "toque para fechar",
+    milestone_5: "🔮 5 placares exatos?! Quem te deixou perto de uma bola de cristal?",
+    milestone_10: "🐙 10 placares exatos! Você é o polvo Paul disfarçado?",
+    milestone_15: "🧙 15 placares exatos?! Tá bom, mago, ensina suas magias pra gente.",
+    milestone_20: "🔮 20 placares exatos?! O Nostradamus ligou pedindo o emprego de volta.",
+    milestone_more: "🤯 {count} placares exatos?! Nesse ritmo você devia tá treinando uma seleção.",
     // Compare with rival
     compare_hint: "👆 Toque em um jogador para comparar palpites",
     comparing_with: "Comparando com {name}",
@@ -561,6 +571,9 @@ const BORDER = "rgba(255,255,255,0.08)";
 // How long the WinnerFlash celebration overlay stays on screen — other UI
 // animations (e.g. a match collapsing into "played") wait until it's gone.
 const WINNER_FLASH_MS = 4500;
+// Milestone flashes (e.g. "5 exact scores!") show extra text, so give the
+// user a bit more time to read it before auto-dismissing.
+const MILESTONE_FLASH_MS = 6500;
 
 const FLAG = {
   "Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz",
@@ -1161,6 +1174,15 @@ function calcPoints(groupMatches, ko, predictions) {
     });
   });
   return { total, byPhase, exact, correct, wrong, played };
+}
+
+// Returns a funny milestone message for the given exact-score count,
+// or null if count isn't a positive multiple of 5.
+function milestoneMessage(t, count) {
+  if (!count || count % 5 !== 0) return null;
+  const key = `milestone_${count}`;
+  if (TRANSLATIONS['en'][key]) return t(key);
+  return t('milestone_more').replace('{count}', count);
 }
 
 // Bucket of KO matches for a given phase key ('final' also includes the third-place match)
@@ -1842,11 +1864,12 @@ function WinnerFlash({ data, onDismiss }) {
   const right = data.winners.filter(w => w.pts === 1);
   const best  = exact.length > 0 ? exact : right;
   const isExact = exact.length > 0;
+  const milestoneMsg = (data.milestone && isExact) ? milestoneMessage(t, data.milestone) : null;
 
   useEffect(() => {
-    const timer = setTimeout(onDismiss, WINNER_FLASH_MS);
+    const timer = setTimeout(onDismiss, milestoneMsg ? MILESTONE_FLASH_MS : WINNER_FLASH_MS);
     return () => clearTimeout(timer);
-  }, [onDismiss]);
+  }, [onDismiss, milestoneMsg]);
 
   return (
     <div onClick={onDismiss} style={{
@@ -1871,11 +1894,11 @@ function WinnerFlash({ data, onDismiss }) {
       {/* card */}
       <div onClick={e => e.stopPropagation()} style={{
         background:'#0c1827',
-        border:`2px solid ${isExact ? ACCENT : PURPLE}`,
+        border:`2px solid ${milestoneMsg ? GOLD : (isExact ? ACCENT : PURPLE)}`,
         borderRadius:22, padding:'28px 32px 24px',
         maxWidth:300, width:'88%',
         textAlign:'center',
-        boxShadow:`0 0 80px ${isExact ? 'rgba(0,208,132,0.45)' : 'rgba(167,139,250,0.35)'}`,
+        boxShadow:`0 0 80px ${milestoneMsg ? 'rgba(255,215,0,0.45)' : (isExact ? 'rgba(0,208,132,0.45)' : 'rgba(167,139,250,0.35)')}`,
         animation:'flashBounce 0.45s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
         <div style={{ fontSize:54, marginBottom:10, lineHeight:1 }}>{isExact ? '🎯' : '✅'}</div>
@@ -1890,6 +1913,14 @@ function WinnerFlash({ data, onDismiss }) {
             {w.isMe ? `${w.name}${t('you_suffix')}` : w.name}
           </div>
         ))}
+        {milestoneMsg && (
+          <div style={{
+            fontSize:13, fontWeight:700, color:GOLD,
+            marginTop:10, marginBottom:4, lineHeight:1.4,
+          }}>
+            {milestoneMsg}
+          </div>
+        )}
         {data.score && (
           <div style={{ fontSize:12, color:'#666', marginTop:8 }}>
             {data.home} {data.scoreH}–{data.scoreA} {data.away}
@@ -3240,9 +3271,14 @@ function App(){
         const myG=preds.group?.[id]; const myK=preds.ko?.[id];
         const myH=myG?myG.home:myK?myK.a:undefined;
         const myA=myG?myG.away:myK?myK.b:undefined;
+        let myExactMilestone=null;
         if(myH!=null&&myA!=null){
           const pts=scorePrediction(myH,myA,h,a);
           if(pts>0) winners.push({name:playerNameRef.current||'You',pts,isMe:true});
+          if(pts===3){
+            const myExactCount=calcPoints(groupMatches,ko,predictionsRef.current).exact;
+            if(myExactCount>0 && myExactCount%5===0) myExactMilestone=myExactCount;
+          }
         }
         rivalsRef.current.forEach(r=>{
           const rG=r.predictions?.group?.[id]; const rK=r.predictions?.ko?.[id];
@@ -3254,7 +3290,7 @@ function App(){
           }
         });
         if(winners.length>0){
-          setFlashData({matchId:id,scoreH:h,scoreA:a,home:hn,away:an,winners});
+          setFlashData({matchId:id,scoreH:h,scoreA:a,home:hn,away:an,winners,milestone:myExactMilestone});
         }
 
         // Schedule this match's collapse into the Fixtures "played" section.
