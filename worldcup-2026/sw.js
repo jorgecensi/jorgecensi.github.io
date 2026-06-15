@@ -1,10 +1,11 @@
-const CACHE_VERSION = '2026061400';
+const CACHE_VERSION = '2026061501';
 const CACHE_NAME = `worldcup-2026-${CACHE_VERSION}`;
 const OFFLINE_URL = '/worldcup-2026/';
 const PRECACHE_URLS = [
   '/worldcup-2026/',
   '/worldcup-2026/manifest.json',
-  '/worldcup-2026/icons/icon.svg',
+  '/worldcup-2026/icons/icon-192.png',
+  '/worldcup-2026/icons/icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js',
