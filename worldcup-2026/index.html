@@ -277,6 +277,8 @@ const TRANSLATIONS = {
     // Compare with rival
     compare_hint: "👆 Tap a player to compare picks",
     comparing_with: "Comparing with {name}",
+    comparing_all: "Comparing with all rivals",
+    compare_all_btn: "👥 Compare all",
     stop_comparing: "✕ Stop comparing",
     rival_pick: "{name}'s pick",
     no_pick: "No pick",
@@ -514,6 +516,8 @@ const TRANSLATIONS = {
     // Compare with rival
     compare_hint: "👆 Toque em um jogador para comparar palpites",
     comparing_with: "Comparando com {name}",
+    comparing_all: "Comparando com todos os rivais",
+    compare_all_btn: "👥 Comparar com todos",
     stop_comparing: "✕ Parar comparação",
     rival_pick: "Palpite de {name}",
     no_pick: "Sem palpite",
@@ -578,6 +582,9 @@ const PURPLE = "#a78bfa";
 const BG     = "#080d16";
 const CARD   = "rgba(255,255,255,0.04)";
 const BORDER = "rgba(255,255,255,0.08)";
+// Sentinel value for the "compare with all rivals" mode (kept distinct from
+// any real rival name, which always comes from a user-entered string).
+const ALL_RIVALS = "__all__";
 // How long the WinnerFlash celebration overlay stays on screen — other UI
 // animations (e.g. a match collapsing into "played") wait until it's gone.
 const WINNER_FLASH_MS = 4500;
@@ -2057,18 +2064,31 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
 
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:6, marginBottom:8 }}>
         <span style={{ fontSize:10, color: compareRival ? PURPLE : '#555' }}>
-          {compareRival ? t('comparing_with').replace('{name}', compareRival) : t('compare_hint')}
+          {compareRival === ALL_RIVALS ? t('comparing_all')
+            : compareRival ? t('comparing_with').replace('{name}', compareRival)
+            : t('compare_hint')}
         </span>
-        {compareRival && (
-          <button onClick={() => onToggleCompare(compareRival)} style={{
-            background:'transparent', border:'none', color:PURPLE,
-            fontSize:9, fontWeight:700, cursor:'pointer', padding:0, flexShrink:0, fontFamily:'inherit',
-          }}>{t('stop_comparing')}</button>
-        )}
+        <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+          {rivals.length > 1 && (
+            <button onClick={() => onToggleCompare(ALL_RIVALS)} style={{
+              background: compareRival === ALL_RIVALS ? 'rgba(167,139,250,0.15)' : 'transparent',
+              border: `1px solid ${compareRival === ALL_RIVALS ? 'rgba(167,139,250,0.5)' : 'rgba(255,255,255,0.08)'}`,
+              color: compareRival === ALL_RIVALS ? PURPLE : '#666',
+              borderRadius:7, padding:'3px 8px',
+              fontSize:9, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+            }}>{t('compare_all_btn')}</button>
+          )}
+          {compareRival && (
+            <button onClick={() => onToggleCompare(compareRival)} style={{
+              background:'transparent', border:'none', color:PURPLE,
+              fontSize:9, fontWeight:700, cursor:'pointer', padding:0, flexShrink:0, fontFamily:'inherit',
+            }}>{t('stop_comparing')}</button>
+          )}
+        </div>
       </div>
 
       {allPlayers.map((p, i) => {
-        const isComparing = !p.isMe && compareRival === p.n;
+        const isComparing = !p.isMe && (compareRival === p.n || compareRival === ALL_RIVALS);
         return (
         <div key={p.n}
           onClick={() => !p.isMe && onToggleCompare(p.n)}
@@ -2642,17 +2662,34 @@ function GuessBadge({ pts }) {
   );
 }
 
-function GuessGroupMatchCard({ match, prediction, onPred, isMobile, rivalName, rivalPrediction }) {
+// A single rival's pick for a match — repeated once per rival when comparing
+// against more than one at a time.
+function RivalPickRow({ name, hasPred, scoreA, scoreB, pts, showBadge, isFirst }) {
+  const { t } = useLang();
+  return (
+    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, ...(isFirst?{}:{marginTop:5})}}>
+      <span style={{fontSize:10, color:PURPLE, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+        {t('rival_pick').replace('{name}', name)}
+      </span>
+      <div style={{display:"flex", alignItems:"center", gap:6, flexShrink:0}}>
+        {hasPred ? (
+          <span style={{fontSize:12, fontWeight:800, color:"#ccc"}}>{scoreA}–{scoreB}</span>
+        ) : (
+          <span style={{fontSize:10, color:"#444"}}>{t('no_pick')}</span>
+        )}
+        {showBadge && hasPred && <GuessBadge pts={pts}/>}
+      </div>
+    </div>
+  );
+}
+
+function GuessGroupMatchCard({ match, prediction, onPred, isMobile, rivalPicks }) {
   const { t } = useLang();
   const predH = prediction?.home ?? null;
   const predA = prediction?.away ?? null;
   const actual = match.homeScore !== null && match.awayScore !== null;
   const pts = actual ? scorePrediction(predH, predA, match.homeScore, match.awayScore) : null;
   const hasPred = predH !== null && predA !== null;
-  const rivalH = rivalPrediction?.home ?? null;
-  const rivalA = rivalPrediction?.away ?? null;
-  const rivalHasPred = rivalH !== null && rivalA !== null;
-  const rivalPts = (actual && rivalHasPred) ? scorePrediction(rivalH, rivalA, match.homeScore, match.awayScore) : null;
   return (
     <div style={{background:CARD, border:`1px solid ${hasPred?'rgba(167,139,250,0.3)':BORDER}`, borderRadius:12, padding:"10px 12px"}}>
       <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:7, gap:6}}>
@@ -2677,26 +2714,25 @@ function GuessGroupMatchCard({ match, prediction, onPred, isMobile, rivalName, r
           {t('actual_score').replace('{a}',match.homeScore).replace('{b}',match.awayScore)}
         </div>
       )}
-      {rivalName && (
-        <div style={{marginTop:6, paddingTop:6, borderTop:`1px solid ${BORDER}`, display:"flex", alignItems:"center", justifyContent:"space-between", gap:6}}>
-          <span style={{fontSize:10, color:PURPLE, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
-            {t('rival_pick').replace('{name}', rivalName)}
-          </span>
-          <div style={{display:"flex", alignItems:"center", gap:6, flexShrink:0}}>
-            {rivalHasPred ? (
-              <span style={{fontSize:12, fontWeight:800, color:"#ccc"}}>{rivalH}–{rivalA}</span>
-            ) : (
-              <span style={{fontSize:10, color:"#444"}}>{t('no_pick')}</span>
-            )}
-            {actual && rivalHasPred && <GuessBadge pts={rivalPts}/>}
-          </div>
+      {rivalPicks?.length > 0 && (
+        <div style={{marginTop:6, paddingTop:6, borderTop:`1px solid ${BORDER}`}}>
+          {rivalPicks.map((r, i) => {
+            const rH = r.prediction?.home ?? null;
+            const rA = r.prediction?.away ?? null;
+            const rHasPred = rH !== null && rA !== null;
+            const rPts = (actual && rHasPred) ? scorePrediction(rH, rA, match.homeScore, match.awayScore) : null;
+            return (
+              <RivalPickRow key={r.name} name={r.name} hasPred={rHasPred}
+                scoreA={rH} scoreB={rA} pts={rPts} showBadge={actual} isFirst={i===0}/>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, prevPhaseLabel, rivalName, rivalPrediction }) {
+function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, prevPhaseLabel, rivalPicks }) {
   const { t } = useLang();
   const hasTeams = !!match.teamA && !!match.teamB;
   const predA = prediction?.a ?? null;
@@ -2704,10 +2740,6 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, pre
   const actual = match.scoreA !== null && match.scoreB !== null;
   const pts = (actual && hasTeams) ? scorePrediction(predA, predB, match.scoreA, match.scoreB) : null;
   const hasPred = predA !== null && predB !== null;
-  const rivalA2 = rivalPrediction?.a ?? null;
-  const rivalB2 = rivalPrediction?.b ?? null;
-  const rivalHasPred = rivalA2 !== null && rivalB2 !== null;
-  const rivalPts = (actual && hasTeams && rivalHasPred) ? scorePrediction(rivalA2, rivalB2, match.scoreA, match.scoreB) : null;
 
   const teamRow = (team, val, field, isTop) => (
     <div style={{display:"flex", alignItems:"center", gap:8, padding:"9px 0",
@@ -2742,19 +2774,18 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, pre
           {t('actual_score').replace('{a}',match.scoreA).replace('{b}',match.scoreB)}
         </div>
       )}
-      {rivalName && hasTeams && (
-        <div style={{marginTop:6, paddingTop:6, borderTop:`1px solid ${BORDER}`, display:"flex", alignItems:"center", justifyContent:"space-between", gap:6}}>
-          <span style={{fontSize:10, color:PURPLE, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
-            {t('rival_pick').replace('{name}', rivalName)}
-          </span>
-          <div style={{display:"flex", alignItems:"center", gap:6, flexShrink:0}}>
-            {rivalHasPred ? (
-              <span style={{fontSize:12, fontWeight:800, color:"#ccc"}}>{rivalA2}–{rivalB2}</span>
-            ) : (
-              <span style={{fontSize:10, color:"#444"}}>{t('no_pick')}</span>
-            )}
-            {actual && rivalHasPred && <GuessBadge pts={rivalPts}/>}
-          </div>
+      {rivalPicks?.length > 0 && hasTeams && (
+        <div style={{marginTop:6, paddingTop:6, borderTop:`1px solid ${BORDER}`}}>
+          {rivalPicks.map((r, i) => {
+            const rA = r.prediction?.a ?? null;
+            const rB = r.prediction?.b ?? null;
+            const rHasPred = rA !== null && rB !== null;
+            const rPts = (actual && rHasPred) ? scorePrediction(rA, rB, match.scoreA, match.scoreB) : null;
+            return (
+              <RivalPickRow key={r.name} name={r.name} hasPred={rHasPred}
+                scoreA={rA} scoreB={rB} pts={rPts} showBadge={actual} isFirst={i===0}/>
+            );
+          })}
         </div>
       )}
     </div>
@@ -2785,15 +2816,19 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
   const canSharePhase = useMemo(()=>isPhaseGuessesComplete(phase,groupMatches,ko,predictions),[phase,groupMatches,ko,predictions]);
   const [copied, setCopied] = useState(null); // null | 'all' | 'phase'
 
-  // Compare picks with a selected rival, match-by-match
+  // Compare picks with a selected rival (or all of them at once), match-by-match
   const [compareRival, setCompareRival] = useState(null);
   useEffect(()=>{
-    if(compareRival && !rivals.some(r=>r.n===compareRival)) setCompareRival(null);
+    if(!compareRival) return;
+    if(compareRival === ALL_RIVALS){ if(rivals.length===0) setCompareRival(null); return; }
+    if(!rivals.some(r=>r.n===compareRival)) setCompareRival(null);
   },[rivals, compareRival]);
   const toggleCompare = useCallback(name=>{
     setCompareRival(prev=>prev===name?null:name);
   },[]);
-  const compareRivalObj = compareRival ? rivals.find(r=>r.n===compareRival) : null;
+  const compareList = compareRival === ALL_RIVALS ? rivals
+    : compareRival ? rivals.filter(r=>r.n===compareRival)
+    : [];
 
   const copyText = (text, which) => {
     const done = () => { setCopied(which); setTimeout(()=>setCopied(null),2000); };
@@ -2828,8 +2863,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         <GuessGroupMatchCard key={m.id} match={m}
           prediction={predictions.group?.[m.id]}
           onPred={onGroupPred} isMobile={isMobile}
-          rivalName={compareRival}
-          rivalPrediction={compareRivalObj?.predictions?.group?.[m.id]}/>
+          rivalPicks={compareList.map(r=>({ name:r.n, prediction:r.predictions?.group?.[m.id] }))}/>
       );
     }
     const label = phase === 'final'
@@ -2841,8 +2875,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         onPred={onKOPred} isMobile={isMobile}
         matchLabel={label}
         prevPhaseLabel={prevPhaseLabel}
-        rivalName={compareRival}
-        rivalPrediction={compareRivalObj?.predictions?.ko?.[m.id]}/>
+        rivalPicks={compareList.map(r=>({ name:r.n, prediction:r.predictions?.ko?.[m.id] }))}/>
     );
   };
 
