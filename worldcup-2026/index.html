@@ -267,6 +267,7 @@ const TRANSLATIONS = {
     exact_scores: "Exact scores!",
     exact_score: "Exact score!",
     right_result: "Right result!",
+    goal_diff_bonus: "🎯 And nailed the goal difference!",
     tap_to_dismiss: "tap to dismiss",
     milestone_5: "🔮 5 exact scores?! Who let you near a crystal ball?",
     milestone_10: "🐙 10 exact scores! Are you secretly an octopus named Paul?",
@@ -503,6 +504,7 @@ const TRANSLATIONS = {
     exact_scores: "Placares exatos!",
     exact_score: "Placar exato!",
     right_result: "Resultado certo!",
+    goal_diff_bonus: "🎯 E acertou também a diferença de gols!",
     tap_to_dismiss: "toque para fechar",
     milestone_5: "🔮 5 placares exatos?! Quem te deixou perto de uma bola de cristal?",
     milestone_10: "🐙 10 placares exatos! Você é o polvo Paul disfarçado?",
@@ -1176,6 +1178,14 @@ function scorePrediction(predH, predA, actualH, actualA) {
   const predOut = pH > pA ? 1 : pA > pH ? -1 : 0;
   const actOut  = aH > aA ? 1 : aA > aH ? -1 : 0;
   return predOut === actOut ? 1 : 0;
+}
+
+// True when a non-exact prediction also nails the goal difference (e.g. predicted 2-1, actual 3-2)
+function isGoalDiffMatch(predH, predA, actualH, actualA) {
+  if (predH === null || predA === null || actualH === null || actualA === null) return false;
+  const pH=+predH, pA=+predA, aH=+actualH, aA=+actualA;
+  if (pH === aH && pA === aA) return false;
+  return (pH - pA) === (aH - aA);
 }
 
 function calcPoints(groupMatches, ko, predictions) {
@@ -1901,8 +1911,10 @@ function WinnerFlash({ data, onDismiss }) {
   const { t } = useLang();
   const exact = data.winners.filter(w => w.pts === 3);
   const right = data.winners.filter(w => w.pts === 1);
+  const goalDiffWinners = right.filter(w => w.goalDiff);
   const best  = exact.length > 0 ? exact : right;
   const isExact = exact.length > 0;
+  const isGoalDiff = !isExact && goalDiffWinners.length > 0;
   const milestoneMsg = (data.milestone && isExact) ? milestoneMessage(t, data.milestone) : null;
 
   useEffect(() => {
@@ -1952,6 +1964,14 @@ function WinnerFlash({ data, onDismiss }) {
             {w.isMe ? `${w.name}${t('you_suffix')}` : w.name}
           </div>
         ))}
+        {isGoalDiff && (
+          <div style={{
+            fontSize:12, fontWeight:700, color:ACCENT,
+            marginTop:8, marginBottom:4, lineHeight:1.4,
+          }}>
+            {t('goal_diff_bonus')}
+          </div>
+        )}
         {milestoneMsg && (
           <div style={{
             fontSize:13, fontWeight:700, color:GOLD,
@@ -3313,7 +3333,7 @@ function App(){
         let myExactMilestone=null;
         if(myH!=null&&myA!=null){
           const pts=scorePrediction(myH,myA,h,a);
-          if(pts>0) winners.push({name:playerNameRef.current||'You',pts,isMe:true});
+          if(pts>0) winners.push({name:playerNameRef.current||'You',pts,goalDiff:isGoalDiffMatch(myH,myA,h,a),isMe:true});
           if(pts===3){
             const myExactCount=calcPoints(groupMatches,ko,predictionsRef.current).exact;
             if(myExactCount>0 && myExactCount%5===0) myExactMilestone=myExactCount;
@@ -3325,7 +3345,7 @@ function App(){
           const rA=rG?rG.away:rK?rK.b:undefined;
           if(rH!=null&&rA!=null){
             const pts=scorePrediction(rH,rA,h,a);
-            if(pts>0) winners.push({name:r.n,pts,isMe:false});
+            if(pts>0) winners.push({name:r.n,pts,goalDiff:isGoalDiffMatch(rH,rA,h,a),isMe:false});
           }
         });
         if(winners.length>0){
