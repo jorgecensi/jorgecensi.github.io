@@ -139,6 +139,7 @@ const TRANSLATIONS = {
     now_badge: "NOW",
     today_badge: "TODAY",
     tomorrow_badge: "TOMORROW",
+    upcoming_badge: "UPCOMING",
     win_badge: "WIN ✓",
     draw_badge: "DRAW",
     // KO match card
@@ -380,6 +381,7 @@ const TRANSLATIONS = {
     now_badge: "AGORA",
     today_badge: "HOJE",
     tomorrow_badge: "AMANHÃ",
+    upcoming_badge: "EM BREVE",
     win_badge: "VITÓRIA ✓",
     draw_badge: "EMPATE",
     // KO match card
@@ -799,6 +801,10 @@ function matchToUTC(date, time) {
 // after every match in them has already kicked off.
 function todayDk() {
   const aest = new Date(Date.now() + 10 * 60 * 60 * 1000);
+  return (aest.getUTCMonth() + 1) * 100 + aest.getUTCDate();
+}
+function tomorrowDk() {
+  const aest = new Date(Date.now() + 10 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000);
   return (aest.getUTCMonth() + 1) * 100 + aest.getUTCDate();
 }
 
@@ -3975,7 +3981,7 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
                   fontSize:8,fontWeight:800,letterSpacing:1,
                   color:"#0a1020",background:ACCENT,
                   borderRadius:4,padding:"2px 6px",flexShrink:0,
-                }}>{t(closestDk===todayDk()?'today_badge':'tomorrow_badge')}</span>
+                }}>{t(closestDk===todayDk()?'today_badge':closestDk===tomorrowDk()?'tomorrow_badge':'upcoming_badge')}</span>
               )}
               <div style={{flex:1,height:1,background:isToday?`${ACCENT}44`:BORDER}}/>
               <div style={{fontSize:9,color:"#555"}}>{dayMatches.length===1?t('match_count').replace('{n}',1):t('matches_count').replace('{n}',dayMatches.length)}</div>
@@ -4211,7 +4217,7 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches}){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:"#fff"}}>{date}</div>
               {isToday&&(
-                <span style={{fontSize:8,fontWeight:800,letterSpacing:1,color:"#0a1020",background:ACCENT,borderRadius:4,padding:"2px 6px",flexShrink:0}}>{t(closestDk===todayDk()?'today_badge':'tomorrow_badge')}</span>
+                <span style={{fontSize:8,fontWeight:800,letterSpacing:1,color:"#0a1020",background:ACCENT,borderRadius:4,padding:"2px 6px",flexShrink:0}}>{t(closestDk===todayDk()?'today_badge':closestDk===tomorrowDk()?'tomorrow_badge':'upcoming_badge')}</span>
               )}
               <div style={{flex:1,height:1,background:isToday?`${ACCENT}44`:BORDER}}/>
               <div style={{fontSize:9,color:"#555"}}>{dayMatches.length===1?t('match_count').replace('{n}',1):t('matches_count').replace('{n}',dayMatches.length)}</div>
