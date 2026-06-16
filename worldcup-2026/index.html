@@ -137,6 +137,8 @@ const TRANSLATIONS = {
     match_count: "{n} match",
     matches_count: "{n} matches",
     now_badge: "NOW",
+    today_badge: "TODAY",
+    tomorrow_badge: "TOMORROW",
     win_badge: "WIN ✓",
     draw_badge: "DRAW",
     // KO match card
@@ -376,6 +378,8 @@ const TRANSLATIONS = {
     match_count: "{n} jogo",
     matches_count: "{n} jogos",
     now_badge: "AGORA",
+    today_badge: "HOJE",
+    tomorrow_badge: "AMANHÃ",
     win_badge: "VITÓRIA ✓",
     draw_badge: "EMPATE",
     // KO match card
@@ -3876,13 +3880,20 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 
   const scored=Object.values(groupMatches).flat().filter(m=>m.homeScore!==null).length;
 
-  // Find the date section closest to today
+  // Find the date section closest to today; skip today if all its games have already kicked off
   const closestDate=useMemo(()=>{
     if(byDate.length===0) return null;
     const dk=todayDk();
-    const future=byDate.filter(d=>d.dk>=dk);
+    const now=Date.now();
+    const future=byDate.filter(d=>{
+      if(d.dk>dk) return true;
+      if(d.dk===dk) return d.matches.some(m=>matchToUTC(m.date,m.time).getTime()>now);
+      return false;
+    });
     return future.length>0 ? future[0].date : byDate[byDate.length-1].date;
   },[byDate]);
+
+  const closestDk=useMemo(()=>byDate.find(d=>d.date===closestDate)?.dk??null,[byDate,closestDate]);
 
   // Scroll to closest date on mount and when filter changes
   useEffect(()=>{
@@ -3964,7 +3975,7 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
                   fontSize:8,fontWeight:800,letterSpacing:1,
                   color:"#0a1020",background:ACCENT,
                   borderRadius:4,padding:"2px 6px",flexShrink:0,
-                }}>{t('now_badge')}</span>
+                }}>{t(closestDk===todayDk()?'today_badge':'tomorrow_badge')}</span>
               )}
               <div style={{flex:1,height:1,background:isToday?`${ACCENT}44`:BORDER}}/>
               <div style={{fontSize:9,color:"#555"}}>{dayMatches.length===1?t('match_count').replace('{n}',1):t('matches_count').replace('{n}',dayMatches.length)}</div>
@@ -4150,13 +4161,21 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches}){
     return Object.values(map).sort((a,b)=>a.dk-b.dk);
   },[matches]);
 
-  // Find the date section closest to today
+  // Find the date section closest to today; skip today if all its games have already kicked off
   const closestDate=useMemo(()=>{
     if(byDate.length===0) return null;
     const dk=todayDk();
-    const future=byDate.filter(d=>d.dk>0&&d.dk>=dk);
+    const now=Date.now();
+    const future=byDate.filter(d=>{
+      if(!d.dk||d.dk<=0) return false;
+      if(d.dk>dk) return true;
+      if(d.dk===dk) return d.matches.some(m=>m.date!=="TBD"&&matchToUTC(m.date,m.time).getTime()>now);
+      return false;
+    });
     return future.length>0 ? future[0].date : byDate[byDate.length-1].date;
   },[byDate]);
+
+  const closestDk=useMemo(()=>byDate.find(d=>d.date===closestDate)?.dk??null,[byDate,closestDate]);
 
   // Scroll to closest date on mount and when round changes
   useEffect(()=>{
@@ -4192,7 +4211,7 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches}){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <div style={{fontSize:11,fontWeight:800,letterSpacing:1,color:"#fff"}}>{date}</div>
               {isToday&&(
-                <span style={{fontSize:8,fontWeight:800,letterSpacing:1,color:"#0a1020",background:ACCENT,borderRadius:4,padding:"2px 6px",flexShrink:0}}>{t('now_badge')}</span>
+                <span style={{fontSize:8,fontWeight:800,letterSpacing:1,color:"#0a1020",background:ACCENT,borderRadius:4,padding:"2px 6px",flexShrink:0}}>{t(closestDk===todayDk()?'today_badge':'tomorrow_badge')}</span>
               )}
               <div style={{flex:1,height:1,background:isToday?`${ACCENT}44`:BORDER}}/>
               <div style={{fontSize:9,color:"#555"}}>{dayMatches.length===1?t('match_count').replace('{n}',1):t('matches_count').replace('{n}',dayMatches.length)}</div>
