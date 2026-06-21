@@ -3793,16 +3793,6 @@ function App(){
               </div>
             )}
 
-            {/* Backup / restore (export-import file) */}
-            <button onClick={()=>{setShareModalMode('file');setShowShareModal(true);}} title={t('file_backup_title')} style={{
-              background:"transparent",border:"none",cursor:"pointer",
-              display:"flex",alignItems:"center",justifyContent:"center",
-              padding:"2px 4px",flexShrink:0,
-              borderRadius:6,transition:"background 0.15s",
-            }}
-            onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}
-            onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-            ><IconBackup size={isMobile?17:19}/></button>
 
             {/* Auto score update toggle */}
             <button onClick={handleToggleAutoUpdate} title={autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')} style={{
