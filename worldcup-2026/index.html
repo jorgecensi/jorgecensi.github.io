@@ -3794,17 +3794,6 @@ function App(){
             )}
 
 
-            {/* Auto score update toggle */}
-            <button onClick={handleToggleAutoUpdate} title={autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')} style={{
-              background:"transparent",border:"none",cursor:"pointer",
-              display:"flex",alignItems:"center",justifyContent:"center",
-              padding:"2px 4px",flexShrink:0,
-              borderRadius:6,transition:"background 0.15s",
-            }}
-            onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}
-            onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-            ><IconSync size={isMobile?17:19} active={autoUpdateEnabled}/></button>
-
             {/* Kick-off notifications toggle */}
             {typeof Notification!=='undefined'&&(
               <button onClick={handleToggleNotif} title={notifEnabled?t('notif_disable'):t('notif_enable')} style={{
@@ -3834,9 +3823,9 @@ function App(){
 
       {/* MAIN */}
       <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden",zoom:isMobile?1.2:1}}>
-        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd}/>}
+        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} autoUpdateEnabled={autoUpdateEnabled} onToggleAutoUpdate={handleToggleAutoUpdate}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
-        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches}/>}
+        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} autoUpdateEnabled={autoUpdateEnabled} onToggleAutoUpdate={handleToggleAutoUpdate}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
         {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
       </div>
@@ -3945,7 +3934,7 @@ function CollapseTransition({onDone, children}){
 
 // ─── FIXTURES VIEW ─────────────────────────────────────────────────────────────
 // All 72 group matches sorted chronologically, grouped by date
-function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd}){
+function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd,autoUpdateEnabled,onToggleAutoUpdate}){
   const { t } = useLang();
   const [filter,setFilter]=useState(initialFilter||"ALL");
   const dateRefs=useRef({});
@@ -4058,7 +4047,16 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 
   return(
     <div ref={containerRef} style={{paddingBottom:isMobile?170:0}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",marginBottom:14,flexWrap:"wrap",gap:8}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <button onClick={onToggleAutoUpdate} title={autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')} style={{
+          display:"flex",alignItems:"center",gap:5,background:"transparent",
+          border:`1px solid ${autoUpdateEnabled?ACCENT+"88":BORDER}`,borderRadius:20,
+          padding:"3px 10px 3px 7px",cursor:"pointer",color:autoUpdateEnabled?ACCENT:"#666",
+          fontSize:10,fontWeight:700,transition:"border-color 0.2s,color 0.2s",
+        }}>
+          <IconSync size={13} active={autoUpdateEnabled}/>
+          {autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')}
+        </button>
         <span style={{fontSize:10,color:"#555"}}>{t('played_count').replace('{n}',scored)}</span>
       </div>
 
@@ -4277,7 +4275,7 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
 }
 
 // ─── KNOCKOUT VIEW ─────────────────────────────────────────────────────────────
-function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches}){
+function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,autoUpdateEnabled,onToggleAutoUpdate}){
   const { t } = useLang();
   const [round,setRound]=useState("r32");
   const ROUNDS=[
@@ -4331,7 +4329,19 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches}){
 
   return(
     <div style={{paddingBottom:isMobile?170:0}}>
-      <SLabel>{currentRound?.fullLabel}</SLabel>      {round==="final"&&ko.final[0].teamA&&(
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <SLabel style={{margin:0}}>{currentRound?.fullLabel}</SLabel>
+        <button onClick={onToggleAutoUpdate} title={autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')} style={{
+          display:"flex",alignItems:"center",gap:5,background:"transparent",
+          border:`1px solid ${autoUpdateEnabled?ACCENT+"88":BORDER}`,borderRadius:20,
+          padding:"3px 10px 3px 7px",cursor:"pointer",color:autoUpdateEnabled?ACCENT:"#666",
+          fontSize:10,fontWeight:700,transition:"border-color 0.2s,color 0.2s",
+        }}>
+          <IconSync size={13} active={autoUpdateEnabled}/>
+          {autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')}
+        </button>
+      </div>
+      {round==="final"&&ko.final[0].teamA&&(
         <div style={{textAlign:"center",marginBottom:16}}>
           <div style={{fontSize:30}}>🏆</div>
           <div style={{fontSize:12,color:GOLD,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{t('the_wc_final')}</div>
