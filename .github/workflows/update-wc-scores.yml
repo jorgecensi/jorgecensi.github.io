@@ -1,0 +1,178 @@
+name: Update WC 2026 Scores
+
+# Triggers fire ~110 min after each group-stage kickoff (UTC) and at both
+# +110 min and +165 min for knockout matches (to cover extra time + penalties).
+# All times are derived from the AEST schedule in index.html (AEST = UTC+10).
+on:
+  schedule:
+    # ── Group stage ────────────────────────────────────────────────────────
+    - cron: '50 20 11 6 *'  # A-0  Mexico vs South Africa
+    - cron: '50 3 12 6 *'   # A-1  South Korea vs Czechia
+    - cron: '50 20 12 6 *'  # B-0  Canada vs Bosnia
+    - cron: '50 2 13 6 *'   # D-0  United States vs Paraguay
+    - cron: '50 20 13 6 *'  # B-1  Qatar vs Switzerland
+    - cron: '50 23 13 6 *'  # C-0  Brazil vs Morocco
+    - cron: '50 2 14 6 *'   # C-1  Haiti vs Scotland
+    - cron: '50 5 14 6 *'   # D-1  Australia vs Turkey
+    - cron: '50 18 14 6 *'  # E-0  Germany vs Curacao
+    - cron: '50 21 14 6 *'  # F-0  Netherlands vs Japan
+    - cron: '50 0 15 6 *'   # E-1  Ivory Coast vs Ecuador
+    - cron: '50 3 15 6 *'   # F-1  Sweden vs Tunisia
+    - cron: '50 17 15 6 *'  # H-0  Spain vs Cape Verde
+    - cron: '50 20 15 6 *'  # G-0  Belgium vs Egypt
+    - cron: '50 23 15 6 *'  # H-1  Saudi Arabia vs Uruguay
+    - cron: '50 2 16 6 *'   # G-1  Iran vs New Zealand
+    - cron: '50 20 16 6 *'  # I-0  France vs Senegal
+    - cron: '50 23 16 6 *'  # I-1  Iraq vs Norway
+    - cron: '50 2 17 6 *'   # J-0  Argentina vs Algeria
+    - cron: '50 5 17 6 *'   # J-1  Austria vs Jordan
+    - cron: '50 18 17 6 *'  # K-0  Portugal vs DR Congo
+    - cron: '50 21 17 6 *'  # L-0  England vs Croatia
+    - cron: '50 0 18 6 *'   # L-1  Ghana vs Panama
+    - cron: '50 3 18 6 *'   # K-1  Uzbekistan vs Colombia
+    - cron: '50 17 18 6 *'  # A-2  Czechia vs South Africa
+    - cron: '50 20 18 6 *'  # B-2  Switzerland vs Bosnia
+    - cron: '50 23 18 6 *'  # B-3  Canada vs Qatar
+    - cron: '50 2 19 6 *'   # A-3  Mexico vs South Korea
+    - cron: '50 20 19 6 *'  # D-2  United States vs Australia
+    - cron: '50 23 19 6 *'  # C-2  Scotland vs Morocco
+    - cron: '20 2 20 6 *'   # C-3  Brazil vs Haiti
+    - cron: '50 5 20 6 *'   # D-3  Turkey vs Paraguay
+    - cron: '50 18 20 6 *'  # F-2  Netherlands vs Sweden
+    - cron: '50 21 20 6 *'  # E-2  Germany vs Ivory Coast
+    - cron: '50 1 21 6 *'   # E-3  Ecuador vs Curacao
+    - cron: '50 5 21 6 *'   # F-3  Tunisia vs Japan
+    - cron: '50 17 21 6 *'  # H-2  Spain vs Saudi Arabia
+    - cron: '50 20 21 6 *'  # G-2  Belgium vs Iran
+    - cron: '50 23 21 6 *'  # H-3  Uruguay vs Cape Verde
+    - cron: '50 2 22 6 *'   # G-3  New Zealand vs Egypt
+    - cron: '50 18 22 6 *'  # J-2  Argentina vs Austria
+    - cron: '50 22 22 6 *'  # I-2  France vs Iraq
+    - cron: '50 1 23 6 *'   # I-3  Norway vs Senegal
+    - cron: '50 4 23 6 *'   # J-3  Jordan vs Algeria
+    - cron: '50 18 23 6 *'  # K-2  Portugal vs Uzbekistan
+    - cron: '50 21 23 6 *'  # L-2  England vs Ghana
+    - cron: '50 0 24 6 *'   # L-3  Panama vs Croatia
+    - cron: '50 3 24 6 *'   # K-3  Colombia vs DR Congo
+    - cron: '50 20 24 6 *'  # B-4  Switzerland vs Canada
+    - cron: '50 23 24 6 *'  # C-4  Scotland vs Brazil
+    - cron: '50 2 25 6 *'   # A-4/A-5  Czechia/South Africa simultaneous
+    - cron: '50 21 25 6 *'  # E-4/E-5  Ecuador/Curacao simultaneous
+    - cron: '50 0 26 6 *'   # F-4/F-5  Japan/Tunisia simultaneous
+    - cron: '50 3 26 6 *'   # D-4/D-5  Turkey/Paraguay simultaneous
+    - cron: '50 20 26 6 *'  # I-4/I-5  Norway/Senegal simultaneous
+    - cron: '50 1 27 6 *'   # H-4/H-5  Cape Verde/Uruguay simultaneous
+    - cron: '50 4 27 6 *'   # G-4/G-5  Egypt/New Zealand simultaneous
+    - cron: '50 22 27 6 *'  # L-4/L-5  Panama/Croatia simultaneous
+    - cron: '20 1 28 6 *'   # K-4/K-5  Colombia/DR Congo simultaneous
+    - cron: '50 3 28 6 *'   # J-4/J-5  Algeria/Jordan simultaneous
+    - cron: '50 20 28 6 *'  # C-5/D-5  Brazil group finals
+
+    # ── Round of 32 (+110 min) ─────────────────────────────────────────────
+    - cron: '50 18 29 6 *'
+    - cron: '20 22 29 6 *'
+    - cron: '50 2 30 6 *'
+    - cron: '50 18 30 6 *'
+    - cron: '50 22 30 6 *'
+    - cron: '50 2 1 7 *'
+    - cron: '50 17 1 7 *'
+    - cron: '50 21 1 7 *'
+    - cron: '50 1 2 7 *'
+    - cron: '50 20 2 7 *'
+    - cron: '50 0 3 7 *'
+    - cron: '50 4 3 7 *'
+    - cron: '50 19 3 7 *'
+    - cron: '50 23 3 7 *'
+    - cron: '20 3 4 7 *'
+
+    # ── Round of 32 (+165 min, covers extra time) ──────────────────────────
+    - cron: '45 19 29 6 *'
+    - cron: '15 23 29 6 *'
+    - cron: '45 3 30 6 *'
+    - cron: '45 19 30 6 *'
+    - cron: '45 23 30 6 *'
+    - cron: '45 3 1 7 *'
+    - cron: '45 18 1 7 *'
+    - cron: '45 22 1 7 *'
+    - cron: '45 2 2 7 *'
+    - cron: '45 21 2 7 *'
+    - cron: '45 1 3 7 *'
+    - cron: '45 5 3 7 *'
+    - cron: '45 20 3 7 *'
+    - cron: '45 0 4 7 *'
+    - cron: '15 4 4 7 *'
+
+    # ── Round of 16 (+110 min) ─────────────────────────────────────────────
+    - cron: '50 18 4 7 *'
+    - cron: '50 22 4 7 *'
+    - cron: '50 21 5 7 *'
+    - cron: '50 1 6 7 *'
+    - cron: '50 20 6 7 *'
+    - cron: '50 1 7 7 *'
+    - cron: '50 17 7 7 *'
+    - cron: '50 21 7 7 *'
+
+    # ── Round of 16 (+165 min) ─────────────────────────────────────────────
+    - cron: '45 19 4 7 *'
+    - cron: '45 23 4 7 *'
+    - cron: '45 22 5 7 *'
+    - cron: '45 2 6 7 *'
+    - cron: '45 21 6 7 *'
+    - cron: '45 2 7 7 *'
+    - cron: '45 18 7 7 *'
+    - cron: '45 22 7 7 *'
+
+    # ── Quarter-finals (+110 min) ──────────────────────────────────────────
+    - cron: '50 21 9 7 *'
+    - cron: '50 20 10 7 *'
+    - cron: '50 22 11 7 *'
+    - cron: '50 2 12 7 *'
+
+    # ── Quarter-finals (+165 min) ──────────────────────────────────────────
+    - cron: '45 22 9 7 *'
+    - cron: '45 21 10 7 *'
+    - cron: '45 23 11 7 *'
+    - cron: '45 3 12 7 *'
+
+    # ── Semi-finals (+110 min and +165 min) ────────────────────────────────
+    - cron: '50 20 14 7 *'
+    - cron: '45 21 14 7 *'
+    - cron: '50 20 15 7 *'
+    - cron: '45 21 15 7 *'
+
+    # ── Third place + Final (+110 min and +165 min) ────────────────────────
+    - cron: '50 22 18 7 *'
+    - cron: '45 23 18 7 *'
+    - cron: '50 20 19 7 *'
+    - cron: '45 21 19 7 *'
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-scores:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Fetch scores
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+        run: node worldcup-2026/scripts/fetch-scores.js
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet worldcup-2026/scores.json; then
+            echo "scores.json unchanged, nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add worldcup-2026/scores.json
+          git commit -m "chore: update WC 2026 scores [skip ci]"
+          git push origin HEAD:master

@@ -52,6 +52,9 @@
       0%   { opacity: 0; transform: translateY(20px) scale(0.96); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
     }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
     @keyframes collapsedPulse {
       0%   { box-shadow: 0 0 0 0 rgba(0,208,132,0); border-color: rgba(255,255,255,0.08); }
       30%  { box-shadow: 0 0 0 5px rgba(0,208,132,0.18); border-color: rgba(0,208,132,0.5); }
@@ -311,6 +314,9 @@ const TRANSLATIONS = {
     notif_denied: "Notifications are blocked. Enable them in your browser/app settings to get kick-off alerts.",
     notif_kickoff_title: "⚽ Kick-off!",
     notif_kickoff_body: "{home} vs {away} just kicked off in {city}!",
+    // Score refresh
+    refresh_scores: "Refresh scores",
+    refreshing_scores: "Refreshing…",
   },
   'pt-BR': {
     // Header
@@ -553,6 +559,9 @@ const TRANSLATIONS = {
     notif_denied: "As notificações estão bloqueadas. Ative-as nas configurações do navegador/app para receber alertas de início de jogo.",
     notif_kickoff_title: "⚽ Bola rolando!",
     notif_kickoff_body: "{home} x {away} começou agora em {city}!",
+    // Atualização de placar
+    refresh_scores: "Atualizar placares",
+    refreshing_scores: "Atualizando…",
   },
 };
 
@@ -2661,6 +2670,19 @@ function IconBackup({ size=20 }) {
   );
 }
 
+function IconSync({ size=20, active=false }) {
+  const c = active ? ACCENT : "#888";
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      <path d="M40 24c0-8.8-7.2-16-16-16-4.8 0-9.1 2.1-12 5.4" stroke={c} strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+      <path d="M8 24c0 8.8 7.2 16 16 16 4.8 0 9.1-2.1 12-5.4" stroke={c} strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+      <path d="M28 8l4 5.4-5.4 4" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      <path d="M20 40l-4-5.4 5.4-4" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      {active && <circle cx="24" cy="24" r="5" fill={ACCENT} opacity="0.3"/>}
+    </svg>
+  );
+}
+
 function GuessBadge({ pts }) {
   if (pts === null || pts === undefined) return null;
   const [col, text] = pts === 3 ? [ACCENT, '✓ 3'] : pts === 1 ? [GOLD, '~ 1'] : [RED, '✗ 0'];
@@ -3256,6 +3278,9 @@ function App(){
   // Kick-off notifications
   const [notifEnabled,setNotifEnabled]=useState(()=>loadNotifState().enabled);
 
+  // Score refresh
+  const [refreshing,setRefreshing]=useState(false);
+
   // Refs to read current state inside effects without re-running them
   const predictionsRef=useRef(predictions);
   predictionsRef.current=predictions;
@@ -3538,6 +3563,55 @@ function App(){
     }
   },[notifEnabled,t]);
 
+  const applyAutoScores=useCallback((data)=>{
+    if(data.group&&Object.keys(data.group).length){
+      setGroupMatches(prev=>{
+        const next={};
+        Object.entries(prev).forEach(([g,matches])=>{
+          next[g]=matches.map(m=>{
+            const s=data.group[m.id];
+            if(!s) return m;
+            return {...m,homeScore:s.homeScore,awayScore:s.awayScore};
+          });
+        });
+        return next;
+      });
+    }
+    if(data.ko&&Object.keys(data.ko).length){
+      setKo(prev=>{
+        const next=structuredClone(prev);
+        ['r32','r16','qf','sf','final','third'].forEach(round=>{
+          next[round].forEach((m,idx)=>{
+            if(!m.teamA||!m.teamB) return;
+            const key=[m.teamA,m.teamB].sort().join('|');
+            const s=data.ko[key];
+            if(!s) return;
+            if(s.scoreA!=null) next[round][idx].scoreA=s.scoreA;
+            if(s.scoreB!=null) next[round][idx].scoreB=s.scoreB;
+            next[round][idx].penA=s.penA??null;
+            next[round][idx].penB=s.penB??null;
+          });
+        });
+        return propagateKO(next,groupMatches);
+      });
+    }
+  },[groupMatches]);
+
+  const handleRefreshScores=useCallback(async()=>{
+    if(refreshing) return;
+    setRefreshing(true);
+    try{
+      const res=await fetch('/worldcup-2026/scores.json?t='+Date.now());
+      if(res.ok){
+        const data=await res.json();
+        if(data&&(Object.keys(data.group||{}).length||Object.keys(data.ko||{}).length)){
+          applyAutoScores(data);
+        }
+      }
+    }catch(_){}
+    setRefreshing(false);
+  },[refreshing,applyAutoScores]);
+
   const champion = React.useMemo(()=>koWinner(ko.final[0]),[ko]);
 
   const globalStats=useMemo(()=>{
@@ -3659,16 +3733,6 @@ function App(){
               </div>
             )}
 
-            {/* Backup / restore (export-import file) */}
-            <button onClick={()=>{setShareModalMode('file');setShowShareModal(true);}} title={t('file_backup_title')} style={{
-              background:"transparent",border:"none",cursor:"pointer",
-              display:"flex",alignItems:"center",justifyContent:"center",
-              padding:"2px 4px",flexShrink:0,
-              borderRadius:6,transition:"background 0.15s",
-            }}
-            onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}
-            onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-            ><IconBackup size={isMobile?17:19}/></button>
 
             {/* Kick-off notifications toggle */}
             {typeof Notification!=='undefined'&&(
@@ -3699,9 +3763,9 @@ function App(){
 
       {/* MAIN */}
       <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden",zoom:isMobile?1.2:1}}>
-        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd}/>}
+        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} onRefreshScores={handleRefreshScores} refreshing={refreshing}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
-        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches}/>}
+        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} onRefreshScores={handleRefreshScores} refreshing={refreshing}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
         {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
       </div>
@@ -3810,7 +3874,7 @@ function CollapseTransition({onDone, children}){
 
 // ─── FIXTURES VIEW ─────────────────────────────────────────────────────────────
 // All 72 group matches sorted chronologically, grouped by date
-function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd}){
+function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd,onRefreshScores,refreshing}){
   const { t } = useLang();
   const [filter,setFilter]=useState(initialFilter||"ALL");
   const dateRefs=useRef({});
@@ -3923,7 +3987,17 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 
   return(
     <div ref={containerRef} style={{paddingBottom:isMobile?170:0}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",marginBottom:14,flexWrap:"wrap",gap:8}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
+          display:"flex",alignItems:"center",gap:5,background:"transparent",
+          border:`1px solid ${BORDER}`,borderRadius:20,
+          padding:"3px 10px 3px 7px",cursor:refreshing?"default":"pointer",
+          color:refreshing?ACCENT:"#888",fontSize:10,fontWeight:700,opacity:refreshing?0.7:1,
+          transition:"color 0.2s,opacity 0.2s",
+        }}>
+          <span style={{display:"inline-flex",animation:refreshing?"spin 0.8s linear infinite":undefined}}><IconSync size={13} active={refreshing}/></span>
+          {refreshing?t('refreshing_scores'):t('refresh_scores')}
+        </button>
         <span style={{fontSize:10,color:"#555"}}>{t('played_count').replace('{n}',scored)}</span>
       </div>
 
@@ -4142,7 +4216,7 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
 }
 
 // ─── KNOCKOUT VIEW ─────────────────────────────────────────────────────────────
-function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches}){
+function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScores,refreshing}){
   const { t } = useLang();
   const [round,setRound]=useState("r32");
   const ROUNDS=[
@@ -4196,7 +4270,20 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches}){
 
   return(
     <div style={{paddingBottom:isMobile?170:0}}>
-      <SLabel>{currentRound?.fullLabel}</SLabel>      {round==="final"&&ko.final[0].teamA&&(
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <SLabel style={{margin:0}}>{currentRound?.fullLabel}</SLabel>
+        <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
+          display:"flex",alignItems:"center",gap:5,background:"transparent",
+          border:`1px solid ${BORDER}`,borderRadius:20,
+          padding:"3px 10px 3px 7px",cursor:refreshing?"default":"pointer",
+          color:refreshing?ACCENT:"#888",fontSize:10,fontWeight:700,opacity:refreshing?0.7:1,
+          transition:"color 0.2s,opacity 0.2s",
+        }}>
+          <span style={{display:"inline-flex",animation:refreshing?"spin 0.8s linear infinite":undefined}}><IconSync size={13} active={refreshing}/></span>
+          {refreshing?t('refreshing_scores'):t('refresh_scores')}
+        </button>
+      </div>
+      {round==="final"&&ko.final[0].teamA&&(
         <div style={{textAlign:"center",marginBottom:16}}>
           <div style={{fontSize:30}}>🏆</div>
           <div style={{fontSize:12,color:GOLD,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{t('the_wc_final')}</div>
