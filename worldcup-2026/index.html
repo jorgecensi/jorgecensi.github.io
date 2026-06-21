@@ -52,6 +52,9 @@
       0%   { opacity: 0; transform: translateY(20px) scale(0.96); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
     }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
     @keyframes collapsedPulse {
       0%   { box-shadow: 0 0 0 0 rgba(0,208,132,0); border-color: rgba(255,255,255,0.08); }
       30%  { box-shadow: 0 0 0 5px rgba(0,208,132,0.18); border-color: rgba(0,208,132,0.5); }
@@ -311,9 +314,9 @@ const TRANSLATIONS = {
     notif_denied: "Notifications are blocked. Enable them in your browser/app settings to get kick-off alerts.",
     notif_kickoff_title: "⚽ Kick-off!",
     notif_kickoff_body: "{home} vs {away} just kicked off in {city}!",
-    // Auto score update
-    autoupdate_enable: "Enable auto score updates",
-    autoupdate_disable: "Disable auto score updates",
+    // Score refresh
+    refresh_scores: "Refresh scores",
+    refreshing_scores: "Refreshing…",
   },
   'pt-BR': {
     // Header
@@ -556,9 +559,9 @@ const TRANSLATIONS = {
     notif_denied: "As notificações estão bloqueadas. Ative-as nas configurações do navegador/app para receber alertas de início de jogo.",
     notif_kickoff_title: "⚽ Bola rolando!",
     notif_kickoff_body: "{home} x {away} começou agora em {city}!",
-    // Atualização automática de placar
-    autoupdate_enable: "Ativar atualização automática de placares",
-    autoupdate_disable: "Desativar atualização automática de placares",
+    // Atualização de placar
+    refresh_scores: "Atualizar placares",
+    refreshing_scores: "Atualizando…",
   },
 };
 
@@ -3027,76 +3030,6 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
   );
 }
 
-// ─── Auto Score Update ─────────────────────────────────────────────────────────
-const AUTO_UPDATE_KEY = "wc2026:autoupdate:v1";
-function loadAutoUpdateEnabled() {
-  try { return JSON.parse(localStorage.getItem(AUTO_UPDATE_KEY))?.enabled === true; }
-  catch(_) { return false; }
-}
-function saveAutoUpdateEnabled(enabled) {
-  try { localStorage.setItem(AUTO_UPDATE_KEY, JSON.stringify({enabled})); } catch(_) {}
-}
-
-// Polls /worldcup-2026/scores.json and applies any finished scores that are
-// missing from local state. Runs once on mount, then every 5 minutes, and
-// whenever the page regains focus — mirroring the notifications pattern.
-const AUTO_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
-const MATCH_DONE_MS = 110 * 60 * 1000; // 110 min after kickoff = game should be over
-
-function useAutoUpdate(groupMatches, ko, onScores, enabled) {
-  const enabledRef     = useRef(enabled);
-  const groupRef       = useRef(groupMatches);
-  const koRef          = useRef(ko);
-  const onScoresRef    = useRef(onScores);
-  enabledRef.current   = enabled;
-  groupRef.current     = groupMatches;
-  koRef.current        = ko;
-  onScoresRef.current  = onScores;
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    const needsFetch = () => {
-      const now = Date.now();
-      const groupNeed = Object.values(groupRef.current).flat().some(m => {
-        if (m.homeScore !== null && m.awayScore !== null) return false;
-        return now >= matchToUTC(m.date, m.time).getTime() + MATCH_DONE_MS;
-      });
-      if (groupNeed) return true;
-      return [...koRef.current.r32, ...koRef.current.r16,
-              ...koRef.current.qf,  ...koRef.current.sf,
-              ...koRef.current.final,...koRef.current.third].some(m => {
-        if (!m.teamA || !m.teamB || m.date === 'TBD') return false;
-        if (m.scoreA !== null && m.scoreB !== null) return false;
-        return now >= matchToUTC(m.date, m.time).getTime() + MATCH_DONE_MS;
-      });
-    };
-
-    const check = async () => {
-      if (!enabledRef.current || !needsFetch()) return;
-      try {
-        const res = await fetch('/worldcup-2026/scores.json?t=' + Date.now());
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data && (Object.keys(data.group||{}).length || Object.keys(data.ko||{}).length)) {
-          onScoresRef.current(data);
-        }
-      } catch(_) {}
-    };
-
-    check();
-    const interval = setInterval(check, AUTO_UPDATE_INTERVAL_MS);
-    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', check);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', check);
-    };
-  }, [enabled]);
-}
-
 // ─── Match Kick-off Notifications ──────────────────────────────────────────────
 const NOTIF_KEY = "wc2026:notify:v1";
 
@@ -3345,8 +3278,8 @@ function App(){
   // Kick-off notifications
   const [notifEnabled,setNotifEnabled]=useState(()=>loadNotifState().enabled);
 
-  // Auto score update
-  const [autoUpdateEnabled,setAutoUpdateEnabled]=useState(loadAutoUpdateEnabled);
+  // Score refresh
+  const [refreshing,setRefreshing]=useState(false);
 
   // Refs to read current state inside effects without re-running them
   const predictionsRef=useRef(predictions);
@@ -3630,12 +3563,6 @@ function App(){
     }
   },[notifEnabled,t]);
 
-  const handleToggleAutoUpdate=useCallback(()=>{
-    const next=!autoUpdateEnabled;
-    setAutoUpdateEnabled(next);
-    saveAutoUpdateEnabled(next);
-  },[autoUpdateEnabled]);
-
   const applyAutoScores=useCallback((data)=>{
     if(data.group&&Object.keys(data.group).length){
       setGroupMatches(prev=>{
@@ -3670,7 +3597,20 @@ function App(){
     }
   },[groupMatches]);
 
-  useAutoUpdate(groupMatches,ko,applyAutoScores,autoUpdateEnabled);
+  const handleRefreshScores=useCallback(async()=>{
+    if(refreshing) return;
+    setRefreshing(true);
+    try{
+      const res=await fetch('/worldcup-2026/scores.json?t='+Date.now());
+      if(res.ok){
+        const data=await res.json();
+        if(data&&(Object.keys(data.group||{}).length||Object.keys(data.ko||{}).length)){
+          applyAutoScores(data);
+        }
+      }
+    }catch(_){}
+    setRefreshing(false);
+  },[refreshing,applyAutoScores]);
 
   const champion = React.useMemo(()=>koWinner(ko.final[0]),[ko]);
 
@@ -3823,9 +3763,9 @@ function App(){
 
       {/* MAIN */}
       <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden",zoom:isMobile?1.2:1}}>
-        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} autoUpdateEnabled={autoUpdateEnabled} onToggleAutoUpdate={handleToggleAutoUpdate}/>}
+        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} onRefreshScores={handleRefreshScores} refreshing={refreshing}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
-        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} autoUpdateEnabled={autoUpdateEnabled} onToggleAutoUpdate={handleToggleAutoUpdate}/>}
+        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} onRefreshScores={handleRefreshScores} refreshing={refreshing}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
         {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
       </div>
@@ -3934,7 +3874,7 @@ function CollapseTransition({onDone, children}){
 
 // ─── FIXTURES VIEW ─────────────────────────────────────────────────────────────
 // All 72 group matches sorted chronologically, grouped by date
-function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd,autoUpdateEnabled,onToggleAutoUpdate}){
+function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd,onRefreshScores,refreshing}){
   const { t } = useLang();
   const [filter,setFilter]=useState(initialFilter||"ALL");
   const dateRefs=useRef({});
@@ -4048,14 +3988,15 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
   return(
     <div ref={containerRef} style={{paddingBottom:isMobile?170:0}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
-        <button onClick={onToggleAutoUpdate} title={autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')} style={{
+        <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
           display:"flex",alignItems:"center",gap:5,background:"transparent",
-          border:`1px solid ${autoUpdateEnabled?ACCENT+"88":BORDER}`,borderRadius:20,
-          padding:"3px 10px 3px 7px",cursor:"pointer",color:autoUpdateEnabled?ACCENT:"#666",
-          fontSize:10,fontWeight:700,transition:"border-color 0.2s,color 0.2s",
+          border:`1px solid ${BORDER}`,borderRadius:20,
+          padding:"3px 10px 3px 7px",cursor:refreshing?"default":"pointer",
+          color:refreshing?ACCENT:"#888",fontSize:10,fontWeight:700,opacity:refreshing?0.7:1,
+          transition:"color 0.2s,opacity 0.2s",
         }}>
-          <IconSync size={13} active={autoUpdateEnabled}/>
-          {autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')}
+          <span style={{display:"inline-flex",animation:refreshing?"spin 0.8s linear infinite":undefined}}><IconSync size={13} active={refreshing}/></span>
+          {refreshing?t('refreshing_scores'):t('refresh_scores')}
         </button>
         <span style={{fontSize:10,color:"#555"}}>{t('played_count').replace('{n}',scored)}</span>
       </div>
@@ -4275,7 +4216,7 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
 }
 
 // ─── KNOCKOUT VIEW ─────────────────────────────────────────────────────────────
-function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,autoUpdateEnabled,onToggleAutoUpdate}){
+function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScores,refreshing}){
   const { t } = useLang();
   const [round,setRound]=useState("r32");
   const ROUNDS=[
@@ -4331,14 +4272,15 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,autoUpdateEnab
     <div style={{paddingBottom:isMobile?170:0}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
         <SLabel style={{margin:0}}>{currentRound?.fullLabel}</SLabel>
-        <button onClick={onToggleAutoUpdate} title={autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')} style={{
+        <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
           display:"flex",alignItems:"center",gap:5,background:"transparent",
-          border:`1px solid ${autoUpdateEnabled?ACCENT+"88":BORDER}`,borderRadius:20,
-          padding:"3px 10px 3px 7px",cursor:"pointer",color:autoUpdateEnabled?ACCENT:"#666",
-          fontSize:10,fontWeight:700,transition:"border-color 0.2s,color 0.2s",
+          border:`1px solid ${BORDER}`,borderRadius:20,
+          padding:"3px 10px 3px 7px",cursor:refreshing?"default":"pointer",
+          color:refreshing?ACCENT:"#888",fontSize:10,fontWeight:700,opacity:refreshing?0.7:1,
+          transition:"color 0.2s,opacity 0.2s",
         }}>
-          <IconSync size={13} active={autoUpdateEnabled}/>
-          {autoUpdateEnabled?t('autoupdate_disable'):t('autoupdate_enable')}
+          <span style={{display:"inline-flex",animation:refreshing?"spin 0.8s linear infinite":undefined}}><IconSync size={13} active={refreshing}/></span>
+          {refreshing?t('refreshing_scores'):t('refresh_scores')}
         </button>
       </div>
       {round==="final"&&ko.final[0].teamA&&(
