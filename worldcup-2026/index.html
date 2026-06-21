@@ -317,6 +317,7 @@ const TRANSLATIONS = {
     // Score refresh
     refresh_scores: "Refresh scores",
     refreshing_scores: "Refreshing…",
+    last_updated: "Updated {time}",
   },
   'pt-BR': {
     // Header
@@ -562,6 +563,7 @@ const TRANSLATIONS = {
     // Atualização de placar
     refresh_scores: "Atualizar placares",
     refreshing_scores: "Atualizando…",
+    last_updated: "Atualizado {time}",
   },
 };
 
@@ -1120,6 +1122,20 @@ function initKO() {
 // keyed by stable match id — and merged back into a freshly generated schedule on
 // load, so changes to the fixtures/bracket data don't break old saved scores.
 const STORAGE_KEY = "wc2026:scores:v1";
+// Timestamp (ISO string) of the scores.json snapshot we last applied, shown
+// next to the refresh button. Cached so the label appears immediately on load.
+const UPDATED_KEY = "wc2026:scores:updated";
+
+// Format the scores.json "updated" ISO timestamp into a short, locale-aware
+// label like "Jun 21, 21:17". Returns null for missing/invalid input.
+function formatUpdated(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
 
 function loadStoredScores() {
   try {
@@ -3313,6 +3329,9 @@ function App(){
 
   // Score refresh
   const [refreshing,setRefreshing]=useState(false);
+  const [lastUpdated,setLastUpdated]=useState(()=>{
+    try{ return localStorage.getItem(UPDATED_KEY)||null; }catch(e){ return null; }
+  });
 
   // Refs to read current state inside effects without re-running them
   const predictionsRef=useRef(predictions);
@@ -3637,6 +3656,10 @@ function App(){
       const res=await fetch('/worldcup-2026/scores.json?t='+Date.now());
       if(res.ok){
         const data=await res.json();
+        if(data&&data.updated){
+          setLastUpdated(data.updated);
+          try{ localStorage.setItem(UPDATED_KEY,data.updated); }catch(_){}
+        }
         if(data&&(Object.keys(data.group||{}).length||Object.keys(data.ko||{}).length)){
           applyAutoScores(data);
         }
@@ -3644,6 +3667,10 @@ function App(){
     }catch(_){}
     setRefreshing(false);
   },[refreshing,applyAutoScores]);
+
+  // Pull the latest scores once on load so the "last updated" label and scores
+  // reflect the published snapshot without the user having to tap refresh.
+  useEffect(()=>{ handleRefreshScores(); },[]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const champion = React.useMemo(()=>koWinner(ko.final[0]),[ko]);
 
@@ -3796,9 +3823,9 @@ function App(){
 
       {/* MAIN */}
       <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden",zoom:isMobile?1.2:1}}>
-        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} onRefreshScores={handleRefreshScores} refreshing={refreshing}/>}
+        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} onRefreshScores={handleRefreshScores} refreshing={refreshing} lastUpdated={lastUpdated}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
-        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} onRefreshScores={handleRefreshScores} refreshing={refreshing}/>}
+        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} onRefreshScores={handleRefreshScores} refreshing={refreshing} lastUpdated={lastUpdated}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
         {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
       </div>
@@ -3907,7 +3934,7 @@ function CollapseTransition({onDone, children}){
 
 // ─── FIXTURES VIEW ─────────────────────────────────────────────────────────────
 // All 72 group matches sorted chronologically, grouped by date
-function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd,onRefreshScores,refreshing}){
+function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd,onRefreshScores,refreshing,lastUpdated}){
   const { t } = useLang();
   const [filter,setFilter]=useState(initialFilter||"ALL");
   const dateRefs=useRef({});
@@ -4022,16 +4049,19 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
   return(
     <div ref={containerRef} style={{paddingBottom:isMobile?170:0}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
-        <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
-          display:"flex",alignItems:"center",gap:5,background:"transparent",
-          border:`1px solid ${BORDER}`,borderRadius:20,
-          padding:"3px 10px 3px 7px",cursor:refreshing?"default":"pointer",
-          color:refreshing?ACCENT:"#888",fontSize:10,fontWeight:700,opacity:refreshing?0.7:1,
-          transition:"color 0.2s,opacity 0.2s",
-        }}>
-          <span style={{display:"inline-flex",animation:refreshing?"spin 0.8s linear infinite":undefined}}><IconSync size={13} active={refreshing}/></span>
-          {refreshing?t('refreshing_scores'):t('refresh_scores')}
-        </button>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
+            display:"flex",alignItems:"center",gap:5,background:"transparent",
+            border:`1px solid ${BORDER}`,borderRadius:20,
+            padding:"3px 10px 3px 7px",cursor:refreshing?"default":"pointer",
+            color:refreshing?ACCENT:"#888",fontSize:10,fontWeight:700,opacity:refreshing?0.7:1,
+            transition:"color 0.2s,opacity 0.2s",
+          }}>
+            <span style={{display:"inline-flex",animation:refreshing?"spin 0.8s linear infinite":undefined}}><IconSync size={13} active={refreshing}/></span>
+            {refreshing?t('refreshing_scores'):t('refresh_scores')}
+          </button>
+          {formatUpdated(lastUpdated)&&<span style={{fontSize:10,color:"#555"}}>{t('last_updated').replace('{time}',formatUpdated(lastUpdated))}</span>}
+        </div>
         <span style={{fontSize:10,color:"#555"}}>{t('played_count').replace('{n}',scored)}</span>
       </div>
 
@@ -4250,7 +4280,7 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
 }
 
 // ─── KNOCKOUT VIEW ─────────────────────────────────────────────────────────────
-function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScores,refreshing}){
+function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScores,refreshing,lastUpdated}){
   const { t } = useLang();
   const [round,setRound]=useState("r32");
   const ROUNDS=[
@@ -4308,16 +4338,19 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
     <div style={{paddingBottom:isMobile?170:0}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
         <SLabel style={{margin:0}}>{currentRound?.fullLabel}</SLabel>
-        <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
-          display:"flex",alignItems:"center",gap:5,background:"transparent",
-          border:`1px solid ${BORDER}`,borderRadius:20,
-          padding:"3px 10px 3px 7px",cursor:refreshing?"default":"pointer",
-          color:refreshing?ACCENT:"#888",fontSize:10,fontWeight:700,opacity:refreshing?0.7:1,
-          transition:"color 0.2s,opacity 0.2s",
-        }}>
-          <span style={{display:"inline-flex",animation:refreshing?"spin 0.8s linear infinite":undefined}}><IconSync size={13} active={refreshing}/></span>
-          {refreshing?t('refreshing_scores'):t('refresh_scores')}
-        </button>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+          {formatUpdated(lastUpdated)&&<span style={{fontSize:10,color:"#555"}}>{t('last_updated').replace('{time}',formatUpdated(lastUpdated))}</span>}
+          <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
+            display:"flex",alignItems:"center",gap:5,background:"transparent",
+            border:`1px solid ${BORDER}`,borderRadius:20,
+            padding:"3px 10px 3px 7px",cursor:refreshing?"default":"pointer",
+            color:refreshing?ACCENT:"#888",fontSize:10,fontWeight:700,opacity:refreshing?0.7:1,
+            transition:"color 0.2s,opacity 0.2s",
+          }}>
+            <span style={{display:"inline-flex",animation:refreshing?"spin 0.8s linear infinite":undefined}}><IconSync size={13} active={refreshing}/></span>
+            {refreshing?t('refreshing_scores'):t('refresh_scores')}
+          </button>
+        </div>
       </div>
       {round==="final"&&ko.final[0].teamA&&(
         <div style={{textAlign:"center",marginBottom:16}}>
