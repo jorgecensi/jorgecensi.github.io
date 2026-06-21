@@ -3719,7 +3719,7 @@ function App(){
                 {NAV.map(({v,Icon,label})=>{
                   const isActive=view===v;
                   return(
-                    <button key={v} onClick={()=>setView(v)} title={label} style={{
+                    <button key={v} onClick={()=>{setView(v);window.scrollTo({top:0});}} title={label} style={{
                       width:38,height:38,borderRadius:9,
                       border:`1.5px solid ${isActive?ACCENT:BORDER}`,
                       background:isActive?`${ACCENT}20`:"transparent",
@@ -3774,7 +3774,7 @@ function App(){
       {isMobile&&(
         <div ref={navRef} style={{position:"fixed",bottom:0,left:0,right:0,background:"#0a1020",borderTop:`2px solid ${ACCENT}33`,display:"flex",zIndex:200,paddingBottom:"env(safe-area-inset-bottom, 0px)"}}>
           {NAV.map(({v,Icon,label})=>(
-            <button key={v} onClick={()=>setView(v)} style={{flex:1,padding:"14px 0 12px",border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <button key={v} onClick={()=>{setView(v);window.scrollTo({top:0});}} style={{flex:1,padding:"14px 0 12px",border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <Icon size={22} active={view===v}/>
               <span style={{fontSize:10,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:view===v?ACCENT:"#555"}}>{label}</span>
               {view===v&&<span style={{width:18,height:2,background:ACCENT,borderRadius:2,marginTop:1}}/>}
@@ -3879,6 +3879,7 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
   const [filter,setFilter]=useState(initialFilter||"ALL");
   const dateRefs=useRef({});
   const containerRef=useRef(null);
+  const didMountScrollRef=useRef(false);
 
   // Apply an incoming filter request from Standings shortcut (runs once)
   useEffect(()=>{
@@ -3965,12 +3966,12 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 
   const closestDk=useMemo(()=>byDate.find(d=>d.date===closestDate)?.dk??null,[byDate,closestDate]);
 
-  // Scroll to closest date on mount and when filter changes
+  // Scroll to closest date when filter changes (skip initial mount — tab switch resets to top)
   useEffect(()=>{
     if(!closestDate) return;
+    if(!didMountScrollRef.current){ didMountScrollRef.current=true; return; }
     const el=dateRefs.current[closestDate];
     if(!el) return;
-    // Short delay so layout is complete
     const timer=setTimeout(()=>{
       el.scrollIntoView({behavior:"smooth",block:"start"});
     },120);
@@ -4230,6 +4231,7 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
   const matches=ko[round];
   const currentRound=ROUNDS.find(r=>r.key===round);
   const dateRefs=useRef({});
+  const didMountScrollRef=useRef(false);
 
   // Group by date
   const byDate=useMemo(()=>{
@@ -4257,9 +4259,10 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
 
   const closestDk=useMemo(()=>byDate.find(d=>d.date===closestDate)?.dk??null,[byDate,closestDate]);
 
-  // Scroll to closest date on mount and when round changes
+  // Scroll to closest date when round changes (skip initial mount — tab switch resets to top)
   useEffect(()=>{
     if(!closestDate) return;
+    if(!didMountScrollRef.current){ didMountScrollRef.current=true; return; }
     const el=dateRefs.current[closestDate];
     if(!el) return;
     const timer=setTimeout(()=>{
