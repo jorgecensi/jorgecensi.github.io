@@ -162,7 +162,7 @@ jobs:
 
       - name: Fetch scores
         env:
-          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: node worldcup-2026/scripts/fetch-scores.js
 
       - name: Commit and push if changed

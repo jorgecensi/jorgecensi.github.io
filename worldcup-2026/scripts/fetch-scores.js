@@ -1,32 +1,29 @@
 #!/usr/bin/env node
-// Fetches FIFA World Cup 2026 results from api-sports.io (api-football.com)
+// Fetches FIFA World Cup 2026 results from football-data.org
 // and writes worldcup-2026/scores.json so the app can auto-apply them.
-// Requires env var API_FOOTBALL_KEY (free account at api-football.com).
+// Requires env var FOOTBALL_DATA_API_KEY (free account at football-data.org).
 
 const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
 
-const API_KEY = process.env.API_FOOTBALL_KEY;
-if (!API_KEY) { console.error('API_FOOTBALL_KEY not set'); process.exit(1); }
+const API_KEY = process.env.FOOTBALL_DATA_API_KEY;
+if (!API_KEY) { console.error('FOOTBALL_DATA_API_KEY not set'); process.exit(1); }
 
-// api-sports team name → app team name (add entries as needed)
+// football-data.org team name → app team name (add entries as needed)
 const NORMALIZE = {
-  'USA':                      'United States',
-  'Korea Republic':           'South Korea',
-  'Korea South':              'South Korea',
-  'Iran':                     'Iran',
-  'IR Iran':                  'Iran',
-  "Bosnia & Herzegovina":     'Bosnia',
-  "Bosnia and Herzegovina":   'Bosnia',
-  "Cabo Verde":               'Cape Verde',
-  "Côte D'Ivoire":            'Ivory Coast',
-  "Cote D'Ivoire":            'Ivory Coast',
-  "Ivory Coast":              'Ivory Coast',
-  'Congo DR':                 'DR Congo',
-  'Congo [DRC]':              'DR Congo',
-  'Czech Republic':           'Czechia',
-  'Curaçao':                  'Curacao',
+  'USA':                           'United States',
+  'Korea Republic':                'South Korea',
+  'IR Iran':                       'Iran',
+  "Bosnia & Herzegovina":          'Bosnia',
+  "Bosnia and Herzegovina":        'Bosnia',
+  "Cabo Verde":                    'Cape Verde',
+  "Côte d'Ivoire":                 'Ivory Coast',
+  "Ivory Coast":                   'Ivory Coast',
+  'Democratic Republic of Congo':  'DR Congo',
+  'Congo DR':                      'DR Congo',
+  'Czech Republic':                'Czechia',
+  'Curaçao':                       'Curacao',
 };
 function norm(name) { return NORMALIZE[name] || name; }
 
@@ -70,24 +67,22 @@ const GROUP_MATCHES = (() => {
   return map;
 })();
 
-// api-sports round string → app KO round key
-const ROUND_MAP = {
-  'Round of 32':    'r32',
-  'Round of 16':    'r16',
-  'Quarter-finals': 'qf',
-  'Quarter-Final':  'qf',
-  'Semi-finals':    'sf',
-  'Semi-Final':     'sf',
-  '3rd Place Final':'third',
-  'Final':          'final',
+// football-data.org stage → app KO round key
+const STAGE_MAP = {
+  'ROUND_OF_32':    'r32',
+  'ROUND_OF_16':    'r16',
+  'QUARTER_FINALS': 'qf',
+  'SEMI_FINALS':    'sf',
+  'THIRD_PLACE':    'third',
+  'FINAL':          'final',
 };
 
 function fetch_json(urlPath) {
   return new Promise((resolve, reject) => {
     https.get({
-      hostname: 'v3.football.api-sports.io',
+      hostname: 'api.football-data.org',
       path: urlPath,
-      headers: { 'x-apisports-key': API_KEY },
+      headers: { 'X-Auth-Token': API_KEY },
     }, res => {
       let raw = '';
       res.on('data', c => raw += c);
@@ -104,36 +99,30 @@ async function main() {
   let existing = { updated: null, group: {}, ko: {} };
   try { existing = JSON.parse(fs.readFileSync(outPath, 'utf8')); } catch(_) {}
 
-  // Only fetch finished matches to avoid partial scores
-  const data = await fetch_json('/fixtures?league=1&season=2026&status=FT-AET-PEN');
-  const fixtures = data.response || [];
-  console.log(`Fetched ${fixtures.length} finished fixtures.`);
+  const data = await fetch_json('/v4/competitions/WC/matches?status=FINISHED');
+  const matches = data.matches || [];
+  console.log(`Fetched ${matches.length} finished matches.`);
 
   const newGroup = { ...existing.group };
   const newKO    = { ...existing.ko };
   let changed = false;
 
-  for (const f of fixtures) {
-    const statusShort = f.fixture?.status?.short;
-    const finished = ['FT', 'AET', 'PEN'].includes(statusShort);
-    if (!finished) continue;
+  for (const m of matches) {
+    const stage   = m.stage;
+    const apiHome = norm(m.homeTeam?.name || m.homeTeam?.shortName || '');
+    const apiAway = norm(m.awayTeam?.name || m.awayTeam?.shortName || '');
 
-    const apiHome = norm(f.teams?.home?.name || '');
-    const apiAway = norm(f.teams?.away?.name || '');
-
-    // Regulation/ET score (NOT including penalty shootout)
-    const scoreH = f.goals?.home;
-    const scoreA = f.goals?.away;
+    // extraTime score is cumulative (includes 90-min goals); use it when present.
+    // fullTime is regulation score (90 min).
+    const scoreH = m.score?.extraTime?.home ?? m.score?.fullTime?.home;
+    const scoreA = m.score?.extraTime?.away ?? m.score?.fullTime?.away;
     if (scoreH == null || scoreA == null) continue;
 
-    // Penalty shootout goals (null if no shootout)
-    const penH = f.score?.penalty?.home ?? null;
-    const penA = f.score?.penalty?.away ?? null;
+    // Penalty shootout goals only (null if no shootout)
+    const penH = m.score?.penalties?.home ?? null;
+    const penA = m.score?.penalties?.away ?? null;
 
-    const round = f.league?.round || '';
-    const isGroup = round.toLowerCase().includes('group');
-
-    if (isGroup) {
+    if (stage === 'GROUP_STAGE') {
       const key   = [apiHome, apiAway].sort().join('|');
       const entry = GROUP_MATCHES[key];
       if (!entry) { console.warn(`Unknown group pair: "${apiHome}" vs "${apiAway}"`); continue; }
@@ -144,8 +133,8 @@ async function main() {
         changed = true;
       }
     } else {
-      const appRound = ROUND_MAP[round];
-      if (!appRound) { console.warn(`Unknown round: "${round}"`); continue; }
+      const appRound = STAGE_MAP[stage];
+      if (!appRound) { console.warn(`Unknown stage: "${stage}"`); continue; }
 
       // Store by sorted team pair; the app resolves to the correct match at read time
       const key  = [apiHome, apiAway].sort().join('|');
