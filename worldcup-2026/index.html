@@ -2187,38 +2187,71 @@ function ResultDots({ results=[] }) {
     </span>
   );
 }
-// Returns only teams that have MATHEMATICALLY CLINCHED their position.
-// A team is confirmed 1st/2nd only when no permutation of remaining results
-// can displace them from that position.
+// Returns only teams that have MATHEMATICALLY CLINCHED a bracket slot.
+// A team fills slot "1G"/"2G" only when NO combination of remaining group
+// results can keep it out of that exact finishing position.
+//
+// We enumerate every possible outcome (win / draw / loss) of the group's
+// remaining matches — at most 6 matches, so ≤ 3^6 = 729 combinations — and
+// test each team against all of them. Because the app's tiebreakers (goal
+// difference, goals scored) can be swung arbitrarily by an adversary
+// choosing the scoreline of a remaining match, any rival that can merely
+// EQUAL a candidate on points is treated as finishing above it. This is the
+// conservative, never-over-claim reading of "mathematically qualified": a
+// slot is filled only when the position is certain on points alone.
 function getGroupQualifiers(gm) {
   const slots = {};
   Object.entries(GROUPS).forEach(([g, teams]) => {
-    const matches = gm[g];
+    const matches = gm[g] || [];
+    const remaining = matches.filter(m => m.homeScore === null || m.awayScore === null);
 
-    // Check each target position (0 = 1st, 1 = 2nd)
-    [0, 1].forEach(pos => {
-      const current = computeStandings(teams, matches);
-      const candidate = current[pos]?.team;
-      if (!candidate) return;
-
-      // Simulate the worst case for this candidate:
-      // - their own remaining matches: they lose
-      // - other remaining matches: home team wins (maximises rivals' points)
-      const worstCase = matches.map(m => {
-        if (m.homeScore !== null && m.awayScore !== null) return m;
-        if (m.home === candidate) return { ...m, homeScore: 0, awayScore: 1 };
-        if (m.away === candidate) return { ...m, homeScore: 1, awayScore: 0 };
-        return { ...m, homeScore: 1, awayScore: 0 };
-      });
-
-      const worstStandings = computeStandings(teams, worstCase);
-      const worstPos = worstStandings.findIndex(r => r.team === candidate);
-
-      // Clinched if even in the worst case they still finish at or above this position
-      if (worstPos <= pos) {
-        slots[`${pos + 1}${g}`] = candidate;
-      }
+    // Points already banked from completed matches.
+    const basePts = {};
+    teams.forEach(tm => { basePts[tm] = 0; });
+    matches.forEach(m => {
+      if (m.homeScore === null || m.awayScore === null) return;
+      const hs = +m.homeScore, as = +m.awayScore;
+      if (hs > as) basePts[m.home] += 3;
+      else if (hs < as) basePts[m.away] += 3;
+      else { basePts[m.home] += 1; basePts[m.away] += 1; }
     });
+
+    // guaranteed1st: candidate is the SOLE points leader in every scenario.
+    // guaranteedTop2: at most one other team can reach the candidate's points
+    //                 in every scenario (so it can never drop below 2nd).
+    const guaranteed1st = {}, guaranteedTop2 = {};
+    teams.forEach(tm => { guaranteed1st[tm] = true; guaranteedTop2[tm] = true; });
+
+    const total = Math.pow(3, remaining.length);
+    for (let mask = 0; mask < total; mask++) {
+      const pts = { ...basePts };
+      let x = mask;
+      for (let i = 0; i < remaining.length; i++) {
+        const outcome = x % 3; x = Math.floor(x / 3);
+        const m = remaining[i];
+        if (outcome === 0) pts[m.home] += 3;        // home win
+        else if (outcome === 1) pts[m.away] += 3;   // away win
+        else { pts[m.home] += 1; pts[m.away] += 1; } // draw
+      }
+      teams.forEach(tm => {
+        // Count rivals that finish at or above this team on points (ties count
+        // against the team, since goal-based tiebreakers are not guaranteed).
+        let atOrAbove = 0;
+        teams.forEach(o => { if (o !== tm && pts[o] >= pts[tm]) atOrAbove++; });
+        if (atOrAbove >= 1) guaranteed1st[tm] = false;
+        if (atOrAbove >= 2) guaranteedTop2[tm] = false;
+      });
+    }
+
+    // Fill the winner slot only for a guaranteed sole leader; the runner-up
+    // slot only once the winner is settled and a second team is locked into
+    // the top two (it is then necessarily 2nd).
+    const winner = teams.find(tm => guaranteed1st[tm]);
+    if (winner) {
+      slots[`1${g}`] = winner;
+      const runnerUp = teams.find(tm => tm !== winner && guaranteedTop2[tm]);
+      if (runnerUp) slots[`2${g}`] = runnerUp;
+    }
   });
   return slots;
 }
