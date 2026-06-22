@@ -60,6 +60,45 @@
       30%  { box-shadow: 0 0 0 5px rgba(0,208,132,0.18); border-color: rgba(0,208,132,0.5); }
       100% { box-shadow: 0 0 0 0 rgba(0,208,132,0); border-color: rgba(255,255,255,0.08); }
     }
+    /* ── First-place celebration ──────────────────────────────────────────── */
+    @keyframes fpRaysSpin { to { transform: rotate(360deg); } }
+    @keyframes fpTrophyPop {
+      0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+      45%  { transform: scale(1.35) rotate(10deg); opacity: 1; }
+      65%  { transform: scale(0.88) rotate(-6deg); }
+      82%  { transform: scale(1.08) rotate(3deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    @keyframes fpTrophyFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-9px); }
+    }
+    @keyframes fpCrownDrop {
+      0%   { transform: translate(-50%,-220%) scale(0.4) rotate(-25deg); opacity: 0; }
+      60%  { opacity: 1; }
+      75%  { transform: translate(-50%,-86%) scale(1.15) rotate(8deg); }
+      100% { transform: translate(-50%,-92%) scale(1) rotate(-6deg); opacity: 1; }
+    }
+    @keyframes fpRingPulse {
+      0%   { transform: scale(0.5); opacity: 0.9; }
+      100% { transform: scale(2.6); opacity: 0; }
+    }
+    @keyframes fpTitleIn {
+      0%   { transform: translateY(18px) scale(0.85); opacity: 0; letter-spacing: 8px; }
+      100% { transform: translateY(0) scale(1); opacity: 1; letter-spacing: 2px; }
+    }
+    @keyframes fpTitleGlow {
+      0%, 100% { text-shadow: 0 0 14px rgba(255,215,0,0.55), 0 0 4px rgba(255,215,0,0.4); }
+      50%      { text-shadow: 0 0 34px rgba(255,215,0,0.95), 0 0 10px rgba(255,215,0,0.7); }
+    }
+    @keyframes fpSparkle {
+      0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0; }
+      50%      { transform: scale(1.1) rotate(25deg); opacity: 1; }
+    }
+    @keyframes fpSubIn {
+      0%   { transform: translateY(10px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -253,6 +292,10 @@ const TRANSLATIONS = {
     compete_friends: "Compete with friends",
     compete_friends_desc: "Share your QR — anyone who scans it joins your leaderboard. The app flashes when someone nails a score.",
     leaderboard_locked_hint: "Fill in all your group stage picks to unlock the leaderboard and compare with friends",
+    first_place_kicker: "Top of the leaderboard",
+    first_place_title: "YOU'RE #1!",
+    first_place_subtitle: "{name} leads the bolão 🏆",
+    first_place_dismiss: "Tap to celebrate 🎉",
     share_qr_nfc: "📲 Share via QR / Link",
     share_predictions_title: "Share Predictions",
     share_predictions_subtitle: "Show this QR to a friend — they scan & add you as a rival",
@@ -507,6 +550,10 @@ const TRANSLATIONS = {
     compete_friends: "Compita com amigos",
     compete_friends_desc: "Compartilhe seu QR — quem escanear entra no seu ranking. O app pisca quando alguém acerta um placar.",
     leaderboard_locked_hint: "Preencha todos os seus palpites da fase de grupos para liberar o ranking e a comparação com amigos",
+    first_place_kicker: "Topo do ranking",
+    first_place_title: "VOCÊ É O 1º!",
+    first_place_subtitle: "{name} lidera o bolão 🏆",
+    first_place_dismiss: "Toque para comemorar 🎉",
     share_qr_nfc: "📲 Compartilhar via QR / Link",
     share_predictions_title: "Compartilhar Palpites",
     share_predictions_subtitle: "Mostre este QR para um amigo — ele escaneia e te adiciona como rival",
@@ -625,6 +672,9 @@ const WINNER_FLASH_MS = 4500;
 // Milestone flashes (e.g. "5 exact scores!") show extra text, so give the
 // user a bit more time to read it before auto-dismissing.
 const MILESTONE_FLASH_MS = 6500;
+// Climbing to #1 on the leaderboard is the big moment — let the celebration
+// breathe a little longer than a regular winner flash.
+const FIRST_PLACE_FLASH_MS = 7000;
 
 const FLAG = {
   "Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz",
@@ -2050,6 +2100,119 @@ function WinnerFlash({ data, onDismiss }) {
   );
 }
 
+// ─── First-place celebration ──────────────────────────────────────────────────
+// Denser, full-screen confetti burst (more pieces than the per-match flash).
+const FP_CONFETTI = Array.from({ length: 60 }, (_, i) => ({
+  left:  `${(i * 100 / 59).toFixed(2)}%`,
+  delay: `${((i % 12) * 0.09).toFixed(2)}s`,
+  dur:   `${(2.0 + (i % 7) * 0.32).toFixed(2)}s`,
+  color: ['#ffd700','#00d084','#a78bfa','#ff6b6b','#4ecdc4','#ff9f43','#fff','#ffe680'][i % 8],
+  size:  6 + (i % 5) * 4,
+  rot:   `${(i * 47) % 360}deg`,
+}));
+
+// Sparkles scattered around the trophy.
+const FP_SPARKLES = [
+  { top:'14%', left:'22%', size:20, delay:'0.2s' },
+  { top:'20%', left:'76%', size:26, delay:'0.5s' },
+  { top:'40%', left:'12%', size:18, delay:'0.9s' },
+  { top:'46%', left:'85%', size:22, delay:'0.35s' },
+  { top:'64%', left:'28%', size:16, delay:'0.7s' },
+  { top:'68%', left:'72%', size:20, delay:'1.05s' },
+];
+
+function FirstPlaceCelebration({ name, onDismiss }) {
+  const { t } = useLang();
+  useEffect(() => {
+    const timer = setTimeout(onDismiss, FIRST_PLACE_FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [onDismiss]);
+
+  return (
+    <div onClick={onDismiss} style={{
+      position:'fixed', inset:0, zIndex:650, cursor:'pointer',
+      background:'radial-gradient(circle at 50% 38%, rgba(40,30,0,0.92), rgba(0,0,0,0.95))',
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      overflow:'hidden', animation:'flashOverlayIn 0.25s ease',
+    }}>
+      {/* confetti rain */}
+      {FP_CONFETTI.map((c, i) => (
+        <div key={i} style={{
+          position:'absolute', top:'-16px', left:c.left,
+          width:c.size, height:Math.round(c.size * 0.5),
+          background:c.color, borderRadius:2,
+          transform:`rotate(${c.rot})`,
+          animation:`confettiDrop ${c.dur} ${c.delay} ease-in forwards`,
+          pointerEvents:'none',
+        }}/>
+      ))}
+
+      {/* trophy + halo */}
+      <div style={{ position:'relative', width:200, height:200, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:6 }}>
+        {/* rotating sun rays */}
+        <div style={{
+          position:'absolute', width:340, height:340, borderRadius:'50%',
+          background:'conic-gradient(from 0deg, rgba(255,215,0,0.0) 0deg, rgba(255,215,0,0.22) 18deg, rgba(255,215,0,0.0) 36deg, rgba(255,215,0,0.0) 180deg, rgba(255,215,0,0.22) 198deg, rgba(255,215,0,0.0) 216deg)',
+          animation:'fpRaysSpin 9s linear infinite', pointerEvents:'none',
+        }}/>
+        {/* expanding pulse rings */}
+        {[0, 0.7, 1.4].map((d, i) => (
+          <div key={i} style={{
+            position:'absolute', width:150, height:150, borderRadius:'50%',
+            border:`2px solid ${GOLD}`,
+            animation:`fpRingPulse 2.1s ${d}s ease-out infinite`, pointerEvents:'none',
+          }}/>
+        ))}
+        {/* sparkles */}
+        {FP_SPARKLES.map((s, i) => (
+          <div key={i} style={{
+            position:'absolute', top:s.top, left:s.left, fontSize:s.size,
+            animation:`fpSparkle 1.6s ${s.delay} ease-in-out infinite`, pointerEvents:'none',
+          }}>✨</div>
+        ))}
+        {/* crown drops onto the trophy */}
+        <div style={{
+          position:'absolute', top:0, left:'50%', fontSize:44, lineHeight:1,
+          transform:'translate(-50%,-92%)',
+          animation:'fpCrownDrop 1s 0.45s cubic-bezier(0.34,1.56,0.64,1) both',
+          pointerEvents:'none',
+        }}>👑</div>
+        {/* trophy */}
+        <div style={{ animation:'fpTrophyPop 0.9s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+          <div style={{
+            fontSize:104, lineHeight:1,
+            filter:'drop-shadow(0 0 26px rgba(255,215,0,0.7))',
+            animation:'fpTrophyFloat 2.6s 0.9s ease-in-out infinite',
+          }}>🏆</div>
+        </div>
+      </div>
+
+      {/* kicker */}
+      <div style={{
+        fontSize:10, fontWeight:800, color:GOLD, letterSpacing:3, textTransform:'uppercase',
+        marginBottom:8, animation:'fpSubIn 0.5s 0.5s both', opacity:0.9,
+      }}>{t('first_place_kicker')}</div>
+
+      {/* title */}
+      <div style={{
+        fontSize:40, fontWeight:900, color:GOLD, lineHeight:1,
+        animation:'fpTitleIn 0.6s 0.55s cubic-bezier(0.34,1.56,0.64,1) both, fpTitleGlow 2s 1.1s ease-in-out infinite',
+      }}>{t('first_place_title')}</div>
+
+      {/* who */}
+      <div style={{
+        fontSize:16, fontWeight:700, color:'#fff', marginTop:14, textAlign:'center', padding:'0 24px',
+        animation:'fpSubIn 0.5s 0.85s both',
+      }}>{t('first_place_subtitle').replace('{name}', name)}</div>
+
+      <div style={{
+        fontSize:11, color:'rgba(255,255,255,0.45)', marginTop:26,
+        animation:'fpSubIn 0.5s 1.2s both',
+      }}>{t('first_place_dismiss')}</div>
+    </div>
+  );
+}
+
 // ─── Rivals Leaderboard ───────────────────────────────────────────────────────
 function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, onShare, onRemove, compareRival, onToggleCompare }) {
   const { t } = useLang();
@@ -3060,6 +3223,29 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
     : compareRival ? rivals.filter(r=>r.n===compareRival)
     : [];
 
+  // My live rank on the leaderboard — mirrors RivalsLeaderboard's ordering so the
+  // celebration fires exactly when the rendered #1 row becomes "me".
+  const myRank = useMemo(() => {
+    if (rivals.length === 0) return null;
+    const players = [
+      { isMe:true,  total: pts.total },
+      ...rivals.map(r => ({ isMe:false, total: calcRivalPoints(r, groupMatches, ko).total })),
+    ].sort((a, b) => b.total - a.total);
+    return players.findIndex(p => p.isMe) + 1;
+  }, [rivals, pts.total, groupMatches, ko]);
+
+  // Celebrate only the *transition* into 1st place against real rivals with a
+  // real score — not on first load if you happen to already be on top.
+  const prevRankRef = useRef(null);
+  const [showFirstPlace, setShowFirstPlace] = useState(false);
+  useEffect(() => {
+    const prev = prevRankRef.current;
+    prevRankRef.current = myRank;
+    if (myRank === 1 && prev !== null && prev > 1 && pts.total > 0) {
+      setShowFirstPlace(true);
+    }
+  }, [myRank, pts.total]);
+
   const copyText = (text, which) => {
     const done = () => { setCopied(which); setTimeout(()=>setCopied(null),2000); };
     navigator.clipboard?.writeText(text).then(done).catch(()=>{
@@ -3111,6 +3297,13 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
 
   return (
     <div>
+      {showFirstPlace && (
+        <FirstPlaceCelebration
+          name={playerName || t('you_default')}
+          onDismiss={() => setShowFirstPlace(false)}
+        />
+      )}
+
       {/* Rivals Leaderboard */}
       <RivalsLeaderboard
         rivals={rivals} myName={playerName} myPts={pts}
