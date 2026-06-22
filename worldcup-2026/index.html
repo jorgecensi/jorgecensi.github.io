@@ -118,6 +118,14 @@ const TRANSLATIONS = {
     col_team: "Team",
     top2_advance: "Top 2 advance",
     best8_advance: "Best 8 of 12 advance",
+    // Qualification status badges (Round of 32)
+    qual_qualified: "Qualified",
+    qual_win: "Win to advance",
+    qual_draw: "Draw to advance",
+    qual_mustwin: "Must win",
+    qual_contention: "In contention",
+    qual_third: "3rd-place race",
+    qual_eliminated: "Eliminated",
     third_race_title: "3RD PLACE RACE",
     eliminated_below: "· · · Eliminated below · · ·",
     top8_advance_sorted: "Top 8 advance · sorted by Pts → GD → GF",
@@ -364,6 +372,14 @@ const TRANSLATIONS = {
     col_team: "Seleção",
     top2_advance: "Top 2 avançam",
     best8_advance: "Top 8 de 12 avançam",
+    // Qualification status badges (Round of 32)
+    qual_qualified: "Classificado",
+    qual_win: "Vencer p/ avançar",
+    qual_draw: "Empate basta",
+    qual_mustwin: "Tem que vencer",
+    qual_contention: "Em disputa",
+    qual_third: "Disputa do 3º",
+    qual_eliminated: "Eliminado",
     third_race_title: "DISPUTA PELO 3º",
     eliminated_below: "· · · Eliminados abaixo · · ·",
     top8_advance_sorted: "Top 8 avançam · por Pts → SG → GF",
@@ -2203,6 +2219,31 @@ function ResultDots({ results=[] }) {
     </span>
   );
 }
+// Small pill shown beside a team's name summarising what it needs to reach the
+// Round of 32. Colour + label are driven by getGroupQualStatuses' kind.
+const QUAL_BADGE = {
+  qualified:  { color: ACCENT,  key: 'qual_qualified' },
+  draw:       { color: ACCENT,  key: 'qual_draw' },
+  win:        { color: GOLD,    key: 'qual_win' },
+  mustwin:    { color: GOLD,    key: 'qual_mustwin' },
+  contention: { color: "#8aa0b8", key: 'qual_contention' },
+  third:      { color: PURPLE,  key: 'qual_third' },
+  eliminated: { color: RED,     key: 'qual_eliminated' },
+};
+function QualBadge({ kind }) {
+  const { t } = useLang();
+  const cfg = QUAL_BADGE[kind];
+  if (!cfg) return null;
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase",
+      color: cfg.color, background: `${cfg.color}1f`, border: `1px solid ${cfg.color}55`,
+      borderRadius: 5, padding: "1px 5px", lineHeight: 1.4, whiteSpace: "nowrap", flexShrink: 0,
+    }}>
+      {t(cfg.key)}
+    </span>
+  );
+}
 // Returns only teams that have MATHEMATICALLY CLINCHED a bracket slot.
 // A team fills slot "1G"/"2G" only when NO combination of remaining group
 // results can keep it out of that exact finishing position.
@@ -2270,6 +2311,113 @@ function getGroupQualifiers(gm) {
     }
   });
   return slots;
+}
+// Per-team "what's needed to reach the Round of 32" status, computed within a
+// single group. We enumerate every win/draw/loss outcome of the group's
+// remaining matches (≤ 3^6 = 729) and judge each team two ways per scenario:
+//   • conservative top-2  — a tie on points counts AGAINST the team (so a slot
+//     is "secured" only when certain on points alone), used to confirm advances.
+//   • optimistic top-2/3  — a tie on points counts FOR the team (goal tiebreakers
+//     could swing its way), used to confirm a path still mathematically exists.
+// Direct qualification means finishing in the top 2; a team that can no longer
+// reach the top 2 but can still finish 3rd stays in the best-thirds race.
+// Returns { team: kind } where kind ∈ qualified | win | draw | mustwin |
+// contention | third | eliminated.
+function getGroupQualStatuses(teams, matches) {
+  const out = {};
+  const remaining = matches.filter(m => m.homeScore === null || m.awayScore === null);
+
+  // Points banked so far, and each team's next still-to-play match.
+  const basePts = {};
+  teams.forEach(tm => { basePts[tm] = 0; });
+  matches.forEach(m => {
+    if (m.homeScore === null || m.awayScore === null) return;
+    const hs = +m.homeScore, as = +m.awayScore;
+    if (hs > as) basePts[m.home] += 3;
+    else if (hs < as) basePts[m.away] += 3;
+    else { basePts[m.home] += 1; basePts[m.away] += 1; }
+  });
+  const ordered = [...remaining].sort((a, b) => (a.dk || 0) - (b.dk || 0) || (a.tk || 0) - (b.tk || 0));
+  const nextMatch = {}; // team -> its earliest remaining match
+  teams.forEach(tm => {
+    nextMatch[tm] = ordered.find(m => m.home === tm || m.away === tm) || null;
+  });
+
+  // Per-team accumulators across all scenarios.
+  const acc = {};
+  teams.forEach(tm => {
+    acc[tm] = {
+      allConsTop2: true,   // conservatively top-2 in EVERY scenario  → clinched
+      everOptTop2: false,  // optimistically top-2 in SOME scenario   → top-2 still possible
+      everOpt3rd: false,   // optimistically top-3 in SOME scenario   → 3rd still reachable
+      // keyed by own next-match outcome ('win'|'draw'|'loss'):
+      consTop2: { win: true, draw: true, loss: true },  // AND of conservative top-2
+      optTop2:  { win: false, draw: false, loss: false }, // OR of optimistic top-2
+      seen:     { win: false, draw: false, loss: false }, // did this outcome occur
+    };
+  });
+
+  const total = Math.pow(3, remaining.length);
+  for (let mask = 0; mask < total; mask++) {
+    const pts = { ...basePts };
+    const outcomeFor = {}; // matchRef -> 'win'/'draw'/'loss' for home perspective
+    let x = mask;
+    for (let i = 0; i < remaining.length; i++) {
+      const o = x % 3; x = Math.floor(x / 3);
+      const m = remaining[i];
+      if (o === 0) { pts[m.home] += 3; outcomeFor[i] = 'home'; }
+      else if (o === 1) { pts[m.away] += 3; outcomeFor[i] = 'away'; }
+      else { pts[m.home] += 1; pts[m.away] += 1; outcomeFor[i] = 'draw'; }
+    }
+    teams.forEach(tm => {
+      let atOrAbove = 0, strictlyAbove = 0;
+      teams.forEach(o => {
+        if (o === tm) return;
+        if (pts[o] >= pts[tm]) atOrAbove++;
+        if (pts[o] > pts[tm]) strictlyAbove++;
+      });
+      const consTop2 = atOrAbove <= 1;      // certain top-2 on points alone
+      const optTop2  = strictlyAbove <= 1;  // top-2 achievable with tiebreakers
+      const opt3rd   = strictlyAbove <= 2;  // 3rd (or better) still achievable
+      const a = acc[tm];
+      if (!consTop2) a.allConsTop2 = false;
+      if (optTop2) a.everOptTop2 = true;
+      if (opt3rd) a.everOpt3rd = true;
+      // Record against this team's own next-match result, if it has one.
+      const nm = nextMatch[tm];
+      if (nm) {
+        const idx = remaining.indexOf(nm);
+        const res = outcomeFor[idx];
+        const own = res === 'draw' ? 'draw' : (res === 'home') === (nm.home === tm) ? 'win' : 'loss';
+        a.seen[own] = true;
+        if (!consTop2) a.consTop2[own] = false;
+        if (optTop2) a.optTop2[own] = true;
+      }
+    });
+  }
+
+  teams.forEach(tm => {
+    const a = acc[tm];
+    let kind;
+    if (remaining.length === 0) {
+      // Group finished: rank is settled within the group.
+      kind = a.allConsTop2 ? 'qualified' : (a.everOpt3rd ? 'third' : 'eliminated');
+    } else if (a.allConsTop2) {
+      kind = 'qualified';
+    } else if (!a.everOptTop2) {
+      kind = a.everOpt3rd ? 'third' : 'eliminated';
+    } else if (a.seen.draw && a.consTop2.draw) {
+      kind = 'draw';                 // avoiding defeat secures top-2
+    } else if (a.seen.win && a.consTop2.win) {
+      kind = 'win';                  // a win secures top-2 (a draw would not)
+    } else if (a.optTop2.win && !a.optTop2.draw && !a.optTop2.loss) {
+      kind = 'mustwin';              // only a win keeps top-2 alive
+    } else {
+      kind = 'contention';           // still possible, hinges on other results
+    }
+    out[tm] = kind;
+  });
+  return out;
 }
 // Resolve the eight best third-placed teams and their bracket slots (FIFA Annex C).
 // Returns an 8-element array indexed by R32_BRACKET.thirdB (winner order
@@ -4168,6 +4316,7 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:16}}>
         {Object.entries(GROUPS).map(([g,teams])=>{
           const standings=computeStandings(teams,groupMatches[g]);
+          const qualStatuses=getGroupQualStatuses(teams,groupMatches[g]);
           const played=groupMatches[g].filter(m=>m.homeScore!==null).length;
           return(
             <div key={g} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,overflow:"hidden"}}>
@@ -4208,9 +4357,10 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
                 <div key={row.team} style={{display:"grid",gridTemplateColumns:"24px 1fr 36px 36px",gap:2,padding:"10px 12px",borderTop:`1px solid rgba(255,255,255,0.04)`,background:i<2?"rgba(0,208,132,0.04)":"transparent",alignItems:"center"}}>
                   <span style={{fontSize:11,fontWeight:700,color:i===0?GOLD:i===1?"#aaa":"#444"}}>{i+1}</span>
                   <div style={{display:"flex",flexDirection:"column",minWidth:0,gap:3}}>
-                    <span style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}>
+                    <span style={{display:"flex",alignItems:"center",gap:5,minWidth:0,flexWrap:"wrap"}}>
                       <Flag team={row.team} size={16} />
                       <TeamName name={row.team} style={{fontWeight:i<2?700:400,color:i<2?"#fff":"#bbb",fontSize:13}}/>
+                      <QualBadge kind={qualStatuses[row.team]}/>
                     </span>
                     <ResultDots results={row.results}/>
                   </div>
