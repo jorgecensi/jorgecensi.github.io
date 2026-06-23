@@ -3209,8 +3209,11 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
   const canSharePhase = useMemo(()=>isPhaseGuessesComplete(phase,groupMatches,ko,predictions),[phase,groupMatches,ko,predictions]);
   const [copied, setCopied] = useState(null); // null | 'all' | 'phase'
 
-  // Compare picks with a selected rival (or all of them at once), match-by-match
-  const [compareRival, setCompareRival] = useState(null);
+  // Compare picks with a selected rival (or all of them at once), match-by-match.
+  // Comparison is on by default (against all rivals) so picks line up with
+  // friends without an extra tap — the effect below switches it off automatically
+  // when there are no rivals to compare against.
+  const [compareRival, setCompareRival] = useState(ALL_RIVALS);
   useEffect(()=>{
     if(!compareRival) return;
     if(compareRival === ALL_RIVALS){ if(rivals.length===0) setCompareRival(null); return; }
@@ -3392,27 +3395,39 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         </div>
       ) : (
         <div style={{display:"flex", flexDirection:"column", gap:8}}>
-          {playedMatches.length > 0 && (
-            <div>
-              <button onClick={()=>setShowPlayed(p=>!p)} style={{
-                width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
-                background:"transparent", border:`1px solid ${BORDER}`, borderRadius:10,
-                padding:"8px 12px", color:"#888", fontSize:11, fontWeight:700, cursor:"pointer",
-              }}>
-                <span>
-                  {showPlayed ? t('hide_played_matches') : t('show_played_matches')}
-                  {' · '}
-                  {playedMatches.length===1 ? t('match_count').replace('{n}',playedMatches.length) : t('matches_count').replace('{n}',playedMatches.length)}
-                </span>
-                <span style={{fontSize:9}}>{showPlayed ? '▲' : '▼'}</span>
-              </button>
-              {showPlayed && (
-                <div style={{display:"flex", flexDirection:"column", gap:8, marginTop:8}}>
-                  {playedMatches.map(renderMatchCard)}
-                </div>
-              )}
-            </div>
-          )}
+          {playedMatches.length > 0 && (() => {
+            // Pin the most recent played match so its picked scores stay visible
+            // even when the rest of the played matches are collapsed away — only
+            // the older results hide behind the toggle.
+            const lastPlayed = playedMatches[playedMatches.length - 1];
+            const olderPlayed = playedMatches.slice(0, -1);
+            return (
+              <div style={{display:"flex", flexDirection:"column", gap:8}}>
+                {olderPlayed.length > 0 && (
+                  <div>
+                    <button onClick={()=>setShowPlayed(p=>!p)} style={{
+                      width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+                      background:"transparent", border:`1px solid ${BORDER}`, borderRadius:10,
+                      padding:"8px 12px", color:"#888", fontSize:11, fontWeight:700, cursor:"pointer",
+                    }}>
+                      <span>
+                        {showPlayed ? t('hide_played_matches') : t('show_played_matches')}
+                        {' · '}
+                        {olderPlayed.length===1 ? t('match_count').replace('{n}',olderPlayed.length) : t('matches_count').replace('{n}',olderPlayed.length)}
+                      </span>
+                      <span style={{fontSize:9}}>{showPlayed ? '▲' : '▼'}</span>
+                    </button>
+                    {showPlayed && (
+                      <div style={{display:"flex", flexDirection:"column", gap:8, marginTop:8}}>
+                        {olderPlayed.map(renderMatchCard)}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {renderMatchCard(lastPlayed)}
+              </div>
+            );
+          })()}
           {upcomingMatches.map(renderMatchCard)}
         </div>
       )}
