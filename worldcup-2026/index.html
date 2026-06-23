@@ -4009,9 +4009,10 @@ function App(){
     setRefreshing(false);
   },[refreshing,applyAutoScores]);
 
-  // Pull the latest scores once on load so the "last updated" label and scores
-  // reflect the published snapshot without the user having to tap refresh.
-  useEffect(()=>{ handleRefreshScores(); },[]);// eslint-disable-line react-hooks/exhaustive-deps
+  // Real results are only pulled when the user taps the refresh button — we
+  // deliberately do NOT auto-fetch on load. The "last updated" label is seeded
+  // from the cached timestamp (UPDATED_KEY) so it still reflects the last
+  // refresh the user performed.
 
   const champion = React.useMemo(()=>koWinner(ko.final[0]),[ko]);
 
