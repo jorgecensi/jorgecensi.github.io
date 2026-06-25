@@ -4672,7 +4672,8 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
       if(!map[m.date]) map[m.date]={date:m.date,dk:m.dk,matches:[]};
       map[m.date].matches.push(m);
     });
-    return Object.values(map).sort((a,b)=>a.dk-b.dk);
+    return Object.values(map).sort((a,b)=>a.dk-b.dk)
+      .map(g=>({...g,matches:[...g.matches].sort((a,b)=>timeKey(a.time||'0:00 AM')-timeKey(b.time||'0:00 AM'))}));
   },[matches]);
 
   // Find the date section closest to today; skip today if all its games have already kicked off
