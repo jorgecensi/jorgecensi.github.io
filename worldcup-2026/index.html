@@ -2425,6 +2425,15 @@ function getGroupQualifiers(gm) {
     const matches = gm[g] || [];
     const remaining = matches.filter(m => m.homeScore === null || m.awayScore === null);
 
+    // When all group matches are done, standings are final — use actual
+    // tiebreakers (GD, GF) instead of the conservative points-only logic below.
+    if (remaining.length === 0 && matches.length > 0) {
+      const st = computeStandings(teams, matches);
+      if (st[0]) slots[`1${g}`] = st[0].team;
+      if (st[1]) slots[`2${g}`] = st[1].team;
+      return;
+    }
+
     // Points already banked from completed matches.
     const basePts = {};
     teams.forEach(tm => { basePts[tm] = 0; });
