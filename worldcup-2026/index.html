@@ -1409,7 +1409,8 @@ function buildShareText(groupMatches, ko, predictions, pts, phaseKey, tFn) {
           phaseLines.push(matchLine(m.home, m.away, pred.home, pred.away, m.homeScore, m.awayScore));
         });
     } else {
-      const pMatches = p === 'final' ? [...(ko.final||[]), ...(ko.third||[])] : (ko[p]||[]);
+      const pMatches = (p === 'final' ? [...(ko.final||[]), ...(ko.third||[])] : (ko[p]||[]))
+        .slice().sort((a,b)=>(a.dk||0)-(b.dk||0)||timeKey(a.time||'0:00 AM')-timeKey(b.time||'0:00 AM'));
       pMatches.forEach(m => {
         const pred = predictions.ko?.[m.id];
         if (!pred || pred.a === null || pred.a === undefined || pred.b === null || pred.b === undefined) return;
@@ -3199,11 +3200,11 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
   const { t } = useLang();
   const PHASES = [
     { key:'group', label:t('phase_group'),    matches:Object.values(groupMatches).flat().sort((a,b)=>(a.dk||0)-(b.dk||0)||(a.tk||0)-(b.tk||0)) },
-    { key:'r32',   label:t('phase_r32'),   matches:ko.r32 },
-    { key:'r16',   label:t('phase_r16'),   matches:ko.r16 },
-    { key:'qf',    label:t('phase_qf'), matches:ko.qf },
-    { key:'sf',    label:t('phase_sf'),    matches:ko.sf },
-    { key:'final', label:t('phase_final'),          matches:[...ko.third,...ko.final] },
+    { key:'r32',   label:t('phase_r32'),   matches:[...ko.r32].sort((a,b)=>(a.dk||0)-(b.dk||0)||timeKey(a.time||'0:00 AM')-timeKey(b.time||'0:00 AM')) },
+    { key:'r16',   label:t('phase_r16'),   matches:[...ko.r16].sort((a,b)=>(a.dk||0)-(b.dk||0)||timeKey(a.time||'0:00 AM')-timeKey(b.time||'0:00 AM')) },
+    { key:'qf',    label:t('phase_qf'), matches:[...ko.qf].sort((a,b)=>(a.dk||0)-(b.dk||0)||timeKey(a.time||'0:00 AM')-timeKey(b.time||'0:00 AM')) },
+    { key:'sf',    label:t('phase_sf'),    matches:[...ko.sf].sort((a,b)=>(a.dk||0)-(b.dk||0)||timeKey(a.time||'0:00 AM')-timeKey(b.time||'0:00 AM')) },
+    { key:'final', label:t('phase_final'),          matches:[...ko.third,...ko.final].sort((a,b)=>(a.dk||0)-(b.dk||0)||timeKey(a.time||'0:00 AM')-timeKey(b.time||'0:00 AM')) },
   ];
 
   const isUnlocked = key => isPhaseUnlocked(key, ko);
