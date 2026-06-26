@@ -2500,6 +2500,19 @@ function getGroupQualStatuses(teams, matches) {
   const out = {};
   const remaining = matches.filter(m => m.homeScore === null || m.awayScore === null);
 
+  // When all matches are done, standings are final — use actual tiebreakers
+  // (GD, GF) instead of the conservative points-only scenario enumeration below,
+  // which incorrectly treats a tied-on-points rival as finishing above a team
+  // that's clearly ahead on goal difference.
+  if (remaining.length === 0 && matches.length > 0) {
+    const st = computeStandings(teams, matches);
+    teams.forEach(tm => {
+      const rank = st.findIndex(s => s.team === tm);
+      out[tm] = rank <= 1 ? 'qualified' : rank === 2 ? 'third' : 'eliminated';
+    });
+    return out;
+  }
+
   // Points banked so far, and each team's next still-to-play match.
   const basePts = {};
   teams.forEach(tm => { basePts[tm] = 0; });
