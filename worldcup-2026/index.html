@@ -2496,7 +2496,7 @@ function getGroupQualifiers(gm) {
 // reach the top 2 but can still finish 3rd stays in the best-thirds race.
 // Returns { team: kind } where kind ∈ qualified | win | draw | mustwin |
 // contention | third | eliminated.
-function getGroupQualStatuses(teams, matches) {
+function getGroupQualStatuses(teams, matches, allGroupMatches) {
   const out = {};
   const remaining = matches.filter(m => m.homeScore === null || m.awayScore === null);
 
@@ -2508,7 +2508,15 @@ function getGroupQualStatuses(teams, matches) {
     const st = computeStandings(teams, matches);
     teams.forEach(tm => {
       const rank = st.findIndex(s => s.team === tm);
-      out[tm] = rank <= 1 ? 'qualified' : rank === 2 ? 'third' : 'eliminated';
+      if (rank <= 1) {
+        out[tm] = 'qualified';
+      } else if (rank === 2) {
+        // 3rd in group — check if they've mathematically locked up a best-3rd spot.
+        out[tm] = (allGroupMatches && isGuaranteedBestThird(tm, st[2], allGroupMatches))
+          ? 'qualified' : 'third';
+      } else {
+        out[tm] = 'eliminated';
+      }
     });
     return out;
   }
@@ -2605,6 +2613,94 @@ function getGroupQualStatuses(teams, matches) {
   });
   return out;
 }
+// Returns true if 'group' (other than the target team's own group) could possibly
+// produce a 3rd-place finisher with better (pts, gd, gf) than `target`.
+// Enumerates all outcomes of remaining matches; for score margins we assume the
+// worst case (free choice of margin), so a win can contribute any positive GD
+// and a high-scoring draw can contribute arbitrary GF.
+function canGroupBeater(teams, matches, target) {
+  const remaining = matches.filter(m => m.homeScore === null || m.awayScore === null);
+
+  const basePts = {}, baseGd = {}, baseGf = {};
+  teams.forEach(tm => { basePts[tm] = 0; baseGd[tm] = 0; baseGf[tm] = 0; });
+  matches.forEach(m => {
+    if (m.homeScore === null || m.awayScore === null) return;
+    const hs = +m.homeScore, as = +m.awayScore;
+    if (hs > as) { basePts[m.home] += 3; }
+    else if (hs < as) { basePts[m.away] += 3; }
+    else { basePts[m.home]++; basePts[m.away]++; }
+    baseGd[m.home] += hs - as; baseGd[m.away] += as - hs;
+    baseGf[m.home] += hs; baseGf[m.away] += as;
+  });
+
+  const total = Math.pow(3, remaining.length);
+  for (let mask = 0; mask < total; mask++) {
+    const pts = { ...basePts };
+    const rmResult = {}; // team -> 'win'|'draw'|'loss' for their remaining match
+    let x = mask;
+    for (let i = 0; i < remaining.length; i++) {
+      const o = x % 3; x = Math.floor(x / 3);
+      const m = remaining[i];
+      if (o === 0)      { pts[m.home] += 3; rmResult[m.home] = 'win';  rmResult[m.away] = 'loss'; }
+      else if (o === 1) { pts[m.away] += 3; rmResult[m.home] = 'loss'; rmResult[m.away] = 'win';  }
+      else              { pts[m.home]++;  pts[m.away]++;  rmResult[m.home] = 'draw'; rmResult[m.away] = 'draw'; }
+    }
+
+    for (const tm of teams) {
+      const tmPts = pts[tm];
+      if (tmPts < target.pts) continue;
+
+      // tm can possibly finish 3rd if at least 2 rivals can finish above it
+      // (atOrAbove >= 2) but no more than 2 are already strictly ahead
+      // (strictlyAbove <= 2; otherwise tm is definitely 4th or lower).
+      const strictlyAbove = teams.filter(o => o !== tm && pts[o] > tmPts).length;
+      const atOrAbove    = teams.filter(o => o !== tm && pts[o] >= tmPts).length;
+      if (atOrAbove < 2 || strictlyAbove > 2) continue;
+
+      if (tmPts > target.pts) return true; // More pts wins unconditionally
+
+      // Same pts — check whether achievable GD/GF beats target.
+      const tmBgd = baseGd[tm];
+      const res   = rmResult[tm]; // undefined when group is already complete
+
+      if (res === undefined) {
+        // Completed group: stats are fixed.
+        if (tmBgd > target.gd) return true;
+        if (tmBgd === target.gd && baseGf[tm] > target.gf) return true;
+      } else if (res === 'win') {
+        // Winning team can score by any margin → GD improvement is unbounded.
+        return true;
+      } else if (res === 'draw') {
+        // Net GD from a draw is 0; a high-scoring draw makes GF arbitrarily large.
+        if (tmBgd > target.gd) return true;
+        if (tmBgd === target.gd) return true; // GF can be made arbitrarily large
+        // tmBgd < target.gd: GD stays below target, can't overcome deficit
+      } else { // loss
+        // Minimum deficit is 1 goal (e.g. 0-1 or k-(k+1)).
+        // Losing k-(k+1) lets GF grow without bound, so if GD after loss equals
+        // target.gd the team can still beat target on GF.
+        if (tmBgd - 1 > target.gd) return true;
+        if (tmBgd - 1 === target.gd) return true; // tie on GD, can win on GF
+      }
+    }
+  }
+  return false;
+}
+
+// Returns true if this 3rd-place team (from their now-complete group) is
+// mathematically guaranteed to finish among the 8 best third-placed teams.
+// Strategy: count how many of the other 11 groups could POSSIBLY produce a
+// 3rd-place team that beats this one. If ≤ 7 can, this team is locked in.
+function isGuaranteedBestThird(team, stats, allGroupMatches) {
+  let maxBetterCount = 0;
+  for (const [g, gTeams] of Object.entries(GROUPS)) {
+    if (gTeams.includes(team)) continue; // skip own group
+    if (canGroupBeater(gTeams, allGroupMatches[g] || [], stats)) maxBetterCount++;
+  }
+  // 12 groups → 11 rivals compete for 8 spots; safe if at most 7 can beat us.
+  return maxBetterCount <= 7;
+}
+
 // Resolve the eight best third-placed teams and their bracket slots (FIFA Annex C).
 // Returns an 8-element array indexed by R32_BRACKET.thirdB (winner order
 // A,B,D,E,G,I,K,L), or null while any group still has matches to play — the eight
@@ -4548,7 +4644,7 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:16}}>
         {Object.entries(GROUPS).map(([g,teams])=>{
           const standings=computeStandings(teams,groupMatches[g]);
-          const qualStatuses=getGroupQualStatuses(teams,groupMatches[g]);
+          const qualStatuses=getGroupQualStatuses(teams,groupMatches[g],groupMatches);
           const played=groupMatches[g].filter(m=>m.homeScore!==null).length;
           return(
             <div key={g} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,overflow:"hidden"}}>
