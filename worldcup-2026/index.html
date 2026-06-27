@@ -4301,7 +4301,7 @@ function App(){
       <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden",zoom:isMobile?1.2:1}}>
         {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} onRefreshScores={handleRefreshScores} refreshing={refreshing} lastUpdated={lastUpdated}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
-        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} onRefreshScores={handleRefreshScores} refreshing={refreshing} lastUpdated={lastUpdated} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}}/>}
+        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} predictions={predictions} onRefreshScores={handleRefreshScores} refreshing={refreshing} lastUpdated={lastUpdated} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
         {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
       </div>
@@ -4758,9 +4758,10 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
 }
 
 // ─── KNOCKOUT VIEW ─────────────────────────────────────────────────────────────
-function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScores,refreshing,lastUpdated,onShare}){
+function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,predictions,onRefreshScores,refreshing,lastUpdated,onShare}){
   const { t } = useLang();
   const [round,setRound]=useState("r32");
+  const canShare=useMemo(()=>isPhaseUnlocked(round,ko)&&isPhaseGuessesComplete(round,groupMatches,ko,predictions),[round,ko,groupMatches,predictions]);
   const ROUNDS=[
     {key:"r32",label:"R32",fullLabel:t('round_r32')},
     {key:"r16",label:"R16",fullLabel:t('round_r16')},
@@ -4819,7 +4820,7 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
         <SLabel style={{margin:0}}>{currentRound?.fullLabel}</SLabel>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
           {formatUpdated(lastUpdated)&&<span style={{fontSize:10,color:"#555"}}>{t('last_updated').replace('{time}',formatUpdated(lastUpdated))}</span>}
-          {onShare&&<button onClick={onShare} style={{display:"flex",alignItems:"center",gap:5,background:"transparent",border:`1px solid rgba(167,139,250,0.4)`,borderRadius:20,padding:"3px 10px",cursor:"pointer",color:"#a78bfa",fontSize:10,fontWeight:700,fontFamily:"inherit"}}>↗ Share</button>}
+          {onShare&&canShare&&<button onClick={onShare} style={{display:"flex",alignItems:"center",gap:5,background:"transparent",border:`1px solid rgba(167,139,250,0.4)`,borderRadius:20,padding:"3px 10px",cursor:"pointer",color:"#a78bfa",fontSize:10,fontWeight:700,fontFamily:"inherit"}}>↗ Share</button>}
           <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
             display:"flex",alignItems:"center",gap:5,background:"transparent",
             border:`1px solid ${BORDER}`,borderRadius:20,
