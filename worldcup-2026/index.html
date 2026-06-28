@@ -200,6 +200,11 @@ const TRANSLATIONS = {
     slot_group_winner: "Winner Group {g}",
     slot_group_runnerup: "Runner-up Group {g}",
     slot_best_third: "Best 3rd: {g}",
+    slot_r32_winner: "W. R32",
+    slot_r16_winner: "W. R16",
+    slot_qf_winner: "W. QF",
+    slot_sf_winner: "W. SF",
+    slot_sf_loser: "L. SF",
     // KO view
     the_wc_final: "The World Cup Final",
     // Fantasy / GuessesView
@@ -460,6 +465,11 @@ const TRANSLATIONS = {
     slot_group_winner: "1º Grupo {g}",
     slot_group_runnerup: "2º Grupo {g}",
     slot_best_third: "Melhor 3º: {g}",
+    slot_r32_winner: "Vit. R32",
+    slot_r16_winner: "Vit. R16",
+    slot_qf_winner: "Vit. QF",
+    slot_sf_winner: "Vit. SF",
+    slot_sf_loser: "Perd. SF",
     // KO view
     the_wc_final: "A Grande Final",
     // Fantasy / GuessesView
@@ -4901,7 +4911,7 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:9}}>
               {dayMatches.map(m=>{
                 const matchIdx=matches.indexOf(m);
-                return <KOMatchCard key={m.id} match={m} matchIdx={matchIdx} round={round} onScore={onScore} isMobile={isMobile} groupMatches={groupMatches}/>;
+                return <KOMatchCard key={m.id} match={m} matchIdx={matchIdx} round={round} onScore={onScore} isMobile={isMobile} groupMatches={groupMatches} ko={ko}/>;
               })}
             </div>
           </div>
@@ -4944,7 +4954,65 @@ function r32SlotInfo(t, slot, thirdB, groupMatches) {
   };
 }
 
-function KOMatchCard({match,matchIdx,round,onScore,isMobile,groupMatches}){
+// Recursively collect teams that could fill a given KO slot (side = 'A' or 'B').
+// Used to populate the candidate-team preview for unresolved R16/QF/SF/Final slots.
+const KO_FEEDER_ROUNDS = { r16: 'r32', qf: 'r16', sf: 'qf', final: 'sf', third: 'sf' };
+const KO_FEEDER_PAIRS  = { r16: R16_PAIRS, qf: QF_PAIRS, sf: SF_PAIRS };
+function koSlotTeams(ko, round, matchIdx, side, groupMatches) {
+  if (round === 'r32') {
+    const m = ko.r32[matchIdx];
+    if (side === 'A') {
+      if (m.teamA) return [m.teamA];
+      if (m.slotA) return [...(GROUPS[m.slotA.slice(1)] || [])];
+      return [];
+    } else {
+      if (m.teamB) return [m.teamB];
+      if (m.thirdB != null) {
+        const gs = THIRD_PLACE_ELIGIBLE_GROUPS[m.thirdB];
+        return gs.map(g => computeStandings(GROUPS[g], groupMatches[g])?.[2]?.team).filter(Boolean);
+      }
+      if (m.slotB) return [...(GROUPS[m.slotB.slice(1)] || [])];
+      return [];
+    }
+  }
+  const fr = KO_FEEDER_ROUNDS[round];
+  if (!fr) return [];
+  const fi = (round === 'final' || round === 'third')
+    ? (side === 'A' ? 0 : 1)
+    : KO_FEEDER_PAIRS[round][matchIdx][side === 'A' ? 0 : 1];
+  const fm = ko[fr][fi];
+  const w = koWinner(fm);
+  if (round === 'third') {
+    // Slot wants the LOSER of the SF match
+    if (w) return [fm.teamA === w ? fm.teamB : fm.teamA].filter(Boolean);
+    const tA = fm.teamA ? [fm.teamA] : koSlotTeams(ko, fr, fi, 'A', groupMatches);
+    const tB = fm.teamB ? [fm.teamB] : koSlotTeams(ko, fr, fi, 'B', groupMatches);
+    return [...tA, ...tB];
+  }
+  if (w) return [w];
+  const tA = fm.teamA ? [fm.teamA] : koSlotTeams(ko, fr, fi, 'A', groupMatches);
+  const tB = fm.teamB ? [fm.teamB] : koSlotTeams(ko, fr, fi, 'B', groupMatches);
+  return [...tA, ...tB];
+}
+
+// Returns { label, flags } for any unresolved KO slot (all rounds).
+function getKOSlotInfo(t, ko, round, matchIdx, side, groupMatches) {
+  if (round === 'r32') {
+    const m = ko.r32[matchIdx];
+    return side === 'A'
+      ? r32SlotInfo(t, m.slotA, null, groupMatches)
+      : r32SlotInfo(t, m.slotB, m.thirdB, groupMatches);
+  }
+  const flags = koSlotTeams(ko, round, matchIdx, side, groupMatches).filter(Boolean);
+  if (flags.length === 0) return null;
+  const fr = KO_FEEDER_ROUNDS[round];
+  const label = flags.length <= 2
+    ? flags.join(' / ')
+    : round === 'third' ? t('slot_sf_loser') : t(`slot_${fr}_winner`);
+  return { label, flags };
+}
+
+function KOMatchCard({match,matchIdx,round,onScore,isMobile,groupMatches,ko}){
   const { t } = useLang();
   const winner=koWinner(match);
   const draw=match.scoreA!==null&&match.scoreB!==null&&+match.scoreA===+match.scoreB;
@@ -4986,8 +5054,8 @@ function KOMatchCard({match,matchIdx,round,onScore,isMobile,groupMatches}){
   return(
     <div style={{background:winner?"linear-gradient(135deg,rgba(0,208,132,0.07),rgba(255,255,255,0.02))":CARD,border:`1px solid ${winner?"rgba(0,208,132,0.22)":draw&&(match.penA!==null||match.penB!==null)?`rgba(167,139,250,0.3)`:BORDER}`,borderRadius:12,padding:"11px 13px"}}>
       <div style={{marginBottom:7}}><TimeBadge date={match.date} time={match.time} city={match.city}/></div>
-      <div style={{borderBottom:`1px solid ${BORDER}`,paddingBottom:2,marginBottom:2}}>{row(match.teamA,match.scoreA,match.penA,"scoreA","penA",winner===match.teamA,round==='r32'?r32SlotInfo(t,match.slotA,null,groupMatches):null)}</div>
-      {row(match.teamB,match.scoreB,match.penB,"scoreB","penB",winner===match.teamB,round==='r32'?r32SlotInfo(t,match.slotB,match.thirdB,groupMatches):null)}
+      <div style={{borderBottom:`1px solid ${BORDER}`,paddingBottom:2,marginBottom:2}}>{row(match.teamA,match.scoreA,match.penA,"scoreA","penA",winner===match.teamA,!match.teamA?getKOSlotInfo(t,ko,round,matchIdx,'A',groupMatches):null)}</div>
+      {row(match.teamB,match.scoreB,match.penB,"scoreB","penB",winner===match.teamB,!match.teamB?getKOSlotInfo(t,ko,round,matchIdx,'B',groupMatches):null)}
       {draw&&(
         <div style={{marginTop:8,padding:"9px 10px 11px",borderRadius:10,
           background:"linear-gradient(135deg, rgba(167,139,250,0.12), rgba(167,139,250,0.03))",
