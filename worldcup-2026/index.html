@@ -820,10 +820,12 @@ const WC_TITLES = {
 const WC_DEBUTANTS = new Set(["Cape Verde","Curacao","Jordan","Uzbekistan"]);
 
 const ChampionContext = React.createContext(null);
+const TeamBadgesContext = React.createContext({bestAttack:null, bestDefence:null});
 
 // Renders team name with WC stars and/or NEW badge inline
 function TeamName({ name, style={} }) {
   const champion = React.useContext(ChampionContext);
+  const { bestAttack, bestDefence } = React.useContext(TeamBadgesContext);
   const { t } = useLang();
   const titles = (WC_TITLES[name] || 0) + (name === champion ? 1 : 0);
   const isNew  = WC_DEBUTANTS.has(name);
@@ -846,6 +848,12 @@ function TeamName({ name, style={} }) {
           borderRadius:3, padding:"1px 4px", flexShrink:0,
           lineHeight:"1.4",
         }}>{t('new_badge')}</span>
+      )}
+      {name === bestAttack && (
+        <span style={{fontSize:10, flexShrink:0}} title="Best attack">⚽</span>
+      )}
+      {name === bestDefence && (
+        <span style={{fontSize:10, flexShrink:0}} title="Best defence">🧤</span>
       )}
     </span>
   );
@@ -4243,9 +4251,26 @@ function App(){
     const teamGoals={};
     gPlayed.forEach(m=>{teamGoals[m.home]=(teamGoals[m.home]||0)+(+m.homeScore);teamGoals[m.away]=(teamGoals[m.away]||0)+(+m.awayScore);});
     kPlayed.forEach(m=>{if(m.teamA)teamGoals[m.teamA]=(teamGoals[m.teamA]||0)+(+m.scoreA);if(m.teamB)teamGoals[m.teamB]=(teamGoals[m.teamB]||0)+(+m.scoreB);});
+    // Best attack: most goals scored
+    const topScorers=Object.entries(teamGoals).sort((a,b)=>b[1]-a[1]).filter(([,g])=>g>0);
+    // Best defence: lowest average goals against per match
+    const teamGA={}, teamPlayed={};
+    gPlayed.forEach(m=>{
+      teamGA[m.home]=(teamGA[m.home]||0)+(+m.awayScore); teamPlayed[m.home]=(teamPlayed[m.home]||0)+1;
+      teamGA[m.away]=(teamGA[m.away]||0)+(+m.homeScore); teamPlayed[m.away]=(teamPlayed[m.away]||0)+1;
+    });
+    kPlayed.forEach(m=>{
+      if(m.teamA){teamGA[m.teamA]=(teamGA[m.teamA]||0)+(+m.scoreB);teamPlayed[m.teamA]=(teamPlayed[m.teamA]||0)+1;}
+      if(m.teamB){teamGA[m.teamB]=(teamGA[m.teamB]||0)+(+m.scoreA);teamPlayed[m.teamB]=(teamPlayed[m.teamB]||0)+1;}
+    });
+    const bestDefenceTeam = Object.keys(teamGA).length>0
+      ? Object.keys(teamGA).sort((a,b)=>(teamGA[a]/teamPlayed[a])-(teamGA[b]/teamPlayed[b]))[0]
+      : null;
     return{
       totalGoals,totalPlayed,avgGoals:totalPlayed?(totalGoals/totalPlayed).toFixed(2):"0.00",
-      topScorers:Object.entries(teamGoals).sort((a,b)=>b[1]-a[1]).slice(0,8).filter(([,g])=>g>0),
+      topScorers:topScorers.slice(0,8),
+      bestAttackTeam:topScorers.length>0?topScorers[0][0]:null,
+      bestDefenceTeam,
     };
   },[groupMatches,ko]);
 
@@ -4261,6 +4286,7 @@ function App(){
 
   return(
     <ChampionContext.Provider value={champion}>
+    <TeamBadgesContext.Provider value={{bestAttack:globalStats.bestAttackTeam, bestDefence:globalStats.bestDefenceTeam}}>
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${BG} 0%,#0d1a2e 60%,${BG} 100%)`,fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",color:"#e8eaf0",paddingBottom:isMobile?"calc(78px + env(safe-area-inset-bottom, 0px))":0}}>
       {splash && <SplashScreen onDone={()=>setSplash(false)}/>}
       {flashData && <WinnerFlash data={flashData} onDismiss={()=>setFlashData(null)}/>}
@@ -4402,6 +4428,7 @@ function App(){
         </div>
       )}
     </div>
+    </TeamBadgesContext.Provider>
     </ChampionContext.Provider>
   );
 }
