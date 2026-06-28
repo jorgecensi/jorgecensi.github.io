@@ -240,6 +240,8 @@ const TRANSLATIONS = {
     conf_team: "team",
     conf_avg_pts: "avg {n} pts",
     top_scoring_nations: "Top Scoring Nations (All Stages)",
+    best_defence: "Best Defences (All Stages)",
+    goals_against_abbr: "GA/game",
     enter_scores_rankings: "Enter scores to see rankings",
     // Historical chart
     chart_gpg: "Goals / Game",
@@ -506,6 +508,8 @@ const TRANSLATIONS = {
     conf_team: "seleção",
     conf_avg_pts: "méd. {n} pts",
     top_scoring_nations: "Seleções Mais Artilheiras (Todas as Fases)",
+    best_defence: "Melhores Defesas (Todas as Fases)",
+    goals_against_abbr: "GS/jogo",
     enter_scores_rankings: "Insira os placares para ver a classificação",
     // Historical chart
     chart_gpg: "Gols / Jogo",
@@ -816,10 +820,12 @@ const WC_TITLES = {
 const WC_DEBUTANTS = new Set(["Cape Verde","Curacao","Jordan","Uzbekistan"]);
 
 const ChampionContext = React.createContext(null);
+const TeamBadgesContext = React.createContext({bestAttack:null, bestDefence:null});
 
 // Renders team name with WC stars and/or NEW badge inline
 function TeamName({ name, style={} }) {
   const champion = React.useContext(ChampionContext);
+  const { bestAttack, bestDefence } = React.useContext(TeamBadgesContext);
   const { t } = useLang();
   const titles = (WC_TITLES[name] || 0) + (name === champion ? 1 : 0);
   const isNew  = WC_DEBUTANTS.has(name);
@@ -842,6 +848,12 @@ function TeamName({ name, style={} }) {
           borderRadius:3, padding:"1px 4px", flexShrink:0,
           lineHeight:"1.4",
         }}>{t('new_badge')}</span>
+      )}
+      {name === bestAttack && (
+        <span style={{fontSize:10, flexShrink:0}} title="Best attack">⚽</span>
+      )}
+      {name === bestDefence && (
+        <span style={{fontSize:10, flexShrink:0}} title="Best defence">🧤</span>
       )}
     </span>
   );
@@ -4239,9 +4251,26 @@ function App(){
     const teamGoals={};
     gPlayed.forEach(m=>{teamGoals[m.home]=(teamGoals[m.home]||0)+(+m.homeScore);teamGoals[m.away]=(teamGoals[m.away]||0)+(+m.awayScore);});
     kPlayed.forEach(m=>{if(m.teamA)teamGoals[m.teamA]=(teamGoals[m.teamA]||0)+(+m.scoreA);if(m.teamB)teamGoals[m.teamB]=(teamGoals[m.teamB]||0)+(+m.scoreB);});
+    // Best attack: most goals scored
+    const topScorers=Object.entries(teamGoals).sort((a,b)=>b[1]-a[1]).filter(([,g])=>g>0);
+    // Best defence: lowest average goals against per match
+    const teamGA={}, teamPlayed={};
+    gPlayed.forEach(m=>{
+      teamGA[m.home]=(teamGA[m.home]||0)+(+m.awayScore); teamPlayed[m.home]=(teamPlayed[m.home]||0)+1;
+      teamGA[m.away]=(teamGA[m.away]||0)+(+m.homeScore); teamPlayed[m.away]=(teamPlayed[m.away]||0)+1;
+    });
+    kPlayed.forEach(m=>{
+      if(m.teamA){teamGA[m.teamA]=(teamGA[m.teamA]||0)+(+m.scoreB);teamPlayed[m.teamA]=(teamPlayed[m.teamA]||0)+1;}
+      if(m.teamB){teamGA[m.teamB]=(teamGA[m.teamB]||0)+(+m.scoreA);teamPlayed[m.teamB]=(teamPlayed[m.teamB]||0)+1;}
+    });
+    const bestDefenceTeam = Object.keys(teamGA).length>0
+      ? Object.keys(teamGA).sort((a,b)=>(teamGA[a]/teamPlayed[a])-(teamGA[b]/teamPlayed[b]))[0]
+      : null;
     return{
       totalGoals,totalPlayed,avgGoals:totalPlayed?(totalGoals/totalPlayed).toFixed(2):"0.00",
-      topScorers:Object.entries(teamGoals).sort((a,b)=>b[1]-a[1]).slice(0,8).filter(([,g])=>g>0),
+      topScorers:topScorers.slice(0,8),
+      bestAttackTeam:topScorers.length>0?topScorers[0][0]:null,
+      bestDefenceTeam,
     };
   },[groupMatches,ko]);
 
@@ -4257,6 +4286,7 @@ function App(){
 
   return(
     <ChampionContext.Provider value={champion}>
+    <TeamBadgesContext.Provider value={{bestAttack:globalStats.bestAttackTeam, bestDefence:globalStats.bestDefenceTeam}}>
     <div style={{minHeight:"100vh",background:`linear-gradient(160deg,${BG} 0%,#0d1a2e 60%,${BG} 100%)`,fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",color:"#e8eaf0",paddingBottom:isMobile?"calc(78px + env(safe-area-inset-bottom, 0px))":0}}>
       {splash && <SplashScreen onDone={()=>setSplash(false)}/>}
       {flashData && <WinnerFlash data={flashData} onDismiss={()=>setFlashData(null)}/>}
@@ -4398,6 +4428,7 @@ function App(){
         </div>
       )}
     </div>
+    </TeamBadgesContext.Provider>
     </ChampionContext.Provider>
   );
 }
@@ -5963,6 +5994,54 @@ function FunFacts({isMobile}){
   );
 }
 
+function BestDefenceLeaderboard({groupMatches, ko}) {
+  const { t } = useLang();
+  const ranked = useMemo(() => {
+    const teamStats = {};
+    const allG = Object.values(groupMatches).flat();
+    allG.forEach(m => {
+      if (m.homeScore === null || m.awayScore === null) return;
+      const hs = +m.homeScore, as_ = +m.awayScore;
+      if (!teamStats[m.home]) teamStats[m.home] = {ga:0, played:0};
+      if (!teamStats[m.away]) teamStats[m.away] = {ga:0, played:0};
+      teamStats[m.home].ga += as_; teamStats[m.home].played++;
+      teamStats[m.away].ga += hs;  teamStats[m.away].played++;
+    });
+    const allKO = [...ko.r32, ...ko.r16, ...ko.qf, ...ko.sf, ...ko.final, ...ko.third];
+    allKO.forEach(m => {
+      if (m.scoreA === null || m.scoreB === null || !m.teamA || !m.teamB) return;
+      if (!teamStats[m.teamA]) teamStats[m.teamA] = {ga:0, played:0};
+      if (!teamStats[m.teamB]) teamStats[m.teamB] = {ga:0, played:0};
+      teamStats[m.teamA].ga += +m.scoreB; teamStats[m.teamA].played++;
+      teamStats[m.teamB].ga += +m.scoreA; teamStats[m.teamB].played++;
+    });
+    return Object.entries(teamStats)
+      .map(([team, s]) => [team, s.ga / s.played])
+      .sort((a, b) => a[1] - b[1])
+      .slice(0, 10);
+  }, [groupMatches, ko]);
+
+  const minAvg = ranked.length > 0 ? ranked[0][1] : 0;
+
+  return (
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px",marginBottom:13}}>
+      <div style={{fontSize:11,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>🧤 {t('best_defence')}</div>
+      {ranked.length === 0
+        ? <div style={{color:"#444",fontSize:13,textAlign:"center",paddingTop:12}}>{t('enter_scores_rankings')}</div>
+        : ranked.map(([team, avg], i) => (
+          <div key={team} style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
+            <span style={{width:16,fontSize:11,color:i===0?ACCENT:"#555",fontWeight:700}}>{i+1}</span>
+            <Flag team={team} size={17} />
+            <span style={{flex:1,fontSize:13,color:"#bbb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><TeamName name={team}/></span>
+            <span style={{fontSize:11,color:"#555",marginRight:4}}>{t('goals_against_abbr')}</span>
+            <span style={{fontSize:15,fontWeight:900,color:i===0?ACCENT:avg===minAvg?ACCENT:"#888"}}>{avg.toFixed(2)}</span>
+          </div>
+        ))
+      }
+    </div>
+  );
+}
+
 function GlobalStats({stats,groupMatches,ko,isMobile}){
   const { t } = useLang();
   return(
@@ -5994,6 +6073,7 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
           ))
         }
       </div>
+      <BestDefenceLeaderboard groupMatches={groupMatches} ko={ko}/>
       <HistoricalGoalsChart stats={stats}/>
       <PastChampions isMobile={isMobile}/>
       <TeamHistorySection isMobile={isMobile}/>
