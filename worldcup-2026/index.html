@@ -314,6 +314,8 @@ const TRANSLATIONS = {
     add_rival_desc: " wants to compete in your bolão. Their predictions are included — you'll see who's ahead as results come in.",
     ignore_btn: "Ignore",
     add_rival_confirm: "Add Rival ✓",
+    update_rival_title: "Update predictions?",
+    update_rival_confirm: "Update ✓",
     // Sync rival to installed app
     sync_hint_desc: "Added {name}! 📲 Also use the installed app? Copy this link and paste it there to sync.",
     sync_hint_copy: "📋 Copy sync link",
@@ -572,6 +574,8 @@ const TRANSLATIONS = {
     add_rival_desc: " quer competir no seu bolão. Os palpites dele(a) estão incluídos — você verá quem está na frente conforme os resultados forem saindo.",
     ignore_btn: "Ignorar",
     add_rival_confirm: "Adicionar Rival ✓",
+    update_rival_title: "Atualizar palpites?",
+    update_rival_confirm: "Atualizar ✓",
     // Sincronizar rival com o app instalado
     sync_hint_desc: "{name} adicionado! 📲 Também usa o app instalado? Copie este link e cole nele para sincronizar.",
     sync_hint_copy: "📋 Copiar link de sincronização",
@@ -1789,7 +1793,7 @@ function AddRivalModal({ rival, onAccept, onDecline }) {
         <div style={{ fontSize:36 }}>🤝</div>
         <div>
           <div style={{ fontSize:15, fontWeight:900, color:'#fff', marginBottom:8 }}>
-            {t('add_rival_title')}
+            {rival._isUpdate ? t('update_rival_title') : t('add_rival_title')}
           </div>
           <div style={{ fontSize:13, color:'#aaa', lineHeight:1.5 }}>
             <span style={{ color:ACCENT, fontWeight:700 }}>{rival.n}</span>
@@ -1806,7 +1810,7 @@ function AddRivalModal({ rival, onAccept, onDecline }) {
             flex:1, padding:'11px', borderRadius:10,
             background:`rgba(0,208,132,0.14)`, border:`1px solid rgba(0,208,132,0.45)`,
             color:ACCENT, fontSize:13, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
-          }}>{t('add_rival_confirm')}</button>
+          }}>{rival._isUpdate ? t('update_rival_confirm') : t('add_rival_confirm')}</button>
         </div>
       </div>
     </div>
@@ -3861,10 +3865,8 @@ function App(){
     if(!rivalParam) return;
     const decoded=decodePreds(rivalParam);
     if(!decoded) return;
-    // Don't add yourself or a duplicate
-    const alreadyExists=loadRivals().some(r=>r.n===decoded.n);
-    if(alreadyExists){ window.history.replaceState({},'',window.location.pathname); return; }
-    setIncomingRival({...decoded,_raw:rivalParam});
+    const _isUpdate=loadRivals().some(r=>r.n===decoded.n);
+    setIncomingRival({...decoded,_raw:rivalParam,_isUpdate});
     window.history.replaceState({},'',window.location.pathname);
   },[]);
 
@@ -4035,8 +4037,12 @@ function App(){
   },[]);
 
   const handleAcceptRival=useCallback((rival)=>{
-    const {_raw,...rivalData}=rival;
-    setRivals(prev=>[...prev,{...rivalData,addedAt:Date.now()}]);
+    const {_raw,_isUpdate,...rivalData}=rival;
+    setRivals(prev=>{
+      const idx=prev.findIndex(r=>r.n===rivalData.n);
+      if(idx>=0){const next=[...prev];next[idx]={...rivalData,addedAt:prev[idx].addedAt,updatedAt:Date.now()};return next;}
+      return [...prev,{...rivalData,addedAt:Date.now()}];
+    });
     setIncomingRival(null);
     if(_raw) setSyncHint({name:rivalData.n,raw:_raw});
   },[]);
@@ -4054,8 +4060,8 @@ function App(){
     if(rivalParam){
       const decoded=decodePreds(rivalParam);
       if(!decoded) return 'invalid';
-      if(rivalsRef.current.some(r=>r.n===decoded.n)) return 'duplicate';
-      setIncomingRival({...decoded,_raw:rivalParam});
+      const _isUpdate=rivalsRef.current.some(r=>r.n===decoded.n);
+      setIncomingRival({...decoded,_raw:rivalParam,_isUpdate});
       return 'ok';
     }
     const transferParam=extractLinkParam(text,'transfer');
