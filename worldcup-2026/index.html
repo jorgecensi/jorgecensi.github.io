@@ -4337,8 +4337,9 @@ function App(){
         {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
       </div>
 
-      {/* MOBILE BOTTOM NAV */}
-      {isMobile&&(
+      {/* MOBILE BOTTOM NAV — portaled to <body> so the zoom:1.2 on the MAIN
+           container cannot create a new containing block that breaks position:fixed */}
+      {isMobile&&ReactDOM.createPortal(
         <div ref={navRef} style={{position:"fixed",bottom:0,left:0,right:0,background:"#0a1020",borderTop:`2px solid ${ACCENT}33`,display:"flex",zIndex:200,paddingBottom:"env(safe-area-inset-bottom, 0px)"}}>
           {NAV.map(({v,Icon,label})=>(
             <button key={v} onClick={()=>{setView(v);window.scrollTo({top:0});}} style={{flex:1,padding:"14px 0 12px",border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
@@ -4347,7 +4348,8 @@ function App(){
               {view===v&&<span style={{width:18,height:2,background:ACCENT,borderRadius:2,marginTop:1}}/>}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
     </ChampionContext.Provider>
