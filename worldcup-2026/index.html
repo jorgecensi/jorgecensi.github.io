@@ -2358,11 +2358,11 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
           </div>
           <div style={{ display:'flex', alignItems:'baseline', gap:3 }}>
             <span style={{ fontSize:16, fontWeight:900, color:'#fff' }}>{p.pts.total}</span>
-            <span style={{ fontSize:9, color:'#555' }}>{t('pts_label')}</span>
+            <span style={{ fontSize:9, color:'#777' }}>{t('pts_label')}</span>
           </div>
           {p.pts.played > 0 && (
-            <div style={{ fontSize:9, color:'#444', flexShrink:0 }}>
-              🎯{p.pts.exact} ✅{p.pts.correct}
+            <div style={{ fontSize:10, color:'#888', flexShrink:0, lineHeight:1.2 }}>
+              🎯<span style={{color:GOLD,fontWeight:800}}>{p.pts.exact}</span>{' '}✅<span style={{color:ACCENT,fontWeight:800}}>{p.pts.correct}</span>
             </div>
           )}
           {!p.isMe && (
@@ -3477,7 +3477,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
               {pts.total} <span style={{fontSize:13, color:"#666", fontWeight:400}}>{t('pts_label')}</span>
             </div>
             {pts.played > 0 && (
-              <div style={{fontSize:10, color:"#666", marginTop:2}}>
+              <div style={{fontSize:10, color:"#999", marginTop:2}}>
                 {t('pts_played_summary').replace('{played}',pts.played).replace('{exact}',pts.exact).replace('{correct}',pts.correct).replace('{wrong}',pts.wrong)}
               </div>
             )}
