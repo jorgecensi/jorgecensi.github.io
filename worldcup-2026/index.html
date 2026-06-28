@@ -3353,7 +3353,8 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
 
   const isUnlocked = key => isPhaseUnlocked(key, ko);
 
-  const [phase, setPhase] = useState('group');
+  const defaultPhase = [...PHASES].reverse().find(p => isUnlocked(p.key))?.key ?? 'group';
+  const [phase, setPhase] = useState(defaultPhase);
   const pts = useMemo(()=>calcPoints(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
   // Group stage being complete unlocks "Copy All" / proximity sharing for good —
   // a later phase still in progress doesn't re-lock it. Late joiners who missed
