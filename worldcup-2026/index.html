@@ -241,7 +241,7 @@ const TRANSLATIONS = {
     conf_avg_pts: "avg {n} pts",
     top_scoring_nations: "Top Scoring Nations (All Stages)",
     best_defence: "Best Defences (All Stages)",
-    goals_against_abbr: "GA",
+    goals_against_abbr: "GA/game",
     enter_scores_rankings: "Enter scores to see rankings",
     // Historical chart
     chart_gpg: "Goals / Game",
@@ -509,7 +509,7 @@ const TRANSLATIONS = {
     conf_avg_pts: "méd. {n} pts",
     top_scoring_nations: "Seleções Mais Artilheiras (Todas as Fases)",
     best_defence: "Melhores Defesas (Todas as Fases)",
-    goals_against_abbr: "GS",
+    goals_against_abbr: "GS/jogo",
     enter_scores_rankings: "Insira os placares para ver a classificação",
     // Historical chart
     chart_gpg: "Gols / Jogo",
@@ -5970,37 +5970,44 @@ function FunFacts({isMobile}){
 function BestDefenceLeaderboard({groupMatches, ko}) {
   const { t } = useLang();
   const ranked = useMemo(() => {
-    const teamGA = {};
+    const teamStats = {};
     const allG = Object.values(groupMatches).flat();
     allG.forEach(m => {
       if (m.homeScore === null || m.awayScore === null) return;
       const hs = +m.homeScore, as_ = +m.awayScore;
-      teamGA[m.home] = (teamGA[m.home] || 0) + as_;
-      teamGA[m.away] = (teamGA[m.away] || 0) + hs;
+      if (!teamStats[m.home]) teamStats[m.home] = {ga:0, played:0};
+      if (!teamStats[m.away]) teamStats[m.away] = {ga:0, played:0};
+      teamStats[m.home].ga += as_; teamStats[m.home].played++;
+      teamStats[m.away].ga += hs;  teamStats[m.away].played++;
     });
     const allKO = [...ko.r32, ...ko.r16, ...ko.qf, ...ko.sf, ...ko.final, ...ko.third];
     allKO.forEach(m => {
       if (m.scoreA === null || m.scoreB === null || !m.teamA || !m.teamB) return;
-      teamGA[m.teamA] = (teamGA[m.teamA] || 0) + +m.scoreB;
-      teamGA[m.teamB] = (teamGA[m.teamB] || 0) + +m.scoreA;
+      if (!teamStats[m.teamA]) teamStats[m.teamA] = {ga:0, played:0};
+      if (!teamStats[m.teamB]) teamStats[m.teamB] = {ga:0, played:0};
+      teamStats[m.teamA].ga += +m.scoreB; teamStats[m.teamA].played++;
+      teamStats[m.teamB].ga += +m.scoreA; teamStats[m.teamB].played++;
     });
-    return Object.entries(teamGA).sort((a, b) => a[1] - b[1]).slice(0, 10);
+    return Object.entries(teamStats)
+      .map(([team, s]) => [team, s.ga / s.played])
+      .sort((a, b) => a[1] - b[1])
+      .slice(0, 10);
   }, [groupMatches, ko]);
 
-  const minGA = ranked.length > 0 ? ranked[0][1] : 0;
+  const minAvg = ranked.length > 0 ? ranked[0][1] : 0;
 
   return (
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px",marginBottom:13}}>
       <div style={{fontSize:11,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>🧤 {t('best_defence')}</div>
       {ranked.length === 0
         ? <div style={{color:"#444",fontSize:13,textAlign:"center",paddingTop:12}}>{t('enter_scores_rankings')}</div>
-        : ranked.map(([team, ga], i) => (
+        : ranked.map(([team, avg], i) => (
           <div key={team} style={{display:"flex",alignItems:"center",gap:7,marginBottom:7}}>
             <span style={{width:16,fontSize:11,color:i===0?ACCENT:"#555",fontWeight:700}}>{i+1}</span>
             <Flag team={team} size={17} />
             <span style={{flex:1,fontSize:13,color:"#bbb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><TeamName name={team}/></span>
             <span style={{fontSize:11,color:"#555",marginRight:4}}>{t('goals_against_abbr')}</span>
-            <span style={{fontSize:15,fontWeight:900,color:i===0?ACCENT:ga===minGA?ACCENT:"#888"}}>{ga}</span>
+            <span style={{fontSize:15,fontWeight:900,color:i===0?ACCENT:avg===minAvg?ACCENT:"#888"}}>{avg.toFixed(2)}</span>
           </div>
         ))
       }
