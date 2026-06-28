@@ -2218,8 +2218,8 @@ function FirstPlaceCelebration({ name, onDismiss }) {
 function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, onShare, onRemove, compareRival, onToggleCompare }) {
   const { t } = useLang();
   const allPlayers = [
-    { n: myName || t('you_default'), pts: myPts, isMe: true },
-    ...rivals.map(r => ({ n: r.n, pts: calcRivalPoints(r, groupMatches, ko), isMe: false })),
+    { n: myName || t('you_default'), pts: myPts, isMe: true, rival: null },
+    ...rivals.map(r => ({ n: r.n, pts: calcRivalPoints(r, groupMatches, ko), isMe: false, rival: r })),
   ].sort((a, b) => b.pts.total - a.pts.total);
 
   if (rivals.length === 0) {
@@ -2322,16 +2322,47 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
           }}>
             {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i+1}
           </div>
-          <div style={{ flex:1, fontSize:13, fontWeight:700, color:p.isMe?ACCENT:isComparing?PURPLE:'#ccc', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {p.n}{p.isMe ? t('you_suffix') : ''}
+          <div style={{ flex:1, overflow:'hidden', minWidth:0 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:p.isMe?ACCENT:isComparing?PURPLE:'#ccc', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              {p.n}{p.isMe ? t('you_suffix') : ''}
+            </div>
+            {!p.isMe && p.rival && (() => {
+              const phases = [
+                { key:'group', label:'G' },
+                { key:'r32',   label:'R32' },
+                { key:'r16',   label:'R16' },
+                { key:'qf',    label:'QF' },
+                { key:'sf',    label:'SF' },
+                { key:'final', label:'F' },
+              ].filter(ph => isPhaseUnlocked(ph.key, ko));
+              if (!phases.length) return null;
+              const preds = p.rival.predictions || { group:{}, ko:{} };
+              return (
+                <div style={{ display:'flex', gap:3, marginTop:2, flexWrap:'wrap' }}>
+                  {phases.map(ph => {
+                    const done = isPhaseGuessesComplete(ph.key, groupMatches, ko, preds);
+                    return (
+                      <span key={ph.key} style={{
+                        fontSize:8, fontWeight:800, padding:'1px 4px', borderRadius:4, letterSpacing:0.3,
+                        background: done ? 'rgba(0,208,132,0.15)' : 'transparent',
+                        border: `1px solid ${done ? 'rgba(0,208,132,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                        color: done ? ACCENT : '#3a3f4e',
+                      }}>
+                        {done ? '✓ ' : ''}{ph.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
           <div style={{ display:'flex', alignItems:'baseline', gap:3 }}>
             <span style={{ fontSize:16, fontWeight:900, color:'#fff' }}>{p.pts.total}</span>
-            <span style={{ fontSize:9, color:'#555' }}>{t('pts_label')}</span>
+            <span style={{ fontSize:9, color:'#777' }}>{t('pts_label')}</span>
           </div>
           {p.pts.played > 0 && (
-            <div style={{ fontSize:9, color:'#444', flexShrink:0 }}>
-              🎯{p.pts.exact} ✅{p.pts.correct}
+            <div style={{ fontSize:10, color:'#888', flexShrink:0, lineHeight:1.2 }}>
+              🎯<span style={{color:GOLD,fontWeight:800}}>{p.pts.exact}</span>{' '}✅<span style={{color:ACCENT,fontWeight:800}}>{p.pts.correct}</span>
             </div>
           )}
           {!p.isMe && (
@@ -3446,7 +3477,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
               {pts.total} <span style={{fontSize:13, color:"#666", fontWeight:400}}>{t('pts_label')}</span>
             </div>
             {pts.played > 0 && (
-              <div style={{fontSize:10, color:"#666", marginTop:2}}>
+              <div style={{fontSize:10, color:"#999", marginTop:2}}>
                 {t('pts_played_summary').replace('{played}',pts.played).replace('{exact}',pts.exact).replace('{correct}',pts.correct).replace('{wrong}',pts.wrong)}
               </div>
             )}
