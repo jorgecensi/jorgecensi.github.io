@@ -4996,6 +4996,10 @@ function koSlotTeams(ko, round, matchIdx, side, groupMatches) {
 }
 
 // Returns { label, flags } for any unresolved KO slot (all rounds).
+// For R32 this delegates to r32SlotInfo (group-level candidates).
+// For later rounds it shows the two teams from the IMMEDIATE feeder match when
+// those are known, keeping the display clean (2 flags) rather than recursing
+// all the way back to groups and overwhelming the card with flags.
 function getKOSlotInfo(t, ko, round, matchIdx, side, groupMatches) {
   if (round === 'r32') {
     const m = ko.r32[matchIdx];
@@ -5003,13 +5007,26 @@ function getKOSlotInfo(t, ko, round, matchIdx, side, groupMatches) {
       ? r32SlotInfo(t, m.slotA, null, groupMatches)
       : r32SlotInfo(t, m.slotB, m.thirdB, groupMatches);
   }
-  const flags = koSlotTeams(ko, round, matchIdx, side, groupMatches).filter(Boolean);
-  if (flags.length === 0) return null;
   const fr = KO_FEEDER_ROUNDS[round];
-  const label = flags.length <= 2
-    ? flags.join(' / ')
+  if (!fr) return null;
+  const fi = (round === 'final' || round === 'third')
+    ? (side === 'A' ? 0 : 1)
+    : KO_FEEDER_PAIRS[round][matchIdx][side === 'A' ? 0 : 1];
+  const fm = ko[fr][fi];
+  const w = koWinner(fm);
+  let teams;
+  if (round === 'third') {
+    if (w) { teams = [fm.teamA === w ? fm.teamB : fm.teamA].filter(Boolean); }
+    else    { teams = [fm.teamA, fm.teamB].filter(Boolean); }
+  } else {
+    if (w) return null; // winner already propagated — slot should be set
+    teams = [fm.teamA, fm.teamB].filter(Boolean);
+  }
+  if (teams.length === 0) return null;
+  const label = teams.length >= 2
+    ? `${teams[0]} / ${teams[1]}`
     : round === 'third' ? t('slot_sf_loser') : t(`slot_${fr}_winner`);
-  return { label, flags };
+  return { label, flags: teams };
 }
 
 function KOMatchCard({match,matchIdx,round,onScore,isMobile,groupMatches,ko}){
