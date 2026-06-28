@@ -121,6 +121,7 @@ const TRANSLATIONS = {
     nav_fixtures: "Fixtures",
     nav_standings: "Standings",
     nav_knockout: "Knockout",
+    nav_bracket: "Bracket",
     nav_stats: "Stats",
     // Phases / rounds (GuessesView)
     phase_group: "Group Stage",
@@ -386,6 +387,7 @@ const TRANSLATIONS = {
     nav_fixtures: "Jogos",
     nav_standings: "Classificação",
     nav_knockout: "Mata-mata",
+    nav_bracket: "Chaveamento",
     nav_stats: "Estatísticas",
     // Phases / rounds (GuessesView)
     phase_group: "Fase de Grupos",
@@ -3154,6 +3156,31 @@ function IconStats({ size=22, active=false }) {
 }
 
 
+function IconBracket({ size=22, active=false }) {
+  const c = active ? ACCENT : "#555";
+  const g = active ? GOLD : "#666";
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      {/* Left column: 4 small boxes */}
+      <rect x="2" y="7"  width="9" height="5" rx="1.5" stroke={c} strokeWidth="1.5" fill={active?"rgba(0,208,132,0.08)":"none"}/>
+      <rect x="2" y="15" width="9" height="5" rx="1.5" stroke={c} strokeWidth="1.5" fill={active?"rgba(0,208,132,0.08)":"none"}/>
+      <rect x="2" y="27" width="9" height="5" rx="1.5" stroke={c} strokeWidth="1.5" fill={active?"rgba(0,208,132,0.08)":"none"}/>
+      <rect x="2" y="35" width="9" height="5" rx="1.5" stroke={c} strokeWidth="1.5" fill={active?"rgba(0,208,132,0.08)":"none"}/>
+      {/* Left connectors */}
+      <path d="M11 9.5 H14 V17.5 H11" stroke={c} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M11 29.5 H14 V37.5 H11" stroke={c} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      {/* Middle column: 2 boxes */}
+      <rect x="16" y="11" width="9" height="5" rx="1.5" stroke={g} strokeWidth="1.5" fill={active?"rgba(255,215,0,0.08)":"none"}/>
+      <rect x="16" y="31" width="9" height="5" rx="1.5" stroke={g} strokeWidth="1.5" fill={active?"rgba(255,215,0,0.08)":"none"}/>
+      {/* Middle connector */}
+      <path d="M25 13.5 H28 V33.5 H25" stroke={g} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      {/* Final box */}
+      <rect x="30" y="20" width="16" height="7" rx="2" stroke={g} strokeWidth="2" fill={active?"rgba(255,215,0,0.15)":"none"}/>
+      <text x="38" y="25.5" textAnchor="middle" fontSize="5.5" fontWeight="900" fill={g} fontFamily="Arial,sans-serif">FINAL</text>
+    </svg>
+  );
+}
+
 function IconGuesses({ size=22, active=false }) {
   const c = active ? ACCENT : "#555";
   const g = active ? GOLD : "#666";
@@ -4220,9 +4247,9 @@ function App(){
 
   const NAV=[
     {v:"guesses",   Icon:IconGuesses,   label:t('nav_fantasy')},
-    {v:"fixtures",  Icon:IconFixtures,  label:t('nav_fixtures')},
     {v:"standings", Icon:IconStandings, label:t('nav_standings')},
     {v:"knockout",  Icon:IconKnockout,  label:t('nav_knockout')},
+    {v:"bracket",   Icon:IconBracket,   label:t('nav_bracket')},
     {v:"stats",     Icon:IconStats,     label:t('nav_stats')},
   ];
 
@@ -4349,10 +4376,11 @@ function App(){
       </div>
 
       {/* MAIN */}
-      <div style={{maxWidth:1040,margin:"0 auto",padding:isMobile?"12px 10px":"20px 24px",overflowX:"hidden",zoom:isMobile?1.2:1}}>
+      <div style={{maxWidth:1040,margin:"0 auto",padding:view==="bracket"?(isMobile?"8px 0":"12px 0"):(isMobile?"12px 10px":"20px 24px"),overflowX:view==="bracket"?"visible":"hidden",zoom:view==="bracket"?1:(isMobile?1.2:1)}}>
         {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} onRefreshScores={handleRefreshScores} refreshing={refreshing} lastUpdated={lastUpdated}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
         {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} onRefreshScores={handleRefreshScores} refreshing={refreshing} lastUpdated={lastUpdated}/>}
+        {view==="bracket"   && <BracketView   ko={ko} groupMatches={groupMatches} isMobile={isMobile} navHeight={navHeight}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
         {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
       </div>
@@ -4929,6 +4957,217 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
           }))}
         />
       </FixedFilterBar>
+    </div>
+  );
+}
+
+// ─── BRACKET VIEW ──────────────────────────────────────────────────────────────
+function BracketView({ ko, groupMatches, isMobile, navHeight }) {
+  const { t } = useLang();
+
+  const CELL = 76;       // height of each R32 cell (8 cells total)
+  const CARD_W = 112;    // width of a match card
+  const CARD_H = 54;     // height of a match card
+  const CONN = 18;       // width of connector area between columns
+  const TOTAL_H = 8 * CELL; // 608px
+
+  const ABBR = {
+    "United States":"USA","South Korea":"S.Korea","South Africa":"S.Africa",
+    "Saudi Arabia":"S.Arabia","New Zealand":"N.Zealand","Cape Verde":"C.Verde",
+    "DR Congo":"DR Congo","Ivory Coast":"C.Ivoire","Bosnia":"Bosnia",
+    "Curacao":"Curaçao","Czech Republic":"Czechia",
+  };
+  const shortName = n => ABBR[n] || n;
+
+  const TeamRow = ({ team, score, isWinner, played }) => (
+    <div style={{
+      display:"flex", alignItems:"center", gap:4, padding:"3px 6px",
+      background: isWinner && played ? `${ACCENT}25` : "transparent",
+      minHeight:24,
+    }}>
+      <Flag team={team} size={12} faded={played && !isWinner}/>
+      <span style={{
+        flex:1, fontSize:9.5, fontWeight:700,
+        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+        color: played && !isWinner ? "#3a3a3a" : team ? "#e8eaf0" : "#555",
+        fontFamily:"'Trebuchet MS','Segoe UI',sans-serif",
+      }}>
+        {team ? shortName(team) : "?"}
+      </span>
+      {played && score !== null && score !== undefined && (
+        <span style={{ fontSize:11, fontWeight:900, flexShrink:0, color: isWinner ? ACCENT : "#555" }}>
+          {score}
+        </span>
+      )}
+    </div>
+  );
+
+  const MatchCard = ({ match, isCenter }) => {
+    const played = match?.scoreA !== null && match?.scoreA !== undefined;
+    const winner = match ? koWinner(match) : null;
+    const bdr = isCenter ? `1.5px solid ${GOLD}55` : `1.5px solid ${BORDER}`;
+    return (
+      <div style={{
+        width:CARD_W, background:CARD, border:bdr, borderRadius:6, overflow:"hidden",
+        boxShadow: isCenter && played ? `0 0 12px ${GOLD}22` : played ? `0 0 6px ${ACCENT}11` : "none",
+      }}>
+        <TeamRow team={match?.teamA} score={match?.scoreA} isWinner={winner===match?.teamA} played={played}/>
+        <div style={{height:1, background: isCenter ? `${GOLD}33` : BORDER}}/>
+        <TeamRow team={match?.teamB} score={match?.scoreB} isWinner={winner===match?.teamB} played={played}/>
+      </div>
+    );
+  };
+
+  const MatchColumn = ({ matches, label, isCenter }) => {
+    const n = matches.length;
+    const cellH = TOTAL_H / n;
+    return (
+      <div style={{ position:"relative", width:CARD_W, height:TOTAL_H, flexShrink:0 }}>
+        {label && (
+          <div style={{
+            position:"absolute", top:-22, left:0, right:0, textAlign:"center",
+            fontSize:8.5, fontWeight:800, color: isCenter ? GOLD : ACCENT,
+            textTransform:"uppercase", letterSpacing:0.8, whiteSpace:"nowrap",
+          }}>{label}</div>
+        )}
+        {matches.map((m, i) => (
+          <div key={i} style={{
+            position:"absolute",
+            top: (i + 0.5) * cellH - CARD_H / 2,
+            left:0,
+          }}>
+            <MatchCard match={m} isCenter={!!isCenter}/>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const lineC = "#2a3a4a";
+
+  const BracketConnector = ({ nLeft, nRight }) => {
+    const items = [];
+    if (nLeft >= nRight) {
+      // Converges left-to-right (opens left): many left → fewer right
+      const count = nRight;
+      const spL = TOTAL_H / nLeft;
+      const spR = TOTAL_H / nRight;
+      for (let i = 0; i < count; i++) {
+        const y1 = (2*i + 0.5) * spL;
+        const y2 = (2*i + 1.5) * spL;
+        const yM = (i + 0.5) * spR;
+        items.push(
+          <React.Fragment key={i}>
+            <div style={{position:"absolute",left:0,top:y1-1,width:CONN/2,height:2,background:lineC}}/>
+            <div style={{position:"absolute",left:0,top:y2-1,width:CONN/2,height:2,background:lineC}}/>
+            <div style={{position:"absolute",left:CONN/2-1,top:y1,width:2,height:y2-y1,background:lineC}}/>
+            <div style={{position:"absolute",left:CONN/2,top:yM-1,width:CONN/2,height:2,background:lineC}}/>
+          </React.Fragment>
+        );
+      }
+    } else {
+      // Diverges left-to-right (opens right): fewer left → many right
+      const count = nLeft;
+      const spL = TOTAL_H / nLeft;
+      const spR = TOTAL_H / nRight;
+      for (let i = 0; i < count; i++) {
+        const yM = (i + 0.5) * spL;
+        const y1 = (2*i + 0.5) * spR;
+        const y2 = (2*i + 1.5) * spR;
+        items.push(
+          <React.Fragment key={i}>
+            <div style={{position:"absolute",left:0,top:yM-1,width:CONN/2,height:2,background:lineC}}/>
+            <div style={{position:"absolute",left:CONN/2-1,top:y1,width:2,height:y2-y1,background:lineC}}/>
+            <div style={{position:"absolute",left:CONN/2,top:y1-1,width:CONN/2,height:2,background:lineC}}/>
+            <div style={{position:"absolute",left:CONN/2,top:y2-1,width:CONN/2,height:2,background:lineC}}/>
+          </React.Fragment>
+        );
+      }
+    }
+    return (
+      <div style={{position:"relative", width:CONN, height:TOTAL_H, flexShrink:0}}>
+        {items}
+      </div>
+    );
+  };
+
+  // Left bracket: R32[0-7] → R16[1,0,4,5] → QF[0,1] → SF[0]
+  const leftR32 = ko.r32.slice(0, 8);
+  const leftR16 = [ko.r16[1], ko.r16[0], ko.r16[4], ko.r16[5]];
+  const leftQF  = [ko.qf[0], ko.qf[1]];
+  const leftSF  = [ko.sf[0]];
+
+  // Right bracket (left→right from center): SF[1] → QF[2,3] → R16[2,3,6,7] → R32[8-15]
+  const rightSF  = [ko.sf[1]];
+  const rightQF  = [ko.qf[2], ko.qf[3]];
+  const rightR16 = [ko.r16[2], ko.r16[3], ko.r16[6], ko.r16[7]];
+  const rightR32 = ko.r32.slice(8, 16);
+
+  // Center connector: simple horizontal line at mid-height
+  const CenterConn = () => (
+    <div style={{position:"relative", width:CONN, height:TOTAL_H, flexShrink:0}}>
+      <div style={{position:"absolute", left:0, top:TOTAL_H/2-1, width:CONN, height:2, background:lineC}}/>
+    </div>
+  );
+
+  // Round label strip at the top of all columns
+  const r32Label = t('round_r32').replace(/^[^\s]+\s/,"");
+  const r16Label = t('round_r16').replace(/^[^\s]+\s/,"");
+  const qfLabel  = t('round_qf').replace(/^[^\s]+\s/,"");
+  const sfLabel  = t('round_sf').replace(/^[^\s]+\s/,"");
+
+  return (
+    <div style={{
+      overflowX:"auto",
+      paddingBottom: isMobile ? `calc(${navHeight||78}px + env(safe-area-inset-bottom, 0px) + 12px)` : 24,
+      WebkitOverflowScrolling:"touch",
+    }}>
+      <div style={{
+        display:"flex", alignItems:"flex-start",
+        paddingTop:30, paddingLeft:8, paddingRight:8, paddingBottom:4,
+        minWidth:"max-content",
+      }}>
+
+        {/* ── Left half ── */}
+        <MatchColumn matches={leftR32} label={r32Label}/>
+        <BracketConnector nLeft={8} nRight={4}/>
+        <MatchColumn matches={leftR16} label={r16Label}/>
+        <BracketConnector nLeft={4} nRight={2}/>
+        <MatchColumn matches={leftQF}  label={qfLabel}/>
+        <BracketConnector nLeft={2} nRight={1}/>
+        <MatchColumn matches={leftSF}  label={sfLabel}/>
+        <CenterConn/>
+
+        {/* ── Center: Final + 3rd place ── */}
+        <div style={{position:"relative", width:CARD_W, height:TOTAL_H, flexShrink:0}}>
+          {/* FINAL */}
+          <div style={{position:"absolute", left:0, top:TOTAL_H/2-CARD_H/2-22}}>
+            <div style={{textAlign:"center", fontSize:9, fontWeight:800, color:GOLD, letterSpacing:1, textTransform:"uppercase", marginBottom:4}}>
+              🏆 {t('round_final').replace(/^[^\s]+\s/,"")}
+            </div>
+            <MatchCard match={ko.final[0]} isCenter={true}/>
+          </div>
+          {/* horizontal line at vertical center (connects to both SF columns) */}
+          <div style={{position:"absolute", left:0, right:0, top:TOTAL_H/2-1, height:2, background:lineC}}/>
+          {/* 3rd Place */}
+          <div style={{position:"absolute", left:0, top:TOTAL_H/2+CARD_H/2+12}}>
+            <div style={{textAlign:"center", fontSize:8.5, fontWeight:800, color:"#777", letterSpacing:0.8, textTransform:"uppercase", marginBottom:4}}>
+              {t('round_third').replace(/^[^\s]+\s/,"")}
+            </div>
+            <MatchCard match={ko.third[0]} isCenter={false}/>
+          </div>
+        </div>
+
+        <CenterConn/>
+        {/* ── Right half ── */}
+        <MatchColumn matches={rightSF}  label={sfLabel}/>
+        <BracketConnector nLeft={1} nRight={2}/>
+        <MatchColumn matches={rightQF}  label={qfLabel}/>
+        <BracketConnector nLeft={2} nRight={4}/>
+        <MatchColumn matches={rightR16} label={r16Label}/>
+        <BracketConnector nLeft={4} nRight={8}/>
+        <MatchColumn matches={rightR32} label={r32Label}/>
+      </div>
     </div>
   );
 }
