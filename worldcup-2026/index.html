@@ -6082,7 +6082,6 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
           </div>
         ))}
       </div>
-      <ConfederationChart groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"12px 14px",marginBottom:13}}>
         <div style={{fontSize:11,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:700}}>{t('top_scoring_nations')}</div>
         {stats.topScorers.length===0
@@ -6098,6 +6097,7 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
         }
       </div>
       <BestDefenceLeaderboard groupMatches={groupMatches} ko={ko}/>
+      <ConfederationChart groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>
       <HistoricalGoalsChart stats={stats}/>
       <PastChampions isMobile={isMobile}/>
       <TeamHistorySection isMobile={isMobile}/>
