@@ -1268,6 +1268,15 @@ function buildInitialKO() {
       }
     }));
   }
+  // Drop any locally-stored scores for matches that haven't kicked off yet
+  const now = Date.now();
+  ['r32','r16','qf','sf','final','third'].forEach(round => {
+    (ko[round]||[]).forEach(m => {
+      if (m.date && m.date !== 'TBD' && matchToUTC(m.date, m.time).getTime() > now) {
+        m.scoreA = null; m.scoreB = null; m.penA = null; m.penB = null;
+      }
+    });
+  });
   return ko;
 }
 
@@ -3402,7 +3411,17 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
 
   const isUnlocked = key => isPhaseUnlocked(key, ko);
 
-  const defaultPhase = [...PHASES].reverse().find(p => isUnlocked(p.key))?.key ?? 'group';
+  const defaultPhase = (() => {
+    // First unlocked phase that still has unplayed matches (currently in progress)
+    const inProgress = PHASES.find(p => {
+      if (!isUnlocked(p.key)) return false;
+      if (p.key === 'group') return p.matches.some(m => m.homeScore === null || m.awayScore === null);
+      return p.matches.some(m => m.scoreA === null || m.scoreB === null);
+    });
+    if (inProgress) return inProgress.key;
+    // Fall back to the most advanced unlocked phase (tournament over)
+    return [...PHASES].reverse().find(p => isUnlocked(p.key))?.key ?? 'group';
+  })();
   const [phase, setPhase] = useState(defaultPhase);
   const pts = useMemo(()=>calcPoints(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
   // Group stage being complete unlocks "Copy All" / proximity sharing for good —
@@ -4077,7 +4096,11 @@ function App(){
     setGroupMatches(prev=>({...prev,[group]:prev[group].map(m=>m.id===matchId?{...m,[side]:val}:m)}));
   },[]);
   const updateKOScore=useCallback((round,idx,field,val)=>{
-    setKo(prev=>{const next=structuredClone(prev);next[round][idx][field]=val;return propagateKO(next,groupMatches);});
+    setKo(prev=>{
+      const m=prev[round][idx];
+      if(m.date&&m.date!=='TBD'&&matchToUTC(m.date,m.time).getTime()>Date.now()) return prev;
+      const next=structuredClone(prev);next[round][idx][field]=val;return propagateKO(next,groupMatches);
+    });
   },[groupMatches]);
   const updateGroupPred=useCallback((matchId,side,val)=>{
     setPredictions(prev=>({...prev,group:{...prev.group,[matchId]:{...prev.group?.[matchId],[side]:val}}}));
@@ -5301,6 +5324,7 @@ function getKOSlotInfo(t, ko, round, matchIdx, side, groupMatches) {
 
 function KOMatchCard({match,matchIdx,round,onScore,isMobile,groupMatches,ko}){
   const { t } = useLang();
+  const isFuture=match.date&&match.date!=='TBD'&&matchToUTC(match.date,match.time).getTime()>Date.now();
   const winner=koWinner(match);
   const draw=match.scoreA!==null&&match.scoreB!==null&&+match.scoreA===+match.scoreB;
   const penWinner=draw&&match.penA!==null&&match.penB!==null
@@ -5316,7 +5340,7 @@ function KOMatchCard({match,matchIdx,round,onScore,isMobile,groupMatches,ko}){
             <span style={{fontSize:12,fontWeight:isWinner?800:400,color:isWinner?"#fff":has?"#aaa":"#444",fontStyle:has?"normal":"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{has?<TeamName name={team}/>:slot?slot.label:t('tbd')}</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
-            <Stepper value={score} onChange={v=>onScore(round,matchIdx,scoreField,v)} highlight={isWinner&&!draw} disabled={!has}/>
+            <Stepper value={isFuture?null:score} onChange={v=>onScore(round,matchIdx,scoreField,v)} highlight={isWinner&&!draw} disabled={!has||isFuture}/>
           </div>
         </div>
         {!has&&slot&&(
