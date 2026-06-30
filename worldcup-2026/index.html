@@ -243,6 +243,12 @@ const TRANSLATIONS = {
     best_defence: "Best Defences (All Stages)",
     goals_against_abbr: "GA/game",
     enter_scores_rankings: "Enter scores to see rankings",
+    team_points_ranking: "Team Rankings (All Stages)",
+    attack_vs_defense: "Attack vs Defense",
+    attack_vs_defense_hint: "Goals scored vs conceded per game — top-right is best",
+    quadrant_best: "Best ↗",
+    axis_x_label: "Goals scored / game",
+    axis_y_label: "Top = fewer goals conceded",
     // Historical chart
     chart_gpg: "Goals / Game",
     chart_goals: "Total Goals",
@@ -511,6 +517,12 @@ const TRANSLATIONS = {
     best_defence: "Melhores Defesas (Todas as Fases)",
     goals_against_abbr: "GS/jogo",
     enter_scores_rankings: "Insira os placares para ver a classificação",
+    team_points_ranking: "Ranking das Seleções (Todas as Fases)",
+    attack_vs_defense: "Ataque vs Defesa",
+    attack_vs_defense_hint: "Gols marcados x sofridos por jogo — canto superior direito é o melhor",
+    quadrant_best: "Melhor ↗",
+    axis_x_label: "Gols marcados / jogo",
+    axis_y_label: "Topo = menos gols sofridos",
     // Historical chart
     chart_gpg: "Gols / Jogo",
     chart_goals: "Total de Gols",
@@ -2802,6 +2814,35 @@ function koWinner(m) {
 }
 function koLoser(m){const w=koWinner(m);if(!w)return null;return w===m.teamA?m.teamB:m.teamA;}
 const isMatchScored = m => m.homeScore!==null && m.homeScore!==undefined && m.awayScore!==null && m.awayScore!==undefined;
+
+// Per-team aggregate (goals for/against, points, W-D-L) across group + knockout stages.
+function buildTeamFullStats(groupMatches, ko) {
+  const s = {};
+  const ensure = team => { if(!s[team]) s[team] = {gf:0, ga:0, pts:0, played:0, wins:0, draws:0, losses:0}; };
+  Object.values(groupMatches).flat().forEach(m=>{
+    if(m.homeScore===null||m.awayScore===null) return;
+    const hs=+m.homeScore, as_=+m.awayScore;
+    ensure(m.home); ensure(m.away);
+    s[m.home].gf+=hs; s[m.home].ga+=as_; s[m.home].played++;
+    s[m.away].gf+=as_; s[m.away].ga+=hs; s[m.away].played++;
+    if(hs>as_){s[m.home].pts+=3;s[m.home].wins++;s[m.away].losses++;}
+    else if(hs<as_){s[m.away].pts+=3;s[m.away].wins++;s[m.home].losses++;}
+    else{s[m.home].pts++;s[m.away].pts++;s[m.home].draws++;s[m.away].draws++;}
+  });
+  const allKO=[...ko.r32,...ko.r16,...ko.qf,...ko.sf,...ko.final,...ko.third];
+  allKO.forEach(m=>{
+    if(m.scoreA===null||m.scoreB===null||!m.teamA||!m.teamB) return;
+    const a=+m.scoreA, b=+m.scoreB;
+    ensure(m.teamA); ensure(m.teamB);
+    s[m.teamA].gf+=a; s[m.teamA].ga+=b; s[m.teamA].played++;
+    s[m.teamB].gf+=b; s[m.teamB].ga+=a; s[m.teamB].played++;
+    const w = koWinner(m);
+    if(w===m.teamA){s[m.teamA].pts+=3;s[m.teamA].wins++;s[m.teamB].losses++;}
+    else if(w===m.teamB){s[m.teamB].pts+=3;s[m.teamB].wins++;s[m.teamA].losses++;}
+    else{s[m.teamA].pts++;s[m.teamB].pts++;s[m.teamA].draws++;s[m.teamB].draws++;}
+  });
+  return s;
+}
 function propagateKO(ko,gm){
   const slots=getGroupQualifiers(gm);
   const thirds=getThirdPlaceTeams(gm);
@@ -6066,6 +6107,102 @@ function BestDefenceLeaderboard({groupMatches, ko}) {
   );
 }
 
+// Horizontal bar chart ranking teams by total points across all stages played.
+function TeamPointsRanking({groupMatches, ko, isMobile}) {
+  const { t } = useLang();
+  const ranked = useMemo(() => {
+    const s = buildTeamFullStats(groupMatches, ko);
+    return Object.entries(s)
+      .filter(([,v])=>v.played>0)
+      .map(([team,v])=>({team, pts:v.pts, gd:v.gf-v.ga}))
+      .sort((a,b)=> b.pts-a.pts || b.gd-a.gd)
+      .slice(0,10);
+  }, [groupMatches, ko]);
+
+  const maxPts = Math.max(...ranked.map(r=>r.pts), 1);
+
+  return (
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"14px 14px",marginBottom:13}}>
+      <div style={{fontSize:11,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:12,fontWeight:700}}>🏆 {t('team_points_ranking')}</div>
+      {ranked.length===0
+        ? <div style={{color:"#444",fontSize:13,textAlign:"center",paddingTop:12}}>{t('enter_scores_rankings')}</div>
+        : ranked.map((r,i)=>{
+          const pct = maxPts>0 ? r.pts/maxPts*100 : 0;
+          return (
+            <div key={r.team} style={{marginBottom:10}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:3,gap:6}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
+                  <span style={{width:16,fontSize:11,color:i===0?GOLD:"#555",fontWeight:700,flexShrink:0}}>{i+1}</span>
+                  <Flag team={r.team} size={16}/>
+                  <span style={{fontSize:13,color:"#bbb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><TeamName name={r.team}/></span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                  <span style={{fontSize:10,color:"#555"}}>{r.gd>0?`+${r.gd}`:r.gd} {t('metric_gd')}</span>
+                  <span style={{fontSize:15,fontWeight:900,color:i===0?GOLD:ACCENT,minWidth:20,textAlign:"right"}}>{r.pts}</span>
+                </div>
+              </div>
+              <div style={{height:7,background:"rgba(255,255,255,0.04)",borderRadius:4,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${pct}%`,background:i===0?GOLD:ACCENT,borderRadius:4,transition:"width 0.5s ease"}}/>
+              </div>
+            </div>
+          );
+        })
+      }
+      <div style={{marginTop:6,fontSize:10,color:"#444",textAlign:"right"}}>{t('all_stages_combined')}</div>
+    </div>
+  );
+}
+
+// Scatter plot of goals scored vs conceded per game — attack on the x-axis, defense on the y-axis.
+function TeamFormScatter({groupMatches, ko, isMobile}) {
+  const { t } = useLang();
+  const teams = useMemo(() => {
+    const s = buildTeamFullStats(groupMatches, ko);
+    return Object.entries(s)
+      .filter(([,v])=>v.played>0)
+      .map(([team,v])=>({team, gpgFor:v.gf/v.played, gpgAgainst:v.ga/v.played}));
+  }, [groupMatches, ko]);
+
+  const HEIGHT = isMobile ? 220 : 280;
+
+  return (
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"14px 14px",marginBottom:13}}>
+      <div style={{fontSize:11,color:"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:4,fontWeight:700}}>⚔️ {t('attack_vs_defense')}</div>
+      <div style={{fontSize:10,color:"#444",marginBottom:10}}>{t('attack_vs_defense_hint')}</div>
+
+      {teams.length===0
+        ? <div style={{color:"#444",fontSize:13,textAlign:"center",paddingTop:12}}>{t('enter_scores_rankings')}</div>
+        : (()=>{
+          const maxFor = Math.max(...teams.map(d=>d.gpgFor), 1);
+          const maxAgainst = Math.max(...teams.map(d=>d.gpgAgainst), 1);
+          return (
+            <React.Fragment>
+              <div style={{position:"relative", width:"100%", height:HEIGHT, background:"rgba(255,255,255,0.02)", borderRadius:8}}>
+                <div style={{position:"absolute", top:6, right:8, fontSize:8, color:ACCENT, fontWeight:700, opacity:0.75}}>{t('quadrant_best')}</div>
+                {teams.map(d=>{
+                  const left = Math.min(95, Math.max(3, d.gpgFor/maxFor*100));
+                  const top  = Math.min(95, Math.max(3, d.gpgAgainst/maxAgainst*100));
+                  return (
+                    <div key={d.team}
+                      title={`${d.team}: ${d.gpgFor.toFixed(1)} ${t('chart_goals_btn').toLowerCase()} · ${d.gpgAgainst.toFixed(1)} ${t('goals_against_abbr')}`}
+                      style={{position:"absolute", left:`${left}%`, top:`${top}%`, transform:"translate(-50%,-50%)", zIndex:2}}>
+                      <Flag team={d.team} size={isMobile?13:15}/>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#444",marginTop:6}}>
+                <span>{t('axis_x_label')} →</span>
+                <span>↑ {t('axis_y_label')}</span>
+              </div>
+            </React.Fragment>
+          );
+        })()
+      }
+    </div>
+  );
+}
+
 function GlobalStats({stats,groupMatches,ko,isMobile}){
   const { t } = useLang();
   return(
@@ -6097,6 +6234,8 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
         }
       </div>
       <BestDefenceLeaderboard groupMatches={groupMatches} ko={ko}/>
+      <TeamPointsRanking groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>
+      <TeamFormScatter groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>
       <ConfederationChart groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>
       <HistoricalGoalsChart stats={stats}/>
       <PastChampions isMobile={isMobile}/>
