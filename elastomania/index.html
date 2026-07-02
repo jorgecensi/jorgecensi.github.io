@@ -151,6 +151,26 @@ permalink: /elastomania/
     const WHEEL_R = 15;
     const CHASSIS_W = 55;
     const CHASSIS_H = 10;
+
+    // Suspension: the main leg from chassis to wheel. Soft + damped so it
+    // visibly compresses on landings and overstretches under a hard impact
+    // instead of acting like a rigid rod.
+    const SUSPENSION_LENGTH    = 15;
+    const SUSPENSION_STIFFNESS = 0.35;
+    const SUSPENSION_DAMPING   = 0.25;
+
+    // Secondary locating link per wheel — see note at rearBrace/frontBrace.
+    // Stiffer than the main leg since its job is structural (stop the wheel
+    // from swinging around the chassis), not to add extra suspension feel.
+    const BRACE_STIFFNESS = 0.7;
+    const BRACE_DAMPING   = 0.2;
+
+    const MOTOR_ACCEL   = 0.12;   // angular accel per 16.67ms frame
+    const BRAKE_ACCEL   = 0.2;
+    const MAX_WHEEL_SPIN  = 22;
+    const MAX_BRAKE_SPIN  = -8;
+    const LEAN_ACCEL    = 0.08;
+
     const SPAWN_X = 80;
     const SPAWN_Y = 400;
 
@@ -186,6 +206,34 @@ permalink: /elastomania/
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
+
+    // ── Sprites ────────────────────────────────────────────────
+    const bikeBodyImg  = new Image();
+    bikeBodyImg.src    = '/elastomania/img/bike-body.png';
+    const bikeWheelImg = new Image();
+    bikeWheelImg.src   = '/elastomania/img/bike-wheel.png';
+    // Scale so the art's fork cluster (~x=230) to swingarm/chain cluster
+    // (~x=85) span — where the wheels visually belong — matches the real
+    // wheelbase (40 world units): 40 / (230-85) ≈ 0.276. The anchor sits at
+    // the midpoint between those two clusters (~x=157) and near the bottom
+    // of the engine block (the wheels themselves are separate, unused parts
+    // of the sheet), then nudges down to roughly axle height.
+    const BIKE_BODY_SCALE    = 0.276;
+    const BIKE_BODY_ANCHOR_X = 0.485;
+    const BIKE_BODY_ANCHOR_Y = 0.99;
+    const BIKE_BODY_OFFSET_Y = 13;
+    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.1) / 108;
+
+    const riderImg = new Image();
+    riderImg.src   = '/elastomania/img/rider.png';
+    // Rider art is a seated/crouched pose; anchor at the hip (where the
+    // thighs bend to horizontal) rather than image center, so that point
+    // lands on the bike's seat instead of floating above or sinking into it.
+    const RIDER_SCALE    = 0.29;
+    const RIDER_ANCHOR_X = 0.286;
+    const RIDER_ANCHOR_Y = 0.569;
+    const RIDER_OFFSET_X = -6;
+    const RIDER_OFFSET_Y = -18;
 
     // ── Physics engine ─────────────────────────────────────────
     const engine = Engine.create();
@@ -264,17 +312,45 @@ permalink: /elastomania/
         collisionFilter: { category: 0x0004, mask: 0x0000 },
         label: 'chassis'
       });
+      // Real bike frames strongly resist pitching (rider + engine mass sits
+      // well away from the wheel axles). The thin default rectangle body is
+      // too easy to snap-rotate, which let throttle alone flip the bike into
+      // an instant, uncontrollable wheelie — bump pitch inertia way up
+      // without changing its mass (so suspension loading stays the same).
+      Body.setInertia(chassis, chassis.inertia * 6);
 
+      // Each wheel is hung from the chassis by TWO non-collinear links, not
+      // one. A single distance constraint only pins the wheel's distance
+      // from one chassis point — the chassis is then free to swing around
+      // that point, and "chassis riding above the wheel" is an *unstable*
+      // equilibrium (like a pendulum bob above its pivot): gravity plus any
+      // tiny numerical nudge eventually swings it around to hang below,
+      // which reads as the frame silently collapsing onto the wheels even
+      // though every individual constraint length looks fine. A second link
+      // from a different chassis point locks the angular relationship too,
+      // so the whole leg can only flex straight along its own axis
+      // (compress on landings, overstretch under a hard impact) instead of
+      // rotating around the wheel.
       const rearConstraint = Constraint.create({
         bodyA: chassis, bodyB: rearWheel,
         pointA: { x: -20, y: 5 }, pointB: { x: 0, y: 0 },
-        stiffness: 0.9, damping: 0.1, length: 15
+        stiffness: SUSPENSION_STIFFNESS, damping: SUSPENSION_DAMPING, length: SUSPENSION_LENGTH
+      });
+      const rearBrace = Constraint.create({
+        bodyA: chassis, bodyB: rearWheel,
+        pointA: { x: -8, y: -3 }, pointB: { x: 0, y: 0 },
+        stiffness: BRACE_STIFFNESS, damping: BRACE_DAMPING
       });
 
       const frontConstraint = Constraint.create({
         bodyA: chassis, bodyB: frontWheel,
         pointA: { x: 20, y: 5 }, pointB: { x: 0, y: 0 },
-        stiffness: 0.9, damping: 0.1, length: 15
+        stiffness: SUSPENSION_STIFFNESS, damping: SUSPENSION_DAMPING, length: SUSPENSION_LENGTH
+      });
+      const frontBrace = Constraint.create({
+        bodyA: chassis, bodyB: frontWheel,
+        pointA: { x: 8, y: -3 }, pointB: { x: 0, y: 0 },
+        stiffness: BRACE_STIFFNESS, damping: BRACE_DAMPING
       });
 
       const terrainBodies = [];
@@ -300,7 +376,7 @@ permalink: /elastomania/
 
       Composite.add(world, [
         rearWheel, frontWheel, chassis,
-        rearConstraint, frontConstraint,
+        rearConstraint, rearBrace, frontConstraint, frontBrace,
         floor, wallL, wallR,
         ...terrainBodies
       ]);
@@ -345,23 +421,28 @@ permalink: /elastomania/
     bindBtn('btn-lean-back','leanBack');
 
     // ── Controls application ───────────────────────────────────
-    function applyControls() {
+    function applyControls(dt) {
       const gas      = keys['ArrowRight'] || keys['KeyD'] || touch.right;
       const brake    = keys['ArrowLeft']  || keys['KeyA'] || touch.left;
       const leanFwd  = keys['ArrowUp']    || keys['KeyW'] || touch.leanFwd;
       const leanBack = keys['ArrowDown']  || keys['KeyS'] || touch.leanBack;
 
+      // Scale per-frame accelerations to elapsed time so input feels the
+      // same regardless of frame rate (was previously applied flat per
+      // animation frame, which spiked torque at high frame rates).
+      const scale = dt / 16.67;
+
       if (gas) {
-        Body.setAngularVelocity(rearWheel, Math.min(rearWheel.angularVelocity + 0.4, 25));
+        Body.setAngularVelocity(rearWheel, Math.min(rearWheel.angularVelocity + MOTOR_ACCEL * scale, MAX_WHEEL_SPIN));
       }
       if (brake) {
-        Body.setAngularVelocity(rearWheel, Math.max(rearWheel.angularVelocity - 0.3, -10));
+        Body.setAngularVelocity(rearWheel, Math.max(rearWheel.angularVelocity - BRAKE_ACCEL * scale, MAX_BRAKE_SPIN));
       }
       if (leanFwd) {
-        Body.setAngularVelocity(chassis, chassis.angularVelocity + 0.08);
+        Body.setAngularVelocity(chassis, chassis.angularVelocity + LEAN_ACCEL * scale);
       }
       if (leanBack) {
-        Body.setAngularVelocity(chassis, chassis.angularVelocity - 0.08);
+        Body.setAngularVelocity(chassis, chassis.angularVelocity - LEAN_ACCEL * scale);
       }
     }
 
@@ -454,33 +535,10 @@ permalink: /elastomania/
     function drawWheel(pos, angle) {
       ctx.save();
       ctx.translate(pos.x, pos.y);
-
-      ctx.beginPath();
-      ctx.arc(0, 0, WHEEL_R, 0, Math.PI * 2);
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fill();
-      ctx.strokeStyle = '#444';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
       ctx.rotate(angle);
-      ctx.strokeStyle = '#666';
-      ctx.lineWidth = 1.5;
-      for (let i = 0; i < 4; i++) {
-        ctx.save();
-        ctx.rotate((i / 4) * Math.PI * 2);
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(0, -(WHEEL_R - 2));
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      ctx.beginPath();
-      ctx.arc(0, 0, 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#888';
-      ctx.fill();
-
+      const w = bikeWheelImg.width * BIKE_WHEEL_SCALE;
+      const h = bikeWheelImg.height * BIKE_WHEEL_SCALE;
+      ctx.drawImage(bikeWheelImg, -w / 2, -h / 2, w, h);
       ctx.restore();
     }
 
@@ -503,58 +561,23 @@ permalink: /elastomania/
       drawWheel(rp, rearWheel.angle);
       drawWheel(fp, frontWheel.angle);
 
-      // Exhaust pipe
-      ctx.save();
-      ctx.translate(cp.x, cp.y);
-      ctx.rotate(ca);
-      ctx.strokeStyle = '#555';
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(-18, 4); ctx.lineTo(-26, 12);
-      ctx.stroke();
-      ctx.restore();
-
       // Chassis body
       ctx.save();
       ctx.translate(cp.x, cp.y);
       ctx.rotate(ca);
-      ctx.fillStyle = '#3a3a50';
-      ctx.fillRect(-CHASSIS_W / 2, -CHASSIS_H / 2, CHASSIS_W, CHASSIS_H);
+      const bw = bikeBodyImg.width * BIKE_BODY_SCALE;
+      const bh = bikeBodyImg.height * BIKE_BODY_SCALE;
+      ctx.drawImage(bikeBodyImg, -bw * BIKE_BODY_ANCHOR_X, -bh * BIKE_BODY_ANCHOR_Y + BIKE_BODY_OFFSET_Y, bw, bh);
       ctx.restore();
 
       // Rider
       ctx.save();
       ctx.translate(cp.x, cp.y);
       ctx.rotate(ca);
-
-      // Torso
-      ctx.fillStyle = '#2244cc';
-      ctx.fillRect(-8, -30, 16, 18);
-
-      // Head
-      ctx.beginPath();
-      ctx.arc(0, -36, 8, 0, Math.PI * 2);
-      ctx.fillStyle = '#f5c090';
-      ctx.fill();
-
-      // Helmet
-      ctx.beginPath();
-      ctx.arc(0, -38, 8.5, Math.PI * 1.05, Math.PI * 1.95);
-      ctx.fillStyle = '#cc2222';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(0, -36, 8, Math.PI, Math.PI * 2);
-      ctx.fillStyle = '#cc2222';
-      ctx.fill();
-
-      // Visor
-      ctx.beginPath();
-      ctx.arc(0, -34, 6, Math.PI * 1.15, Math.PI * 1.85);
-      ctx.strokeStyle = 'rgba(0,100,200,0.6)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
+      ctx.translate(RIDER_OFFSET_X, RIDER_OFFSET_Y);
+      const rw = riderImg.width * RIDER_SCALE;
+      const rh = riderImg.height * RIDER_SCALE;
+      ctx.drawImage(riderImg, -rw * RIDER_ANCHOR_X, -rh * RIDER_ANCHOR_Y, rw, rh);
       ctx.restore();
     }
 
@@ -828,7 +851,7 @@ permalink: /elastomania/
       lastTs = ts;
 
       if (state === 'playing') {
-        applyControls();
+        applyControls(dt);
         Engine.update(engine, dt);
         checkApples();
         checkDeath();
