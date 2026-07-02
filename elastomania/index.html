@@ -223,8 +223,17 @@ permalink: /elastomania/
     const BIKE_BODY_ANCHOR_Y = 0.99;
     const BIKE_BODY_OFFSET_Y = 16;
     const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.1) / 108;
-    const RIDER_OFFSET_X = -10;
-    const RIDER_OFFSET_Y = 14;
+
+    const riderImg = new Image();
+    riderImg.src   = '/elastomania/img/rider.png';
+    // Rider art is a seated/crouched pose; anchor at the hip (where the
+    // thighs bend to horizontal) rather than image center, so that point
+    // lands on the bike's seat instead of floating above or sinking into it.
+    const RIDER_SCALE    = 0.26;
+    const RIDER_ANCHOR_X = 0.36;
+    const RIDER_ANCHOR_Y = 0.58;
+    const RIDER_OFFSET_X = -18;
+    const RIDER_OFFSET_Y = -20;
 
     // ── Physics engine ─────────────────────────────────────────
     const engine = Engine.create();
@@ -566,34 +575,9 @@ permalink: /elastomania/
       ctx.translate(cp.x, cp.y);
       ctx.rotate(ca);
       ctx.translate(RIDER_OFFSET_X, RIDER_OFFSET_Y);
-
-      // Torso
-      ctx.fillStyle = '#2244cc';
-      ctx.fillRect(-8, -30, 16, 18);
-
-      // Head
-      ctx.beginPath();
-      ctx.arc(0, -36, 8, 0, Math.PI * 2);
-      ctx.fillStyle = '#f5c090';
-      ctx.fill();
-
-      // Helmet
-      ctx.beginPath();
-      ctx.arc(0, -38, 8.5, Math.PI * 1.05, Math.PI * 1.95);
-      ctx.fillStyle = '#cc2222';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(0, -36, 8, Math.PI, Math.PI * 2);
-      ctx.fillStyle = '#cc2222';
-      ctx.fill();
-
-      // Visor
-      ctx.beginPath();
-      ctx.arc(0, -34, 6, Math.PI * 1.15, Math.PI * 1.85);
-      ctx.strokeStyle = 'rgba(0,100,200,0.6)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
+      const rw = riderImg.width * RIDER_SCALE;
+      const rh = riderImg.height * RIDER_SCALE;
+      ctx.drawImage(riderImg, -rw * RIDER_ANCHOR_X, -rh * RIDER_ANCHOR_Y, rw, rh);
       ctx.restore();
     }
 
