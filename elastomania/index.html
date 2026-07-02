@@ -212,16 +212,16 @@ permalink: /elastomania/
     bikeBodyImg.src    = '/elastomania/img/bike-body.png';
     const bikeWheelImg = new Image();
     bikeWheelImg.src   = '/elastomania/img/bike-wheel.png';
-    // Native art is much wider than tall relative to the wheelbase; scale
-    // its width to roughly the wheel-to-wheel span (plus overhang) and keep
-    // native aspect ratio. The art's engine block sits at the bottom-center
-    // of the source image (the wheels themselves are separate, unused parts
-    // of the sheet), so anchor there instead of the image's bounding-box
-    // center, then nudge down to roughly axle height.
-    const BIKE_BODY_SCALE    = 0.34;
-    const BIKE_BODY_ANCHOR_X = 0.48;
+    // Scale so the art's fork cluster (~x=230) to swingarm/chain cluster
+    // (~x=85) span — where the wheels visually belong — matches the real
+    // wheelbase (40 world units): 40 / (230-85) ≈ 0.276. The anchor sits at
+    // the midpoint between those two clusters (~x=157) and near the bottom
+    // of the engine block (the wheels themselves are separate, unused parts
+    // of the sheet), then nudges down to roughly axle height.
+    const BIKE_BODY_SCALE    = 0.276;
+    const BIKE_BODY_ANCHOR_X = 0.485;
     const BIKE_BODY_ANCHOR_Y = 0.99;
-    const BIKE_BODY_OFFSET_Y = 16;
+    const BIKE_BODY_OFFSET_Y = 13;
     const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.1) / 108;
 
     const riderImg = new Image();
@@ -229,11 +229,11 @@ permalink: /elastomania/
     // Rider art is a seated/crouched pose; anchor at the hip (where the
     // thighs bend to horizontal) rather than image center, so that point
     // lands on the bike's seat instead of floating above or sinking into it.
-    const RIDER_SCALE    = 0.26;
-    const RIDER_ANCHOR_X = 0.36;
-    const RIDER_ANCHOR_Y = 0.58;
-    const RIDER_OFFSET_X = -18;
-    const RIDER_OFFSET_Y = -20;
+    const RIDER_SCALE    = 0.29;
+    const RIDER_ANCHOR_X = 0.286;
+    const RIDER_ANCHOR_Y = 0.569;
+    const RIDER_OFFSET_X = -6;
+    const RIDER_OFFSET_Y = -18;
 
     // ── Physics engine ─────────────────────────────────────────
     const engine = Engine.create();
