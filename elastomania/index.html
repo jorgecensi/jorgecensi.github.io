@@ -207,6 +207,25 @@ permalink: /elastomania/
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
+    // ── Sprites ────────────────────────────────────────────────
+    const bikeBodyImg  = new Image();
+    bikeBodyImg.src    = '/elastomania/img/bike-body.png';
+    const bikeWheelImg = new Image();
+    bikeWheelImg.src   = '/elastomania/img/bike-wheel.png';
+    // Native art is much wider than tall relative to the wheelbase; scale
+    // its width to roughly the wheel-to-wheel span (plus overhang) and keep
+    // native aspect ratio. The art's engine block sits at the bottom-center
+    // of the source image (the wheels themselves are separate, unused parts
+    // of the sheet), so anchor there instead of the image's bounding-box
+    // center, then nudge down to roughly axle height.
+    const BIKE_BODY_SCALE    = 0.34;
+    const BIKE_BODY_ANCHOR_X = 0.48;
+    const BIKE_BODY_ANCHOR_Y = 0.99;
+    const BIKE_BODY_OFFSET_Y = 16;
+    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.1) / 108;
+    const RIDER_OFFSET_X = -10;
+    const RIDER_OFFSET_Y = 14;
+
     // ── Physics engine ─────────────────────────────────────────
     const engine = Engine.create();
     engine.gravity.y = 1.8;
@@ -507,33 +526,10 @@ permalink: /elastomania/
     function drawWheel(pos, angle) {
       ctx.save();
       ctx.translate(pos.x, pos.y);
-
-      ctx.beginPath();
-      ctx.arc(0, 0, WHEEL_R, 0, Math.PI * 2);
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fill();
-      ctx.strokeStyle = '#444';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
       ctx.rotate(angle);
-      ctx.strokeStyle = '#666';
-      ctx.lineWidth = 1.5;
-      for (let i = 0; i < 4; i++) {
-        ctx.save();
-        ctx.rotate((i / 4) * Math.PI * 2);
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(0, -(WHEEL_R - 2));
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      ctx.beginPath();
-      ctx.arc(0, 0, 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#888';
-      ctx.fill();
-
+      const w = bikeWheelImg.width * BIKE_WHEEL_SCALE;
+      const h = bikeWheelImg.height * BIKE_WHEEL_SCALE;
+      ctx.drawImage(bikeWheelImg, -w / 2, -h / 2, w, h);
       ctx.restore();
     }
 
@@ -556,30 +552,20 @@ permalink: /elastomania/
       drawWheel(rp, rearWheel.angle);
       drawWheel(fp, frontWheel.angle);
 
-      // Exhaust pipe
-      ctx.save();
-      ctx.translate(cp.x, cp.y);
-      ctx.rotate(ca);
-      ctx.strokeStyle = '#555';
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(-18, 4); ctx.lineTo(-26, 12);
-      ctx.stroke();
-      ctx.restore();
-
       // Chassis body
       ctx.save();
       ctx.translate(cp.x, cp.y);
       ctx.rotate(ca);
-      ctx.fillStyle = '#3a3a50';
-      ctx.fillRect(-CHASSIS_W / 2, -CHASSIS_H / 2, CHASSIS_W, CHASSIS_H);
+      const bw = bikeBodyImg.width * BIKE_BODY_SCALE;
+      const bh = bikeBodyImg.height * BIKE_BODY_SCALE;
+      ctx.drawImage(bikeBodyImg, -bw * BIKE_BODY_ANCHOR_X, -bh * BIKE_BODY_ANCHOR_Y + BIKE_BODY_OFFSET_Y, bw, bh);
       ctx.restore();
 
       // Rider
       ctx.save();
       ctx.translate(cp.x, cp.y);
       ctx.rotate(ca);
+      ctx.translate(RIDER_OFFSET_X, RIDER_OFFSET_Y);
 
       // Torso
       ctx.fillStyle = '#2244cc';
