@@ -2602,7 +2602,9 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
   const total = data.frames.length;
   const [revealIdx, setRevealIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const stepMs = total > 0 ? Math.min(550, Math.max(90, 3200 / total)) : 0;
+  // One second per match, regardless of how many were played — slow enough to
+  // actually read the commentary strip and watch the lines move.
+  const stepMs = 1000;
 
   // Auto-advance while playing; pauses itself once every match is revealed.
   useEffect(() => {
