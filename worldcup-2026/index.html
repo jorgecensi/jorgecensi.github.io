@@ -122,6 +122,25 @@
       0%   { opacity: 0; transform: translateY(-4px); }
       100% { opacity: 1; transform: translateY(0); }
     }
+    @keyframes ppCrownPass {
+      0%   { transform: scale(0) rotate(-25deg) translateY(6px); opacity: 0; }
+      50%  { transform: scale(1.6) rotate(12deg) translateY(-8px); opacity: 1; }
+      75%  { transform: scale(0.85) rotate(-6deg) translateY(0); }
+      100% { transform: scale(1.05) rotate(0deg) translateY(-1px); opacity: 1; }
+    }
+    @keyframes ppCrownIdle {
+      0%   { transform: scale(0) translateY(4px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes ppLeadBannerIn {
+      0%   { opacity: 0; transform: scale(0.7) translateY(-5px); }
+      60%  { opacity: 1; transform: scale(1.1) translateY(0); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes ppConfettiBit {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(34px) rotate(280deg); opacity: 0; }
+    }
     .pp-slider {
       -webkit-appearance: none; appearance: none;
       width: 100%; height: 4px; border-radius: 2px; outline: none; cursor: pointer;
@@ -362,6 +381,7 @@ const TRANSLATIONS = {
     progress_exact_many: "🎯 {names} all nailed the exact score!",
     progress_play: "Play",
     progress_pause: "Pause",
+    progress_lead_change: "👑 {name} takes the lead!",
     first_place_kicker: "Top of the leaderboard",
     first_place_title: "YOU'RE #1!",
     first_place_subtitle: "{name} leads the bolão 🏆",
@@ -647,6 +667,7 @@ const TRANSLATIONS = {
     progress_exact_many: "🎯 {names} cravaram o placar exato!",
     progress_play: "Reproduzir",
     progress_pause: "Pausar",
+    progress_lead_change: "👑 {name} assume a liderança!",
     first_place_kicker: "Topo do ranking",
     first_place_title: "VOCÊ É O 1º!",
     first_place_subtitle: "{name} lidera o bolão 🏆",
@@ -2603,8 +2624,26 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
     : [];
 
   const gridLines = [0.25, 0.5, 0.75, 1].map(f => Math.round(maxY * f));
-  const finalTotals = total > 0 ? data.frames[total - 1].cum : data.players.map(() => 0);
-  const leaderIdx = finalTotals.indexOf(Math.max(...finalTotals));
+
+  // Leader at every point in the timeline, plus the exact frames where the lead
+  // actually changed hands — drives the "takes the lead" celebration below.
+  // (Frame 0 is deliberately excluded from leadChangeFrames: the very first
+  // player to score isn't "passing" anyone.)
+  const leaderTimeline = useMemo(
+    () => data.frames.map(f => f.cum.indexOf(Math.max(...f.cum))),
+    [data.frames]
+  );
+  const leadChangeFrames = useMemo(() => {
+    const set = new Set();
+    for (let i = 1; i < leaderTimeline.length; i++) {
+      if (leaderTimeline[i] !== leaderTimeline[i - 1]) set.add(i);
+    }
+    return set;
+  }, [leaderTimeline]);
+  const leaderIdx = total > 0 ? leaderTimeline[total - 1] : -1;
+  const liveLeaderIdx = shown > 0 ? leaderTimeline[shown - 1] : -1;
+  const isPassMoment = shown > 0 && leadChangeFrames.has(shown - 1);
+  const passName = isPassMoment ? data.players[liveLeaderIdx]?.n : null;
 
   return (
     <div onClick={onClose} style={{
@@ -2646,9 +2685,9 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
             {/* current match / commentary strip */}
             <div style={{
               minHeight:34, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
-              background: exactNames.length ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.03)',
-              border:`1px solid ${exactNames.length ? 'rgba(255,215,0,0.4)' : BORDER}`, borderRadius:10, padding:'6px 10px',
-              textAlign:'center',
+              background: exactNames.length ? 'rgba(255,215,0,0.08)' : isPassMoment ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)',
+              border:`1px solid ${exactNames.length ? 'rgba(255,215,0,0.4)' : isPassMoment ? 'rgba(167,139,250,0.5)' : BORDER}`,
+              borderRadius:10, padding:'6px 10px', textAlign:'center',
             }}>
               {currentFrame && (
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, flexWrap:'wrap' }}>
@@ -2659,10 +2698,17 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
                 </div>
               )}
               {exactNames.length > 0 && (
-                <div key={shown} style={{
+                <div key={`exact-${shown}`} style={{
                   fontSize:11, fontWeight:800, color:GOLD, animation:'ppExactStrip 0.3s ease',
                 }}>
                   {t(exactNames.length > 1 ? 'progress_exact_many' : 'progress_exact_one').replace('{names}', exactNames.join(' & '))}
+                </div>
+              )}
+              {isPassMoment && (
+                <div key={`lead-${shown}`} style={{
+                  fontSize:12, fontWeight:900, color:PURPLE, animation:'ppLeadBannerIn 0.4s ease',
+                }}>
+                  {t('progress_lead_change').replace('{name}', passName + (data.players[liveLeaderIdx]?.isMe ? t('you_suffix') : ''))}
                 </div>
               )}
             </div>
@@ -2678,8 +2724,10 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
                 if (pts.length === 0) return null;
                 const d = pts.map(([x,y],i) => `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
                 const [lx, ly] = pts[pts.length-1];
-                const isLeader = done && pi === leaderIdx;
+                const isFinalWinner = done && pi === leaderIdx;
+                const isCurrentLeader = !done && pi === liveLeaderIdx;
                 const isExact = exactNames.includes(p.n);
+                const isPasser = isPassMoment && pi === liveLeaderIdx;
                 return (
                   <g key={p.n}>
                     <path d={d} fill="none" stroke={colors[pi]} strokeWidth={p.isMe?3:2}
@@ -2688,17 +2736,41 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
                       <circle key={`ring-${shown}`} cx={lx} cy={ly} r="5" fill="none" stroke={GOLD}
                         style={{ animation:'ppExactRing 0.7s ease-out', transformBox:'fill-box', transformOrigin:'center' }}/>
                     )}
+                    {isPasser && (
+                      <circle key={`passring-${shown}`} cx={lx} cy={ly} r="5" fill="none" stroke={PURPLE}
+                        style={{ animation:'ppExactRing 0.8s ease-out', transformBox:'fill-box', transformOrigin:'center' }}/>
+                    )}
                     <circle key={shown} cx={lx} cy={ly} r={p.isMe?5:4} fill={colors[pi]}
                       stroke={isExact?GOLD:"#0d1a2e"} strokeWidth={isExact?2.5:1.5}
                       style={{ animation:'ppDotPop 0.35s ease', transformBox:'fill-box', transformOrigin:'center' }}/>
-                    {isExact && !isLeader && (
+                    {isExact && !isCurrentLeader && (
                       <text x={lx} y={ly-11} textAnchor="middle" fontSize="12"
                         style={{ animation:'ppExactBadge 0.4s ease', transformBox:'fill-box', transformOrigin:'center' }}>🎯</text>
                     )}
-                    {isLeader && (
+                    {isCurrentLeader && (
+                      // Not keyed by `shown` on purpose — this node stays mounted
+                      // (and quiet) for as long as this player holds the lead, so
+                      // the flashy pop animation below only plays once, right when
+                      // they take over.
+                      <text x={lx} y={ly-11} textAnchor="middle" fontSize="13"
+                        style={{
+                          animation: isPasser ? 'ppCrownPass 0.6s ease' : 'ppCrownIdle 0.3s ease',
+                          transformBox:'fill-box', transformOrigin:'center',
+                        }}>👑</text>
+                    )}
+                    {isFinalWinner && (
                       <text x={lx} y={ly-11} textAnchor="middle" fontSize="13"
                         style={{ animation:'ppTrophyPop 0.4s ease', transformBox:'fill-box', transformOrigin:'center' }}>🏆</text>
                     )}
+                    {isPasser && [...Array(8)].map((_, ci) => (
+                      <rect key={`confetti-${shown}-${ci}`}
+                        x={lx + (ci - 3.5) * 4} y={ly - 6} width="3" height="6" rx="1"
+                        fill={[ACCENT, GOLD, PURPLE, RED][ci % 4]}
+                        style={{
+                          animation: `ppConfettiBit 0.8s ease-in ${ci * 0.02}s both`,
+                          transformBox:'fill-box', transformOrigin:'center',
+                        }}/>
+                    ))}
                   </g>
                 );
               })}
