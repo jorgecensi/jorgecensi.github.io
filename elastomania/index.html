@@ -89,7 +89,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607022222';
+    const SW_VERSION = '2607030100';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -146,7 +146,7 @@ permalink: /elastomania/
     const { Engine, Bodies, Body, Composite, Constraint } = Matter;
 
     // ── Constants ──────────────────────────────────────────────
-    const WORLD_W = 2800;
+    // WORLD_W varies per level and is declared with the LEVELS data below.
     const WORLD_H = 700;
     const WHEEL_R = 15;
     const CHASSIS_W = 55;
@@ -174,27 +174,184 @@ permalink: /elastomania/
     const SPAWN_X = 80;
     const SPAWN_Y = 400;
 
-    const TERRAIN = [
-      [0,420],[100,420],[160,415],[230,390],[300,360],[370,370],
-      [430,400],[480,408],[540,370],[610,330],[670,308],[720,330],
-      [780,370],[840,400],[900,370],[950,320],[1000,270],[1050,248],
-      [1100,258],[1160,285],[1220,330],[1280,382],[1340,400],
-      [1400,380],[1460,340],[1520,300],[1560,270],[1600,258],
-      [1650,280],[1710,320],[1780,370],[1840,400],[1920,410],
-      [2000,400],[2060,370],[2120,328],[2180,298],[2240,278],
-      [2300,292],[2360,322],[2420,360],[2480,392],[2540,402],
-      [2600,408],[2660,408],[2750,420],[2800,420]
+    // ── Levels ─────────────────────────────────────────────────
+    // Each level is progressively longer, with steeper slopes and bigger
+    // elevation swings, so momentum management and jump timing both get
+    // harder as you advance. Apples sit just above local hill crests, so
+    // higher levels increasingly reward catching air rather than just
+    // riding through.
+    const LEVELS = [
+      {
+        name: 'Green Hills',
+        worldW: 2800,
+        terrain: [
+          [0,420],[100,420],[160,415],[230,390],[300,360],[370,370],
+          [430,400],[480,408],[540,370],[610,330],[670,308],[720,330],
+          [780,370],[840,400],[900,370],[950,320],[1000,270],[1050,248],
+          [1100,258],[1160,285],[1220,330],[1280,382],[1340,400],
+          [1400,380],[1460,340],[1520,300],[1560,270],[1600,258],
+          [1650,280],[1710,320],[1780,370],[1840,400],[1920,410],
+          [2000,400],[2060,370],[2120,328],[2180,298],[2240,278],
+          [2300,292],[2360,322],[2420,360],[2480,392],[2540,402],
+          [2600,408],[2660,408],[2750,420],[2800,420]
+        ],
+        apples: [
+          { x: 670,  y: 278 },
+          { x: 1050, y: 222 },
+          { x: 1600, y: 232 },
+          { x: 1920, y: 382 },
+          { x: 2240, y: 252 }
+        ],
+        flower: { x: 2600, y: 378 }
+      },
+      {
+        name: 'Rolling Ridge',
+        worldW: 3200,
+        terrain: [
+          [0,400],[60,400],[120,400],[180,337],[240,340],[300,366],
+          [360,429],[420,430],[480,430],[540,430],[600,430],[660,407],
+          [720,423],[780,406],[840,399],[900,356],[960,301],[1020,308],
+          [1080,323],[1140,383],[1200,430],[1260,430],[1320,430],[1380,430],
+          [1440,430],[1500,430],[1560,430],[1620,430],[1680,395],[1740,332],
+          [1800,313],[1860,309],[1920,351],[1980,393],[2040,387],[2100,401],
+          [2160,398],[2220,423],[2280,430],[2340,430],[2400,430],[2460,430],
+          [2520,372],[2580,354],[2640,335],[2700,356],[2760,372],[2820,345],
+          [2880,348],[2940,345],[3000,400],[3060,400],[3120,400],[3180,400],
+          [3200,400]
+        ],
+        apples: [
+          { x: 960,  y: 269 },
+          { x: 1786, y: 286 },
+          { x: 1860, y: 277 },
+          { x: 2157, y: 366 },
+          { x: 2529, y: 337 },
+          { x: 2640, y: 303 }
+        ],
+        flower: { x: 3060, y: 378 }
+      },
+      {
+        name: 'Canyon Run',
+        worldW: 3800,
+        terrain: [
+          [0,400],[60,400],[120,400],[180,430],[240,430],[300,430],
+          [360,430],[420,430],[480,430],[540,360],[600,288],[660,306],
+          [720,315],[780,350],[840,379],[900,340],[960,364],[1020,396],
+          [1080,430],[1140,430],[1200,430],[1260,430],[1320,430],[1380,361],
+          [1440,363],[1500,360],[1560,352],[1620,362],[1680,299],[1740,288],
+          [1800,322],[1860,364],[1920,430],[1980,430],[2040,430],[2100,430],
+          [2160,427],[2220,429],[2280,430],[2340,414],[2400,406],[2460,334],
+          [2520,264],[2580,276],[2640,291],[2700,363],[2760,430],[2820,430],
+          [2880,430],[2940,430],[3000,430],[3060,430],[3120,430],[3180,430],
+          [3240,407],[3300,335],[3360,292],[3420,276],[3480,323],[3540,383],
+          [3600,400],[3660,400],[3720,400],[3780,400],[3800,400]
+        ],
+        apples: [
+          { x: 600,  y: 254 },
+          { x: 1740, y: 254 },
+          { x: 2160, y: 393 },
+          { x: 2300, y: 391 },
+          { x: 2700, y: 329 },
+          { x: 3100, y: 396 },
+          { x: 3420, y: 242 }
+        ],
+        flower: { x: 3660, y: 378 }
+      },
+      {
+        name: 'Cliffside Dash',
+        worldW: 4400,
+        terrain: [
+          [0,400],[60,400],[120,400],[180,319],[240,350],[300,375],
+          [360,393],[420,417],[480,385],[540,430],[600,430],[660,430],
+          [720,430],[780,430],[840,367],[900,328],[960,272],[1020,320],
+          [1080,350],[1140,312],[1200,328],[1260,299],[1320,335],[1380,416],
+          [1440,430],[1500,430],[1560,430],[1620,430],[1680,430],[1740,382],
+          [1800,372],[1860,408],[1920,338],[1980,295],[2040,258],[2100,223],
+          [2160,304],[2220,385],[2280,430],[2340,430],[2400,430],[2460,430],
+          [2520,430],[2580,430],[2640,430],[2700,430],[2760,356],[2820,302],
+          [2880,221],[2940,236],[3000,317],[3060,363],[3120,430],[3180,430],
+          [3240,407],[3300,430],[3360,430],[3420,430],[3480,430],[3540,430],
+          [3600,406],[3660,325],[3720,246],[3780,305],[3840,315],[3900,342],
+          [3960,363],[4020,310],[4080,360],[4140,427],[4200,400],[4260,400],
+          [4320,400],[4380,400],[4400,400]
+        ],
+        apples: [
+          { x: 960,  y: 236 },
+          { x: 2100, y: 187 },
+          { x: 2411, y: 394 },
+          { x: 2833, y: 248 },
+          { x: 2880, y: 185 },
+          { x: 3256, y: 377 },
+          { x: 3678, y: 266 },
+          { x: 3720, y: 210 }
+        ],
+        flower: { x: 4260, y: 378 }
+      },
+      {
+        name: 'Volcano Peak',
+        worldW: 5000,
+        terrain: [
+          [0,400],[60,400],[120,400],[180,422],[240,398],[300,396],
+          [360,430],[420,430],[480,430],[540,430],[600,430],[660,430],
+          [720,351],[780,261],[840,288],[900,271],[960,328],[1020,343],
+          [1080,270],[1140,312],[1200,345],[1260,427],[1320,430],[1380,430],
+          [1440,430],[1500,430],[1560,388],[1620,385],[1680,381],[1740,351],
+          [1800,372],[1860,282],[1920,205],[1980,240],[2040,261],[2100,351],
+          [2160,430],[2220,430],[2280,430],[2340,430],[2400,430],[2460,430],
+          [2520,430],[2580,430],[2640,410],[2700,320],[2760,230],[2820,199],
+          [2880,239],[2940,329],[3000,419],[3060,430],[3120,430],[3180,421],
+          [3240,430],[3300,430],[3360,430],[3420,430],[3480,430],[3540,340],
+          [3600,267],[3660,217],[3720,286],[3780,353],[3840,317],[3900,349],
+          [3960,335],[4020,362],[4080,430],[4140,430],[4200,430],[4260,430],
+          [4320,430],[4380,389],[4440,343],[4500,309],[4560,372],[4620,321],
+          [4680,263],[4740,260],[4800,350],[4860,400],[4920,400],[4980,400],
+          [5000,400]
+        ],
+        apples: [
+          { x: 300,  y: 356 },
+          { x: 780,  y: 221 },
+          { x: 1920, y: 165 },
+          { x: 2820, y: 159 },
+          { x: 3380, y: 390 },
+          { x: 3660, y: 177 },
+          { x: 3820, y: 289 },
+          { x: 4260, y: 390 },
+          { x: 4500, y: 269 }
+        ],
+        flower: { x: 4860, y: 378 }
+      }
     ];
 
-    const APPLES_DATA = [
-      { x: 670,  y: 278 },
-      { x: 1050, y: 222 },
-      { x: 1600, y: 232 },
-      { x: 1920, y: 382 },
-      { x: 2240, y: 252 }
-    ];
+    const PROGRESS_KEY = 'elastomania_unlocked';
+    function loadUnlockedCount() {
+      try {
+        const n = parseInt(localStorage.getItem(PROGRESS_KEY), 10);
+        if (Number.isFinite(n)) return Math.min(Math.max(n, 1), LEVELS.length);
+      } catch (e) { /* localStorage unavailable (private mode, etc.) */ }
+      return 1;
+    }
+    function saveUnlockedCount(n) {
+      try { localStorage.setItem(PROGRESS_KEY, String(n)); } catch (e) { /* ignore */ }
+    }
 
-    const FLOWER_DATA = { x: 2600, y: 378 };
+    let unlockedCount     = loadUnlockedCount();
+    let selectedLevel     = unlockedCount - 1;
+    let currentLevelIndex = selectedLevel;
+    let WORLD_W    = LEVELS[0].worldW;
+    let TERRAIN    = LEVELS[0].terrain;
+    let APPLES_DATA = LEVELS[0].apples;
+    let FLOWER_DATA = LEVELS[0].flower;
+
+    // Swaps in the given level's terrain/apples/flower/world size. Called
+    // before initPhysics()/initPickups() so every system downstream just
+    // reads the current values without needing to know levels exist.
+    function loadLevel(index) {
+      currentLevelIndex = index;
+      const lvl = LEVELS[index];
+      WORLD_W     = lvl.worldW;
+      TERRAIN     = lvl.terrain;
+      APPLES_DATA = lvl.apples;
+      FLOWER_DATA = lvl.flower;
+    }
 
     // ── Canvas ─────────────────────────────────────────────────
     const canvas = document.getElementById('canvas');
@@ -393,7 +550,11 @@ permalink: /elastomania/
     // ── Input ──────────────────────────────────────────────────
     window.addEventListener('keydown', (e) => {
       keys[e.code] = true;
-      if (e.code === 'Space' && state === 'start') startGame();
+      if (state === 'start') {
+        if (e.code === 'Space') startGame();
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') changeSelectedLevel(1);
+        if (e.code === 'ArrowLeft'  || e.code === 'KeyA') changeSelectedLevel(-1);
+      }
       if (e.code === 'KeyR' && state === 'win')   resetToStart();
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
         e.preventDefault();
@@ -408,8 +569,16 @@ permalink: /elastomania/
 
     function bindBtn(id, flag) {
       const el = document.getElementById(id);
-      const press   = (e) => { e.preventDefault(); touch[flag] = true;  el.classList.add('pressed'); };
-      const release = ()  => { touch[flag] = false; el.classList.remove('pressed'); };
+      const press = (e) => {
+        e.preventDefault();
+        if (state === 'start' && (flag === 'right' || flag === 'left')) {
+          changeSelectedLevel(flag === 'right' ? 1 : -1);
+          return;
+        }
+        touch[flag] = true;
+        el.classList.add('pressed');
+      };
+      const release = () => { touch[flag] = false; el.classList.remove('pressed'); };
       el.addEventListener('pointerdown',   press);
       el.addEventListener('pointerup',     release);
       el.addEventListener('pointercancel', release);
@@ -483,6 +652,7 @@ permalink: /elastomania/
 
     // ── State transitions ──────────────────────────────────────
     function startGame() {
+      loadLevel(selectedLevel);
       initPickups();
       initPhysics();
       state = 'playing';
@@ -504,10 +674,24 @@ permalink: /elastomania/
     function win() {
       state = 'win';
       elapsedTime = (performance.now() - startTime) / 1000;
+      if (currentLevelIndex + 1 >= unlockedCount) {
+        unlockedCount = Math.min(currentLevelIndex + 2, LEVELS.length);
+        saveUnlockedCount(unlockedCount);
+      }
     }
 
     function resetToStart() {
+      // Land back on the next level if the one just won unlocked it,
+      // otherwise stay on whichever level was last selected.
+      if (state === 'win' && currentLevelIndex + 1 < unlockedCount) {
+        selectedLevel = currentLevelIndex + 1;
+      }
       state = 'start';
+    }
+
+    function changeSelectedLevel(delta) {
+      if (state !== 'start') return;
+      selectedLevel = Math.max(0, Math.min(unlockedCount - 1, selectedLevel + delta));
     }
 
     // ── Camera ─────────────────────────────────────────────────
@@ -719,6 +903,16 @@ permalink: /elastomania/
       ctx.textAlign = 'right';
       ctx.fillText(`⏱ ${timeStr}`, canvas.width - 20, 28);
 
+      // Level pill (top center)
+      const lvlLabel = `Lv ${currentLevelIndex + 1} · ${LEVELS[currentLevelIndex].name}`;
+      ctx.font = 'bold 13px system-ui, sans-serif';
+      const lvlWidth = ctx.measureText(lvlLabel).width + 24;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath(); ctx.roundRect(canvas.width / 2 - lvlWidth / 2, 12, lvlWidth, 32, 8); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.fillText(lvlLabel, canvas.width / 2, 28);
+
       ctx.restore();
     }
 
@@ -732,27 +926,57 @@ permalink: /elastomania/
       ctx.textBaseline = 'middle';
       const cx = canvas.width / 2, cy = canvas.height / 2;
 
-      ctx.font = 'bold 42px system-ui, sans-serif';
+      ctx.font = 'bold 38px system-ui, sans-serif';
       ctx.fillStyle = '#ffffff';
       ctx.shadowColor = '#1e4d2b';
       ctx.shadowBlur = 16;
-      ctx.fillText('🏍️  Elasto Mania', cx, cy - 65);
-
+      ctx.fillText('🏍️  Elasto Mania', cx, cy - 100);
       ctx.shadowBlur = 0;
+
+      // Level selector: ◀ name ▶, with arrows only shown if there's
+      // somewhere to go, plus a row of dots (filled = unlocked, one lit
+      // brighter for the current selection, dim = still locked).
+      const lvl = LEVELS[selectedLevel];
+      const canGoLeft  = selectedLevel > 0;
+      const canGoRight = selectedLevel < unlockedCount - 1;
+
+      ctx.font = 'bold 24px system-ui, sans-serif';
+      ctx.fillStyle = canGoLeft ? '#ffffff' : 'rgba(255,255,255,0.25)';
+      ctx.fillText('◀', cx - 150, cy - 48);
+      ctx.fillStyle = canGoRight ? '#ffffff' : 'rgba(255,255,255,0.25)';
+      ctx.fillText('▶', cx + 150, cy - 48);
+
+      ctx.font = 'bold 24px system-ui, sans-serif';
+      ctx.fillStyle = '#ffe08a';
+      ctx.fillText(`Level ${selectedLevel + 1}: ${lvl.name}`, cx, cy - 48);
+
+      const dotSpacing = 18;
+      const dotStartX  = cx - (LEVELS.length - 1) * dotSpacing / 2;
+      for (let i = 0; i < LEVELS.length; i++) {
+        const locked = i >= unlockedCount;
+        ctx.beginPath();
+        ctx.arc(dotStartX + i * dotSpacing, cy - 14, i === selectedLevel ? 5 : 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = locked ? 'rgba(255,255,255,0.2)' : (i === selectedLevel ? '#ffe08a' : '#ffffff');
+        ctx.fill();
+      }
+
       ctx.font = '19px system-ui, sans-serif';
       ctx.fillStyle = '#ccffcc';
-      ctx.fillText('Collect all 🍎 apples, then reach the 🌸 flower', cx, cy - 15);
+      ctx.fillText('Collect all 🍎 apples, then reach the 🌸 flower', cx, cy + 18);
 
       const pulse = 0.75 + 0.25 * Math.sin(performance.now() * 0.003);
       ctx.globalAlpha = pulse;
       ctx.font = 'bold 22px system-ui, sans-serif';
       ctx.fillStyle = '#ffffff';
-      ctx.fillText('Press Space or Tap to Start', cx, cy + 38);
+      ctx.fillText('Press Space or Tap to Start', cx, cy + 62);
       ctx.globalAlpha = 1;
 
       ctx.font = '14px system-ui, sans-serif';
       ctx.fillStyle = '#aaaaaa';
-      ctx.fillText('← → throttle/brake   ↑ ↓ lean', cx, cy + 80);
+      ctx.fillText(
+        unlockedCount > 1 ? '← → choose level   ↑ ↓ lean once riding' : '← → throttle/brake   ↑ ↓ lean',
+        cx, cy + 100
+      );
 
       ctx.restore();
     }
@@ -793,11 +1017,13 @@ permalink: /elastomania/
       const cx = canvas.width / 2, cy = canvas.height / 2;
       const bounce = Math.sin(performance.now() * 0.004) * 5;
 
+      const isLastLevel = currentLevelIndex === LEVELS.length - 1;
+
       ctx.font = 'bold 46px system-ui, sans-serif';
       ctx.fillStyle = '#88ff88';
       ctx.shadowColor = '#00cc00';
       ctx.shadowBlur = 22;
-      ctx.fillText('🌸  Level Complete!  🌸', cx, cy - 52 + bounce);
+      ctx.fillText('🌸  Level Complete!  🌸', cx, cy - 68 + bounce);
 
       ctx.shadowBlur = 0;
       const mins   = Math.floor(elapsedTime / 60);
@@ -805,13 +1031,22 @@ permalink: /elastomania/
       const tStr   = `${mins}:${secVal < 10 ? '0' : ''}${secVal.toFixed(2)}`;
       ctx.font = 'bold 28px system-ui, sans-serif';
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(`Time: ${tStr}`, cx, cy + 18);
+      ctx.fillText(`Time: ${tStr}`, cx, cy + 2);
+
+      ctx.font = 'bold 18px system-ui, sans-serif';
+      ctx.fillStyle = '#ffe08a';
+      ctx.fillText(
+        isLastLevel
+          ? '🏆 All levels complete!'
+          : `Next up: Level ${currentLevelIndex + 2} – ${LEVELS[currentLevelIndex + 1].name}`,
+        cx, cy + 40
+      );
 
       const pulse = 0.75 + 0.25 * Math.sin(performance.now() * 0.003);
       ctx.globalAlpha = pulse;
       ctx.font = '20px system-ui, sans-serif';
       ctx.fillStyle = '#ccffcc';
-      ctx.fillText('Press R or Tap to play again', cx, cy + 72);
+      ctx.fillText('Press R or Tap to continue', cx, cy + 80);
       ctx.globalAlpha = 1;
       ctx.restore();
     }
