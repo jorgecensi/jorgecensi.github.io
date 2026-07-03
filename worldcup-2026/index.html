@@ -99,6 +99,16 @@
       0%   { transform: translateY(10px); opacity: 0; }
       100% { transform: translateY(0); opacity: 1; }
     }
+    @keyframes ppDotPop {
+      0%   { transform: scale(0); opacity: 0; }
+      60%  { transform: scale(1.5); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes ppTrophyPop {
+      0%   { transform: scale(0) translateY(6px); opacity: 0; }
+      70%  { transform: scale(1.25) translateY(-2px); opacity: 1; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -306,6 +316,13 @@ const TRANSLATIONS = {
     compete_friends: "Compete with friends",
     compete_friends_desc: "Share your QR — anyone who scans it joins your leaderboard. The app flashes when someone nails a score.",
     leaderboard_locked_hint: "Fill in all your group stage picks to unlock the leaderboard and compare with friends",
+    progress_btn: "📈 Progression",
+    progress_title: "📈 Points Progression",
+    progress_subtitle: "How the leaderboard evolved, match by match",
+    progress_empty_title: "No matches played yet",
+    progress_empty_desc: "Once results start coming in, watch the leaderboard race unfold here.",
+    progress_replay: "↻ Replay",
+    progress_match_count: "Match {i} of {n}",
     first_place_kicker: "Top of the leaderboard",
     first_place_title: "YOU'RE #1!",
     first_place_subtitle: "{name} leads the bolão 🏆",
@@ -580,6 +597,13 @@ const TRANSLATIONS = {
     compete_friends: "Compita com amigos",
     compete_friends_desc: "Compartilhe seu QR — quem escanear entra no seu ranking. O app pisca quando alguém acerta um placar.",
     leaderboard_locked_hint: "Preencha todos os seus palpites da fase de grupos para liberar o ranking e a comparação com amigos",
+    progress_btn: "📈 Progressão",
+    progress_title: "📈 Progressão de Pontos",
+    progress_subtitle: "Como o ranking evoluiu, jogo a jogo",
+    progress_empty_title: "Nenhum jogo terminado ainda",
+    progress_empty_desc: "Assim que os resultados começarem a sair, acompanhe a corrida do ranking aqui.",
+    progress_replay: "↻ Repetir",
+    progress_match_count: "Jogo {i} de {n}",
     first_place_kicker: "Topo do ranking",
     first_place_title: "VOCÊ É O 1º!",
     first_place_subtitle: "{name} lidera o bolão 🏆",
@@ -2264,7 +2288,7 @@ function FirstPlaceCelebration({ name, onDismiss }) {
 }
 
 // ─── Rivals Leaderboard ───────────────────────────────────────────────────────
-function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, onShare, onRemove, compareRival, onToggleCompare }) {
+function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, onShare, onRemove, compareRival, onToggleCompare, onShowProgress }) {
   const { t } = useLang();
   const allPlayers = [
     { n: myName || t('you_default'), pts: myPts, isMe: true, rival: null },
@@ -2318,13 +2342,20 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
         <div style={{ fontSize:9, color:ACCENT, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
           {t('leaderboard_title')}
         </div>
-        {canShare && (
-          <button onClick={onShare} style={{
-            background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
-            color:ACCENT, borderRadius:7, padding:'4px 10px',
+        <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+          <button onClick={onShowProgress} style={{
+            background:'transparent', border:`1px solid rgba(167,139,250,0.3)`,
+            color:PURPLE, borderRadius:7, padding:'4px 10px',
             fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-          }}>{t('add_rival_btn')}</button>
-        )}
+          }}>{t('progress_btn')}</button>
+          {canShare && (
+            <button onClick={onShare} style={{
+              background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
+              color:ACCENT, borderRadius:7, padding:'4px 10px',
+              fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+            }}>{t('add_rival_btn')}</button>
+          )}
+        </div>
       </div>
 
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:6, marginBottom:8 }}>
@@ -2422,6 +2453,218 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
           )}
         </div>
       );})}
+    </div>
+  );
+}
+
+// ─── Points Progression Animation ──────────────────────────────────────────────
+// Fixed categorical order for rival lines — "me" always uses ACCENT (the app's
+// established "you" color), so this set only needs to stay distinguishable from
+// that green and from itself (checked with dataviz's palette validator against
+// the app's dark surface #080d16).
+const PROGRESS_RIVAL_COLORS = ['#3987e5','#c98500','#9085e9','#e66767','#d55181','#d95926','#199e70'];
+
+// Chronological list of every match with a final score, paired with each
+// player's per-match points — the raw material the animation plays back.
+function buildProgressionSeries(groupMatches, ko, myName, myPredictions, rivals, t) {
+  const matches = [];
+  Object.values(groupMatches).flat().forEach(m => {
+    matches.push({
+      id: m.id, sortKey: (m.dk||0)*10000 + (m.tk||0), predType: 'group',
+      played: m.homeScore !== null && m.awayScore !== null,
+      home: m.home, away: m.away, actualH: m.homeScore, actualA: m.awayScore, date: m.date,
+    });
+  });
+  ['r32','r16','qf','sf','final','third'].forEach(round => {
+    (ko[round]||[]).forEach(m => {
+      matches.push({
+        id: m.id, sortKey: (m.dk||0)*10000 + timeKey(m.time||'0:00 AM'), predType: 'ko',
+        played: m.scoreA !== null && m.scoreB !== null,
+        home: m.teamA, away: m.teamB, actualH: m.scoreA, actualA: m.scoreB, date: m.date,
+      });
+    });
+  });
+  const played = matches.filter(m => m.played).sort((a,b) => a.sortKey - b.sortKey);
+
+  const players = [
+    { n: myName || t('you_default'), isMe: true, predictions: myPredictions || { group:{}, ko:{} } },
+    ...rivals.map(r => ({ n: r.n, isMe: false, predictions: r.predictions || { group:{}, ko:{} } })),
+  ];
+
+  const cum = players.map(() => 0);
+  const frames = played.map(m => {
+    const gains = players.map((p, i) => {
+      const pred = m.predType === 'group' ? p.predictions.group?.[m.id] : p.predictions.ko?.[m.id];
+      let pts = 0;
+      if (pred) {
+        const ph = m.predType === 'group' ? pred.home : pred.a;
+        const pa = m.predType === 'group' ? pred.away : pred.b;
+        pts = scorePrediction(ph, pa, m.actualH, m.actualA) || 0;
+      }
+      cum[i] += pts;
+      return pts;
+    });
+    return { match: m, gains, cum: [...cum] };
+  });
+
+  return { players, frames };
+}
+
+function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals, onClose }) {
+  const { t } = useLang();
+  const data = useMemo(
+    () => buildProgressionSeries(groupMatches, ko, myName, predictions, rivals, t),
+    [groupMatches, ko, myName, predictions, rivals, t]
+  );
+  const total = data.frames.length;
+  const [revealIdx, setRevealIdx] = useState(0);
+  const timerRef = useRef(null);
+
+  const play = useCallback(() => {
+    clearInterval(timerRef.current);
+    setRevealIdx(0);
+    if (total === 0) return;
+    const stepMs = Math.min(550, Math.max(90, 3200 / total));
+    let i = 0;
+    timerRef.current = setInterval(() => {
+      i++;
+      setRevealIdx(i);
+      if (i >= total) clearInterval(timerRef.current);
+    }, stepMs);
+  }, [total]);
+
+  useEffect(() => { play(); return () => clearInterval(timerRef.current); }, [play]);
+
+  const colors = data.players.map((p, i) => p.isMe ? ACCENT : PROGRESS_RIVAL_COLORS[(i - 1) % PROGRESS_RIVAL_COLORS.length]);
+
+  const W = 640, H = 210, padL = 6, padR = 6, padT = 16, padB = 6;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxY = Math.max(3, ...data.frames.map(f => Math.max(...f.cum)));
+  const xAt = i => total <= 1 ? padL + plotW / 2 : padL + (plotW * i) / (total - 1);
+  const yAt = v => padT + plotH - (plotH * v) / maxY;
+
+  const shown = revealIdx;
+  const currentFrame = shown > 0 ? data.frames[shown - 1] : null;
+  const done = shown >= total && total > 0;
+
+  const gridLines = [0.25, 0.5, 0.75, 1].map(f => Math.round(maxY * f));
+  const finalTotals = total > 0 ? data.frames[total - 1].cum : data.players.map(() => 0);
+  const leaderIdx = finalTotals.indexOf(Math.max(...finalTotals));
+
+  return (
+    <div onClick={onClose} style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:500,
+      display:'flex', alignItems:'flex-end', justifyContent:'center',
+      padding:'0 0 env(safe-area-inset-bottom,0)',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background:'#0d1a2e', border:`1px solid rgba(0,208,132,0.35)`,
+        borderRadius:'20px 20px 0 0', padding:'16px 18px 24px',
+        width:'100%', maxWidth:560,
+        display:'flex', flexDirection:'column', gap:12,
+        animation:'shareModalIn 0.3s ease',
+        maxHeight:'88vh', overflowY:'auto',
+      }}>
+        <div style={{ width:36, height:4, borderRadius:2, background:'rgba(255,255,255,0.12)', alignSelf:'center', marginBottom:2 }}/>
+
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10 }}>
+          <div>
+            <div style={{ fontSize:11, color:ACCENT, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
+              {t('progress_title')}
+            </div>
+            <div style={{ fontSize:11, color:'#666', marginTop:3 }}>{t('progress_subtitle')}</div>
+          </div>
+          <button onClick={onClose} style={{
+            background:'transparent', border:'none', color:'#666',
+            fontSize:20, cursor:'pointer', padding:2, lineHeight:1, flexShrink:0,
+          }}>✕</button>
+        </div>
+
+        {total === 0 ? (
+          <div style={{ textAlign:'center', padding:'22px 10px' }}>
+            <div style={{ fontSize:26, marginBottom:8 }}>⏳</div>
+            <div style={{ fontSize:12, fontWeight:800, color:'#ccc', marginBottom:4 }}>{t('progress_empty_title')}</div>
+            <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>{t('progress_empty_desc')}</div>
+          </div>
+        ) : (
+          <>
+            {/* current match / commentary strip */}
+            <div style={{
+              minHeight:34, display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+              background:'rgba(255,255,255,0.03)', border:`1px solid ${BORDER}`, borderRadius:10, padding:'6px 10px',
+              textAlign:'center', flexWrap:'wrap',
+            }}>
+              {currentFrame && (
+                <>
+                  <span style={{ fontSize:11, color:'#888', flexShrink:0 }}>{currentFrame.match.date}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#eee' }}>
+                    {currentFrame.match.home||'?'} {currentFrame.match.actualH}-{currentFrame.match.actualA} {currentFrame.match.away||'?'}
+                  </span>
+                </>
+              )}
+            </div>
+
+            <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:'auto', display:'block' }}>
+              {gridLines.map((v,i) => (
+                <line key={i} x1={padL} x2={W-padR} y1={yAt(v)} y2={yAt(v)} stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+              ))}
+              <line x1={padL} x2={W-padR} y1={yAt(0)} y2={yAt(0)} stroke="rgba(255,255,255,0.14)" strokeWidth="1"/>
+
+              {data.players.map((p, pi) => {
+                const pts = data.frames.slice(0, shown).map((f,fi) => [xAt(fi), yAt(f.cum[pi])]);
+                if (pts.length === 0) return null;
+                const d = pts.map(([x,y],i) => `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+                const [lx, ly] = pts[pts.length-1];
+                const isLeader = done && pi === leaderIdx;
+                return (
+                  <g key={p.n}>
+                    <path d={d} fill="none" stroke={colors[pi]} strokeWidth={p.isMe?3:2}
+                      strokeLinejoin="round" strokeLinecap="round" opacity={p.isMe?1:0.85}/>
+                    <circle key={shown} cx={lx} cy={ly} r={p.isMe?5:4} fill={colors[pi]}
+                      stroke="#0d1a2e" strokeWidth="1.5"
+                      style={{ animation:'ppDotPop 0.35s ease', transformBox:'fill-box', transformOrigin:'center' }}/>
+                    {isLeader && (
+                      <text x={lx} y={ly-11} textAnchor="middle" fontSize="13"
+                        style={{ animation:'ppTrophyPop 0.4s ease', transformBox:'fill-box', transformOrigin:'center' }}>🏆</text>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* legend */}
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+              {data.players.map((p,pi) => {
+                const val = shown > 0 ? data.frames[shown-1].cum[pi] : 0;
+                return (
+                  <div key={p.n} style={{
+                    display:'flex', alignItems:'center', gap:5,
+                    background:'rgba(255,255,255,0.04)', border:`1px solid ${BORDER}`,
+                    borderRadius:8, padding:'4px 8px',
+                  }}>
+                    <span style={{ width:8, height:8, borderRadius:'50%', background:colors[pi], flexShrink:0 }}/>
+                    <span style={{ fontSize:11, fontWeight:700, color:p.isMe?ACCENT:'#ccc' }}>
+                      {p.n}{p.isMe?t('you_suffix'):''}
+                    </span>
+                    <span style={{ fontSize:11, fontWeight:900, color:'#fff' }}>{val}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:2 }}>
+              <span style={{ fontSize:10, color:'#555' }}>
+                {t('progress_match_count').replace('{i}', Math.min(shown,total)).replace('{n}', total)}
+              </span>
+              <button onClick={play} style={{
+                background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
+                color:ACCENT, borderRadius:7, padding:'5px 12px',
+                fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+              }}>{t('progress_replay')}</button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -3464,6 +3707,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
     return [...PHASES].reverse().find(p => isUnlocked(p.key))?.key ?? 'group';
   })();
   const [phase, setPhase] = useState(defaultPhase);
+  const [showProgress, setShowProgress] = useState(false);
   const pts = useMemo(()=>calcPoints(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
   // Group stage being complete unlocks "Copy All" / proximity sharing for good —
   // a later phase still in progress doesn't re-lock it. Late joiners who missed
@@ -3577,7 +3821,16 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         groupMatches={groupMatches} ko={ko} canShare={canShare}
         onShare={onShare} onRemove={onRemoveRival}
         compareRival={compareRival} onToggleCompare={toggleCompare}
+        onShowProgress={() => setShowProgress(true)}
       />
+
+      {showProgress && (
+        <PointsProgressionModal
+          groupMatches={groupMatches} ko={ko}
+          myName={playerName} predictions={predictions} rivals={rivals}
+          onClose={() => setShowProgress(false)}
+        />
+      )}
 
       {/* Paste a sync link received in another storage context (e.g. browser vs. installed PWA) */}
       <PasteSyncLink onResolve={onResolveLink} />
