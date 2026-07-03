@@ -52,6 +52,15 @@
       0%   { opacity: 0; transform: translateY(20px) scale(0.96); }
       100% { opacity: 1; transform: translateY(0) scale(1); }
     }
+    @keyframes progressionPulse {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.16); }
+      100% { transform: scale(1); }
+    }
+    @keyframes progressionRowIn {
+      0%   { opacity: 0; transform: translateX(-8px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
@@ -222,6 +231,12 @@ const TRANSLATIONS = {
     actual_score: "Actual: {a}–{b}",
     show_played_matches: "Show played",
     hide_played_matches: "Hide played",
+    progression_btn: "📈 Progression",
+    progression_title: "📈 Points Progression",
+    progression_subtitle: "Your fantasy points, match by match",
+    progression_empty: "No scored matches yet — come back once results start rolling in",
+    progression_replay: "↻ Replay",
+    progression_match_count: "{n} matches scored",
     // Stats
     stat_host_cities: "Host Cities",
     stat_farthest_trip: "Farthest Trip",
@@ -496,6 +511,12 @@ const TRANSLATIONS = {
     actual_score: "Real: {a}–{b}",
     show_played_matches: "Mostrar jogados",
     hide_played_matches: "Ocultar jogados",
+    progression_btn: "📈 Evolução",
+    progression_title: "📈 Evolução de Pontos",
+    progression_subtitle: "Seus pontos do bolão, jogo a jogo",
+    progression_empty: "Nenhum jogo pontuado ainda — volte quando os resultados começarem a sair",
+    progression_replay: "↻ Repetir",
+    progression_match_count: "{n} jogos pontuados",
     // Stats
     stat_host_cities: "Cidades-Sede",
     stat_farthest_trip: "Viagem Mais Longa",
@@ -1551,6 +1572,32 @@ function extractLinkParam(text, name) {
 
 function calcRivalPoints(rival, groupMatches, ko) {
   return calcPoints(groupMatches, ko, rival.predictions || { group: {}, ko: {} });
+}
+
+// Chronological, match-by-match fantasy points feed — every guessed-and-played
+// match in kickoff order, with a running cumulative total. Powers the points
+// progression animation.
+function buildProgressionSeries(groupMatches, ko, predictions) {
+  const items = [];
+  Object.values(groupMatches).flat().forEach(m => {
+    const p = predictions.group?.[m.id];
+    if (!p || p.home == null || p.away == null) return;
+    const pts = scorePrediction(p.home, p.away, m.homeScore, m.awayScore);
+    if (pts === null) return;
+    items.push({ id:m.id, dk:m.dk||0, tk:m.tk||0, home:m.home, away:m.away, aH:m.homeScore, aA:m.awayScore, pts });
+  });
+  ['r32','r16','qf','sf','final'].forEach(round => {
+    koPhaseBucket(round, ko).forEach(m => {
+      const p = predictions.ko?.[m.id];
+      if (!p || p.a == null || p.b == null) return;
+      const pts = scorePrediction(p.a, p.b, m.scoreA, m.scoreB);
+      if (pts === null) return;
+      items.push({ id:m.id, dk:m.dk||0, tk:timeKey(m.time||'0:00 AM'), home:m.teamA, away:m.teamB, aH:m.scoreA, aA:m.scoreB, pts });
+    });
+  });
+  items.sort((a, b) => (a.dk - b.dk) || (a.tk - b.tk));
+  let cum = 0;
+  return items.map(it => { cum += it.pts; return { ...it, cum }; });
 }
 
 // ─── Backup file export / import ──────────────────────────────────────────────
@@ -3438,6 +3485,143 @@ function GuessKOMatchCard({ match, prediction, onPred, isMobile, matchLabel, pre
   );
 }
 
+// A single scored match in the progression feed — flags, score, and points badge.
+function ProgressionRow({ item, revealed }) {
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", gap:8,
+      background:CARD, border:`1px solid ${BORDER}`, borderRadius:10,
+      padding:"7px 10px", flexShrink:0,
+      animation: revealed ? 'progressionRowIn 0.35s ease both' : 'none',
+    }}>
+      <div style={{display:"flex", alignItems:"center", gap:5, flex:1, minWidth:0}}>
+        <Flag team={item.home} size={15}/>
+        <span style={{fontSize:11, color:"#ccc", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+          <TeamName name={item.home}/> {item.aH}–{item.aA} <TeamName name={item.away}/>
+        </span>
+        <Flag team={item.away} size={15}/>
+      </div>
+      <GuessBadge pts={item.pts}/>
+    </div>
+  );
+}
+
+// Animated, match-by-match replay of the fantasy points total — an SVG line
+// that draws itself as the running total climbs, paired with a feed of the
+// matches driving it. Purely a playback of already-known results; it doesn't
+// reveal anything the leaderboard/summary card doesn't already show.
+function PointsProgressionModal({ groupMatches, ko, predictions, onClose }) {
+  const { t } = useLang();
+  const series = useMemo(()=>buildProgressionSeries(groupMatches, ko, predictions), [groupMatches, ko, predictions]);
+  const n = series.length;
+  const [step, setStep] = useState(0);
+  const [playToken, setPlayToken] = useState(0);
+  const listEndRef = useRef(null);
+
+  useEffect(() => {
+    setStep(0);
+    if (n === 0) return;
+    const stepMs = Math.max(45, Math.min(260, Math.round(2600 / n)));
+    let i = 0;
+    const id = setInterval(() => {
+      i++;
+      setStep(i);
+      if (i >= n) clearInterval(id);
+    }, stepMs);
+    return () => clearInterval(id);
+  }, [n, playToken]);
+
+  useEffect(() => {
+    listEndRef.current?.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  }, [step]);
+
+  const done = step >= n;
+  const displayedTotal = step === 0 ? 0 : series[step-1].cum;
+
+  const W = 300, H = 120, PAD = 10;
+  const maxCum = Math.max(1, ...series.map(s=>s.cum));
+  const xAt = i => n === 0 ? W/2 : PAD + (i/n) * (W - 2*PAD);
+  const yAt = cum => H - PAD - (cum/maxCum) * (H - 2*PAD);
+  const pathPoints = [{x:xAt(0), y:yAt(0)}, ...series.map((s,i)=>({x:xAt(i+1), y:yAt(s.cum)}))];
+  let totalLen = 0;
+  const segLens = [];
+  for (let i=1;i<pathPoints.length;i++){
+    const dx = pathPoints[i].x - pathPoints[i-1].x, dy = pathPoints[i].y - pathPoints[i-1].y;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    segLens.push(d); totalLen += d;
+  }
+  const revealedLen = segLens.slice(0, step).reduce((a,b)=>a+b, 0);
+  const dashOffset = Math.max(0, totalLen - revealedLen);
+  const pointsAttr = pathPoints.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const current = pathPoints[step] || pathPoints[0];
+
+  return (
+    <div onClick={onClose} style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:500,
+      display:'flex', alignItems:'center', justifyContent:'center', padding:16,
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:'#0d1a2e', border:`1px solid rgba(167,139,250,0.4)`,
+        borderRadius:20, padding:'20px 18px 18px', width:'100%', maxWidth:420,
+        maxHeight:'86vh', display:'flex', flexDirection:'column', gap:12,
+        animation:'shareModalIn 0.3s ease',
+      }}>
+        <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10}}>
+          <div>
+            <div style={{fontSize:11, color:PURPLE, letterSpacing:2, fontWeight:700, textTransform:'uppercase'}}>{t('progression_title')}</div>
+            <div style={{fontSize:10, color:'#666', marginTop:2}}>{t('progression_subtitle')}</div>
+          </div>
+          <button onClick={onClose} style={{background:'transparent', border:'none', color:'#555', fontSize:18, cursor:'pointer', lineHeight:1, flexShrink:0}}>✕</button>
+        </div>
+
+        {n === 0 ? (
+          <div style={{textAlign:'center', color:'#555', fontSize:12, padding:'30px 10px'}}>{t('progression_empty')}</div>
+        ) : (
+          <React.Fragment>
+            <div style={{display:'flex', alignItems:'baseline', gap:6, justifyContent:'center'}}>
+              <span key={step} style={{fontSize:38, fontWeight:900, color:'#fff', display:'inline-block', animation:'progressionPulse 0.3s ease'}}>{displayedTotal}</span>
+              <span style={{fontSize:13, color:'#666', fontWeight:400}}>{t('pts_label')}</span>
+            </div>
+
+            <div style={{background:'rgba(255,255,255,0.02)', borderRadius:12, padding:'8px 4px'}}>
+              <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{display:'block'}}>
+                <polyline points={pointsAttr} fill="none" stroke={ACCENT} strokeWidth="2.5"
+                  strokeLinecap="round" strokeLinejoin="round"
+                  strokeDasharray={totalLen} strokeDashoffset={dashOffset}
+                  style={{transition:'stroke-dashoffset 0.2s linear'}}/>
+                {step > 0 && (
+                  <circle cx={current.x} cy={current.y} r="4" fill={ACCENT}>
+                    {!done && <animate attributeName="r" values="4;6;4" dur="0.8s" repeatCount="indefinite"/>}
+                  </circle>
+                )}
+              </svg>
+            </div>
+
+            <div style={{display:'flex', flexDirection:'column', gap:6, overflowY:'auto', flex:1, minHeight:0, paddingRight:2}}>
+              {series.slice(0, step).map((item, i) => (
+                <ProgressionRow key={item.id} item={item} revealed={i === step-1}/>
+              ))}
+              <div ref={listEndRef}/>
+            </div>
+
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8}}>
+              <span style={{fontSize:10, color:'#555'}}>{t('progression_match_count').replace('{n}', n)}</span>
+              {done && (
+                <button onClick={()=>setPlayToken(x=>x+1)} style={{
+                  background:'rgba(167,139,250,0.12)', border:`1px solid rgba(167,139,250,0.4)`,
+                  color:PURPLE, borderRadius:9, padding:'6px 12px', fontSize:11, fontWeight:700, cursor:'pointer',
+                }}>
+                  {t('progression_replay')}
+                </button>
+              )}
+            </div>
+          </React.Fragment>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isMobile,
                         rivals, playerName, onShare, onRemoveRival, onResolveLink }) {
   const { t } = useLang();
@@ -3472,6 +3656,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
   const canShare = useMemo(()=>isPhaseGuessesComplete('group',groupMatches,ko,predictions),[groupMatches,ko,predictions]);
   const canSharePhase = useMemo(()=>isPhaseGuessesComplete(phase,groupMatches,ko,predictions),[phase,groupMatches,ko,predictions]);
   const [copied, setCopied] = useState(null); // null | 'all' | 'phase'
+  const [showProgression, setShowProgression] = useState(false);
 
   // Compare picks with a selected rival (or all of them at once), match-by-match.
   // Comparison is on by default (against all rivals) so picks line up with
@@ -3596,20 +3781,37 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
               </div>
             )}
           </div>
-          {canShare ? (
+          <div style={{display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6}}>
+            {canShare ? (
+              <button
+                onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,null,t),'all')}
+                style={{background:`rgba(167,139,250,0.15)`, border:`1px solid rgba(167,139,250,0.4)`,
+                  color:PURPLE, borderRadius:10, padding:"8px 14px", fontSize:12, fontWeight:700,
+                  cursor:"pointer", display:"flex", alignItems:"center", gap:6}}
+              >
+                {copied==='all' ? t('copied') : t('share_all')}
+              </button>
+            ) : (
+              <div style={{fontSize:10, color:"#555", maxWidth:160, textAlign:"right"}}>{t('share_locked_hint')}</div>
+            )}
             <button
-              onClick={()=>copyText(buildShareText(groupMatches,ko,predictions,pts,null,t),'all')}
-              style={{background:`rgba(167,139,250,0.15)`, border:`1px solid rgba(167,139,250,0.4)`,
-                color:PURPLE, borderRadius:10, padding:"8px 14px", fontSize:12, fontWeight:700,
-                cursor:"pointer", display:"flex", alignItems:"center", gap:6}}
+              onClick={()=>setShowProgression(true)}
+              style={{background:"transparent", border:`1px solid rgba(167,139,250,0.3)`,
+                color:PURPLE, borderRadius:10, padding:"6px 12px", fontSize:11, fontWeight:700,
+                cursor:"pointer", display:"flex", alignItems:"center", gap:5}}
             >
-              {copied==='all' ? t('copied') : t('share_all')}
+              {t('progression_btn')}
             </button>
-          ) : (
-            <div style={{fontSize:10, color:"#555", maxWidth:160, textAlign:"right"}}>{t('share_locked_hint')}</div>
-          )}
+          </div>
         </div>
       </div>
+
+      {showProgression && (
+        <PointsProgressionModal
+          groupMatches={groupMatches} ko={ko} predictions={predictions}
+          onClose={()=>setShowProgression(false)}
+        />
+      )}
 
       {/* Phase Selector */}
       <div style={{display:"flex", gap:6, overflowX:"auto", paddingBottom:8, marginBottom:12, scrollbarWidth:"none", msOverflowStyle:"none"}}>
