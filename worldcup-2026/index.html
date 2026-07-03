@@ -109,6 +109,19 @@
       70%  { transform: scale(1.25) translateY(-2px); opacity: 1; }
       100% { transform: scale(1) translateY(0); opacity: 1; }
     }
+    @keyframes ppExactRing {
+      0%   { r: 5; opacity: 0.9; stroke-width: 2.5; }
+      100% { r: 15; opacity: 0; stroke-width: 0.5; }
+    }
+    @keyframes ppExactBadge {
+      0%   { transform: scale(0) translateY(4px); opacity: 0; }
+      55%  { transform: scale(1.3) translateY(-3px); opacity: 1; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes ppExactStrip {
+      0%   { opacity: 0; transform: translateY(-4px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -323,6 +336,8 @@ const TRANSLATIONS = {
     progress_empty_desc: "Once results start coming in, watch the leaderboard race unfold here.",
     progress_replay: "↻ Replay",
     progress_match_count: "Match {i} of {n}",
+    progress_exact_one: "🎯 {names} nailed the exact score!",
+    progress_exact_many: "🎯 {names} all nailed the exact score!",
     first_place_kicker: "Top of the leaderboard",
     first_place_title: "YOU'RE #1!",
     first_place_subtitle: "{name} leads the bolão 🏆",
@@ -604,6 +619,8 @@ const TRANSLATIONS = {
     progress_empty_desc: "Assim que os resultados começarem a sair, acompanhe a corrida do ranking aqui.",
     progress_replay: "↻ Repetir",
     progress_match_count: "Jogo {i} de {n}",
+    progress_exact_one: "🎯 {names} cravou o placar exato!",
+    progress_exact_many: "🎯 {names} cravaram o placar exato!",
     first_place_kicker: "Topo do ranking",
     first_place_title: "VOCÊ É O 1º!",
     first_place_subtitle: "{name} lidera o bolão 🏆",
@@ -2546,6 +2563,11 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
   const shown = revealIdx;
   const currentFrame = shown > 0 ? data.frames[shown - 1] : null;
   const done = shown >= total && total > 0;
+  // Players who scored the full 3 points (exact scoreline) on the match that
+  // was just revealed — drives the gold highlight on their dot/legend chip.
+  const exactNames = currentFrame
+    ? data.players.filter((p, pi) => currentFrame.gains[pi] === 3).map(p => p.n)
+    : [];
 
   const gridLines = [0.25, 0.5, 0.75, 1].map(f => Math.round(maxY * f));
   const finalTotals = total > 0 ? data.frames[total - 1].cum : data.players.map(() => 0);
@@ -2590,17 +2612,25 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
           <>
             {/* current match / commentary strip */}
             <div style={{
-              minHeight:34, display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-              background:'rgba(255,255,255,0.03)', border:`1px solid ${BORDER}`, borderRadius:10, padding:'6px 10px',
-              textAlign:'center', flexWrap:'wrap',
+              minHeight:34, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
+              background: exactNames.length ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.03)',
+              border:`1px solid ${exactNames.length ? 'rgba(255,215,0,0.4)' : BORDER}`, borderRadius:10, padding:'6px 10px',
+              textAlign:'center',
             }}>
               {currentFrame && (
-                <>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, flexWrap:'wrap' }}>
                   <span style={{ fontSize:11, color:'#888', flexShrink:0 }}>{currentFrame.match.date}</span>
                   <span style={{ fontSize:12, fontWeight:700, color:'#eee' }}>
                     {currentFrame.match.home||'?'} {currentFrame.match.actualH}-{currentFrame.match.actualA} {currentFrame.match.away||'?'}
                   </span>
-                </>
+                </div>
+              )}
+              {exactNames.length > 0 && (
+                <div key={shown} style={{
+                  fontSize:11, fontWeight:800, color:GOLD, animation:'ppExactStrip 0.3s ease',
+                }}>
+                  {t(exactNames.length > 1 ? 'progress_exact_many' : 'progress_exact_one').replace('{names}', exactNames.join(' & '))}
+                </div>
               )}
             </div>
 
@@ -2616,13 +2646,22 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
                 const d = pts.map(([x,y],i) => `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
                 const [lx, ly] = pts[pts.length-1];
                 const isLeader = done && pi === leaderIdx;
+                const isExact = exactNames.includes(p.n);
                 return (
                   <g key={p.n}>
                     <path d={d} fill="none" stroke={colors[pi]} strokeWidth={p.isMe?3:2}
                       strokeLinejoin="round" strokeLinecap="round" opacity={p.isMe?1:0.85}/>
+                    {isExact && (
+                      <circle key={`ring-${shown}`} cx={lx} cy={ly} r="5" fill="none" stroke={GOLD}
+                        style={{ animation:'ppExactRing 0.7s ease-out', transformBox:'fill-box', transformOrigin:'center' }}/>
+                    )}
                     <circle key={shown} cx={lx} cy={ly} r={p.isMe?5:4} fill={colors[pi]}
-                      stroke="#0d1a2e" strokeWidth="1.5"
+                      stroke={isExact?GOLD:"#0d1a2e"} strokeWidth={isExact?2.5:1.5}
                       style={{ animation:'ppDotPop 0.35s ease', transformBox:'fill-box', transformOrigin:'center' }}/>
+                    {isExact && !isLeader && (
+                      <text x={lx} y={ly-11} textAnchor="middle" fontSize="12"
+                        style={{ animation:'ppExactBadge 0.4s ease', transformBox:'fill-box', transformOrigin:'center' }}>🎯</text>
+                    )}
                     {isLeader && (
                       <text x={lx} y={ly-11} textAnchor="middle" fontSize="13"
                         style={{ animation:'ppTrophyPop 0.4s ease', transformBox:'fill-box', transformOrigin:'center' }}>🏆</text>
@@ -2636,17 +2675,20 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
             <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
               {data.players.map((p,pi) => {
                 const val = shown > 0 ? data.frames[shown-1].cum[pi] : 0;
+                const isExact = exactNames.includes(p.n);
                 return (
                   <div key={p.n} style={{
                     display:'flex', alignItems:'center', gap:5,
-                    background:'rgba(255,255,255,0.04)', border:`1px solid ${BORDER}`,
+                    background: isExact ? 'rgba(255,215,0,0.14)' : 'rgba(255,255,255,0.04)',
+                    border:`1px solid ${isExact ? 'rgba(255,215,0,0.55)' : BORDER}`,
                     borderRadius:8, padding:'4px 8px',
                   }}>
                     <span style={{ width:8, height:8, borderRadius:'50%', background:colors[pi], flexShrink:0 }}/>
                     <span style={{ fontSize:11, fontWeight:700, color:p.isMe?ACCENT:'#ccc' }}>
                       {p.n}{p.isMe?t('you_suffix'):''}
                     </span>
-                    <span style={{ fontSize:11, fontWeight:900, color:'#fff' }}>{val}</span>
+                    <span style={{ fontSize:11, fontWeight:900, color: isExact ? GOLD : '#fff' }}>{val}</span>
+                    {isExact && <span style={{ fontSize:10 }}>🎯</span>}
                   </div>
                 );
               })}
