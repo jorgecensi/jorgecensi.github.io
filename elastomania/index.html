@@ -392,6 +392,21 @@ permalink: /elastomania/
     const RIDER_OFFSET_X = -6;
     const RIDER_OFFSET_Y = -18;
 
+    // Point on the rider's torso/chest, in chassis-local space (before
+    // rotation) — used as the hit-test spot for ground/terrain crashes so
+    // only the upper body counts as a collision, not the wheels, frame, or
+    // legs clipping a bump.
+    const UPPER_BODY_OFFSET = { x: -10, y: -45 };
+
+    function getUpperBodyPos() {
+      const a = chassis.angle;
+      const cos = Math.cos(a), sin = Math.sin(a);
+      return {
+        x: chassis.position.x + UPPER_BODY_OFFSET.x * cos - UPPER_BODY_OFFSET.y * sin,
+        y: chassis.position.y + UPPER_BODY_OFFSET.x * sin + UPPER_BODY_OFFSET.y * cos
+      };
+    }
+
     // ── Physics engine ─────────────────────────────────────────
     const engine = Engine.create();
     engine.gravity.y = 1.8;
@@ -619,9 +634,12 @@ permalink: /elastomania/
     function checkDeath() {
       if (state !== 'playing') return;
 
-      const groundY = getTerrainY(chassis.position.x);
-      if (chassis.position.y + 8 > groundY) { die(); return; }
-      if (chassis.position.y > WORLD_H + 50) { die(); return; }
+      // Only the rider's upper body counts as a crash — the wheels, frame,
+      // and legs can clip a bump or scrape a slope without ending the run.
+      const upperBody = getUpperBodyPos();
+      const groundY = getTerrainY(upperBody.x);
+      if (upperBody.y > groundY) { die(); return; }
+      if (upperBody.y > WORLD_H + 50) { die(); return; }
 
       // Die if chassis is inverted (~135° – 225° from upright)
       const angle = ((chassis.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
