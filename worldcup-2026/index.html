@@ -393,7 +393,6 @@ const TRANSLATIONS = {
     you_default: "You",
     you_suffix: " (you)",
     leaderboard_title: "🏆 Leaderboard",
-    add_rival_btn: "📲 Share with friends",
     remove_rival: "Remove rival",
     compete_friends: "Compete with friends",
     compete_friends_desc: "Share your QR — anyone who scans it joins your leaderboard. The app flashes when someone nails a score.",
@@ -679,7 +678,6 @@ const TRANSLATIONS = {
     you_default: "Você",
     you_suffix: " (você)",
     leaderboard_title: "🏆 Ranking",
-    add_rival_btn: "📲 Compartilhar com amigos",
     remove_rival: "Remover rival",
     compete_friends: "Compita com amigos",
     compete_friends_desc: "Compartilhe seu QR — quem escanear entra no seu ranking. O app pisca quando alguém acerta um placar.",
@@ -2434,20 +2432,11 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
         <div style={{ fontSize:9, color:ACCENT, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
           {t('leaderboard_title')}
         </div>
-        <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-          <button onClick={onShowProgress} style={{
-            background:'transparent', border:`1px solid rgba(167,139,250,0.3)`,
-            color:PURPLE, borderRadius:7, padding:'4px 10px',
-            fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-          }}>{t('progress_btn')}</button>
-          {canShare && (
-            <button onClick={onShare} style={{
-              background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
-              color:ACCENT, borderRadius:7, padding:'4px 10px',
-              fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-            }}>{t('add_rival_btn')}</button>
-          )}
-        </div>
+        <button onClick={onShowProgress} style={{
+          background:'transparent', border:`1px solid rgba(167,139,250,0.3)`,
+          color:PURPLE, borderRadius:7, padding:'4px 10px',
+          fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit', flexShrink:0,
+        }}>{t('progress_btn')}</button>
       </div>
 
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:6, marginBottom:8 }}>
@@ -2550,6 +2539,21 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
 }
 
 // ─── Points Progression Animation ──────────────────────────────────────────────
+// Best-effort landscape lock for the progression animation, so it opens
+// already in the wider layout instead of asking people to manually rotate.
+// Called synchronously from the button's onClick (not a useEffect on mount)
+// so it stays inside the user-gesture / transient-activation window most
+// browsers require. Android Chrome (incl. installed PWA) honors this; iOS
+// Safari has never implemented the Orientation Lock API at all, so it's a
+// silent no-op there and the modal just falls back to whatever orientation
+// the phone is already in — the manual-rotate landscape layout still works.
+function tryLockLandscape() {
+  try { screen.orientation?.lock?.('landscape')?.catch(() => {}); } catch (e) {}
+}
+function tryUnlockOrientation() {
+  try { screen.orientation?.unlock?.(); } catch (e) {}
+}
+
 // Fixed categorical order for rival lines — "me" always uses ACCENT (the app's
 // established "you" color), so this set only needs to stay distinguishable from
 // that green and from itself (checked with dataviz's palette validator against
@@ -4028,14 +4032,14 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         groupMatches={groupMatches} ko={ko} canShare={canShare}
         onShare={onShare} onRemove={onRemoveRival}
         compareRival={compareRival} onToggleCompare={toggleCompare}
-        onShowProgress={() => setShowProgress(true)}
+        onShowProgress={() => { tryLockLandscape(); setShowProgress(true); }}
       />
 
       {showProgress && (
         <PointsProgressionModal
           groupMatches={groupMatches} ko={ko}
           myName={playerName} predictions={predictions} rivals={rivals}
-          onClose={() => setShowProgress(false)}
+          onClose={() => { tryUnlockOrientation(); setShowProgress(false); }}
         />
       )}
 
