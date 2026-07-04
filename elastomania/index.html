@@ -89,7 +89,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607030738';
+    const SW_VERSION = '2607031300';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -152,22 +152,29 @@ permalink: /elastomania/
     const CHASSIS_W = 55;
     const CHASSIS_H = 10;
 
-    // Suspension: the main leg from chassis to wheel. Soft + damped so it
-    // visibly compresses on landings and overstretches under a hard impact
-    // instead of acting like a rigid rod.
+    // Suspension: the main leg from chassis to wheel. Stiff + well-damped so
+    // it gives a little under load but firmly springs back to its rest length
+    // — the wheels stay put under the bike (matching where the sprite draws
+    // the fork/swingarm) instead of drifting, and it can't stretch out and
+    // stay stretched. (A soft spring here let the wheels wander and also let
+    // the frame pitch up more, which exaggerated the throttle wheelie.)
     const SUSPENSION_LENGTH    = 15;
-    const SUSPENSION_STIFFNESS = 0.35;
-    const SUSPENSION_DAMPING   = 0.25;
+    const SUSPENSION_STIFFNESS = 0.9;
+    const SUSPENSION_DAMPING   = 0.5;
 
     // Secondary locating link per wheel — see note at rearBrace/frontBrace.
-    // Stiffer than the main leg since its job is structural (stop the wheel
-    // from swinging around the chassis), not to add extra suspension feel.
-    const BRACE_STIFFNESS = 0.7;
-    const BRACE_DAMPING   = 0.2;
+    // Stiff, since its job is structural (stop the wheel from swinging around
+    // the chassis), not to add suspension feel.
+    const BRACE_STIFFNESS = 0.9;
+    const BRACE_DAMPING   = 0.4;
 
-    const MOTOR_ACCEL   = 0.12;   // angular accel per 16.67ms frame
+    // Throttle: eased down from the old grabbier values so gassing from a
+    // standstill no longer pops the front end up into a hard wheelie. Paired
+    // with the stiffer suspension above, full throttle now lifts the nose only
+    // modestly; a deliberate wheelie still needs a held lean-back.
+    const MOTOR_ACCEL   = 0.09;   // angular accel per 16.67ms frame
     const BRAKE_ACCEL   = 0.2;
-    const MAX_WHEEL_SPIN  = 22;
+    const MAX_WHEEL_SPIN  = 20;
     const MAX_BRAKE_SPIN  = -8;
     const LEAN_ACCEL    = 0.08;
 
@@ -379,7 +386,7 @@ permalink: /elastomania/
     const BIKE_BODY_ANCHOR_X = 0.485;
     const BIKE_BODY_ANCHOR_Y = 0.99;
     const BIKE_BODY_OFFSET_Y = 13;
-    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.1) / 108;
+    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.35) / 108;
 
     const riderImg = new Image();
     riderImg.src   = '/elastomania/img/rider.png';
@@ -389,8 +396,8 @@ permalink: /elastomania/
     const RIDER_SCALE    = 0.29;
     const RIDER_ANCHOR_X = 0.286;
     const RIDER_ANCHOR_Y = 0.569;
-    const RIDER_OFFSET_X = -6;
-    const RIDER_OFFSET_Y = -18;
+    const RIDER_OFFSET_X = -4;
+    const RIDER_OFFSET_Y = -11;
 
     // Point on the rider's torso/chest, in chassis-local space (before
     // rotation) — used as the hit-test spot for ground/terrain crashes so
