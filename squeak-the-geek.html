@@ -356,6 +356,15 @@ permalink: /squeak-the-geek/
         (function () {
             'use strict';
 
+            // Block double-tap-to-zoom and double-click-to-zoom gestures
+            document.addEventListener('dblclick', (e) => e.preventDefault());
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', (e) => {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 350) e.preventDefault();
+                lastTouchEnd = now;
+            }, { passive: false });
+
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
             const canvasWrap = document.getElementById('canvasWrap');
