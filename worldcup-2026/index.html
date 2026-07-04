@@ -2550,6 +2550,21 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
 }
 
 // ─── Points Progression Animation ──────────────────────────────────────────────
+// Best-effort landscape lock for the progression animation, so it opens
+// already in the wider layout instead of asking people to manually rotate.
+// Called synchronously from the button's onClick (not a useEffect on mount)
+// so it stays inside the user-gesture / transient-activation window most
+// browsers require. Android Chrome (incl. installed PWA) honors this; iOS
+// Safari has never implemented the Orientation Lock API at all, so it's a
+// silent no-op there and the modal just falls back to whatever orientation
+// the phone is already in — the manual-rotate landscape layout still works.
+function tryLockLandscape() {
+  try { screen.orientation?.lock?.('landscape')?.catch(() => {}); } catch (e) {}
+}
+function tryUnlockOrientation() {
+  try { screen.orientation?.unlock?.(); } catch (e) {}
+}
+
 // Fixed categorical order for rival lines — "me" always uses ACCENT (the app's
 // established "you" color), so this set only needs to stay distinguishable from
 // that green and from itself (checked with dataviz's palette validator against
@@ -4028,14 +4043,14 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         groupMatches={groupMatches} ko={ko} canShare={canShare}
         onShare={onShare} onRemove={onRemoveRival}
         compareRival={compareRival} onToggleCompare={toggleCompare}
-        onShowProgress={() => setShowProgress(true)}
+        onShowProgress={() => { tryLockLandscape(); setShowProgress(true); }}
       />
 
       {showProgress && (
         <PointsProgressionModal
           groupMatches={groupMatches} ko={ko}
           myName={playerName} predictions={predictions} rivals={rivals}
-          onClose={() => setShowProgress(false)}
+          onClose={() => { tryUnlockOrientation(); setShowProgress(false); }}
         />
       )}
 
