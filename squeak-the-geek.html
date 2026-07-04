@@ -616,23 +616,30 @@ permalink: /squeak-the-geek/
                     blocks.add(key(c.x, c.y));
                 }
 
-                const hazardCells = [];
-                for (let i = 0; i < 2; i++) {
-                    const c = takeCell();
-                    if (c) hazardCells.push(c);
-                }
-                if (hazardCells[0]) {
-                    ball.x = ball.fromX = hazardCells[0].x;
-                    ball.y = ball.fromY = hazardCells[0].y;
+                const ballCell = takeCell();
+                if (ballCell) {
+                    ball.x = ball.fromX = ballCell.x;
+                    ball.y = ball.fromY = ballCell.y;
                     ball.px = ball.x * TILE; ball.py = ball.y * TILE;
                     ball.dx = Math.random() < 0.5 ? 1 : -1; ball.dy = 0;
                     ball.moving = false; ball.active = true;
                 } else {
                     ball.active = false;
                 }
-                if (hazardCells[1] && level >= 1) {
-                    frog.x = frog.fromX = hazardCells[1].x;
-                    frog.y = frog.fromY = hazardCells[1].y;
+
+                // Keep the frog off the ball's row and column so they never spawn aligned.
+                let frogCell = null;
+                let fallbackCell = null;
+                while (true) {
+                    const c = takeCell();
+                    if (!c) break;
+                    if (!ballCell || (c.x !== ballCell.x && c.y !== ballCell.y)) { frogCell = c; break; }
+                    if (!fallbackCell) fallbackCell = c;
+                }
+                if (!frogCell) frogCell = fallbackCell;
+                if (frogCell) {
+                    frog.x = frog.fromX = frogCell.x;
+                    frog.y = frog.fromY = frogCell.y;
                     frog.px = frog.x * TILE; frog.py = frog.y * TILE;
                     frog.moving = false; frog.timer = 0.4; frog.active = true;
                 } else {
