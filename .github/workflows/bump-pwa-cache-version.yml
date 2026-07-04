@@ -56,6 +56,7 @@ jobs:
           echo "auto_runner=$(check 'auto-runner/sw.js auto-runner/index.html auto-runner/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "music_theory=$(check 'music-theory/sw.js music-theory/index.html music-theory/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "elastomania=$(check 'elastomania/sw.js elastomania/index.html elastomania/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "squeak_the_geek=$(check 'squeak-the-geek-sw.js squeak-the-geek.html squeak-the-geek-manifest.json')" >> "${GITHUB_OUTPUT}"
 
       - name: Update PWA version constants
         run: |
@@ -79,6 +80,7 @@ jobs:
               "auto_runner":  "${{ steps.changed.outputs.auto_runner }}" == "true",
               "music_theory": "${{ steps.changed.outputs.music_theory }}" == "true",
               "elastomania":  "${{ steps.changed.outputs.elastomania }}" == "true",
+              "squeak_the_geek": "${{ steps.changed.outputs.squeak_the_geek }}" == "true",
           }
 
           # On tag/dispatch, bump everything; on push to main, only bump changed PWAs
@@ -122,6 +124,9 @@ jobs:
           if bump_all or changed["elastomania"]:
               versioned_files["elastomania/sw.js"] = ("CACHE_VERSION", version)
               versioned_files["elastomania/index.html"] = ("SW_VERSION", version)
+          if bump_all or changed["squeak_the_geek"]:
+              versioned_files["squeak-the-geek-sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["squeak-the-geek.html"] = ("SW_VERSION", version)
 
           for relative_path, (const_name, ver) in versioned_files.items():
               path = repo / relative_path
@@ -165,6 +170,8 @@ jobs:
             music-theory/sw.js \
             music-theory/index.html \
             elastomania/sw.js \
-            elastomania/index.html
+            elastomania/index.html \
+            squeak-the-geek-sw.js \
+            squeak-the-geek.html
           git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }} [skip ci]"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"
