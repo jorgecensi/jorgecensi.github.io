@@ -89,7 +89,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607031200';
+    const SW_VERSION = '2607031300';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -386,7 +386,7 @@ permalink: /elastomania/
     const BIKE_BODY_ANCHOR_X = 0.485;
     const BIKE_BODY_ANCHOR_Y = 0.99;
     const BIKE_BODY_OFFSET_Y = 13;
-    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.1) / 108;
+    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.35) / 108;
 
     const riderImg = new Image();
     riderImg.src   = '/elastomania/img/rider.png';
@@ -396,8 +396,8 @@ permalink: /elastomania/
     const RIDER_SCALE    = 0.29;
     const RIDER_ANCHOR_X = 0.286;
     const RIDER_ANCHOR_Y = 0.569;
-    const RIDER_OFFSET_X = -6;
-    const RIDER_OFFSET_Y = -18;
+    const RIDER_OFFSET_X = -4;
+    const RIDER_OFFSET_Y = -11;
 
     // Point on the rider's torso/chest, in chassis-local space (before
     // rotation) — used as the hit-test spot for ground/terrain crashes so
