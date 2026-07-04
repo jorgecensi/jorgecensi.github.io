@@ -196,6 +196,36 @@ permalink: /squeak-the-geek/
             color: #fbbf24;
         }
 
+        .player-picker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 14px 0;
+            flex-wrap: wrap;
+        }
+
+        .player-picker label {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+
+        .player-picker select,
+        .player-picker input {
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            color: #fff;
+            padding: 6px 10px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .player-picker select option {
+            background: #0f172a;
+            color: #fff;
+        }
+
         .overlay button {
             margin-top: 8px;
             background: linear-gradient(180deg, #3b82f6, #1d4ed8);
@@ -290,6 +320,11 @@ permalink: /squeak-the-geek/
         <div class="panel">
             <h1>SQUEAK THE GEEK</h1>
             <p>Guide the geek through the brick maze. Collect every flower to open the exit. Push crystal blocks out of your way, grab the key to unlock the treasure chest, and stay clear of the frog!</p>
+            <div class="player-picker">
+                <label for="playerSelect">Player</label>
+                <select id="playerSelect"></select>
+                <input type="text" id="newPlayerName" placeholder="Enter your name" maxlength="16" style="display:none">
+            </div>
             <div class="stat-row">
                 <div>Best Score<b id="bestScoreStart">0</b></div>
             </div>
@@ -382,10 +417,96 @@ permalink: /squeak-the-geek/
             const endBestEl = document.getElementById('endBest');
             const playBtn = document.getElementById('playBtn');
             const retryBtn = document.getElementById('retryBtn');
+            const playerSelectEl = document.getElementById('playerSelect');
+            const newPlayerNameEl = document.getElementById('newPlayerName');
 
-            const HIGH_SCORE_KEY = 'squeakTheGeekHighScore';
-            let highScore = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0', 10);
-            bestScoreStartEl.textContent = highScore;
+            // ---- Per-player high scores ----
+            const PLAYERS_KEY = 'squeakTheGeekPlayers';
+            const LAST_PLAYER_KEY = 'squeakTheGeekLastPlayer';
+            const NEW_PLAYER_VALUE = '__new__';
+
+            function loadPlayers() {
+                try { return JSON.parse(localStorage.getItem(PLAYERS_KEY)) || {}; } catch (e) { return {}; }
+            }
+            function savePlayers(players) {
+                localStorage.setItem(PLAYERS_KEY, JSON.stringify(players));
+            }
+
+            // One-time migration from the old single global high score.
+            (function migrateOldHighScore() {
+                const players = loadPlayers();
+                const oldScore = localStorage.getItem('squeakTheGeekHighScore');
+                if (Object.keys(players).length === 0 && oldScore) {
+                    players['Player'] = parseInt(oldScore, 10) || 0;
+                    savePlayers(players);
+                }
+                localStorage.removeItem('squeakTheGeekHighScore');
+            })();
+
+            let currentPlayerName = '';
+
+            function refreshPlayerUI() {
+                const players = loadPlayers();
+                const names = Object.keys(players).sort((a, b) => (players[b] || 0) - (players[a] || 0));
+                const lastPlayer = localStorage.getItem(LAST_PLAYER_KEY);
+
+                playerSelectEl.innerHTML = '';
+                for (const name of names) {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = `${name} (${players[name] || 0})`;
+                    playerSelectEl.appendChild(opt);
+                }
+                const newOpt = document.createElement('option');
+                newOpt.value = NEW_PLAYER_VALUE;
+                newOpt.textContent = '+ New Player';
+                playerSelectEl.appendChild(newOpt);
+
+                if (lastPlayer && names.includes(lastPlayer)) {
+                    playerSelectEl.value = lastPlayer;
+                } else if (names.length) {
+                    playerSelectEl.value = names[0];
+                } else {
+                    playerSelectEl.value = NEW_PLAYER_VALUE;
+                }
+                newPlayerNameEl.value = '';
+                syncPlayerPickerVisibility();
+            }
+
+            function syncPlayerPickerVisibility() {
+                const isNew = playerSelectEl.value === NEW_PLAYER_VALUE;
+                newPlayerNameEl.style.display = isNew ? '' : 'none';
+                const players = loadPlayers();
+                const best = isNew ? 0 : (players[playerSelectEl.value] || 0);
+                bestScoreStartEl.textContent = best;
+                if (isNew) newPlayerNameEl.focus();
+            }
+
+            playerSelectEl.addEventListener('change', syncPlayerPickerVisibility);
+            newPlayerNameEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') playBtn.click();
+            });
+            newPlayerNameEl.addEventListener('input', () => {
+                bestScoreStartEl.textContent = 0;
+            });
+
+            function resolvePlayerName() {
+                if (playerSelectEl.value === NEW_PLAYER_VALUE) {
+                    return newPlayerNameEl.value.trim();
+                }
+                return playerSelectEl.value;
+            }
+
+            function recordScoreIfHighest(name, finalScore) {
+                const players = loadPlayers();
+                const best = players[name] || 0;
+                const isNewBest = finalScore > best;
+                if (isNewBest) players[name] = finalScore;
+                savePlayers(players);
+                return isNewBest ? finalScore : best;
+            }
+
+            refreshPlayerUI();
 
             // ---- Audio (tiny synthesized SFX) ----
             let audioCtx = null;
@@ -868,13 +989,10 @@ permalink: /squeak-the-geek/
 
             function gameOver() {
                 running = false;
-                if (score > highScore) {
-                    highScore = score;
-                    localStorage.setItem(HIGH_SCORE_KEY, String(highScore));
-                }
+                const best = recordScoreIfHighest(currentPlayerName, score);
                 endScoreEl.textContent = score;
                 endLevelEl.textContent = level;
-                endBestEl.textContent = highScore;
+                endBestEl.textContent = best;
                 endOverlay.classList.remove('hidden');
                 sfx.gameOver();
             }
@@ -895,6 +1013,17 @@ permalink: /squeak-the-geek/
             }
 
             playBtn.addEventListener('click', () => {
+                const name = resolvePlayerName();
+                if (!name) {
+                    newPlayerNameEl.style.display = '';
+                    newPlayerNameEl.focus();
+                    return;
+                }
+                currentPlayerName = name;
+                localStorage.setItem(LAST_PLAYER_KEY, name);
+                const players = loadPlayers();
+                if (!(name in players)) { players[name] = 0; savePlayers(players); }
+
                 ensureAudio();
                 startOverlay.classList.add('hidden');
                 startGame();
@@ -902,7 +1031,8 @@ permalink: /squeak-the-geek/
             retryBtn.addEventListener('click', () => {
                 ensureAudio();
                 endOverlay.classList.add('hidden');
-                startGame();
+                refreshPlayerUI();
+                startOverlay.classList.remove('hidden');
             });
 
             // ---- Update loop ----
