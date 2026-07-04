@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607040432';
+const CACHE_VERSION = '2607041053';
 const CACHE_NAME = `squeak-the-geek-${CACHE_VERSION}`;
 const OFFLINE_URL = '/squeak-the-geek/';
 const PRECACHE_URLS = [
