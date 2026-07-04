@@ -99,6 +99,98 @@
       0%   { transform: translateY(10px); opacity: 0; }
       100% { transform: translateY(0); opacity: 1; }
     }
+    @keyframes ppDotPop {
+      0%   { transform: scale(0); opacity: 0; }
+      60%  { transform: scale(1.5); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes ppTrophyPop {
+      0%   { transform: scale(0) translateY(6px); opacity: 0; }
+      70%  { transform: scale(1.25) translateY(-2px); opacity: 1; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes ppExactRing {
+      0%   { r: 5; opacity: 0.9; stroke-width: 2.5; }
+      100% { r: 15; opacity: 0; stroke-width: 0.5; }
+    }
+    @keyframes ppExactBadge {
+      0%   { transform: scale(0) translateY(4px); opacity: 0; }
+      55%  { transform: scale(1.3) translateY(-3px); opacity: 1; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes ppExactStrip {
+      0%   { opacity: 0; transform: translateY(-4px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes ppCrownPass {
+      0%   { transform: scale(0) rotate(-25deg) translateY(6px); opacity: 0; }
+      50%  { transform: scale(1.6) rotate(12deg) translateY(-8px); opacity: 1; }
+      75%  { transform: scale(0.85) rotate(-6deg) translateY(0); }
+      100% { transform: scale(1.05) rotate(0deg) translateY(-1px); opacity: 1; }
+    }
+    @keyframes ppCrownIdle {
+      0%   { transform: scale(0) translateY(4px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes ppLeadBannerIn {
+      0%   { opacity: 0; transform: scale(0.7) translateY(-5px); }
+      60%  { opacity: 1; transform: scale(1.1) translateY(0); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes ppConfettiBit {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(34px) rotate(280deg); opacity: 0; }
+    }
+    .pp-overlay { display:flex; align-items:flex-end; justify-content:center; }
+    .pp-sheet {
+      display:flex; flex-direction:column; gap:12px;
+      width:100%; max-width:560px; max-height:88vh; overflow-y:auto;
+      border-radius:20px 20px 0 0;
+    }
+    .pp-body { display:flex; flex-direction:column; gap:12px; }
+    .pp-chart-col { display:flex; flex-direction:column; gap:12px; }
+    .pp-side-col { display:flex; flex-direction:column; gap:8px; }
+    /* Short, wide viewport (a rotated phone, not just any desktop window) —
+       swap the bottom sheet for a centered dialog and put the chart and the
+       legend/scrubber side by side so the whole thing fits without scrolling. */
+    @media (orientation: landscape) and (max-height: 560px) {
+      .pp-overlay { align-items:center; padding:16px; }
+      .pp-sheet { border-radius:20px; max-width:760px; max-height:92vh; }
+      /* flex + min-height:0 forces pp-body to actually fill (not just hug) the
+         remaining sheet height — without it the sheet's own scroll absorbs the
+         overflow instead of the inner legend list, and the controls end up
+         pushed out of view below the fold. */
+      .pp-body { flex:1 1 auto; min-height:0; flex-direction:row; align-items:stretch; }
+      .pp-chart-col { flex:2.2; min-width:0; justify-content:center; }
+      .pp-side-col { flex:1; min-width:0; min-height:0; justify-content:flex-start; }
+      /* Only the ranked list scrolls — the play/slider/replay controls below
+         it stay pinned and reachable no matter how many rivals there are. */
+      .pp-legend-scroll { flex:1; min-height:0; overflow-y:auto; }
+      .pp-legend { flex-direction:column; flex-wrap:nowrap; }
+      .pp-legend > div { width:100%; flex-shrink:0; }
+    }
+    .pp-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 4px; border-radius: 2px; outline: none; cursor: pointer;
+      background: linear-gradient(to right,
+        #00d084 0%, #00d084 var(--pp-fill, 0%),
+        rgba(255,255,255,0.14) var(--pp-fill, 0%), rgba(255,255,255,0.14) 100%);
+    }
+    .pp-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #00d084; border: 2px solid #0d1a2e;
+      box-shadow: 0 0 0 1px rgba(0,208,132,0.6);
+      cursor: pointer;
+    }
+    .pp-slider::-moz-range-track { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.14); }
+    .pp-slider::-moz-range-progress { height: 4px; border-radius: 2px; background: #00d084; }
+    .pp-slider::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #00d084; border: 2px solid #0d1a2e;
+      box-shadow: 0 0 0 1px rgba(0,208,132,0.6);
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -306,6 +398,18 @@ const TRANSLATIONS = {
     compete_friends: "Compete with friends",
     compete_friends_desc: "Share your QR — anyone who scans it joins your leaderboard. The app flashes when someone nails a score.",
     leaderboard_locked_hint: "Fill in all your group stage picks to unlock the leaderboard and compare with friends",
+    progress_btn: "📈 Progression",
+    progress_title: "📈 Points Progression",
+    progress_subtitle: "How the leaderboard evolved, match by match",
+    progress_empty_title: "No matches played yet",
+    progress_empty_desc: "Once results start coming in, watch the leaderboard race unfold here.",
+    progress_replay: "↻ Replay",
+    progress_match_count: "Match {i} of {n}",
+    progress_exact_one: "🎯 {names} nailed the exact score!",
+    progress_exact_many: "🎯 {names} all nailed the exact score!",
+    progress_play: "Play",
+    progress_pause: "Pause",
+    progress_lead_change: "👑 {name} takes the lead!",
     first_place_kicker: "Top of the leaderboard",
     first_place_title: "YOU'RE #1!",
     first_place_subtitle: "{name} leads the bolão 🏆",
@@ -580,6 +684,18 @@ const TRANSLATIONS = {
     compete_friends: "Compita com amigos",
     compete_friends_desc: "Compartilhe seu QR — quem escanear entra no seu ranking. O app pisca quando alguém acerta um placar.",
     leaderboard_locked_hint: "Preencha todos os seus palpites da fase de grupos para liberar o ranking e a comparação com amigos",
+    progress_btn: "📈 Progressão",
+    progress_title: "📈 Progressão de Pontos",
+    progress_subtitle: "Como o ranking evoluiu, jogo a jogo",
+    progress_empty_title: "Nenhum jogo terminado ainda",
+    progress_empty_desc: "Assim que os resultados começarem a sair, acompanhe a corrida do ranking aqui.",
+    progress_replay: "↻ Repetir",
+    progress_match_count: "Jogo {i} de {n}",
+    progress_exact_one: "🎯 {names} cravou o placar exato!",
+    progress_exact_many: "🎯 {names} cravaram o placar exato!",
+    progress_play: "Reproduzir",
+    progress_pause: "Pausar",
+    progress_lead_change: "👑 {name} assume a liderança!",
     first_place_kicker: "Topo do ranking",
     first_place_title: "VOCÊ É O 1º!",
     first_place_subtitle: "{name} lidera o bolão 🏆",
@@ -2264,7 +2380,7 @@ function FirstPlaceCelebration({ name, onDismiss }) {
 }
 
 // ─── Rivals Leaderboard ───────────────────────────────────────────────────────
-function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, onShare, onRemove, compareRival, onToggleCompare }) {
+function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, onShare, onRemove, compareRival, onToggleCompare, onShowProgress }) {
   const { t } = useLang();
   const allPlayers = [
     { n: myName || t('you_default'), pts: myPts, isMe: true, rival: null },
@@ -2318,13 +2434,20 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
         <div style={{ fontSize:9, color:ACCENT, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
           {t('leaderboard_title')}
         </div>
-        {canShare && (
-          <button onClick={onShare} style={{
-            background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
-            color:ACCENT, borderRadius:7, padding:'4px 10px',
+        <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+          <button onClick={onShowProgress} style={{
+            background:'transparent', border:`1px solid rgba(167,139,250,0.3)`,
+            color:PURPLE, borderRadius:7, padding:'4px 10px',
             fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-          }}>{t('add_rival_btn')}</button>
-        )}
+          }}>{t('progress_btn')}</button>
+          {canShare && (
+            <button onClick={onShare} style={{
+              background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
+              color:ACCENT, borderRadius:7, padding:'4px 10px',
+              fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+            }}>{t('add_rival_btn')}</button>
+          )}
+        </div>
       </div>
 
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:6, marginBottom:8 }}>
@@ -2422,6 +2545,333 @@ function RivalsLeaderboard({ rivals, myName, myPts, groupMatches, ko, canShare, 
           )}
         </div>
       );})}
+    </div>
+  );
+}
+
+// ─── Points Progression Animation ──────────────────────────────────────────────
+// Fixed categorical order for rival lines — "me" always uses ACCENT (the app's
+// established "you" color), so this set only needs to stay distinguishable from
+// that green and from itself (checked with dataviz's palette validator against
+// the app's dark surface #080d16).
+const PROGRESS_RIVAL_COLORS = ['#3987e5','#c98500','#9085e9','#e66767','#d55181','#d95926','#199e70'];
+
+// Chronological list of every match with a final score, paired with each
+// player's per-match points — the raw material the animation plays back.
+function buildProgressionSeries(groupMatches, ko, myName, myPredictions, rivals, t) {
+  const matches = [];
+  Object.values(groupMatches).flat().forEach(m => {
+    matches.push({
+      id: m.id, sortKey: (m.dk||0)*10000 + (m.tk||0), predType: 'group',
+      played: m.homeScore !== null && m.awayScore !== null,
+      home: m.home, away: m.away, actualH: m.homeScore, actualA: m.awayScore, date: m.date,
+    });
+  });
+  ['r32','r16','qf','sf','final','third'].forEach(round => {
+    (ko[round]||[]).forEach(m => {
+      matches.push({
+        id: m.id, sortKey: (m.dk||0)*10000 + timeKey(m.time||'0:00 AM'), predType: 'ko',
+        played: m.scoreA !== null && m.scoreB !== null,
+        home: m.teamA, away: m.teamB, actualH: m.scoreA, actualA: m.scoreB, date: m.date,
+      });
+    });
+  });
+  const played = matches.filter(m => m.played).sort((a,b) => a.sortKey - b.sortKey);
+
+  const players = [
+    { n: myName || t('you_default'), isMe: true, predictions: myPredictions || { group:{}, ko:{} } },
+    ...rivals.map(r => ({ n: r.n, isMe: false, predictions: r.predictions || { group:{}, ko:{} } })),
+  ];
+
+  const cum = players.map(() => 0);
+  const frames = played.map(m => {
+    const gains = players.map((p, i) => {
+      const pred = m.predType === 'group' ? p.predictions.group?.[m.id] : p.predictions.ko?.[m.id];
+      let pts = 0;
+      if (pred) {
+        const ph = m.predType === 'group' ? pred.home : pred.a;
+        const pa = m.predType === 'group' ? pred.away : pred.b;
+        pts = scorePrediction(ph, pa, m.actualH, m.actualA) || 0;
+      }
+      cum[i] += pts;
+      return pts;
+    });
+    return { match: m, gains, cum: [...cum] };
+  });
+
+  return { players, frames };
+}
+
+function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals, onClose }) {
+  const { t } = useLang();
+  const data = useMemo(
+    () => buildProgressionSeries(groupMatches, ko, myName, predictions, rivals, t),
+    [groupMatches, ko, myName, predictions, rivals, t]
+  );
+  const total = data.frames.length;
+  const [revealIdx, setRevealIdx] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  // One second per match, regardless of how many were played — slow enough to
+  // actually read the commentary strip and watch the lines move.
+  const stepMs = 1000;
+
+  // Auto-advance while playing; pauses itself once every match is revealed.
+  useEffect(() => {
+    if (!playing || total === 0) return;
+    const id = setInterval(() => {
+      setRevealIdx(i => {
+        if (i + 1 >= total) { setPlaying(false); return total; }
+        return i + 1;
+      });
+    }, stepMs);
+    return () => clearInterval(id);
+  }, [playing, stepMs, total]);
+
+  const replay = useCallback(() => { setRevealIdx(0); setPlaying(true); }, []);
+  const togglePlay = useCallback(() => {
+    setPlaying(p => {
+      if (!p && revealIdx >= total) { setRevealIdx(0); return true; }
+      return !p;
+    });
+  }, [revealIdx, total]);
+  const scrubTo = useCallback(idx => { setPlaying(false); setRevealIdx(idx); }, []);
+
+  const colors = data.players.map((p, i) => p.isMe ? ACCENT : PROGRESS_RIVAL_COLORS[(i - 1) % PROGRESS_RIVAL_COLORS.length]);
+
+  const W = 640, H = 210, padL = 6, padR = 6, padT = 16, padB = 6;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxY = Math.max(3, ...data.frames.map(f => Math.max(...f.cum)));
+  const xAt = i => total <= 1 ? padL + plotW / 2 : padL + (plotW * i) / (total - 1);
+  const yAt = v => padT + plotH - (plotH * v) / maxY;
+
+  const shown = revealIdx;
+  const currentFrame = shown > 0 ? data.frames[shown - 1] : null;
+  const done = shown >= total && total > 0;
+  // Players who scored the full 3 points (exact scoreline) on the match that
+  // was just revealed — drives the gold highlight on their dot/legend chip.
+  const exactNames = currentFrame
+    ? data.players.filter((p, pi) => currentFrame.gains[pi] === 3).map(p => p.n)
+    : [];
+
+  const gridLines = [0.25, 0.5, 0.75, 1].map(f => Math.round(maxY * f));
+
+  // Leader at every point in the timeline, plus the exact frames where the lead
+  // actually changed hands — drives the "takes the lead" celebration below.
+  // (Frame 0 is deliberately excluded from leadChangeFrames: the very first
+  // player to score isn't "passing" anyone.)
+  const leaderTimeline = useMemo(
+    () => data.frames.map(f => f.cum.indexOf(Math.max(...f.cum))),
+    [data.frames]
+  );
+  const leadChangeFrames = useMemo(() => {
+    const set = new Set();
+    for (let i = 1; i < leaderTimeline.length; i++) {
+      if (leaderTimeline[i] !== leaderTimeline[i - 1]) set.add(i);
+    }
+    return set;
+  }, [leaderTimeline]);
+  const leaderIdx = total > 0 ? leaderTimeline[total - 1] : -1;
+  const liveLeaderIdx = shown > 0 ? leaderTimeline[shown - 1] : -1;
+  const isPassMoment = shown > 0 && leadChangeFrames.has(shown - 1);
+  const passName = isPassMoment ? data.players[liveLeaderIdx]?.n : null;
+
+  // Legend rows read top-to-bottom by current standing (like the leaderboard),
+  // not by rival-add order — re-sorted every reveal so it tracks the race live.
+  const rankedPlayers = useMemo(() => {
+    const withVal = data.players.map((p, pi) => ({
+      p, pi, val: shown > 0 ? data.frames[shown - 1].cum[pi] : 0,
+    }));
+    withVal.sort((a, b) => b.val - a.val);
+    return withVal;
+  }, [data.players, data.frames, shown]);
+
+  return (
+    <div onClick={onClose} className="pp-overlay" style={{
+      position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:500,
+      padding:'0 0 env(safe-area-inset-bottom,0)',
+    }}>
+      <div onClick={e => e.stopPropagation()} className="pp-sheet" style={{
+        background:'#0d1a2e', border:`1px solid rgba(0,208,132,0.35)`,
+        padding:'16px 18px 24px',
+        animation:'shareModalIn 0.3s ease',
+      }}>
+        <div style={{ width:36, height:4, borderRadius:2, background:'rgba(255,255,255,0.12)', alignSelf:'center', marginBottom:2 }}/>
+
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10 }}>
+          <div>
+            <div style={{ fontSize:11, color:ACCENT, letterSpacing:2, fontWeight:700, textTransform:'uppercase' }}>
+              {t('progress_title')}
+            </div>
+            <div style={{ fontSize:11, color:'#666', marginTop:3 }}>{t('progress_subtitle')}</div>
+          </div>
+          <button onClick={onClose} style={{
+            background:'transparent', border:'none', color:'#666',
+            fontSize:20, cursor:'pointer', padding:2, lineHeight:1, flexShrink:0,
+          }}>✕</button>
+        </div>
+
+        {total === 0 ? (
+          <div style={{ textAlign:'center', padding:'22px 10px' }}>
+            <div style={{ fontSize:26, marginBottom:8 }}>⏳</div>
+            <div style={{ fontSize:12, fontWeight:800, color:'#ccc', marginBottom:4 }}>{t('progress_empty_title')}</div>
+            <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>{t('progress_empty_desc')}</div>
+          </div>
+        ) : (
+          <div className="pp-body">
+          <div className="pp-chart-col">
+            {/* current match / commentary strip */}
+            <div style={{
+              minHeight:34, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
+              background: exactNames.length ? 'rgba(255,215,0,0.08)' : isPassMoment ? 'rgba(167,139,250,0.1)' : 'rgba(255,255,255,0.03)',
+              border:`1px solid ${exactNames.length ? 'rgba(255,215,0,0.4)' : isPassMoment ? 'rgba(167,139,250,0.5)' : BORDER}`,
+              borderRadius:10, padding:'6px 10px', textAlign:'center',
+            }}>
+              {currentFrame && (
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:11, color:'#888', flexShrink:0 }}>{currentFrame.match.date}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#eee' }}>
+                    {currentFrame.match.home||'?'} {currentFrame.match.actualH}-{currentFrame.match.actualA} {currentFrame.match.away||'?'}
+                  </span>
+                </div>
+              )}
+              {exactNames.length > 0 && (
+                <div key={`exact-${shown}`} style={{
+                  fontSize:11, fontWeight:800, color:GOLD, animation:'ppExactStrip 0.3s ease',
+                }}>
+                  {t(exactNames.length > 1 ? 'progress_exact_many' : 'progress_exact_one').replace('{names}', exactNames.join(' & '))}
+                </div>
+              )}
+              {isPassMoment && (
+                <div key={`lead-${shown}`} style={{
+                  fontSize:12, fontWeight:900, color:PURPLE, animation:'ppLeadBannerIn 0.4s ease',
+                }}>
+                  {t('progress_lead_change').replace('{name}', passName + (data.players[liveLeaderIdx]?.isMe ? t('you_suffix') : ''))}
+                </div>
+              )}
+            </div>
+
+            <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:'auto', display:'block' }}>
+              {gridLines.map((v,i) => (
+                <line key={i} x1={padL} x2={W-padR} y1={yAt(v)} y2={yAt(v)} stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+              ))}
+              <line x1={padL} x2={W-padR} y1={yAt(0)} y2={yAt(0)} stroke="rgba(255,255,255,0.14)" strokeWidth="1"/>
+
+              {data.players.map((p, pi) => {
+                const pts = data.frames.slice(0, shown).map((f,fi) => [xAt(fi), yAt(f.cum[pi])]);
+                if (pts.length === 0) return null;
+                const d = pts.map(([x,y],i) => `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+                const [lx, ly] = pts[pts.length-1];
+                const isFinalWinner = done && pi === leaderIdx;
+                const isCurrentLeader = !done && pi === liveLeaderIdx;
+                const isExact = exactNames.includes(p.n);
+                const isPasser = isPassMoment && pi === liveLeaderIdx;
+                return (
+                  <g key={p.n}>
+                    <path d={d} fill="none" stroke={colors[pi]} strokeWidth={p.isMe?3:2}
+                      strokeLinejoin="round" strokeLinecap="round" opacity={p.isMe?1:0.85}/>
+                    {isExact && (
+                      <circle key={`ring-${shown}`} cx={lx} cy={ly} r="5" fill="none" stroke={GOLD}
+                        style={{ animation:'ppExactRing 0.7s ease-out', transformBox:'fill-box', transformOrigin:'center' }}/>
+                    )}
+                    {isPasser && (
+                      <circle key={`passring-${shown}`} cx={lx} cy={ly} r="5" fill="none" stroke={PURPLE}
+                        style={{ animation:'ppExactRing 0.8s ease-out', transformBox:'fill-box', transformOrigin:'center' }}/>
+                    )}
+                    <circle key={shown} cx={lx} cy={ly} r={p.isMe?5:4} fill={colors[pi]}
+                      stroke={isExact?GOLD:"#0d1a2e"} strokeWidth={isExact?2.5:1.5}
+                      style={{ animation:'ppDotPop 0.35s ease', transformBox:'fill-box', transformOrigin:'center' }}/>
+                    {isExact && !isCurrentLeader && (
+                      <text x={lx} y={ly-11} textAnchor="middle" fontSize="12"
+                        style={{ animation:'ppExactBadge 0.4s ease', transformBox:'fill-box', transformOrigin:'center' }}>🎯</text>
+                    )}
+                    {isCurrentLeader && (
+                      // Not keyed by `shown` on purpose — this node stays mounted
+                      // (and quiet) for as long as this player holds the lead, so
+                      // the flashy pop animation below only plays once, right when
+                      // they take over.
+                      <text x={lx} y={ly-11} textAnchor="middle" fontSize="13"
+                        style={{
+                          animation: isPasser ? 'ppCrownPass 0.6s ease' : 'ppCrownIdle 0.3s ease',
+                          transformBox:'fill-box', transformOrigin:'center',
+                        }}>👑</text>
+                    )}
+                    {isFinalWinner && (
+                      <text x={lx} y={ly-11} textAnchor="middle" fontSize="13"
+                        style={{ animation:'ppTrophyPop 0.4s ease', transformBox:'fill-box', transformOrigin:'center' }}>🏆</text>
+                    )}
+                    {isPasser && [...Array(8)].map((_, ci) => (
+                      <rect key={`confetti-${shown}-${ci}`}
+                        x={lx + (ci - 3.5) * 4} y={ly - 6} width="3" height="6" rx="1"
+                        fill={[ACCENT, GOLD, PURPLE, RED][ci % 4]}
+                        style={{
+                          animation: `ppConfettiBit 0.8s ease-in ${ci * 0.02}s both`,
+                          transformBox:'fill-box', transformOrigin:'center',
+                        }}/>
+                    ))}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+
+          <div className="pp-side-col">
+            {/* legend — ranked top-to-bottom by current standing. Scrolls on
+               its own in landscape so the controls below stay pinned and
+               reachable however many rivals are in the list. */}
+            <div className="pp-legend-scroll">
+              <div className="pp-legend" style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                {rankedPlayers.map(({ p, pi, val }) => {
+                  const isExact = exactNames.includes(p.n);
+                  return (
+                    <div key={p.n} style={{
+                      display:'flex', alignItems:'center', justifyContent:'space-between', gap:8,
+                      background: isExact ? 'rgba(255,215,0,0.14)' : 'rgba(255,255,255,0.04)',
+                      border:`1px solid ${isExact ? 'rgba(255,215,0,0.55)' : BORDER}`,
+                      borderRadius:8, padding:'4px 8px',
+                    }}>
+                      <span style={{ display:'flex', alignItems:'center', gap:5, minWidth:0 }}>
+                        <span style={{ width:8, height:8, borderRadius:'50%', background:colors[pi], flexShrink:0 }}/>
+                        <span style={{ fontSize:11, fontWeight:700, color:p.isMe?ACCENT:'#ccc', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {p.n}{p.isMe?t('you_suffix'):''}
+                        </span>
+                      </span>
+                      <span style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
+                        <span style={{ fontSize:11, fontWeight:900, color: isExact ? GOLD : '#fff' }}>{val}</span>
+                        {isExact && <span style={{ fontSize:10 }}>🎯</span>}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* scrubber */}
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <button onClick={togglePlay} aria-label={playing?t('progress_pause'):t('progress_play')} style={{
+                background:'rgba(0,208,132,0.14)', border:`1px solid rgba(0,208,132,0.45)`,
+                color:ACCENT, borderRadius:'50%', width:28, height:28, flexShrink:0,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:12, cursor:'pointer', fontFamily:'inherit', padding:0,
+              }}>{playing ? '⏸' : '▶'}</button>
+              <input type="range" className="pp-slider" min={0} max={total} step={1} value={shown}
+                onChange={e => scrubTo(Number(e.target.value))}
+                style={{ '--pp-fill': `${total>0 ? (shown/total)*100 : 0}%`, flex:1 }}/>
+            </div>
+
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:-4 }}>
+              <span style={{ fontSize:10, color:'#555' }}>
+                {t('progress_match_count').replace('{i}', Math.min(shown,total)).replace('{n}', total)}
+              </span>
+              <button onClick={replay} style={{
+                background:'transparent', border:`1px solid rgba(0,208,132,0.3)`,
+                color:ACCENT, borderRadius:7, padding:'5px 12px',
+                fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+              }}>{t('progress_replay')}</button>
+            </div>
+          </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -3464,6 +3914,7 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
     return [...PHASES].reverse().find(p => isUnlocked(p.key))?.key ?? 'group';
   })();
   const [phase, setPhase] = useState(defaultPhase);
+  const [showProgress, setShowProgress] = useState(false);
   const pts = useMemo(()=>calcPoints(groupMatches,ko,predictions),[groupMatches,ko,predictions]);
   // Group stage being complete unlocks "Copy All" / proximity sharing for good —
   // a later phase still in progress doesn't re-lock it. Late joiners who missed
@@ -3577,7 +4028,16 @@ function GuessesView({ groupMatches, ko, predictions, onGroupPred, onKOPred, isM
         groupMatches={groupMatches} ko={ko} canShare={canShare}
         onShare={onShare} onRemove={onRemoveRival}
         compareRival={compareRival} onToggleCompare={toggleCompare}
+        onShowProgress={() => setShowProgress(true)}
       />
+
+      {showProgress && (
+        <PointsProgressionModal
+          groupMatches={groupMatches} ko={ko}
+          myName={playerName} predictions={predictions} rivals={rivals}
+          onClose={() => setShowProgress(false)}
+        />
+      )}
 
       {/* Paste a sync link received in another storage context (e.g. browser vs. installed PWA) */}
       <PasteSyncLink onResolve={onResolveLink} />
