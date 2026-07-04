@@ -2644,8 +2644,11 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
 
   const W = 640, H = 210, padL = 6, padR = 6, padT = 16, padB = 6;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-  const maxY = Math.max(3, ...data.frames.map(f => Math.max(...f.cum)));
-  const xAt = i => total <= 1 ? padL + plotW / 2 : padL + (plotW * i) / (total - 1);
+  const visibleMax = revealIdx > 0
+    ? Math.max(...data.frames.slice(0, revealIdx).map(f => Math.max(...f.cum)))
+    : 0;
+  const maxY = Math.ceil(Math.max(3, visibleMax) * 1.12);
+  const xAt = i => revealIdx <= 1 ? padL + plotW / 2 : padL + (plotW * i) / (revealIdx - 1);
   const yAt = v => padT + plotH - (plotH * v) / maxY;
 
   const shown = revealIdx;
