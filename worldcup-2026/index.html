@@ -5411,14 +5411,12 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
   ];
   const [round,setRound]=useState(()=>{
     const now=Date.now();
-    const allPastScored=ROUNDS.every(r=>ko[r.key].every(m=>{
-      if(!m.date||m.date==="TBD") return true;
-      if(matchToUTC(m.date,m.time).getTime()>now) return true;
-      return m.scoreA!==null&&m.scoreB!==null;
-    }));
-    if(!allPastScored) return "r32";
-    const current=ROUNDS.find(r=>ko[r.key].some(m=>m.scoreA===null||m.scoreB===null));
-    return current?current.key:"r32";
+    for(let i=ROUNDS.length-1;i>=0;i--){
+      const matches=ko[ROUNDS[i].key];
+      const hasKickedOff=matches.some(m=>m.date&&m.date!=="TBD"&&matchToUTC(m.date,m.time).getTime()<=now);
+      if(hasKickedOff) return ROUNDS[i].key;
+    }
+    return "r32";
   });
   const matches=ko[round];
   const currentRound=ROUNDS.find(r=>r.key===round);
