@@ -688,6 +688,19 @@ permalink: /squeak-the-geek/
                     }
                     return null;
                 }
+                // Take the first (already-shuffled) open cell matching pred, else null.
+                function takeCellWhere(pred) {
+                    for (let i = openCells.length - 1; i >= 0; i--) {
+                        const c = openCells[i];
+                        if (used.has(key(c.x, c.y))) { openCells.splice(i, 1); continue; }
+                        if (pred(c)) {
+                            openCells.splice(i, 1);
+                            used.add(key(c.x, c.y));
+                            return c;
+                        }
+                    }
+                    return null;
+                }
 
                 // exit: farthest reachable cell from start
                 const dist = bfsDistances(startCell.x, startCell.y);
@@ -731,13 +744,77 @@ permalink: /squeak-the-geek/
 
                 blocks = new Set();
                 const blockCount = Math.min(2 + Math.floor(level / 2), 5);
-                for (let i = 0; i < blockCount; i++) {
-                    const c = takeCell();
-                    if (!c) break;
-                    blocks.add(key(c.x, c.y));
+
+                // Cells that must stay reachable so the level is always completable.
+                const requiredCells = [];
+                for (const fk of flowers.keys()) requiredCells.push(fk);
+                if (keyCell) requiredCells.push(key(keyCell.x, keyCell.y));
+                requiredCells.push(key(exitCell.x, exitCell.y));
+
+                // A block can be pushed only if one axis has open floor on BOTH sides.
+                function isOpenForPush(x, y, blockSet) {
+                    if (!inBounds(x, y) || grid[y][x] === WALL) return false;
+                    if (blockSet.has(key(x, y))) return false;
+                    if (chestCell && chestCell.locked && chestCell.x === x && chestCell.y === y) return false;
+                    return true;
+                }
+                function blockPushable(bx, by, blockSet) {
+                    const horizontal = isOpenForPush(bx - 1, by, blockSet) && isOpenForPush(bx + 1, by, blockSet);
+                    const vertical = isOpenForPush(bx, by - 1, blockSet) && isOpenForPush(bx, by + 1, blockSet);
+                    return horizontal || vertical;
+                }
+                // Every block in the set must be pushable, treating the others as obstacles.
+                // (A block placed next to an earlier one can otherwise box it in.)
+                function allBlocksPushable(blockSet) {
+                    for (const bk of blockSet) {
+                        const [bx, by] = bk.split(',').map(Number);
+                        const others = new Set(blockSet);
+                        others.delete(bk);
+                        if (!blockPushable(bx, by, others)) return false;
+                    }
+                    return true;
                 }
 
-                const ballCell = takeCell();
+                let placedBlocks = 0, blockTries = 0;
+                while (placedBlocks < blockCount && blockTries < blockCount * 40) {
+                    blockTries++;
+                    const c = takeCell();
+                    if (!c) break;
+
+                    const trialBlocks = new Set(blocks);
+                    trialBlocks.add(key(c.x, c.y));
+                    if (!allBlocksPushable(trialBlocks)) continue;
+
+                    // Adding the block (as an obstacle) must not cut off any required cell,
+                    // and the player must be able to reach at least one side to push it.
+                    const wallTrial = new Set(trialBlocks);
+                    if (chestCell && chestCell.locked) wallTrial.add(key(chestCell.x, chestCell.y));
+                    const reach = floodFillReachable(startCell.x, startCell.y, wallTrial);
+
+                    let ok = true;
+                    for (const rk of requiredCells) { if (!reach.has(rk)) { ok = false; break; } }
+                    if (ok) {
+                        const approaches = [[c.x - 1, c.y], [c.x + 1, c.y], [c.x, c.y - 1], [c.x, c.y + 1]];
+                        if (!approaches.some(([ax, ay]) => reach.has(key(ax, ay)))) ok = false;
+                    }
+                    if (!ok) continue;
+
+                    blocks.add(key(c.x, c.y));
+                    placedBlocks++;
+                }
+
+                // Give the player breathing room: hazards never share the start row/column
+                // and must be at least MIN_START_GAP tiles away (Manhattan) from the start.
+                const MIN_START_GAP = 5;
+                function offStartLines(c) {
+                    return c.x !== startCell.x && c.y !== startCell.y;
+                }
+                function farFromStart(c) {
+                    return offStartLines(c) &&
+                        (Math.abs(c.x - startCell.x) + Math.abs(c.y - startCell.y)) >= MIN_START_GAP;
+                }
+
+                const ballCell = takeCellWhere(farFromStart) || takeCellWhere(offStartLines) || takeCell();
                 if (ballCell) {
                     ball.x = ball.fromX = ballCell.x;
                     ball.y = ball.fromY = ballCell.y;
@@ -748,16 +825,15 @@ permalink: /squeak-the-geek/
                     ball.active = false;
                 }
 
-                // Keep the frog off the ball's row and column so they never spawn aligned.
-                let frogCell = null;
-                let fallbackCell = null;
-                while (true) {
-                    const c = takeCell();
-                    if (!c) break;
-                    if (!ballCell || (c.x !== ballCell.x && c.y !== ballCell.y)) { frogCell = c; break; }
-                    if (!fallbackCell) fallbackCell = c;
+                // Frog: away from the start too, and never aligned with the ball's row/column.
+                function offBallLines(c) {
+                    return !ballCell || (c.x !== ballCell.x && c.y !== ballCell.y);
                 }
-                if (!frogCell) frogCell = fallbackCell;
+                const frogCell =
+                    takeCellWhere(c => farFromStart(c) && offBallLines(c)) ||
+                    takeCellWhere(c => offStartLines(c) && offBallLines(c)) ||
+                    takeCellWhere(offStartLines) ||
+                    takeCell();
                 if (frogCell) {
                     frog.x = frog.fromX = frogCell.x;
                     frog.y = frog.fromY = frogCell.y;
