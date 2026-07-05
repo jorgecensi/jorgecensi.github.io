@@ -5401,7 +5401,6 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
 // ─── KNOCKOUT VIEW ─────────────────────────────────────────────────────────────
 function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScores,refreshing,lastUpdated}){
   const { t } = useLang();
-  const [round,setRound]=useState("r32");
   const ROUNDS=[
     {key:"r32",label:"R32",fullLabel:t('round_r32')},
     {key:"r16",label:"R16",fullLabel:t('round_r16')},
@@ -5410,6 +5409,17 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
     {key:"third",label:t('finish_3rd'),fullLabel:t('round_third')},
     {key:"final",label:"🏆 Final",fullLabel:t('round_final')},
   ];
+  const [round,setRound]=useState(()=>{
+    const now=Date.now();
+    const allPastScored=ROUNDS.every(r=>ko[r.key].every(m=>{
+      if(!m.date||m.date==="TBD") return true;
+      if(matchToUTC(m.date,m.time).getTime()>now) return true;
+      return m.scoreA!==null&&m.scoreB!==null;
+    }));
+    if(!allPastScored) return "r32";
+    const current=ROUNDS.find(r=>ko[r.key].some(m=>m.scoreA===null||m.scoreB===null));
+    return current?current.key:"r32";
+  });
   const matches=ko[round];
   const currentRound=ROUNDS.find(r=>r.key===round);
   const dateRefs=useRef({});
