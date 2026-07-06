@@ -79,17 +79,20 @@ permalink: /elastomania/
   <canvas id="canvas"></canvas>
   <div id="touch-controls">
     <div class="btn-group">
-      <button class="touch-btn" id="btn-left">←</button>
-      <button class="touch-btn" id="btn-right">→</button>
+      <button class="touch-btn" id="btn-brake" aria-label="Brake">◀</button>
+      <button class="touch-btn" id="btn-accel" aria-label="Accelerator">▶</button>
     </div>
     <div class="btn-group">
-      <button class="touch-btn" id="btn-lean-back">↺</button>
-      <button class="touch-btn" id="btn-lean-fwd">↻</button>
+      <button class="touch-btn" id="btn-switch" aria-label="Switch side">⇄</button>
+    </div>
+    <div class="btn-group">
+      <button class="touch-btn" id="btn-spin-back" aria-label="Backward spin">↺</button>
+      <button class="touch-btn" id="btn-spin-fwd" aria-label="Forward spin">↻</button>
     </div>
   </div>
 
   <script>
-    const SW_VERSION = '2607041144';
+    const SW_VERSION = '2607061200';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -151,6 +154,11 @@ permalink: /elastomania/
     const WHEEL_R = 15;
     const CHASSIS_W = 55;
     const CHASSIS_H = 10;
+    // Half the wheelbase — each wheel hangs from this far ahead of / behind
+    // the chassis centre. Kept a touch tighter than the chassis so the fat
+    // wheels sit close under the frame, matching the reference art.
+    const WHEELBASE_HALF = 18;
+    const BRACE_HALF     = 7;
 
     // Suspension: the main leg from chassis to wheel. Stiff + well-damped so
     // it gives a little under load but firmly springs back to its rest length
@@ -382,22 +390,25 @@ permalink: /elastomania/
     // the midpoint between those two clusters (~x=157) and near the bottom
     // of the engine block (the wheels themselves are separate, unused parts
     // of the sheet), then nudges down to roughly axle height.
-    const BIKE_BODY_SCALE    = 0.276;
+    const BIKE_BODY_SCALE    = 0.248;
     const BIKE_BODY_ANCHOR_X = 0.485;
     const BIKE_BODY_ANCHOR_Y = 0.99;
     const BIKE_BODY_OFFSET_Y = 13;
-    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.35) / 108;
+    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.1) / 108;
+    // Only spin the wheel art at a fraction of the real wheel speed so the
+    // spokes read as a calm roll instead of a dizzy strobe at full throttle.
+    const WHEEL_SPIN_VISUAL  = 0.3;
 
     const riderImg = new Image();
     riderImg.src   = '/elastomania/img/rider.png';
     // Rider art is a seated/crouched pose; anchor at the hip (where the
     // thighs bend to horizontal) rather than image center, so that point
     // lands on the bike's seat instead of floating above or sinking into it.
-    const RIDER_SCALE    = 0.29;
+    const RIDER_SCALE    = 0.26;
     const RIDER_ANCHOR_X = 0.286;
     const RIDER_ANCHOR_Y = 0.569;
-    const RIDER_OFFSET_X = -4;
-    const RIDER_OFFSET_Y = -11;
+    const RIDER_OFFSET_X = -3;
+    const RIDER_OFFSET_Y = -6;
 
     // Point on the rider's torso/chest, in chassis-local space (before
     // rotation) — used as the hit-test spot for ground/terrain crashes so
@@ -408,9 +419,12 @@ permalink: /elastomania/
     function getUpperBodyPos() {
       const a = chassis.angle;
       const cos = Math.cos(a), sin = Math.sin(a);
+      // Flip the fore/aft offset with facing, since the rider (and his torso)
+      // mirror when the bike is switched to face the other way.
+      const ox = UPPER_BODY_OFFSET.x * facing;
       return {
-        x: chassis.position.x + UPPER_BODY_OFFSET.x * cos - UPPER_BODY_OFFSET.y * sin,
-        y: chassis.position.y + UPPER_BODY_OFFSET.x * sin + UPPER_BODY_OFFSET.y * cos
+        x: chassis.position.x + ox * cos - UPPER_BODY_OFFSET.y * sin,
+        y: chassis.position.y + ox * sin + UPPER_BODY_OFFSET.y * cos
       };
     }
 
@@ -426,6 +440,7 @@ permalink: /elastomania/
     let camera  = { x: 0, y: 0 };
     let keys    = {};
     let touch   = { left: false, right: false, leanFwd: false, leanBack: false };
+    let facing  = 1; // 1 = the bike drives/faces right, -1 = flipped to the left
     let startTime   = 0;
     let elapsedTime = 0;
     let deadTimer   = 0;
@@ -467,7 +482,7 @@ permalink: /elastomania/
     function initPhysics() {
       Composite.clear(world, false);
 
-      rearWheel = Bodies.circle(SPAWN_X - 20, SPAWN_Y, WHEEL_R, {
+      rearWheel = Bodies.circle(SPAWN_X - WHEELBASE_HALF, SPAWN_Y, WHEEL_R, {
         friction: 0.95,
         density: 0.002,
         restitution: 0.05,
@@ -476,7 +491,7 @@ permalink: /elastomania/
         label: 'rearWheel'
       });
 
-      frontWheel = Bodies.circle(SPAWN_X + 20, SPAWN_Y, WHEEL_R, {
+      frontWheel = Bodies.circle(SPAWN_X + WHEELBASE_HALF, SPAWN_Y, WHEEL_R, {
         friction: 0.95,
         density: 0.002,
         restitution: 0.05,
@@ -512,23 +527,23 @@ permalink: /elastomania/
       // rotating around the wheel.
       const rearConstraint = Constraint.create({
         bodyA: chassis, bodyB: rearWheel,
-        pointA: { x: -20, y: 5 }, pointB: { x: 0, y: 0 },
+        pointA: { x: -WHEELBASE_HALF, y: 5 }, pointB: { x: 0, y: 0 },
         stiffness: SUSPENSION_STIFFNESS, damping: SUSPENSION_DAMPING, length: SUSPENSION_LENGTH
       });
       const rearBrace = Constraint.create({
         bodyA: chassis, bodyB: rearWheel,
-        pointA: { x: -8, y: -3 }, pointB: { x: 0, y: 0 },
+        pointA: { x: -BRACE_HALF, y: -3 }, pointB: { x: 0, y: 0 },
         stiffness: BRACE_STIFFNESS, damping: BRACE_DAMPING
       });
 
       const frontConstraint = Constraint.create({
         bodyA: chassis, bodyB: frontWheel,
-        pointA: { x: 20, y: 5 }, pointB: { x: 0, y: 0 },
+        pointA: { x: WHEELBASE_HALF, y: 5 }, pointB: { x: 0, y: 0 },
         stiffness: SUSPENSION_STIFFNESS, damping: SUSPENSION_DAMPING, length: SUSPENSION_LENGTH
       });
       const frontBrace = Constraint.create({
         bodyA: chassis, bodyB: frontWheel,
-        pointA: { x: 8, y: -3 }, pointB: { x: 0, y: 0 },
+        pointA: { x: BRACE_HALF, y: -3 }, pointB: { x: 0, y: 0 },
         stiffness: BRACE_STIFFNESS, damping: BRACE_DAMPING
       });
 
@@ -578,6 +593,7 @@ permalink: /elastomania/
         if (e.code === 'ArrowLeft'  || e.code === 'KeyA') changeSelectedLevel(-1);
       }
       if (e.code === 'KeyR' && state === 'win')   resetToStart();
+      if (e.code === 'KeyF' && state === 'playing' && !e.repeat) flipBike();
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
         e.preventDefault();
       }
@@ -606,10 +622,30 @@ permalink: /elastomania/
       el.addEventListener('pointercancel', release);
       el.addEventListener('pointerleave',  release);
     }
-    bindBtn('btn-right',    'right');
-    bindBtn('btn-left',     'left');
-    bindBtn('btn-lean-fwd', 'leanFwd');
-    bindBtn('btn-lean-back','leanBack');
+    bindBtn('btn-accel',     'right');
+    bindBtn('btn-brake',     'left');
+    bindBtn('btn-spin-fwd',  'leanFwd');
+    bindBtn('btn-spin-back', 'leanBack');
+
+    // Switch-side button: flips which way the bike faces/drives. A one-shot on
+    // press (not a held flag) with a short lockout so a single tap flips once.
+    (function () {
+      const el = document.getElementById('btn-switch');
+      let lock = false;
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        el.classList.add('pressed');
+        if (state === 'playing' && !lock) { flipBike(); lock = true; }
+      });
+      const release = () => { el.classList.remove('pressed'); lock = false; };
+      el.addEventListener('pointerup',     release);
+      el.addEventListener('pointercancel', release);
+      el.addEventListener('pointerleave',  release);
+    })();
+
+    function flipBike() {
+      facing = -facing;
+    }
 
     // ── Controls application ───────────────────────────────────
     function applyControls(dt) {
@@ -623,17 +659,25 @@ permalink: /elastomania/
       // animation frame, which spiked torque at high frame rates).
       const scale = dt / 16.67;
 
+      // Drive/brake/lean all respect `facing`, so a flipped bike accelerates,
+      // brakes and spins the correct way relative to the direction it faces.
       if (gas) {
-        Body.setAngularVelocity(rearWheel, Math.min(rearWheel.angularVelocity + MOTOR_ACCEL * scale, MAX_WHEEL_SPIN));
+        const t = facing > 0
+          ? Math.min(rearWheel.angularVelocity + MOTOR_ACCEL * scale,  MAX_WHEEL_SPIN)
+          : Math.max(rearWheel.angularVelocity - MOTOR_ACCEL * scale, -MAX_WHEEL_SPIN);
+        Body.setAngularVelocity(rearWheel, t);
       }
       if (brake) {
-        Body.setAngularVelocity(rearWheel, Math.max(rearWheel.angularVelocity - BRAKE_ACCEL * scale, MAX_BRAKE_SPIN));
+        const t = facing > 0
+          ? Math.max(rearWheel.angularVelocity - BRAKE_ACCEL * scale,  MAX_BRAKE_SPIN)
+          : Math.min(rearWheel.angularVelocity + BRAKE_ACCEL * scale, -MAX_BRAKE_SPIN);
+        Body.setAngularVelocity(rearWheel, t);
       }
       if (leanFwd) {
-        Body.setAngularVelocity(chassis, chassis.angularVelocity + LEAN_ACCEL * scale);
+        Body.setAngularVelocity(chassis, chassis.angularVelocity + LEAN_ACCEL * scale * facing);
       }
       if (leanBack) {
-        Body.setAngularVelocity(chassis, chassis.angularVelocity - LEAN_ACCEL * scale);
+        Body.setAngularVelocity(chassis, chassis.angularVelocity - LEAN_ACCEL * scale * facing);
       }
     }
 
@@ -680,6 +724,7 @@ permalink: /elastomania/
       loadLevel(selectedLevel);
       initPickups();
       initPhysics();
+      facing = 1;
       state = 'playing';
       startTime = performance.now();
       lastTs = performance.now();
@@ -692,6 +737,7 @@ permalink: /elastomania/
 
     function respawn() {
       initPhysics(); // keeps apples collected state
+      facing = 1;
       state = 'playing';
       lastTs = performance.now();
     }
@@ -744,7 +790,7 @@ permalink: /elastomania/
     function drawWheel(pos, angle) {
       ctx.save();
       ctx.translate(pos.x, pos.y);
-      ctx.rotate(angle);
+      ctx.rotate(angle * WHEEL_SPIN_VISUAL);
       const w = bikeWheelImg.width * BIKE_WHEEL_SCALE;
       const h = bikeWheelImg.height * BIKE_WHEEL_SCALE;
       ctx.drawImage(bikeWheelImg, -w / 2, -h / 2, w, h);
@@ -757,6 +803,11 @@ permalink: /elastomania/
       const fp = frontWheel.position;
       const cp = chassis.position;
       const ca = chassis.angle;
+
+      ctx.save();
+      // Mirror the whole bike around its own centre when it's flipped to face
+      // left, so the frame, wheels and rider all point the other way.
+      if (facing < 0) { ctx.translate(cp.x, 0); ctx.scale(-1, 1); ctx.translate(-cp.x, 0); }
 
       // Frame lines
       ctx.strokeStyle = '#2a2a3a';
@@ -788,6 +839,8 @@ permalink: /elastomania/
       const rh = riderImg.height * RIDER_SCALE;
       ctx.drawImage(riderImg, -rw * RIDER_ANCHOR_X, -rh * RIDER_ANCHOR_Y, rw, rh);
       ctx.restore();
+
+      ctx.restore(); // end facing-mirror
     }
 
     // ── Terrain drawing ────────────────────────────────────────
@@ -999,7 +1052,9 @@ permalink: /elastomania/
       ctx.font = '14px system-ui, sans-serif';
       ctx.fillStyle = '#aaaaaa';
       ctx.fillText(
-        unlockedCount > 1 ? '← → choose level   ↑ ↓ lean once riding' : '← → throttle/brake   ↑ ↓ lean',
+        unlockedCount > 1
+          ? '← → choose level   ↑ ↓ lean   F flip'
+          : '← → throttle/brake   ↑ ↓ lean   F flip',
         cx, cy + 100
       );
 
