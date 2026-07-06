@@ -2826,15 +2826,21 @@ function PointsProgressionModal({ groupMatches, ko, myName, predictions, rivals,
                its own in landscape so the controls below stay pinned and
                reachable however many rivals are in the list. */}
             <div className="pp-legend-scroll">
-              <div className="pp-legend" style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                {rankedPlayers.map(({ p, pi, val }) => {
+              <div className="pp-legend" style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {data.players.map((p, pi) => {
+                  const rank = rankedPlayers.findIndex(r => r.pi === pi);
+                  const val = shown > 0 ? data.frames[shown - 1].cum[pi] : 0;
                   const isExact = exactNames.includes(p.n);
+                  const ROW_STRIDE = 32;
                   return (
                     <div key={p.n} style={{
                       display:'flex', alignItems:'center', justifyContent:'space-between', gap:8,
                       background: isExact ? 'rgba(255,215,0,0.14)' : 'rgba(255,255,255,0.04)',
                       border:`1px solid ${isExact ? 'rgba(255,215,0,0.55)' : BORDER}`,
                       borderRadius:8, padding:'4px 8px',
+                      height:26, boxSizing:'border-box', flexShrink:0, width:'100%',
+                      transform:`translateY(${(rank - pi) * ROW_STRIDE}px)`,
+                      transition:'transform 0.35s ease-out',
                     }}>
                       <span style={{ display:'flex', alignItems:'center', gap:5, minWidth:0 }}>
                         <span style={{ width:8, height:8, borderRadius:'50%', background:colors[pi], flexShrink:0 }}/>
