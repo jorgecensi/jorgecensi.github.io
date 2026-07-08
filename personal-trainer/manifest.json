@@ -1,0 +1,31 @@
+{
+  "id": "/personal-trainer/",
+  "name": "Personal Trainer",
+  "short_name": "Trainer",
+  "description": "Adaptive core fitness and mat pilates workouts that progress with you. Works offline.",
+  "start_url": "/personal-trainer/",
+  "scope": "/personal-trainer/",
+  "display": "standalone",
+  "background_color": "#0c1512",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/img/personal-trainer-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/personal-trainer-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "fitness"],
+  "lang": "en-US",
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
