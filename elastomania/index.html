@@ -92,7 +92,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607091500';
+    const SW_VERSION = '2607091530';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -224,50 +224,110 @@ permalink: /elastomania/
       const STEP = 60;
       const segCount = Math.floor(worldW / STEP);
 
+      // Build terrain in segments; some stretches are rolling hills,
+      // others are ramp → cliff → wall obstacles the player must brake
+      // for or die.
       const terrain = [[0, FLAT_Y]];
       let y = FLAT_Y;
+      let i = 1;
 
-      // First few segments are flat for spawn safety
+      // Flat spawn zone
       const flatStart = 2;
-      for (let i = 1; i <= flatStart; i++) terrain.push([i * STEP, FLAT_Y]);
+      for (; i <= flatStart; i++) terrain.push([i * STEP, FLAT_Y]);
 
-      // Generate terrain with controlled randomness
       const maxSlope = 30 + difficulty * 40;
-      const hillChance = 0.35 + difficulty * 0.15;
 
-      for (let i = flatStart + 1; i < segCount - 2; i++) {
+      // How many ramp obstacles to place (scales with difficulty)
+      const rampCount = 1 + Math.floor(difficulty * 3 + rng() * 1.5);
+      // Spread ramp placements roughly evenly across the track
+      const rampZoneSize = Math.floor((segCount - flatStart - 4) / (rampCount + 1));
+      const rampPositions = new Set();
+      for (let r = 0; r < rampCount; r++) {
+        const base = flatStart + 2 + rampZoneSize * (r + 1);
+        const jitter = Math.floor((rng() - 0.5) * rampZoneSize * 0.4);
+        rampPositions.add(Math.max(flatStart + 3, Math.min(segCount - 8, base + jitter)));
+      }
+
+      while (i < segCount - 2) {
         const x = i * STEP;
-        const progress = i / segCount;
 
-        // Tendency toward valleys (low ground) then hills in waves
+        if (rampPositions.has(i) && i < segCount - 7) {
+          // ── Ramp → cliff → wall obstacle ──
+          // Approach: gentle upslope (ramp), then a cliff drop, then a
+          // steep wall rise. If the player is going too fast they'll
+          // smash into the wall; they need to brake before the ramp.
+          const rampHeight = 40 + Math.round(difficulty * 60 + rng() * 30);
+          const gapWidth = 2 + Math.floor(rng() * 1.5);
+          const wallHeight = 30 + Math.round(difficulty * 50 + rng() * 20);
+
+          // Ramp up (2 segments)
+          const rampBase = y;
+          const rampTop = Math.max(MIN_Y, rampBase - rampHeight);
+          terrain.push([x, Math.round(rampBase - rampHeight * 0.4)]);
+          i++;
+          terrain.push([i * STEP, rampTop]);
+          i++;
+
+          // Cliff edge — drop to floor
+          const cliffBottom = Math.min(MAX_Y, rampTop + rampHeight + 30);
+          terrain.push([i * STEP, cliffBottom]);
+          i++;
+
+          // Gap floor (1–2 segments)
+          for (let g = 0; g < gapWidth; g++) {
+            terrain.push([i * STEP, cliffBottom]);
+            i++;
+          }
+
+          // Wall — steep rise the player will crash into if too fast
+          const wallTop = Math.max(MIN_Y, cliffBottom - wallHeight - rampHeight * 0.5);
+          terrain.push([i * STEP, Math.round(cliffBottom - (cliffBottom - wallTop) * 0.7)]);
+          i++;
+          terrain.push([i * STEP, wallTop]);
+          i++;
+
+          // Gentle descent back to rideable terrain
+          y = wallTop;
+          const recover = Math.min(MAX_Y, wallTop + 40 + rng() * 30);
+          terrain.push([i * STEP, Math.round(y + (recover - y) * 0.5)]);
+          i++;
+          y = Math.round(recover);
+          terrain.push([i * STEP, y]);
+          i++;
+
+          continue;
+        }
+
+        // ── Regular rolling terrain ──
+        const progress = i / segCount;
         const wave = Math.sin(progress * Math.PI * (2 + rng() * 2)) * (60 + difficulty * 80);
         const jitter = (rng() - 0.5) * maxSlope;
 
         let target = FLAT_Y + wave + jitter;
         target = Math.max(MIN_Y, Math.min(MAX_Y, target));
 
-        // Limit slope between consecutive points
         const maxDelta = maxSlope * 0.8;
         const delta = Math.max(-maxDelta, Math.min(maxDelta, target - y));
         y = y + delta;
         y = Math.max(MIN_Y, Math.min(MAX_Y, Math.round(y)));
 
         terrain.push([x, y]);
+        i++;
       }
 
       // Flatten the last few segments for flower placement
       const endY = Math.min(400, y);
-      for (let i = segCount - 2; i <= segCount; i++) {
+      for (; i <= segCount; i++) {
         terrain.push([i * STEP, endY]);
       }
       terrain.push([worldW, endY]);
 
       // Find hill crests for apple placement
       const crests = [];
-      for (let i = 2; i < terrain.length - 3; i++) {
-        const [, yPrev] = terrain[i - 1];
-        const [xC, yC] = terrain[i];
-        const [, yNext] = terrain[i + 1];
+      for (let j = 2; j < terrain.length - 3; j++) {
+        const [, yPrev] = terrain[j - 1];
+        const [xC, yC] = terrain[j];
+        const [, yNext] = terrain[j + 1];
         if (yC < yPrev && yC < yNext && yC < FLAT_Y - 10) {
           crests.push({ x: xC, y: yC, depth: FLAT_Y - yC });
         }
