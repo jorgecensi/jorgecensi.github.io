@@ -121,7 +121,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607101313';
+    const SW_VERSION = '2607101400';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -233,17 +233,21 @@ permalink: /elastomania/
     // holding full throttle from a standstill loops you over backwards in
     // about a second and a half unless you lean forward, and throttle/brake
     // rotate the bike in mid-air. MOTOR_REACTION scales the
-    // I_wheel/I_chassis reaction reaching the frame — a feel knob, tuned so
-    // held full gas hits 45° in ~1.5s (wheel inertia goes with r⁴, so this
-    // compensates for the smaller wheel radius).
-    const MOTOR_ACCEL    = 0.1;    // wheel spin gain per 16.67ms frame
-    const MOTOR_REACTION = 1.25;
+    // I_wheel/I_chassis reaction reaching the frame — a feel knob. With
+    // both wheels held on their suspension axes there is no trailing-wheel
+    // weight transfer any more, so the reaction torque is the sole wheelie
+    // source (as in the original game): tuned so held full gas hits 45° in
+    // about a second, while gas + lean-forward cruises fast and level.
+    const MOTOR_ACCEL    = 0.12;   // wheel spin gain per 16.67ms frame
+    const MOTOR_REACTION = 1.6;
     // Brake couples both wheels to the frame (locks them relative to it, no
     // reverse thrust) — turn around with the flip key instead, as in the
     // original.
     const BRAKE_LOCK     = 0.25;   // per-frame lock-up fraction
     const MAX_WHEEL_SPIN = 20;
-    const LEAN_ACCEL     = 0.09;
+    // Lean ("spin") input: kept subtle — it nudges the bike's rotation for
+    // balance corrections rather than whipping it around.
+    const LEAN_ACCEL     = 0.045;
 
     const SPAWN_X = 80;
     const SPAWN_Y = 400;
@@ -877,44 +881,51 @@ permalink: /elastomania/
       }
     }
 
-    // ── Front fork alignment ───────────────────────────────────
-    // Keep the front wheel on the fork's slider axis so it only moves
-    // diagonally along the fork angle, like a real telescopic fork. The
-    // correction is deliberately soft and capped: the springs and the
-    // collision solver keep full authority (a hard projection here can
-    // drag the wheel through walls or fight the springs into stuck
-    // states), while the capped perpendicular pull plus velocity damping
-    // keeps the visible off-axis error under about a pixel in normal
-    // riding and lets brutal impacts flex for only a few frames.
-    function alignFrontFork() {
+    // ── Wheel axis alignment ───────────────────────────────────
+    // Keep each wheel on its suspension's slider axis: the front wheel
+    // moves only diagonally along the fork angle (crown → axle) and the
+    // rear wheel only straight up and down in chassis space, never
+    // sideways. The correction is deliberately soft and capped: the
+    // springs and the collision solver keep full authority (a hard
+    // projection here can drag a wheel through walls or fight the springs
+    // into stuck states), while the capped perpendicular pull plus
+    // velocity damping keeps the visible off-axis error under about a
+    // pixel in normal riding and lets brutal impacts flex for only a few
+    // frames.
+    function alignWheelToAxis(w, restX, dir) {
       const cos = Math.cos(chassis.angle), sin = Math.sin(chassis.angle);
-      const w = frontWheel;
       const dx = w.position.x - chassis.position.x;
       const dy = w.position.y - chassis.position.y;
       const localX = dx * cos + dy * sin;
       const localY = -dx * sin + dy * cos;
-      // Perpendicular offset from the fork axis, in chassis space.
-      const o = (localX - WHEELBASE_HALF) * -FORK_DIR.y
-              + (localY - AXLE_REST_Y) * FORK_DIR.x;
+      // Perpendicular offset from the axis, in chassis space.
+      const o = (localX - restX) * -dir.y + (localY - AXLE_REST_Y) * dir.x;
       const corr = Math.max(-FORK_ALIGN_POS_CAP,
                    Math.min(FORK_ALIGN_POS_CAP, o * FORK_ALIGN_POS_K));
       if (Math.abs(corr) > 0.01) {
-        const nx = localX - corr * -FORK_DIR.y;
-        const ny = localY - corr * FORK_DIR.x;
+        const nx = localX - corr * -dir.y;
+        const ny = localY - corr * dir.x;
         Body.setPosition(w, {
           x: chassis.position.x + nx * cos - ny * sin,
           y: chassis.position.y + nx * sin + ny * cos
         });
       }
       // Damp the perpendicular part of the wheel's relative velocity.
-      const px = -FORK_DIR.y * cos - FORK_DIR.x * sin;
-      const py = -FORK_DIR.y * sin + FORK_DIR.x * cos;
+      const px = -dir.y * cos - dir.x * sin;
+      const py = -dir.y * sin + dir.x * cos;
       const pv = ((w.velocity.x - chassis.velocity.x) * px
                 + (w.velocity.y - chassis.velocity.y) * py) * FORK_ALIGN_VEL_K;
       Body.setVelocity(w, {
         x: w.velocity.x - pv * px,
         y: w.velocity.y - pv * py
       });
+    }
+
+    const REAR_AXIS_DIR = { x: 0, y: 1 }; // straight down in chassis space
+
+    function alignWheelAxes() {
+      alignWheelToAxis(frontWheel, WHEELBASE_HALF, FORK_DIR);
+      alignWheelToAxis(rearWheel, -WHEELBASE_HALF, REAR_AXIS_DIR);
     }
 
     // ── Death detection ────────────────────────────────────────
@@ -1451,7 +1462,7 @@ permalink: /elastomania/
         applyControls(dt);
         Engine.update(engine, dt);
         applyBumpStops();
-        alignFrontFork();
+        alignWheelAxes();
         checkApples();
         checkDeath();
         checkWin();
