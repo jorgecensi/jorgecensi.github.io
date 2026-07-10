@@ -439,14 +439,16 @@ permalink: /elastomania/
     bikeBodyImg.src    = '/elastomania/img/bike-body.png';
     const bikeWheelImg = new Image();
     bikeWheelImg.src   = '/elastomania/img/bike-wheel.png';
-    // Axle points measured off bike-body.png: the pronged swingarm clamp at
-    // the sprite's rear tip and the fork tip at its front. Mapping these two
-    // art pixels onto the wheels' rest positions in chassis space (a
-    // similarity transform: scale + slight rotation, since the art's axle
-    // line isn't quite horizontal) puts the frame exactly over the wheels —
-    // fork on the front axle, swingarm on the rear axle.
-    const BODY_ART_REAR_AXLE  = { x: 8,   y: 68 };
-    const BODY_ART_FRONT_AXLE = { x: 314, y: 95 };
+    // Axle points in bike-body.png pixel coordinates, solved from the
+    // artist's assembled reference shot: the wheels sit INBOARD of the
+    // sprite tips — the rear fender/prong overhangs the rear wheel and the
+    // front fender arcs above the front wheel — with both axle centres
+    // below the sprite's lower edge (the frame rides on top of the wheels).
+    // Mapping these two points onto the wheels' rest positions in chassis
+    // space (a similarity transform: scale + slight rotation) reproduces
+    // the reference layout exactly.
+    const BODY_ART_REAR_AXLE  = { x: 37,  y: 140 };
+    const BODY_ART_FRONT_AXLE = { x: 273, y: 123 };
     const BODY_ART_DX = BODY_ART_FRONT_AXLE.x - BODY_ART_REAR_AXLE.x;
     const BODY_ART_DY = BODY_ART_FRONT_AXLE.y - BODY_ART_REAR_AXLE.y;
     const BIKE_BODY_SCALE = (WHEELBASE_HALF * 2) / Math.hypot(BODY_ART_DX, BODY_ART_DY);
@@ -461,19 +463,20 @@ permalink: /elastomania/
     // Rider art is a seated/crouched pose; anchor at the hip (where the
     // thighs bend to horizontal) rather than image center, so that point
     // lands on the bike's seat instead of floating above or sinking into it.
-    // Scaled so the feet reach the pegs at the engine bottom now that the
-    // body art is smaller (it spans the wider wheelbase).
-    const RIDER_SCALE    = 0.17;
+    // Size and hip placement match the assembled reference shot: the rider
+    // is big relative to the bike (helmet well above the handlebars, feet
+    // reaching the pegs at the engine bottom).
+    const RIDER_SCALE    = 0.27;
     const RIDER_ANCHOR_X = 0.286;
     const RIDER_ANCHOR_Y = 0.569;
-    const RIDER_OFFSET_X = -13;
-    const RIDER_OFFSET_Y = 12;
+    const RIDER_OFFSET_X = -12;
+    const RIDER_OFFSET_Y = -1;
 
     // Point at the rider's helmet, in chassis-local space (before rotation)
     // — used as the hit-test spot for ground/terrain crashes so only the
     // head counts as a collision (as in the original game), not the wheels,
     // frame, or legs clipping a bump.
-    const UPPER_BODY_OFFSET = { x: -6, y: -16 };
+    const UPPER_BODY_OFFSET = { x: -3, y: -35 };
 
     function getUpperBodyPos() {
       const a = chassis.angle;
@@ -923,18 +926,38 @@ permalink: /elastomania/
       // left, so the frame, wheels and rider all point the other way.
       if (facing < 0) { ctx.translate(cp.x, 0); ctx.scale(-1, 1); ctx.translate(-cp.x, 0); }
 
-      // Suspension legs: from the frame's axle rest points to wherever the
-      // wheels actually are, so the fork/swingarm visibly flex as the
-      // suspension compresses and stretches.
+      // Suspension animation: the swingarm pivots from the frame down to the
+      // actual rear wheel centre and the front fork telescopes from the fork
+      // crown to the actual front wheel centre, so both visibly compress,
+      // stretch and flex with the physics. Their frame-side ends are fixed
+      // in chassis space (points read off the body art: swingarm pivot by
+      // the engine, fork crown under the handlebars).
       const cos = Math.cos(ca), sin = Math.sin(ca);
-      const legX = (side) => cp.x + side * WHEELBASE_HALF * cos - AXLE_REST_Y * sin;
-      const legY = (side) => cp.y + side * WHEELBASE_HALF * sin + AXLE_REST_Y * cos;
-      ctx.strokeStyle = '#2a2a3a';
-      ctx.lineWidth = 3;
+      const localPt = (lx, ly) => ({
+        x: cp.x + lx * cos - ly * sin,
+        y: cp.y + lx * sin + ly * cos
+      });
+      const swingarmPivot = localPt(-14, 15);
+      const forkCrown     = localPt(23, 4);
       ctx.lineCap = 'round';
+      // Rear swingarm: single dark arm.
+      ctx.strokeStyle = '#2a2a3a';
+      ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.moveTo(rp.x, rp.y); ctx.lineTo(legX(-1), legY(-1)); ctx.lineTo(cp.x, cp.y);
-      ctx.moveTo(fp.x, fp.y); ctx.lineTo(legX(1),  legY(1));  ctx.lineTo(cp.x, cp.y);
+      ctx.moveTo(swingarmPivot.x, swingarmPivot.y); ctx.lineTo(rp.x, rp.y);
+      ctx.stroke();
+      // Front fork: dark outer tube with a lighter slider core, so the
+      // telescoping motion reads clearly.
+      ctx.strokeStyle = '#2a2a3a';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(forkCrown.x, forkCrown.y); ctx.lineTo(fp.x, fp.y);
+      ctx.stroke();
+      ctx.strokeStyle = '#9a9aa8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(forkCrown.x, forkCrown.y);
+      ctx.lineTo((forkCrown.x + fp.x) / 2, (forkCrown.y + fp.y) / 2);
       ctx.stroke();
 
       drawWheel(rp, rearWheel.angle);
