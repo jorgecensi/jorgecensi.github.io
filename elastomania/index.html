@@ -155,36 +155,48 @@ permalink: /elastomania/
     const CHASSIS_W = 55;
     const CHASSIS_H = 10;
     // Half the wheelbase — each wheel hangs from this far ahead of / behind
-    // the chassis centre. Kept a touch tighter than the chassis so the fat
-    // wheels sit close under the frame, matching the reference art.
-    const WHEELBASE_HALF = 18;
+    // the chassis centre. Original Elasto Mania geometry: the wheelbase is
+    // roughly 4× the wheel radius and the wheels poke out beyond the frame
+    // front and rear, rather than tucking underneath it.
+    const WHEELBASE_HALF = 28;
     const BRACE_HALF     = 7;
 
-    // Suspension: the main leg from chassis to wheel. Stiff + well-damped so
-    // it gives a little under load but firmly springs back to its rest length
-    // — the wheels stay put under the bike (matching where the sprite draws
-    // the fork/swingarm) instead of drifting, and it can't stretch out and
-    // stay stretched. (A soft spring here let the wheels wander and also let
-    // the frame pitch up more, which exaggerated the throttle wheelie.)
+    // Suspension: the main leg from chassis to wheel. Soft and lightly
+    // damped on purpose — the elastic, visibly-bouncing suspension is the
+    // signature of the original game (it's what the "Elasto" in the name
+    // means). Landings compress, the frame bobs, and the wheels spring back.
+    // The second brace link per wheel (see rearBrace/frontBrace) keeps the
+    // geometry from collapsing even though these springs are soft.
     const SUSPENSION_LENGTH    = 15;
-    const SUSPENSION_STIFFNESS = 0.9;
-    const SUSPENSION_DAMPING   = 0.5;
+    const SUSPENSION_STIFFNESS = 0.35;
+    const SUSPENSION_DAMPING   = 0.1;
 
     // Secondary locating link per wheel — see note at rearBrace/frontBrace.
-    // Stiff, since its job is structural (stop the wheel from swinging around
-    // the chassis), not to add suspension feel.
-    const BRACE_STIFFNESS = 0.9;
-    const BRACE_DAMPING   = 0.4;
+    // Springy like the main leg so the wheel can visibly travel, but stiff
+    // enough that the wheel can't swing around the chassis.
+    const BRACE_STIFFNESS = 0.5;
+    const BRACE_DAMPING   = 0.12;
 
-    // Throttle: eased down from the old grabbier values so gassing from a
-    // standstill no longer pops the front end up into a hard wheelie. Paired
-    // with the stiffer suspension above, full throttle now lifts the nose only
-    // modestly; a deliberate wheelie still needs a held lean-back.
-    const MOTOR_ACCEL   = 0.09;   // angular accel per 16.67ms frame
-    const BRAKE_ACCEL   = 0.2;
+    // Throttle: strong, like the original — gassing hard from a standstill
+    // lifts the front wheel, and wheelie balance (throttle + lean) is part
+    // of the core skill set. Brake clamps BOTH wheels toward zero spin (the
+    // original has no reverse; you flip the bike to go the other way).
+    const MOTOR_ACCEL   = 0.14;   // angular accel per 16.67ms frame
+    const BRAKE_ACCEL   = 0.4;
     const MAX_WHEEL_SPIN  = 20;
-    const MAX_BRAKE_SPIN  = -8;
-    const LEAN_ACCEL    = 0.08;
+    // Lean ramps chassis rotation up to a capped rate, like the original's
+    // constant-speed rotate keys — holding it flips at a steady pace
+    // (~1.2s per full mid-air flip) instead of winding up ever faster.
+    // The per-frame ramp is small on purpose: it acts like a torque, so on
+    // the ground the wheels/suspension resist it and taps give gentle
+    // wheelie corrections, while in the air the body winds up to full rate.
+    const LEAN_ACCEL    = 0.005;
+    const LEAN_MAX_SPIN = 0.09;
+    // Motor reaction torque: spinning the rear wheel up kicks the frame the
+    // opposite way (nose up under throttle) — this is what makes standstill
+    // wheelies possible in the original. Expressed as the fraction of each
+    // frame's wheel spin-up that is fed back into chassis rotation.
+    const MOTOR_KICK    = 0.02;
 
     const SPAWN_X = 80;
     const SPAWN_Y = 400;
@@ -432,11 +444,11 @@ permalink: /elastomania/
     bikeWheelImg.src   = '/elastomania/img/bike-wheel.png';
     // Scale so the art's fork cluster (~x=230) to swingarm/chain cluster
     // (~x=85) span — where the wheels visually belong — matches the real
-    // wheelbase (40 world units): 40 / (230-85) ≈ 0.276. The anchor sits at
+    // wheelbase (56 world units): 56 / (230-85) ≈ 0.386. The anchor sits at
     // the midpoint between those two clusters (~x=157) and near the bottom
     // of the engine block (the wheels themselves are separate, unused parts
     // of the sheet), then nudges down to roughly axle height.
-    const BIKE_BODY_SCALE    = 0.248;
+    const BIKE_BODY_SCALE    = 0.386;
     const BIKE_BODY_ANCHOR_X = 0.485;
     const BIKE_BODY_ANCHOR_Y = 0.99;
     const BIKE_BODY_OFFSET_Y = 13;
@@ -450,17 +462,17 @@ permalink: /elastomania/
     // Rider art is a seated/crouched pose; anchor at the hip (where the
     // thighs bend to horizontal) rather than image center, so that point
     // lands on the bike's seat instead of floating above or sinking into it.
-    const RIDER_SCALE    = 0.26;
+    const RIDER_SCALE    = 0.38;
     const RIDER_ANCHOR_X = 0.286;
     const RIDER_ANCHOR_Y = 0.569;
-    const RIDER_OFFSET_X = -3;
-    const RIDER_OFFSET_Y = -6;
+    const RIDER_OFFSET_X = -5;
+    const RIDER_OFFSET_Y = -17;
 
     // Point on the rider's torso/chest, in chassis-local space (before
     // rotation) — used as the hit-test spot for ground/terrain crashes so
     // only the upper body counts as a collision, not the wheels, frame, or
     // legs clipping a bump.
-    const UPPER_BODY_OFFSET = { x: -10, y: -45 };
+    const UPPER_BODY_OFFSET = { x: -14, y: -62 };
 
     function getUpperBodyPos() {
       const a = chassis.angle;
@@ -475,8 +487,10 @@ permalink: /elastomania/
     }
 
     // ── Physics engine ─────────────────────────────────────────
+    // Gravity tuned down a touch from earlier builds: the original game has
+    // a floaty, hang-time feel in the air that a heavier pull kills.
     const engine = Engine.create();
-    engine.gravity.y = 1.8;
+    engine.gravity.y = 1.4;
     const world = engine.world;
 
     // ── Game state ─────────────────────────────────────────────
@@ -552,12 +566,11 @@ permalink: /elastomania/
         collisionFilter: { category: 0x0004, mask: 0x0000 },
         label: 'chassis'
       });
-      // Real bike frames strongly resist pitching (rider + engine mass sits
-      // well away from the wheel axles). The thin default rectangle body is
-      // too easy to snap-rotate, which let throttle alone flip the bike into
-      // an instant, uncontrollable wheelie — bump pitch inertia way up
-      // without changing its mass (so suspension loading stays the same).
-      Body.setInertia(chassis, chassis.inertia * 6);
+      // The thin default rectangle body snap-rotates far too easily, so give
+      // it extra pitch inertia — but only a moderate amount: the original
+      // bike rotates quickly under lean input (mid-air flips are a core
+      // move) and pops the front wheel up under hard throttle.
+      Body.setInertia(chassis, chassis.inertia * 3);
 
       // Each wheel is hung from the chassis by TWO non-collinear links, not
       // one. A single distance constraint only pins the wheel's distance
@@ -639,6 +652,9 @@ permalink: /elastomania/
         if (e.code === 'ArrowLeft'  || e.code === 'KeyA') changeSelectedLevel(-1);
       }
       if (e.code === 'KeyR' && state === 'win')   resetToStart();
+      // Restart in place, like Esc in the original — with loops legal it's
+      // possible to end up wedged/upside-down without a head touch.
+      if (e.code === 'KeyR' && state === 'playing' && !e.repeat) die();
       if (e.code === 'KeyF' && state === 'playing' && !e.repeat) flipBike();
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
         e.preventDefault();
@@ -708,22 +724,31 @@ permalink: /elastomania/
       // Drive/brake/lean all respect `facing`, so a flipped bike accelerates,
       // brakes and spins the correct way relative to the direction it faces.
       if (gas) {
+        const before = rearWheel.angularVelocity;
         const t = facing > 0
-          ? Math.min(rearWheel.angularVelocity + MOTOR_ACCEL * scale,  MAX_WHEEL_SPIN)
-          : Math.max(rearWheel.angularVelocity - MOTOR_ACCEL * scale, -MAX_WHEEL_SPIN);
+          ? Math.min(before + MOTOR_ACCEL * scale,  MAX_WHEEL_SPIN)
+          : Math.max(before - MOTOR_ACCEL * scale, -MAX_WHEEL_SPIN);
         Body.setAngularVelocity(rearWheel, t);
+        // Equal-and-opposite kick on the frame (see MOTOR_KICK). Signs work
+        // out for both facings: spin-up direction flips with `facing`, so
+        // the reaction always pitches the nose up.
+        Body.setAngularVelocity(chassis, chassis.angularVelocity - (t - before) * MOTOR_KICK);
       }
       if (brake) {
-        const t = facing > 0
-          ? Math.max(rearWheel.angularVelocity - BRAKE_ACCEL * scale,  MAX_BRAKE_SPIN)
-          : Math.min(rearWheel.angularVelocity + BRAKE_ACCEL * scale, -MAX_BRAKE_SPIN);
-        Body.setAngularVelocity(rearWheel, t);
+        // Like the original: braking clamps BOTH wheels toward zero spin.
+        // There is no reverse — flip the bike to drive the other way.
+        const step = BRAKE_ACCEL * scale;
+        for (const w of [rearWheel, frontWheel]) {
+          const av = w.angularVelocity;
+          Body.setAngularVelocity(w, Math.abs(av) <= step ? 0 : av - Math.sign(av) * step);
+        }
       }
-      if (leanFwd) {
-        Body.setAngularVelocity(chassis, chassis.angularVelocity + LEAN_ACCEL * scale * facing);
-      }
-      if (leanBack) {
-        Body.setAngularVelocity(chassis, chassis.angularVelocity - LEAN_ACCEL * scale * facing);
+      if (leanFwd !== leanBack) {
+        const dir = (leanFwd ? 1 : -1) * facing;
+        const av  = chassis.angularVelocity + LEAN_ACCEL * scale * dir;
+        Body.setAngularVelocity(chassis, dir > 0
+          ? Math.min(av,  LEAN_MAX_SPIN)
+          : Math.max(av, -LEAN_MAX_SPIN));
       }
     }
 
@@ -733,14 +758,13 @@ permalink: /elastomania/
 
       // Only the rider's upper body counts as a crash — the wheels, frame,
       // and legs can clip a bump or scrape a slope without ending the run.
+      // Note there is deliberately NO "you are upside down" check: like the
+      // original game, full mid-air flips and loops are legal moves — you
+      // only die when the rider's head actually meets the ground.
       const upperBody = getUpperBodyPos();
       const groundY = getTerrainY(upperBody.x);
       if (upperBody.y > groundY) { die(); return; }
       if (upperBody.y > WORLD_H + 50) { die(); return; }
-
-      // Die if chassis is inverted (~135° – 225° from upright)
-      const angle = ((chassis.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-      if (angle > Math.PI * 0.75 && angle < Math.PI * 1.25) { die(); return; }
     }
 
     // ── Apple & flower checks ──────────────────────────────────
@@ -1106,8 +1130,8 @@ permalink: /elastomania/
       ctx.fillStyle = '#aaaaaa';
       ctx.fillText(
         unlockedCount > 1
-          ? '← → choose level   ↑ ↓ lean   F flip'
-          : '← → throttle/brake   ↑ ↓ lean   F flip',
+          ? '← → choose level   ↑ ↓ lean   F flip   R restart'
+          : '← → throttle/brake   ↑ ↓ lean   F flip   R restart',
         cx, cy + 100
       );
 
@@ -1237,6 +1261,19 @@ permalink: /elastomania/
 
     lastTs = performance.now();
     requestAnimationFrame(loop);
+
+    // Test/debug hook: expose a physics snapshot for automated checks.
+    window.__DBG = function () {
+      if (!chassis) return { state };
+      return {
+        state,
+        chassis: { x: chassis.position.x, y: chassis.position.y, angle: chassis.angle },
+        rear:  { x: rearWheel.position.x,  y: rearWheel.position.y,  spin: rearWheel.angularVelocity },
+        front: { x: frontWheel.position.x, y: frontWheel.position.y, spin: frontWheel.angularVelocity },
+        head: getUpperBodyPos(),
+        groundAtChassis: getTerrainY(chassis.position.x)
+      };
+    };
 
   })();
   </script>
