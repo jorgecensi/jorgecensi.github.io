@@ -121,7 +121,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607101430';
+    const SW_VERSION = '2607101500';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -729,8 +729,25 @@ permalink: /elastomania/
     });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
+    // The manifest already declares landscape for the installed app; in the
+    // browser, orientation can only be locked from a user gesture and only
+    // while fullscreen, so try both on the start tap. Each step is
+    // best-effort: iOS Safari supports neither, Android Chrome supports
+    // both — and failing just leaves the game as a normal page.
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+    function tryLockLandscape() {
+      if (!isTouchDevice) return;
+      try {
+        const el = document.documentElement;
+        Promise.resolve(el.requestFullscreen && el.requestFullscreen({ navigationUI: 'hide' }))
+          .then(() => screen.orientation && screen.orientation.lock &&
+                      screen.orientation.lock('landscape'))
+          .catch(() => { /* unsupported (e.g. iOS Safari) — ignore */ });
+      } catch (e) { /* ignore */ }
+    }
+
     canvas.addEventListener('pointerdown', () => {
-      if (state === 'start') startGame();
+      if (state === 'start') { tryLockLandscape(); startGame(); }
       if (state === 'win')   resetToStart();
     });
 
@@ -1363,6 +1380,13 @@ permalink: /elastomania/
           : '← → throttle/brake   ↑ ↓ lean   F flip',
         cx, cy + 100
       );
+
+      // Nudge phone players toward landscape — the game is built wide.
+      if (isTouchDevice && canvas.height > canvas.width) {
+        ctx.font = 'bold 17px system-ui, sans-serif';
+        ctx.fillStyle = '#ffe08a';
+        ctx.fillText('↻ Rotate your device to landscape', cx, cy + 136);
+      }
 
       ctx.restore();
     }
