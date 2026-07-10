@@ -468,17 +468,17 @@ permalink: /elastomania/
     // Size and hip placement match the assembled reference shot: the rider
     // is big relative to the bike (helmet well above the handlebars, feet
     // reaching the pegs at the engine bottom).
-    const RIDER_SCALE    = 0.23;
+    const RIDER_SCALE    = 0.20;
     const RIDER_ANCHOR_X = 0.286;
     const RIDER_ANCHOR_Y = 0.569;
-    const RIDER_OFFSET_X = -12;
-    const RIDER_OFFSET_Y = 0;
+    const RIDER_OFFSET_X = -10;
+    const RIDER_OFFSET_Y = -3;
 
     // Point at the rider's helmet, in chassis-local space (before rotation)
     // — used as the hit-test spot for ground/terrain crashes so only the
     // head counts as a collision (as in the original game), not the wheels,
     // frame, or legs clipping a bump.
-    const UPPER_BODY_OFFSET = { x: -4, y: -29 };
+    const UPPER_BODY_OFFSET = { x: -3, y: -28 };
 
     function getUpperBodyPos() {
       const a = chassis.angle;
