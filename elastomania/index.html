@@ -121,7 +121,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607101329';
+    const SW_VERSION = '2607101430';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -202,6 +202,13 @@ permalink: /elastomania/
     const SUSPENSION_DAMPING   = 0.06;
     const BRACE_STIFFNESS = 0.18;
     const BRACE_DAMPING   = 0.06;
+    // The front fork runs noticeably softer than the rear, so it visibly
+    // dives on landings and under braking (about double the rear's travel
+    // on the same bump) while the rear stays planted.
+    const FRONT_SUS_STIFFNESS   = 0.05;
+    const FRONT_SUS_DAMPING     = 0.05;
+    const FRONT_BRACE_STIFFNESS = 0.08;
+    const FRONT_BRACE_DAMPING   = 0.05;
     // Where a wheel sits in chassis space when the suspension is at rest.
     const AXLE_REST_Y = SUSPENSION_ANCHOR_Y + SUSPENSION_LENGTH;
     // Bump stop: a wheel can never rise above this chassis-local height —
@@ -245,9 +252,11 @@ permalink: /elastomania/
     // original.
     const BRAKE_LOCK     = 0.25;   // per-frame lock-up fraction
     const MAX_WHEEL_SPIN = 20;
-    // Lean ("spin") input: kept subtle — it nudges the bike's rotation for
-    // balance corrections rather than whipping it around.
-    const LEAN_ACCEL     = 0.045;
+    // Lean ("spin") input: kept very subtle — it nudges the bike's rotation
+    // for balance corrections rather than whipping it around. Still strong
+    // enough (about 5× the throttle's reaction torque) to hold a wheelie
+    // down under full gas.
+    const LEAN_ACCEL     = 0.02;
 
     const SPAWN_X = 80;
     const SPAWN_Y = 400;
@@ -644,21 +653,25 @@ permalink: /elastomania/
       // force is transmitted below the centre of mass — accelerating pitches
       // the nose up, as it should.
       function wheelLinks(wheel, side) {
+        const susStiff  = side > 0 ? FRONT_SUS_STIFFNESS   : SUSPENSION_STIFFNESS;
+        const susDamp   = side > 0 ? FRONT_SUS_DAMPING     : SUSPENSION_DAMPING;
+        const brStiff   = side > 0 ? FRONT_BRACE_STIFFNESS : BRACE_STIFFNESS;
+        const brDamp    = side > 0 ? FRONT_BRACE_DAMPING   : BRACE_DAMPING;
         return [
           Constraint.create({
             bodyA: chassis, bodyB: wheel,
             pointA: { x: side * WHEELBASE_HALF, y: SUSPENSION_ANCHOR_Y }, pointB: { x: 0, y: 0 },
-            stiffness: SUSPENSION_STIFFNESS, damping: SUSPENSION_DAMPING, length: SUSPENSION_LENGTH
+            stiffness: susStiff, damping: susDamp, length: SUSPENSION_LENGTH
           }),
           Constraint.create({
             bodyA: chassis, bodyB: wheel,
             pointA: { x: side * 12, y: 2 }, pointB: { x: 0, y: 0 },
-            stiffness: BRACE_STIFFNESS, damping: BRACE_DAMPING
+            stiffness: brStiff, damping: brDamp
           }),
           Constraint.create({
             bodyA: chassis, bodyB: wheel,
             pointA: { x: side * 24, y: 0 }, pointB: { x: 0, y: 0 },
-            stiffness: BRACE_STIFFNESS, damping: BRACE_DAMPING
+            stiffness: brStiff, damping: brDamp
           })
         ];
       }
