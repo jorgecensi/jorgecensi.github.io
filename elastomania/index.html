@@ -151,7 +151,7 @@ permalink: /elastomania/
     // ── Constants ──────────────────────────────────────────────
     // WORLD_W varies per level and is declared with the LEVELS data below.
     const WORLD_H = 700;
-    const WHEEL_R = 14;
+    const WHEEL_R = 13;
     const CHASSIS_W = 55;
     const CHASSIS_H = 10;
     // Half the wheelbase. The original Elasto Mania bike has its wheels well
@@ -189,7 +189,7 @@ permalink: /elastomania/
     // held full gas hits 45° in ~1.2s (wheel inertia goes with r⁴, so this
     // compensates for the smaller wheel radius).
     const MOTOR_ACCEL    = 0.1;    // wheel spin gain per 16.67ms frame
-    const MOTOR_REACTION = 1.1;
+    const MOTOR_REACTION = 1.45;
     // Brake couples both wheels to the frame (locks them relative to it, no
     // reverse thrust) — turn around with the flip key instead, as in the
     // original.
@@ -471,7 +471,7 @@ permalink: /elastomania/
     const RIDER_SCALE    = 0.20;
     const RIDER_ANCHOR_X = 0.286;
     const RIDER_ANCHOR_Y = 0.569;
-    const RIDER_OFFSET_X = -10;
+    const RIDER_OFFSET_X = -7;
     const RIDER_OFFSET_Y = -3;
     // Lean the rider forward around his hip so his gloves rest on the
     // handlebar grips instead of hovering above them.
@@ -481,7 +481,7 @@ permalink: /elastomania/
     // — used as the hit-test spot for ground/terrain crashes so only the
     // head counts as a collision (as in the original game), not the wheels,
     // frame, or legs clipping a bump.
-    const UPPER_BODY_OFFSET = { x: 1, y: -27 };
+    const UPPER_BODY_OFFSET = { x: 4, y: -27 };
 
     function getUpperBodyPos() {
       const a = chassis.angle;
