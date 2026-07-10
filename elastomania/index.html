@@ -62,6 +62,33 @@ permalink: /elastomania/
       outline: none;
     }
     .touch-btn.pressed { background: rgba(255,255,255,0.32); }
+    #throttle-slider {
+      width: 72px;
+      height: 150px;
+      border-radius: 36px;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.25);
+      position: relative;
+      pointer-events: all;
+      touch-action: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #throttle-knob {
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      color: white;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
     #sw-banner {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: #1e4d2b; color: #fff; padding: 12px 16px;
@@ -79,8 +106,10 @@ permalink: /elastomania/
   <canvas id="canvas"></canvas>
   <div id="touch-controls">
     <div class="btn-group">
-      <button class="touch-btn" id="btn-brake" aria-label="Brake">◀</button>
-      <button class="touch-btn" id="btn-accel" aria-label="Accelerator">▶</button>
+      <button class="touch-btn" id="btn-brake" aria-label="Brake">■</button>
+      <div id="throttle-slider" aria-label="Throttle">
+        <div id="throttle-knob">▲</div>
+      </div>
     </div>
     <div class="btn-group">
       <button class="touch-btn" id="btn-switch" aria-label="Switch side">⇄</button>
@@ -92,7 +121,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607101040';
+    const SW_VERSION = '2607101130';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -176,9 +205,28 @@ permalink: /elastomania/
     // Where a wheel sits in chassis space when the suspension is at rest.
     const AXLE_REST_Y = SUSPENSION_ANCHOR_Y + SUSPENSION_LENGTH;
     // Bump stop: a wheel can never rise above this chassis-local height —
-    // the fork bottoms out. Keeps violent landings from punching a wheel
-    // through the frame into the mirror equilibrium.
+    // the suspension bottoms out. Keeps violent landings from punching a
+    // wheel through the frame into the mirror equilibrium.
     const BUMP_STOP_Y = 8;
+
+    // Front fork geometry: the fork crown (where the fork enters the frame
+    // art, under the handlebars) and the slider axis from it to the axle's
+    // rest position. The front wheel is kept ON this axis by a gentle
+    // per-frame correction: its perpendicular offset is decayed (capped per
+    // frame so it can never teleport the wheel through an obstacle) and the
+    // perpendicular part of its relative velocity is damped. The springs
+    // stay in charge of the along-axis suspension travel, so the wheel only
+    // moves diagonally along the fork angle.
+    const FORK_CROWN = { x: 23, y: 4 };
+    const FORK_DIR = (() => {
+      const dx = WHEELBASE_HALF - FORK_CROWN.x;
+      const dy = AXLE_REST_Y - FORK_CROWN.y;
+      const len = Math.hypot(dx, dy);
+      return { x: dx / len, y: dy / len };
+    })();
+    const FORK_ALIGN_POS_K   = 0.5;  // perp offset decay per frame
+    const FORK_ALIGN_POS_CAP = 4;    // max perp position correction px/frame
+    const FORK_ALIGN_VEL_K   = 0.4;  // perp relative-velocity damping
 
     // Engine torque acts BETWEEN the rear wheel and the frame, like the real
     // game: gassing spins the wheel up and kicks the frame back (nose-up), so
@@ -186,10 +234,10 @@ permalink: /elastomania/
     // about a second and a half unless you lean forward, and throttle/brake
     // rotate the bike in mid-air. MOTOR_REACTION scales the
     // I_wheel/I_chassis reaction reaching the frame — a feel knob, tuned so
-    // held full gas hits 45° in ~1.2s (wheel inertia goes with r⁴, so this
+    // held full gas hits 45° in ~1.5s (wheel inertia goes with r⁴, so this
     // compensates for the smaller wheel radius).
     const MOTOR_ACCEL    = 0.1;    // wheel spin gain per 16.67ms frame
-    const MOTOR_REACTION = 1.45;
+    const MOTOR_REACTION = 1.25;
     // Brake couples both wheels to the frame (locks them relative to it, no
     // reverse thrust) — turn around with the flip key instead, as in the
     // original.
@@ -506,7 +554,7 @@ permalink: /elastomania/
     let apples = [];
     let camera  = { x: 0, y: 0 };
     let keys    = {};
-    let touch   = { left: false, right: false, leanFwd: false, leanBack: false };
+    let touch   = { gas: 0, brake: false, leanFwd: false, leanBack: false };
     let facing  = 1; // 1 = the bike drives/faces right, -1 = flipped to the left
     let startTime   = 0;
     let elapsedTime = 0;
@@ -673,8 +721,8 @@ permalink: /elastomania/
       const el = document.getElementById(id);
       const press = (e) => {
         e.preventDefault();
-        if (state === 'start' && (flag === 'right' || flag === 'left')) {
-          changeSelectedLevel(flag === 'right' ? 1 : -1);
+        if (state === 'start' && flag === 'brake') {
+          changeSelectedLevel(-1);
           return;
         }
         touch[flag] = true;
@@ -686,10 +734,45 @@ permalink: /elastomania/
       el.addEventListener('pointercancel', release);
       el.addEventListener('pointerleave',  release);
     }
-    bindBtn('btn-accel',     'right');
-    bindBtn('btn-brake',     'left');
+    bindBtn('btn-brake',     'brake');
     bindBtn('btn-spin-fwd',  'leanFwd');
     bindBtn('btn-spin-back', 'leanBack');
+
+    // Throttle slider: slide the knob up for more gas — the throttle is
+    // analog (knob height = throttle amount) and snaps shut on release.
+    // On the start screen a tap steps the level selector instead.
+    (function () {
+      const track = document.getElementById('throttle-slider');
+      const knob  = document.getElementById('throttle-knob');
+      const KNOB = 56, PAD = 6;
+      let pointer = null;
+      function setFromClientY(clientY) {
+        const r = track.getBoundingClientRect();
+        const travel = r.height - KNOB - PAD * 2;
+        const fromBottom = (r.bottom - PAD - KNOB / 2) - clientY;
+        const v = Math.max(0, Math.min(1, fromBottom / travel));
+        touch.gas = v;
+        knob.style.bottom = (PAD + v * travel) + 'px';
+      }
+      track.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (state === 'start') { changeSelectedLevel(1); return; }
+        pointer = e.pointerId;
+        track.setPointerCapture(e.pointerId);
+        setFromClientY(e.clientY);
+      });
+      track.addEventListener('pointermove', (e) => {
+        if (pointer === e.pointerId) setFromClientY(e.clientY);
+      });
+      const release = (e) => {
+        if (pointer !== e.pointerId) return;
+        pointer = null;
+        touch.gas = 0;
+        knob.style.bottom = PAD + 'px';
+      };
+      track.addEventListener('pointerup', release);
+      track.addEventListener('pointercancel', release);
+    })();
 
     // Switch-side button: flips which way the bike faces/drives. A one-shot on
     // press (not a held flag) with a short lockout so a single tap flips once.
@@ -713,8 +796,9 @@ permalink: /elastomania/
 
     // ── Controls application ───────────────────────────────────
     function applyControls(dt) {
-      const gas      = keys['ArrowRight'] || keys['KeyD'] || touch.right;
-      const brake    = keys['ArrowLeft']  || keys['KeyA'] || touch.left;
+      // Keyboard throttle is full-on; the touch slider is analog (0..1).
+      const gasAmount = (keys['ArrowRight'] || keys['KeyD']) ? 1 : touch.gas;
+      const brake     = keys['ArrowLeft']  || keys['KeyA'] || touch.brake;
       const leanFwd  = keys['ArrowUp']    || keys['KeyW'] || touch.leanFwd;
       const leanBack = keys['ArrowDown']  || keys['KeyS'] || touch.leanBack;
 
@@ -739,11 +823,11 @@ permalink: /elastomania/
       // the chassis centre, so when facing left the physical front body is
       // the one under the swingarm.
       const driveWheel = facing > 0 ? rearWheel : frontWheel;
-      if (gas) {
+      if (gasAmount > 0) {
         const room = facing > 0
           ? MAX_WHEEL_SPIN - driveWheel.angularVelocity
           : driveWheel.angularVelocity + MAX_WHEEL_SPIN;
-        const d = Math.min(MOTOR_ACCEL * scale, Math.max(0, room));
+        const d = Math.min(MOTOR_ACCEL * scale * gasAmount, Math.max(0, room));
         if (d > 0) spinPair(driveWheel, d * facing);
       }
       if (brake) {
@@ -791,6 +875,46 @@ permalink: /elastomania/
           });
         }
       }
+    }
+
+    // ── Front fork alignment ───────────────────────────────────
+    // Keep the front wheel on the fork's slider axis so it only moves
+    // diagonally along the fork angle, like a real telescopic fork. The
+    // correction is deliberately soft and capped: the springs and the
+    // collision solver keep full authority (a hard projection here can
+    // drag the wheel through walls or fight the springs into stuck
+    // states), while the capped perpendicular pull plus velocity damping
+    // keeps the visible off-axis error under about a pixel in normal
+    // riding and lets brutal impacts flex for only a few frames.
+    function alignFrontFork() {
+      const cos = Math.cos(chassis.angle), sin = Math.sin(chassis.angle);
+      const w = frontWheel;
+      const dx = w.position.x - chassis.position.x;
+      const dy = w.position.y - chassis.position.y;
+      const localX = dx * cos + dy * sin;
+      const localY = -dx * sin + dy * cos;
+      // Perpendicular offset from the fork axis, in chassis space.
+      const o = (localX - WHEELBASE_HALF) * -FORK_DIR.y
+              + (localY - AXLE_REST_Y) * FORK_DIR.x;
+      const corr = Math.max(-FORK_ALIGN_POS_CAP,
+                   Math.min(FORK_ALIGN_POS_CAP, o * FORK_ALIGN_POS_K));
+      if (Math.abs(corr) > 0.01) {
+        const nx = localX - corr * -FORK_DIR.y;
+        const ny = localY - corr * FORK_DIR.x;
+        Body.setPosition(w, {
+          x: chassis.position.x + nx * cos - ny * sin,
+          y: chassis.position.y + nx * sin + ny * cos
+        });
+      }
+      // Damp the perpendicular part of the wheel's relative velocity.
+      const px = -FORK_DIR.y * cos - FORK_DIR.x * sin;
+      const py = -FORK_DIR.y * sin + FORK_DIR.x * cos;
+      const pv = ((w.velocity.x - chassis.velocity.x) * px
+                + (w.velocity.y - chassis.velocity.y) * py) * FORK_ALIGN_VEL_K;
+      Body.setVelocity(w, {
+        x: w.velocity.x - pv * px,
+        y: w.velocity.y - pv * py
+      });
     }
 
     // ── Death detection ────────────────────────────────────────
@@ -943,7 +1067,7 @@ permalink: /elastomania/
         y: cp.y + lx * sin + ly * cos
       });
       const swingarmPivot = localPt(-14, 15);
-      const forkCrown     = localPt(23, 4);
+      const forkCrown     = localPt(FORK_CROWN.x, FORK_CROWN.y);
       ctx.lineCap = 'round';
       // Rear swingarm: single dark arm.
       ctx.strokeStyle = '#2a2a3a';
@@ -1327,6 +1451,7 @@ permalink: /elastomania/
         applyControls(dt);
         Engine.update(engine, dt);
         applyBumpStops();
+        alignFrontFork();
         checkApples();
         checkDeath();
         checkWin();
