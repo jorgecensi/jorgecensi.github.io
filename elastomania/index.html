@@ -151,7 +151,7 @@ permalink: /elastomania/
     // ── Constants ──────────────────────────────────────────────
     // WORLD_W varies per level and is declared with the LEVELS data below.
     const WORLD_H = 700;
-    const WHEEL_R = 15;
+    const WHEEL_R = 14;
     const CHASSIS_W = 55;
     const CHASSIS_H = 10;
     // Half the wheelbase. The original Elasto Mania bike has its wheels well
@@ -184,10 +184,12 @@ permalink: /elastomania/
     // game: gassing spins the wheel up and kicks the frame back (nose-up), so
     // holding full throttle from a standstill loops you over backwards in
     // about a second and a half unless you lean forward, and throttle/brake
-    // rotate the bike in mid-air. MOTOR_REACTION scales how much of the
-    // ideal I_wheel/I_chassis reaction reaches the frame.
+    // rotate the bike in mid-air. MOTOR_REACTION scales the
+    // I_wheel/I_chassis reaction reaching the frame — a feel knob, tuned so
+    // held full gas hits 45° in ~1.2s (wheel inertia goes with r⁴, so this
+    // compensates for the smaller wheel radius).
     const MOTOR_ACCEL    = 0.1;    // wheel spin gain per 16.67ms frame
-    const MOTOR_REACTION = 0.8;
+    const MOTOR_REACTION = 1.1;
     // Brake couples both wheels to the frame (locks them relative to it, no
     // reverse thrust) — turn around with the flip key instead, as in the
     // original.
@@ -453,7 +455,7 @@ permalink: /elastomania/
     const BODY_ART_DY = BODY_ART_FRONT_AXLE.y - BODY_ART_REAR_AXLE.y;
     const BIKE_BODY_SCALE = (WHEELBASE_HALF * 2) / Math.hypot(BODY_ART_DX, BODY_ART_DY);
     const BIKE_BODY_ROT   = -Math.atan2(BODY_ART_DY, BODY_ART_DX);
-    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.1) / 108;
+    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.05) / 108;
     // Only spin the wheel art at a fraction of the real wheel speed so the
     // spokes read as a calm roll instead of a dizzy strobe at full throttle.
     const WHEEL_SPIN_VISUAL  = 0.3;
@@ -466,17 +468,17 @@ permalink: /elastomania/
     // Size and hip placement match the assembled reference shot: the rider
     // is big relative to the bike (helmet well above the handlebars, feet
     // reaching the pegs at the engine bottom).
-    const RIDER_SCALE    = 0.27;
+    const RIDER_SCALE    = 0.23;
     const RIDER_ANCHOR_X = 0.286;
     const RIDER_ANCHOR_Y = 0.569;
     const RIDER_OFFSET_X = -12;
-    const RIDER_OFFSET_Y = -1;
+    const RIDER_OFFSET_Y = 0;
 
     // Point at the rider's helmet, in chassis-local space (before rotation)
     // — used as the hit-test spot for ground/terrain crashes so only the
     // head counts as a collision (as in the original game), not the wheels,
     // frame, or legs clipping a bump.
-    const UPPER_BODY_OFFSET = { x: -3, y: -35 };
+    const UPPER_BODY_OFFSET = { x: -4, y: -29 };
 
     function getUpperBodyPos() {
       const a = chassis.angle;
