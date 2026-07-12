@@ -630,6 +630,51 @@ permalink: /personal-trainer/
             font-size: 1.2rem;
             color: #06281d;
         }
+
+        /* App glyph icons */
+        .ico {
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .stat-ico {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 6px;
+        }
+
+        .topbar h1 .ico {
+            width: 1.5em;
+            height: 1.5em;
+            vertical-align: -0.42em;
+            margin-right: 2px;
+        }
+
+        #nav-settings .ico {
+            width: 26px;
+            height: 26px;
+            display: block;
+        }
+
+        .btn .ico {
+            width: 1.4em;
+            height: 1.4em;
+            vertical-align: -0.38em;
+            margin-right: 8px;
+        }
+
+        .level-row strong {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .level-row .ico {
+            width: 1.4em;
+            height: 1.4em;
+        }
     </style>
 </head>
 
@@ -646,7 +691,7 @@ permalink: /personal-trainer/
         <!-- ============ SETUP ============ -->
         <section class="screen" id="setup">
             <header class="topbar">
-                <h1>💪 Personal <span>Trainer</span></h1>
+                <h1><img class="ico" src="/img/pt/app-logo.png" alt="">Personal <span>Trainer</span></h1>
             </header>
             <div class="card">
                 <div class="section-title">Your fitness level</div>
@@ -671,18 +716,18 @@ permalink: /personal-trainer/
         <!-- ============ HOME ============ -->
         <section class="screen" id="home">
             <header class="topbar">
-                <h1>💪 Personal <span>Trainer</span></h1>
-                <button class="back-btn" id="nav-settings" title="Change level / duration">⚙︎</button>
+                <h1><img class="ico" src="/img/pt/app-logo.png" alt="">Personal <span>Trainer</span></h1>
+                <button class="back-btn" id="nav-settings" title="Change level / duration" aria-label="Settings"><img class="ico" src="/img/pt/settings.png" alt=""></button>
             </header>
             <div class="stats-row">
-                <div class="stat"><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
-                <div class="stat"><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
-                <div class="stat"><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
+                <div class="stat"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
+                <div class="stat"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
+                <div class="stat"><img class="stat-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
             </div>
             <div class="card">
-                <div class="level-row"><strong>Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
+                <div class="level-row"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="core-bar" style="width:0%"></div></div>
-                <div class="level-row" style="margin-top:14px;"><strong>Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
+                <div class="level-row" style="margin-top:14px;"><strong><img class="ico" src="/img/pt/mat-pilates.png" alt="">Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="pilates-bar" style="width:0%"></div></div>
             </div>
             <div class="card">
@@ -693,10 +738,10 @@ permalink: /personal-trainer/
                     <div class="choice" data-v="40">40 min</div>
                 </div>
             </div>
-            <button class="btn" id="btn-generate">Generate today's workout</button>
+            <button class="btn" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
             <div class="home-nav">
-                <button class="btn secondary" id="nav-library">📚 Exercise library</button>
-                <button class="btn secondary" id="nav-history">📈 History</button>
+                <button class="btn secondary" id="nav-library"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
+                <button class="btn secondary" id="nav-history"><img class="ico" src="/img/pt/history.png" alt="">History</button>
             </div>
         </section>
 
@@ -778,7 +823,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607120241';
+        const SW_VERSION = '2607120311';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
