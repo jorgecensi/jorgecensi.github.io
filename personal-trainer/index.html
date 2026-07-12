@@ -253,6 +253,7 @@ permalink: /personal-trainer/
         /* Workout preview */
         .plan-item {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 12px;
             padding: 10px 0;
@@ -269,6 +270,47 @@ permalink: /personal-trainer/
             font-weight: 700;
             font-size: 0.9rem;
             white-space: nowrap;
+        }
+
+        .plan-play {
+            flex-shrink: 0;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--accent);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .plan-item.playing .plan-play {
+            background: var(--accent);
+            color: #06281d;
+            border-color: var(--accent);
+        }
+
+        .plan-video {
+            flex-basis: 100%;
+            width: 100%;
+            position: relative;
+            aspect-ratio: 16 / 9;
+            margin-top: 4px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid var(--border);
+        }
+
+        .plan-video iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
         }
 
         .plan-item .name {
@@ -876,72 +918,72 @@ permalink: /personal-trainer/
         const PRESET_LINKS = {
             // Warm-up
             'wu-march': 'https://youtu.be/Ac8M_Osjy6s?si=QHi9IcmimigdmJOT',
-            'wu-armcircles': 'https://youtu.be/RN40wyH6x9o',
-            'wu-catcow': 'https://youtu.be/WHUevrqeKIg',
-            'wu-sidebend': 'https://youtu.be/Vko-SJok-fk',
-            'wu-hipcircles': 'https://youtu.be/OqR7Tl6SPLQ',
-            'wu-pelvictilt': 'https://youtu.be/6Ayl6IXpgyM',
+            'wu-armcircles': 'https://youtu.be/hne3nHGXPRM',
+            'wu-catcow': 'https://youtu.be/TWmG67J2wj0',
+            'wu-sidebend': 'https://youtu.be/fHyCshP7U1Y',
+            'wu-hipcircles': 'https://youtu.be/JYqLwajOGjI',
+            'wu-pelvictilt': 'https://youtu.be/RZi6di5IjW8',
             // Core fitness
             'co-kneeplank': 'https://youtu.be/iDSHokfXqyA?si=d6yIR5_UFTsT-d0O',
-            'co-deadbug': 'https://youtu.be/twDnCxAx9LM',
-            'co-glutebridge': 'https://youtu.be/R1OXPHRqehw',
-            'co-birddog': 'https://youtu.be/wh2spJeDDQs',
+            'co-deadbug': 'https://youtu.be/g_BYB0R-4Ws',
+            'co-glutebridge': 'https://youtu.be/3nQeWv5Tx1A',
+            'co-birddog': 'https://youtu.be/ZdAHe9_HeEw',
             'co-heeltap': 'https://youtu.be/jfXcyLTuKP4',
             'co-plank': 'https://youtu.be/fE6rctLE6QU',
-            'co-crunch': 'https://youtu.be/uToiOqWbBGg',
-            'co-mtclimber': 'https://youtu.be/K3Xt4QH4b-U',
-            'co-ksideplank': 'https://youtu.be/8imTmxwFgRg',
-            'co-flutter': 'https://youtu.be/CmVWVOAbYh4',
-            'co-revcrunch': 'https://youtu.be/2rkmoJf0Iqc',
-            'co-sideplank': 'https://youtu.be/sH5PiIUjDW8',
-            'co-bicycle': 'https://youtu.be/hP-ol0LxLZ8',
-            'co-legraise': 'https://youtu.be/FijNSgahpz0',
-            'co-shouldertap': 'https://youtu.be/eyeuugrpLYA',
-            'co-russtwist': 'https://youtu.be/vlsq-839C0U',
-            'co-bearhold': 'https://youtu.be/tdyX_gNTOz0',
-            'co-hollow': 'https://youtu.be/Xk-JcNj6lfY',
-            'co-plankupdown': 'https://youtu.be/SZ8ZQiQcAt4',
+            'co-crunch': 'https://youtu.be/qZq9bNk1owk',
+            'co-mtclimber': 'https://youtu.be/hq_0YlyfqGM',
+            'co-ksideplank': 'https://youtu.be/lvpPNjRQONQ',
+            'co-flutter': 'https://youtu.be/rqyyVGT3vHI',
+            'co-revcrunch': 'https://youtu.be/XY8KzdDcMFg',
+            'co-sideplank': 'https://youtu.be/8YFN6-dJiKo',
+            'co-bicycle': 'https://youtu.be/QtptPxZq4R8',
+            'co-legraise': 'https://youtu.be/Cwuxy8eo7iw',
+            'co-shouldertap': 'https://youtu.be/Ub3x9gt0UlQ',
+            'co-russtwist': 'https://youtu.be/NrBUdmJSTXk',
+            'co-bearhold': 'https://youtu.be/CILKLy84EDk',
+            'co-hollow': 'https://youtu.be/0yPin8hSc8o',
+            'co-plankupdown': 'https://youtu.be/AAPpXm-q7lc',
             'co-vup': 'https://youtu.be/0TCWWBmzRQM',
-            'co-hipdip': 'https://youtu.be/4yylMqlnjwU',
-            'co-plankjack': 'https://youtu.be/D1NegdAoJcg',
-            'co-hollowrock': 'https://youtu.be/R-beoEhL0ys',
-            'co-lsit': 'https://youtu.be/ddqfe41Vq1g',
-            'co-pike': 'https://youtu.be/m_XnPxYJXPY',
-            'co-wipers': 'https://youtu.be/tIM5AS3J-JU',
-            'co-longplank': 'https://youtu.be/mLXVonulPlo',
+            'co-hipdip': 'https://youtu.be/7BaVvUuxj6Q',
+            'co-plankjack': 'https://youtu.be/ae4vQc80jtE',
+            'co-hollowrock': 'https://youtu.be/ixfvk6ERKtI',
+            'co-lsit': 'https://youtu.be/Qcde45O8lzo',
+            'co-pike': 'https://youtu.be/G-2oFuWRgNI',
+            'co-wipers': 'https://youtu.be/ggmcWcfSeq4',
+            'co-longplank': 'https://youtu.be/XM96fe7jAXE',
             // Mat pilates
             'pi-pelviccurl': 'https://youtu.be/7f9w1IvAe6s',
-            'pi-toetap': 'https://youtu.be/a3aFwz9ish4',
-            'pi-chestlift': 'https://youtu.be/yvSui_HSXy0',
-            'pi-spinestretch': 'https://youtu.be/MnDw-zqe1R0',
-            'pi-sideleg': 'https://youtu.be/4Drg7EeBR_I',
-            'pi-hundredmod': 'https://youtu.be/ku-rTTYenAU',
-            'pi-singleleg': 'https://youtu.be/AmIQhyM1yRM',
-            'pi-bridge': 'https://youtu.be/wu_Q_1fYnOE',
-            'pi-swanprep': 'https://youtu.be/AkdaB_hUSo8',
-            'pi-sidekick': 'https://youtu.be/cUYEwxyOnds',
-            'pi-rollup': 'https://youtu.be/MlJQiupVp-A',
-            'pi-doubleleg': 'https://youtu.be/WgmW1NmQbz0',
-            'pi-crisscross': 'https://youtu.be/S_kNHaJTxhs',
-            'pi-swimming': 'https://youtu.be/4YHYpXSrwhc',
-            'pi-saw': 'https://youtu.be/GKOmzE5yXPI',
+            'pi-toetap': 'https://youtu.be/hlnfZBQwPaA',
+            'pi-chestlift': 'https://youtu.be/8R7_5qW2k1o',
+            'pi-spinestretch': 'https://youtu.be/XZGuNaEV-nM',
+            'pi-sideleg': 'https://youtu.be/9a8r12qqFHs',
+            'pi-hundredmod': 'https://youtu.be/UaqpuUzs1i8',
+            'pi-singleleg': 'https://youtu.be/Ad4lgW4ieAM',
+            'pi-bridge': 'https://youtu.be/QFv_Fex3Mko',
+            'pi-swanprep': 'https://youtu.be/KAotX1bDGps',
+            'pi-sidekick': 'https://youtu.be/nG9JfDHJJlY',
+            'pi-rollup': 'https://youtu.be/H_-JE2yN1W0',
+            'pi-doubleleg': 'https://youtu.be/fuwzt4d7FuY',
+            'pi-crisscross': 'https://youtu.be/gzaCxDVQL90',
+            'pi-swimming': 'https://youtu.be/rbcvbbtB6E0',
+            'pi-saw': 'https://youtu.be/1XcU-WsTcaU',
             'pi-scissors': 'https://youtu.be/GP4wMpfFFWY',
             'pi-hundred': 'https://youtu.be/Bu2iDgLY0D4',
-            'pi-teaserprep': 'https://youtu.be/rJEncRhX3OE',
+            'pi-teaserprep': 'https://youtu.be/9qqEKdfjyFI',
             'pi-openleg': 'https://youtu.be/rOY7d3zD-cA',
             'pi-dbllower': 'https://youtu.be/b4vGCB5iY_E',
             'pi-kneelkick': 'https://youtu.be/Uyfas4hL9uw',
-            'pi-teaser': 'https://youtu.be/GtULqwNxTtE',
-            'pi-rollover': 'https://youtu.be/EHMQjsWk7Bw',
+            'pi-teaser': 'https://youtu.be/UJ5gZQSqlXo',
+            'pi-rollover': 'https://youtu.be/Y5YdoRMCCKM',
             'pi-corkscrew': 'https://youtu.be/2GBd4o1K018',
-            'pi-jackknife': 'https://youtu.be/1iyhjYyAMUg',
+            'pi-jackknife': 'https://youtu.be/OA1MloQcPu0',
             // Cool-down
-            'cd-child': 'https://youtu.be/CHk_NNL5cQU',
-            'cd-cobra': 'https://youtu.be/1b8XrX2KbXY',
-            'cd-twist': 'https://youtu.be/lyhWPzuGUHc',
-            'cd-knees': 'https://youtu.be/kv0_T28nPno',
-            'cd-hamstring': 'https://youtu.be/EvmskBZK_ws',
-            'cd-mermaid': 'https://youtu.be/CM86rwkQ7SU'
+            'cd-child': 'https://youtu.be/_ZX_zTOBgp8',
+            'cd-cobra': 'https://youtu.be/YYudWYM5Q9g',
+            'cd-twist': 'https://youtu.be/TeAhhVD2q1c',
+            'cd-knees': 'https://youtu.be/SkrV4wjkhJY',
+            'cd-hamstring': 'https://youtu.be/5P3E8Pec_L8',
+            'cd-mermaid': 'https://youtu.be/eRyVvrN5CLU'
         };
 
         // Effective link for an exercise: user override first, then preset.
@@ -1161,7 +1203,7 @@ permalink: /personal-trainer/
         document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); show('library'); });
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); show('history'); });
         document.querySelectorAll('[data-back]').forEach((b) =>
-            b.addEventListener('click', () => { renderHome(); show(b.dataset.back); }));
+            b.addEventListener('click', () => { clearPreviewVideos(); renderHome(); show(b.dataset.back); }));
 
         document.getElementById('btn-generate').addEventListener('click', () => {
             currentWorkout = generateWorkout();
@@ -1197,22 +1239,52 @@ permalink: /personal-trainer/
             const list = document.getElementById('preview-list');
             const section = (title, exs) => `
                 <div class="section-title">${title}</div>
-                ${exs.map((ex) => `
-                    <div class="plan-item">
+                ${exs.map((ex) => {
+                    const hasVideo = !!youtubeId(linkFor(ex.id));
+                    return `
+                    <div class="plan-item" data-ex="${ex.id}">
                         <span class="tier-badge">T${ex.tier}</span>
                         <div>
                             <div class="name">${ex.name}</div>
                             <div class="meta">${ex.disc === 'core' ? 'Core' : ex.disc === 'pilates' ? 'Pilates' : ex.focus}</div>
                         </div>
                         <span class="dose">${doseLabel(ex, doseFor(ex, state.prog[ex.disc] ?? 0))}</span>
-                    </div>`).join('')}`;
+                        ${hasVideo ? `<button class="plan-play" data-play="${ex.id}" aria-label="Preview ${ex.name} video">▶</button>` : ''}
+                        ${hasVideo ? `<div class="plan-video" id="pv-${ex.id}"></div>` : ''}
+                    </div>`;
+                }).join('')}`;
 
             const mins = Math.round(w.totalSecs / 60);
             list.innerHTML =
-                `<p class="muted-note" style="margin-bottom:6px;">≈ ${mins} min · ${w.main.length} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level</p>` +
+                `<p class="muted-note" style="margin-bottom:6px;">≈ ${mins} min · ${w.main.length} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level · tap ▶ to preview</p>` +
                 section('Warm-up', w.warmups) +
                 section(w.rounds > 1 ? `Main circuit — ${w.rounds} rounds` : 'Main workout', w.main) +
                 section('Cool-down', w.cooldowns);
+
+            list.querySelectorAll('[data-play]').forEach((btn) => {
+                btn.addEventListener('click', () => togglePreviewVideo(btn.dataset.play));
+            });
+        }
+
+        // Stop and remove every inline preview video on the workout preview screen.
+        function clearPreviewVideos() {
+            document.querySelectorAll('#preview-list .plan-video').forEach((slot) => { slot.innerHTML = ''; });
+            document.querySelectorAll('#preview-list .plan-item.playing').forEach((item) => item.classList.remove('playing'));
+        }
+
+        // Toggle the inline form video for one exercise; only one plays at a time.
+        function togglePreviewVideo(exId) {
+            const slot = document.getElementById(`pv-${exId}`);
+            if (!slot) return;
+            const isOpen = slot.childElementCount > 0;
+            clearPreviewVideos();
+            if (isOpen) return;
+            const ex = EX_BY_ID[exId];
+            const src = youtubeEmbedSrc(linkFor(exId));
+            if (!src) return;
+            slot.innerHTML = `<iframe src="${src}" title="${ex ? ex.name : ''} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+            slot.closest('.plan-item').classList.add('playing');
+            slot.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
 
         // =====================================================
@@ -1249,6 +1321,7 @@ permalink: /personal-trainer/
         });
 
         async function startWorkout() {
+            clearPreviewVideos();
             player.idx = 0;
             player.paused = false;
             player.startedAt = Date.now();
@@ -1330,6 +1403,26 @@ permalink: /personal-trainer/
             } catch (e) { return null; }
         }
 
+        // Build an autoplaying, muted embed URL for a saved link, or null if it isn't a video.
+        function youtubeEmbedSrc(link, { loop = false } = {}) {
+            const id = youtubeId(link);
+            if (!id) return null;
+            const params = new URLSearchParams({
+                autoplay: '1',
+                mute: '1',
+                playsinline: '1',
+                rel: '0',
+                modestbranding: '1'
+            });
+            if (loop) {
+                params.set('loop', '1');
+                params.set('playlist', id);
+            }
+            const start = youtubeStart(link);
+            if (start) params.set('start', String(start));
+            return `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`;
+        }
+
         function clearVideo() {
             const videoEl = document.getElementById('player-video');
             videoEl.innerHTML = '';
@@ -1341,20 +1434,9 @@ permalink: /personal-trainer/
             const videoEl = document.getElementById('player-video');
             const linksEl = document.getElementById('player-links');
             const saved = linkFor(ex.id);
-            const id = youtubeId(saved);
-            if (saved && id) {
-                const params = new URLSearchParams({
-                    autoplay: '1',
-                    mute: '1',
-                    playsinline: '1',
-                    rel: '0',
-                    modestbranding: '1',
-                    loop: '1',
-                    playlist: id
-                });
-                const start = youtubeStart(saved);
-                if (start) params.set('start', String(start));
-                videoEl.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?${params.toString()}" title="${ex.name} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+            const src = youtubeEmbedSrc(saved, { loop: true });
+            if (src) {
+                videoEl.innerHTML = `<iframe src="${src}" title="${ex.name} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
                 videoEl.classList.add('active');
                 linksEl.innerHTML = `<a href="${saved}" target="_blank" rel="noopener">▶ Open on YouTube</a>`;
             } else {
