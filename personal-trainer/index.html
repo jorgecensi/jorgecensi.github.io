@@ -807,10 +807,6 @@ permalink: /personal-trainer/
         }
 
         /* Achievements */
-        .home-nav #nav-achievements {
-            grid-column: 1 / -1;
-        }
-
         .ach-count {
             color: var(--muted);
             font-size: 0.8rem;
@@ -894,6 +890,66 @@ permalink: /personal-trainer/
             inset: 0;
             pointer-events: none;
             z-index: 70;
+        }
+
+        /* Personal records */
+        .rec-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .rec-item:last-child {
+            border-bottom: none;
+        }
+
+        .rec-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .rec-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .rec-head .name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .rec-best {
+            color: var(--accent-bright);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .rec-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface2);
+            overflow: hidden;
+            margin: 6px 0 4px;
+        }
+
+        .rec-bar > div {
+            height: 100%;
+            background: linear-gradient(90deg, #12c48a, #0fb7a4);
+            border-radius: 3px;
+        }
+
+        .rec-sub {
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+
+        .rec-sub .gain {
+            color: var(--accent-bright);
+            font-weight: 700;
         }
 
         /* History heatmap */
@@ -1002,6 +1058,7 @@ permalink: /personal-trainer/
             <div class="home-nav">
                 <button class="btn secondary" id="nav-library"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
                 <button class="btn secondary" id="nav-history"><img class="ico" src="/img/pt/history.png" alt="">History</button>
+                <button class="btn secondary" id="nav-records">📊 Records</button>
                 <button class="btn secondary" id="nav-achievements">🏅 Achievements <span id="ach-badge-count" class="ach-count"></span></button>
             </div>
         </section>
@@ -1129,8 +1186,9 @@ permalink: /personal-trainer/
                 <div class="info-row"><span>🎯 Weekly goal</span><span class="muted-note">pick 2–5 sessions, Mon–Sun</span></div>
                 <div class="info-row"><span>✨ Twists</span><span class="muted-note">every workout gets a theme</span></div>
                 <div class="info-row"><span>🏅 Achievements</span><span class="muted-note">badges unlock as you train</span></div>
+                <div class="info-row"><span>📊 Records</span><span class="muted-note">best hold &amp; rep count per exercise</span></div>
                 <div class="info-row"><span>🟩 The chain</span><span class="muted-note">History marks every day you show up</span></div>
-                <p class="muted-note" style="margin-top:10px;">Focus days, endurance rounds, speedy rests and surprise finishers keep sessions fresh, while the weekly bar and the chain make consistency visible. Show up, tap done, keep the chain alive.</p>
+                <p class="muted-note" style="margin-top:10px;">Focus days, endurance rounds, speedy rests and surprise finishers keep sessions fresh, while the weekly bar and the chain make consistency visible. A record is the biggest dose you actually finish — skipped exercises don't count — so your plank holds and rep counts climb as you do. Show up, tap done, keep the chain alive.</p>
             </div>
         </section>
 
@@ -1144,10 +1202,21 @@ permalink: /personal-trainer/
             <p class="muted-note" id="ach-count" style="margin-bottom:12px;"></p>
             <div id="ach-grid"></div>
         </section>
+
+        <!-- ============ RECORDS ============ -->
+        <section class="screen" id="records">
+            <header class="topbar">
+                <button class="back-btn" data-back="home">‹ Back</button>
+                <h1>Your <span>Records</span></h1>
+                <span></span>
+            </header>
+            <p class="muted-note" id="rec-note" style="margin-bottom:12px;"></p>
+            <div id="records-list"></div>
+        </section>
     </div>
 
     <script>
-        const SW_VERSION = '2607121409';
+        const SW_VERSION = '2607121430';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -1385,8 +1454,38 @@ permalink: /personal-trainer/
                 bestStreak: 0,
                 weeklyGoal: 3,
                 achievements: {},
-                lastTwist: null
+                lastTwist: null,
+                records: {}
             };
+        }
+
+        // ---- Personal records ----
+        // A record is the biggest dose actually completed for an exercise
+        // (countdown ran out or ✓ Done was tapped — skips don't count).
+        function recordCompletion(item) {
+            const ex = item.ex;
+            if (ex.disc !== 'core' && ex.disc !== 'pilates') return;
+            const rec = state.records[ex.id] || (state.records[ex.id] = { type: ex.type, best: 0, hist: [] });
+            if (item.dose > rec.best) {
+                rec.best = item.dose;
+                rec.hist.push({ ts: Date.now(), v: item.dose });
+                if (rec.hist.length > 30) rec.hist.shift();
+                saveState();
+            }
+        }
+
+        function recordedExerciseCount() {
+            return Object.keys(state.records || {}).length;
+        }
+
+        function improvementCount() {
+            return Object.values(state.records || {})
+                .reduce((t, r) => t + Math.max(0, (r.hist ? r.hist.length : 0) - 1), 0);
+        }
+
+        function historySpanDays() {
+            if (state.history.length < 2) return 0;
+            return (state.history[state.history.length - 1].ts - state.history[0].ts) / 86400000;
         }
 
         // ---- Week helpers (weeks run Monday–Sunday) ----
@@ -1665,7 +1764,7 @@ permalink: /personal-trainer/
             const dy = Math.abs(t.clientY - start.y);
             if (dx < 70 || dy > 60) return;
             const cur = activeScreenId();
-            const canSwipeBack = ['preview', 'library', 'history', 'info', 'achievements'].includes(cur)
+            const canSwipeBack = ['preview', 'library', 'history', 'info', 'achievements', 'records'].includes(cur)
                 || (cur === 'setup' && state.setupDone);
             if (canSwipeBack) goBack();
         }, { passive: true });
@@ -1726,6 +1825,7 @@ permalink: /personal-trainer/
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
         document.getElementById('nav-achievements').addEventListener('click', () => { renderAchievements(); navigate('achievements'); });
+        document.getElementById('nav-records').addEventListener('click', () => { renderRecords(); navigate('records'); });
         document.querySelectorAll('[data-back]').forEach((b) =>
             b.addEventListener('click', () => { clearPreviewVideos(); goBack(); }));
 
@@ -1847,6 +1947,7 @@ permalink: /personal-trainer/
         document.getElementById('btn-main-action').addEventListener('click', () => {
             const item = currentWorkout.items[player.idx];
             if (item.kind === 'work' && item.ex.type === 'reps') {
+                recordCompletion(item);
                 advance();
             } else {
                 player.paused = !player.paused;
@@ -2044,6 +2145,8 @@ permalink: /personal-trainer/
                 if (player.paused) return;
                 player.remaining -= 1;
                 if (player.remaining <= 0) {
+                    const item = currentWorkout.items[player.idx];
+                    if (item && item.kind === 'work') recordCompletion(item);
                     advance();
                     return;
                 }
@@ -2199,10 +2302,14 @@ permalink: /personal-trainer/
             { id: 'w25', emoji: '💪', name: 'Committed', desc: 'Complete 25 workouts', test: () => state.history.length >= 25 },
             { id: 'w50', emoji: '🏆', name: 'Half century', desc: 'Complete 50 workouts', test: () => state.history.length >= 50 },
             { id: 'w100', emoji: '👑', name: 'Century club', desc: 'Complete 100 workouts', test: () => state.history.length >= 100 },
+            { id: 'w250', emoji: '🗿', name: 'Iron will', desc: 'Complete 250 workouts', test: () => state.history.length >= 250 },
+            { id: 'w500', emoji: '🏛️', name: 'Hall of fame', desc: 'Complete 500 workouts', test: () => state.history.length >= 500 },
             { id: 's3', emoji: '🔥', name: 'On a roll', desc: 'Reach a 3-workout streak', test: () => (state.bestStreak || 0) >= 3 },
             { id: 's7', emoji: '🧨', name: 'Week of fire', desc: 'Reach a 7-workout streak', test: () => (state.bestStreak || 0) >= 7 },
             { id: 's14', emoji: '🚀', name: 'Unstoppable', desc: 'Reach a 14-workout streak', test: () => (state.bestStreak || 0) >= 14 },
             { id: 's30', emoji: '🌋', name: 'Living legend', desc: 'Reach a 30-workout streak', test: () => (state.bestStreak || 0) >= 30 },
+            { id: 's60', emoji: '☄️', name: 'Comet', desc: 'Reach a 60-workout streak', test: () => (state.bestStreak || 0) >= 60 },
+            { id: 's100', emoji: '🌌', name: 'Immortal', desc: 'Reach a 100-workout streak', test: () => (state.bestStreak || 0) >= 100 },
             { id: 't2', emoji: '🥉', name: 'Moving up', desc: 'Reach Tier 2 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 2 },
             { id: 't3', emoji: '🥈', name: 'Middle of the pack', desc: 'Reach Tier 3 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 3 },
             { id: 't4', emoji: '🥇', name: 'Front runner', desc: 'Reach Tier 4 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 4 },
@@ -2210,9 +2317,17 @@ permalink: /personal-trainer/
             { id: 'elite', emoji: '🦾', name: 'Double elite', desc: 'Tier 5 in both disciplines', test: () => tierCap(state.prog.core) >= 5 && tierCap(state.prog.pilates) >= 5 },
             { id: 'goal1', emoji: '✅', name: 'Goal getter', desc: 'Hit your weekly goal', test: () => goalMetWeeks() >= 1 },
             { id: 'goal4', emoji: '📆', name: 'Habit formed', desc: 'Hit your weekly goal in 4 different weeks', test: () => goalMetWeeks() >= 4 },
+            { id: 'goal12', emoji: '🗓️', name: 'Quarter master', desc: 'Hit your weekly goal in 12 different weeks', test: () => goalMetWeeks() >= 12 },
+            { id: 'goal52', emoji: '🧱', name: 'Brick by brick', desc: 'Hit your weekly goal in 52 different weeks', test: () => goalMetWeeks() >= 52 },
             { id: 'early', emoji: '🌅', name: 'Early bird', desc: 'Finish a workout before 8am', test: () => state.history.some((h) => new Date(h.ts).getHours() < 8) },
             { id: 'night', emoji: '🦉', name: 'Night owl', desc: 'Finish a workout after 9pm', test: () => state.history.some((h) => new Date(h.ts).getHours() >= 21) },
-            { id: 'min300', emoji: '⏱️', name: 'Five hours in', desc: 'Train 300 total minutes', test: () => state.history.reduce((t, h) => t + h.mins, 0) >= 300 }
+            { id: 'min300', emoji: '⏱️', name: 'Five hours in', desc: 'Train 300 total minutes', test: () => state.history.reduce((t, h) => t + h.mins, 0) >= 300 },
+            { id: 'min1000', emoji: '⏳', name: 'Time well spent', desc: 'Train 1,000 total minutes', test: () => state.history.reduce((t, h) => t + h.mins, 0) >= 1000 },
+            { id: 'min3000', emoji: '🏔️', name: 'Mountain of minutes', desc: 'Train 3,000 total minutes', test: () => state.history.reduce((t, h) => t + h.mins, 0) >= 3000 },
+            { id: 'year1', emoji: '🎂', name: 'One-year club', desc: 'Train across a full year', test: () => historySpanDays() >= 365 },
+            { id: 'explorer', emoji: '🧭', name: 'Explorer', desc: 'Set records on 25 different exercises', test: () => recordedExerciseCount() >= 25 },
+            { id: 'pr10', emoji: '📈', name: 'Record breaker', desc: 'Beat your own records 10 times', test: () => improvementCount() >= 10 },
+            { id: 'pr25', emoji: '💥', name: 'Limit pusher', desc: 'Beat your own records 25 times', test: () => improvementCount() >= 25 }
         ];
 
         function checkAchievements() {
@@ -2235,6 +2350,45 @@ permalink: /personal-trainer/
                     <span class="em">${a.emoji}</span>
                     <div><div class="nm">${a.name}</div><div class="ds">${a.desc}</div></div>
                 </div>`).join('');
+        }
+
+        // =====================================================
+        // Personal records page
+        // =====================================================
+        function renderRecords() {
+            const list = document.getElementById('records-list');
+            const ids = Object.keys(state.records || {});
+            document.getElementById('rec-note').textContent = ids.length
+                ? 'Your best completed dose per exercise — finish it (don’t skip) to count. Doses grow as you progress, so watch these climb.'
+                : '';
+            if (!ids.length) {
+                list.innerHTML = '<div class="card"><div class="empty-note">No records yet. Finish exercises in a workout — skipped ones don’t count.</div></div>';
+                return;
+            }
+            list.innerHTML = ['core', 'pilates'].map((disc) => {
+                const exs = ids.map((id) => EX_BY_ID[id])
+                    .filter((e) => e && e.disc === disc)
+                    .sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
+                if (!exs.length) return '';
+                return `<div class="card">
+                    <div class="section-title">${disc === 'core' ? 'Core Fitness' : 'Mat Pilates'}</div>
+                    ${exs.map((ex) => {
+                        const rec = state.records[ex.id];
+                        const unit = rec.type === 'secs' ? 's' : ' reps';
+                        const pct = Math.min(100, (rec.best / ex.max) * 100);
+                        const first = rec.hist.length ? rec.hist[0].v : rec.best;
+                        const gain = rec.best - first;
+                        return `<div class="rec-item">
+                            <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
+                            <div class="rec-main">
+                                <div class="rec-head"><span class="name">${ex.name}${ex.perSide ? ' <span style="color:var(--muted);font-weight:400;font-size:0.75rem;">/side</span>' : ''}</span><span class="rec-best">${rec.best}${unit}</span></div>
+                                <div class="rec-bar"><div style="width:${pct}%"></div></div>
+                                <div class="rec-sub">${gain > 0 ? `<span class="gain">▲ +${gain}${unit}</span> since first (${first}${unit})` : 'first record set'} · cap ${ex.max}${unit}</div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            }).join('');
         }
 
         function showAchievementToasts(list) {
