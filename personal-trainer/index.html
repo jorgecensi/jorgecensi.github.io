@@ -871,6 +871,18 @@ permalink: /personal-trainer/
 
         const EX_BY_ID = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
 
+        // Built-in form-guide videos shown by default. A user's own link saved in the
+        // library (state.links) always takes precedence over the preset for that exercise.
+        const PRESET_LINKS = {
+            'wu-march': 'https://youtu.be/Ac8M_Osjy6s?si=QHi9IcmimigdmJOT',
+            'co-kneeplank': 'https://youtu.be/iDSHokfXqyA?si=d6yIR5_UFTsT-d0O'
+        };
+
+        // Effective link for an exercise: user override first, then preset.
+        function linkFor(id) {
+            return (state.links && state.links[id]) || PRESET_LINKS[id] || '';
+        }
+
         // =====================================================
         // State
         // =====================================================
@@ -1216,7 +1228,7 @@ permalink: /personal-trainer/
         }
 
         function youtubeLinksFor(ex) {
-            const saved = state.links[ex.id];
+            const saved = linkFor(ex.id);
             const search = `https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + (ex.disc === 'pilates' ? ' mat pilates' : ' exercise form'))}`;
             if (saved) return `<a href="${saved}" target="_blank" rel="noopener">▶ Watch guide</a>`;
             return `<a href="${search}" target="_blank" rel="noopener">🔍 Search YouTube</a>`;
@@ -1262,7 +1274,7 @@ permalink: /personal-trainer/
         function renderExerciseMedia(ex) {
             const videoEl = document.getElementById('player-video');
             const linksEl = document.getElementById('player-links');
-            const saved = state.links[ex.id];
+            const saved = linkFor(ex.id);
             const id = youtubeId(saved);
             if (saved && id) {
                 const params = new URLSearchParams({
@@ -1425,11 +1437,11 @@ permalink: /personal-trainer/
                             <div class="lib-head">
                                 <span class="tier-badge">T${ex.tier}</span>
                                 <span class="name">${ex.name}</span>
-                                <span class="has-link">${state.links[ex.id] ? '▶' : ''}</span>
+                                <span class="has-link">${linkFor(ex.id) ? '▶' : ''}</span>
                             </div>
                             <div class="lib-body">
                                 <div class="lib-cues">${ex.cues.join(' · ')}</div>
-                                <input type="url" placeholder="Paste YouTube link…" value="${state.links[ex.id] || ''}" data-link-for="${ex.id}">
+                                <input type="url" placeholder="Paste YouTube link…" value="${linkFor(ex.id)}" data-link-for="${ex.id}">
                             </div>
                         </div>`).join('')}
                 </div>`).join('');
@@ -1444,7 +1456,7 @@ permalink: /personal-trainer/
                     if (url) state.links[id] = url;
                     else delete state.links[id];
                     saveState();
-                    input.closest('.lib-item').querySelector('.has-link').textContent = url ? '▶' : '';
+                    input.closest('.lib-item').querySelector('.has-link').textContent = linkFor(id) ? '▶' : '';
                 });
             });
         }
