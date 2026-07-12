@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607120040';
+const CACHE_VERSION = '2607120017';
 const CACHE_NAME = `elastomania-${CACHE_VERSION}`;
 const OFFLINE_URL = '/elastomania/';
 const PRECACHE_URLS = [
