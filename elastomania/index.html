@@ -121,7 +121,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607120017';
+    const SW_VERSION = '2607121230';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -243,15 +243,29 @@ permalink: /elastomania/
     // I_wheel/I_chassis reaction reaching the frame — a feel knob. With
     // both wheels held on their suspension axes there is no trailing-wheel
     // weight transfer any more, so the reaction torque is the sole wheelie
-    // source (as in the original game): tuned so held full gas hits 45° in
-    // about a second, while gas + lean-forward cruises fast and level.
+    // source (as in the original game). MOTOR_REACTION is the full-kick
+    // value: suddenly opening the throttle at full kick budget lifts the
+    // nose hard (and loops if held), while steady throttle fades toward
+    // KICK_FLOOR of it and just rides with a mild rear-weighted attitude.
     const MOTOR_ACCEL    = 0.12;   // wheel spin gain per 16.67ms frame
     const MOTOR_REACTION = 1.6;
     // Brake couples both wheels to the frame (locks them relative to it, no
     // reverse thrust) — turn around with the flip key instead, as in the
     // original.
     const BRAKE_LOCK     = 0.25;   // per-frame lock-up fraction
-    const MAX_WHEEL_SPIN = 20;
+    // Wheel spin cap near the rolling rate at top speed (2.2 rad/step ×
+    // 13px ≈ 29px/step of surface speed). Bounding slip keeps traction
+    // predictable at any attitude instead of letting the wheel rev away.
+    const MAX_WHEEL_SPIN = 2.2;
+    // Throttle kick: wheelies come from SUDDENLY opening the throttle, not
+    // from steady cruising. A "kick budget" is full after coasting and
+    // drains while gas is held — the frame reaction scales from full
+    // (punchy: a flat-out from coast lifts the nose hard) down to
+    // KICK_FLOOR (steady throttle just settles into a mild rear-weighted
+    // attitude).
+    const KICK_FLOOR  = 0.55;
+    const KICK_DRAIN  = 0.010;     // per-frame drain while gassing
+    const KICK_REFILL = 0.007;     // per-frame refill while off throttle
     // Terminal velocity for every bike body (px per 16.67ms step). Long
     // free-falls and monster jumps otherwise build impact speeds that
     // outrun the collision solver.
@@ -584,6 +598,7 @@ permalink: /elastomania/
     let keys    = {};
     let touch   = { gas: 0, brake: false, leanFwd: false, leanBack: false };
     let facing  = 1; // 1 = the bike drives/faces right, -1 = flipped to the left
+    let throttleKick = 1; // reaction budget: full after coasting, drains while gassing
     let startTime   = 0;
     let elapsedTime = 0;
     let deadTimer   = 0;
@@ -614,7 +629,9 @@ permalink: /elastomania/
       const cy    = (y1 + y2) / 2;
       const len   = Math.hypot(x2 - x1, y2 - y1);
       const angle = Math.atan2(y2 - y1, x2 - x1);
-      return Bodies.rectangle(cx, cy + 31, len, 62, {
+      // Offset the slab centre along the segment's downward NORMAL so the
+      // top face lies exactly on the drawn surface line at any slope.
+      return Bodies.rectangle(cx - 31 * Math.sin(angle), cy + 31 * Math.cos(angle), len, 62, {
         isStatic: true,
         angle,
         friction: 0.85,
@@ -877,11 +894,23 @@ permalink: /elastomania/
       // the one under the swingarm.
       const driveWheel = facing > 0 ? rearWheel : frontWheel;
       if (gasAmount > 0) {
+        throttleKick = Math.max(0, throttleKick - KICK_DRAIN * scale * gasAmount);
         const room = facing > 0
           ? MAX_WHEEL_SPIN - driveWheel.angularVelocity
           : driveWheel.angularVelocity + MAX_WHEEL_SPIN;
         const d = Math.min(MOTOR_ACCEL * scale * gasAmount, Math.max(0, room));
-        if (d > 0) spinPair(driveWheel, d * facing);
+        if (d > 0) {
+          Body.setAngularVelocity(driveWheel, driveWheel.angularVelocity + d * facing);
+        }
+        // The frame reaction follows the THROTTLE, not the wheel's spin
+        // headroom, scaled by the kick budget — so a sudden flat-out
+        // pitches the nose up while held throttle settles down.
+        const r = MOTOR_ACCEL * scale * gasAmount * MOTOR_REACTION
+                * (KICK_FLOOR + (1 - KICK_FLOOR) * throttleKick)
+                * driveWheel.inertia / chassis.inertia;
+        Body.setAngularVelocity(chassis, chassis.angularVelocity - r * facing);
+      } else {
+        throttleKick = Math.min(1, throttleKick + KICK_REFILL * scale);
       }
       if (brake) {
         // Lock both wheels to the frame (no reverse thrust, as in the
@@ -899,34 +928,46 @@ permalink: /elastomania/
       }
     }
 
-    // ── Suspension bump stop ───────────────────────────────────
+    // ── Suspension bump stop (ground-aware) ────────────────────
     // The fork/swingarm is steel: a wheel can never rise above BUMP_STOP_Y
-    // in chassis space. When the suspension bottoms out, push the CHASSIS
-    // away from the wheel and cancel its approach velocity — like the stop
-    // transmitting the blow to the frame. It must never move the WHEEL
-    // downward instead: the wheel is sitting on the ground, and re-embedding
-    // it below the surface every frame while the chassis keeps falling
-    // ratchets the whole bike through the floor on hard landings.
+    // in chassis space, so clamp it there — but never place it below the
+    // terrain surface. Re-embedding a grounded wheel below the surface
+    // every frame while the chassis keeps falling ratchets the whole bike
+    // through the floor on hard landings; and shoving the chassis around
+    // instead makes every fork bottom-out on a bump kick the nose up.
+    // Only in the pathological case (the stop position would be
+    // underground) is the chassis's approach velocity cancelled, so the
+    // crush of a monster landing is absorbed without either failure mode.
     function applyBumpStops() {
       const cos = Math.cos(chassis.angle), sin = Math.sin(chassis.angle);
       for (const w of [rearWheel, frontWheel]) {
         const dx = w.position.x - chassis.position.x;
         const dy = w.position.y - chassis.position.y;
+        const localX = dx * cos + dy * sin;
         const localY = -dx * sin + dy * cos;
         if (localY >= BUMP_STOP_Y) continue;
+        const tx = chassis.position.x + localX * cos - BUMP_STOP_Y * sin;
+        let   ty = chassis.position.y + localX * sin + BUMP_STOP_Y * cos;
         // Chassis-local "up" (-y) in world coords.
         const upX = sin, upY = -cos;
-        const violation = BUMP_STOP_Y - localY;
-        Body.setPosition(chassis, {
-          x: chassis.position.x + violation * upX,
-          y: chassis.position.y + violation * upY
-        });
+        const groundLimit = getTerrainY(tx) - WHEEL_R + 2;
+        if (ty > groundLimit) {
+          ty = groundLimit;
+          const approach = chassis.velocity.x * -upX + chassis.velocity.y * -upY;
+          if (approach > 0) {
+            Body.setVelocity(chassis, {
+              x: chassis.velocity.x + approach * upX,
+              y: chassis.velocity.y + approach * upY
+            });
+          }
+        }
+        Body.setPosition(w, { x: tx, y: ty });
         const inward = (w.velocity.x - chassis.velocity.x) * upX
                      + (w.velocity.y - chassis.velocity.y) * upY;
         if (inward > 0) {
-          Body.setVelocity(chassis, {
-            x: chassis.velocity.x + inward * upX,
-            y: chassis.velocity.y + inward * upY
+          Body.setVelocity(w, {
+            x: w.velocity.x - inward * upX,
+            y: w.velocity.y - inward * upY
           });
         }
       }
@@ -1033,6 +1074,7 @@ permalink: /elastomania/
       initPickups();
       initPhysics();
       facing = 1;
+      throttleKick = 1;
       state = 'playing';
       startTime = performance.now();
       lastTs = performance.now();
@@ -1046,6 +1088,7 @@ permalink: /elastomania/
     function respawn() {
       initPhysics(); // keeps apples collected state
       facing = 1;
+      throttleKick = 1;
       state = 'playing';
       lastTs = performance.now();
     }
