@@ -289,6 +289,52 @@ permalink: /personal-trainer/
             margin-top: 14px;
         }
 
+        /* How-progression-works page */
+        .info-link {
+            display: block;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 10px 0 0;
+            margin-top: 6px;
+            text-align: left;
+        }
+
+        .info-tier {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 0;
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 7px 0;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .info-row .delta {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .info-row .delta.up { color: var(--accent-bright); }
+        .info-row .delta.down { color: var(--danger); }
+
         /* Themed action buttons */
         #btn-generate {
             background: linear-gradient(135deg, #12c48a, #0fb7a4);
@@ -346,6 +392,8 @@ permalink: /personal-trainer/
         }
 
         .plan-video {
+            /* hidden until its ▶ button loads a video into it */
+            display: none;
             flex-basis: 100%;
             width: 100%;
             position: relative;
@@ -355,6 +403,10 @@ permalink: /personal-trainer/
             overflow: hidden;
             background: #000;
             border: 1px solid var(--border);
+        }
+
+        .plan-item.playing .plan-video {
+            display: block;
         }
 
         .plan-video iframe {
@@ -389,6 +441,13 @@ permalink: /personal-trainer/
             align-items: center;
             justify-content: center;
         }
+
+        /* Tier difficulty ramp: green → blue → yellow → orange → red */
+        .tier-badge.t1 { color: #3ecf8e; border-color: rgba(62, 207, 142, 0.45); background: rgba(62, 207, 142, 0.10); }
+        .tier-badge.t2 { color: var(--blue); border-color: rgba(107, 184, 239, 0.45); background: rgba(107, 184, 239, 0.10); }
+        .tier-badge.t3 { color: var(--warn); border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.10); }
+        .tier-badge.t4 { color: var(--orange); border-color: rgba(239, 138, 95, 0.5); background: rgba(239, 138, 95, 0.10); }
+        .tier-badge.t5 { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.10); }
 
         /* Player */
         #player {
@@ -728,6 +787,140 @@ permalink: /personal-trainer/
             width: 1.4em;
             height: 1.4em;
         }
+
+        /* Weekly goal */
+        .week-segs {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .week-segs div {
+            flex: 1;
+            height: 10px;
+            border-radius: 5px;
+            background: var(--surface2);
+        }
+
+        .week-segs div.done {
+            background: linear-gradient(90deg, #12c48a, #0fb7a4);
+        }
+
+        /* Achievements */
+        .home-nav #nav-achievements {
+            grid-column: 1 / -1;
+        }
+
+        .ach-count {
+            color: var(--muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        #ach-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .ach {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .ach.unlocked {
+            border-color: rgba(16, 185, 129, 0.45);
+            background: rgba(16, 185, 129, 0.07);
+        }
+
+        .ach.locked {
+            opacity: 0.45;
+            filter: grayscale(1);
+        }
+
+        .ach .em {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .ach .nm {
+            font-weight: 700;
+            font-size: 0.88rem;
+        }
+
+        .ach .ds {
+            font-size: 0.74rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        /* Achievement toast */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: max(24px, env(safe-area-inset-bottom));
+            transform: translate(-50%, 120%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface2);
+            border: 1px solid rgba(16, 185, 129, 0.55);
+            border-radius: 14px;
+            padding: 12px 18px;
+            font-size: 1.4rem;
+            z-index: 80;
+            transition: transform 0.3s ease;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+            max-width: 90vw;
+        }
+
+        .toast.show {
+            transform: translate(-50%, 0);
+        }
+
+        .toast div {
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 70;
+        }
+
+        /* History heatmap */
+        .hm {
+            display: grid;
+            grid-template-rows: repeat(7, 12px);
+            grid-auto-flow: column;
+            grid-auto-columns: 12px;
+            gap: 4px;
+            justify-content: start;
+            margin: 4px 0;
+        }
+
+        .hm div {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            background: var(--surface2);
+        }
+
+        .hm .on {
+            background: var(--accent);
+        }
+
+        .hm .td {
+            outline: 1px solid var(--muted);
+        }
     </style>
 </head>
 
@@ -762,6 +955,15 @@ permalink: /personal-trainer/
                     <div class="choice" data-v="40">40 min<small>Full</small></div>
                 </div>
             </div>
+            <div class="card">
+                <div class="section-title">Weekly goal</div>
+                <div class="choice-row" id="setup-goal" style="grid-template-columns:repeat(4,1fr);">
+                    <div class="choice" data-v="2">2×<small>a week</small></div>
+                    <div class="choice selected" data-v="3">3×<small>a week</small></div>
+                    <div class="choice" data-v="4">4×<small>a week</small></div>
+                    <div class="choice" data-v="5">5×<small>a week</small></div>
+                </div>
+            </div>
             <p class="muted-note" style="margin-bottom:14px;">All workouts mix core fitness and mat pilates — just a mat, no equipment. The plan adapts every session based on your feedback.</p>
             <button class="btn" id="setup-go">Let's go</button>
         </section>
@@ -777,11 +979,16 @@ permalink: /personal-trainer/
                 <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
                 <div class="stat accent-orange"><img class="stat-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
             </div>
+            <div class="card" id="weekly-card">
+                <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
+                <div class="week-segs" id="week-segs"></div>
+            </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="core-bar" style="width:0%"></div></div>
                 <div class="level-row row-pilates" style="margin-top:14px;"><strong><img class="ico" src="/img/pt/mat-pilates.png" alt="">Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="pilates-bar" style="width:0%"></div></div>
+                <button class="info-link" id="nav-info">ⓘ How progression works</button>
             </div>
             <div class="card">
                 <div class="section-title">Session length</div>
@@ -795,6 +1002,7 @@ permalink: /personal-trainer/
             <div class="home-nav">
                 <button class="btn secondary" id="nav-library"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
                 <button class="btn secondary" id="nav-history"><img class="ico" src="/img/pt/history.png" alt="">History</button>
+                <button class="btn secondary" id="nav-achievements">🏅 Achievements <span id="ach-badge-count" class="ach-count"></span></button>
             </div>
         </section>
 
@@ -839,6 +1047,7 @@ permalink: /personal-trainer/
             <div class="big-emoji">🎉</div>
             <div class="card" style="text-align:center;">
                 <div id="complete-summary" style="font-size:1.05rem;font-weight:600;"></div>
+                <div id="complete-motivate" class="muted-note" style="margin-top:8px;"></div>
                 <p class="muted-note" style="margin-top:6px;">How did it feel? Your answer tunes the next workout.</p>
                 <div class="feedback-row">
                     <button class="btn secondary" data-fb="easy">😴<br>Too easy</button>
@@ -873,10 +1082,72 @@ permalink: /personal-trainer/
             </header>
             <div class="card" id="history-list"></div>
         </section>
+
+        <!-- ============ HOW PROGRESSION WORKS ============ -->
+        <section class="screen" id="info">
+            <header class="topbar">
+                <button class="back-btn" data-back="home">‹ Back</button>
+                <h1>How it <span>Works</span></h1>
+                <span></span>
+            </header>
+
+            <div class="card">
+                <div class="section-title">Tiers</div>
+                <p class="muted-note" style="margin-bottom:10px;">Core Fitness and Mat Pilates each have their own score from 0 to 90. Every 18 points unlocks the next tier, and the bars on the home screen show how far along you are.</p>
+                <div class="info-tier"><span class="tier-badge t1">T1</span><span>Beginner</span></div>
+                <div class="info-tier"><span class="tier-badge t2">T2</span><span>Novice</span></div>
+                <div class="info-tier"><span class="tier-badge t3">T3</span><span>Intermediate</span></div>
+                <div class="info-tier"><span class="tier-badge t4">T4</span><span>Advanced</span></div>
+                <div class="info-tier"><span class="tier-badge t5">T5</span><span>Elite</span></div>
+                <p class="muted-note" style="margin-top:10px;">Workouts draw exercises from your current tier and up to two tiers below it, so new challenges mix with familiar moves. Your Level stat is the average of both disciplines.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">Your feedback drives it</div>
+                <p class="muted-note" style="margin-bottom:10px;">After every workout you say how it felt, and both scores adjust:</p>
+                <div class="info-row"><span>😴 Too easy</span><span class="delta up">+8 points</span></div>
+                <div class="info-row"><span>💪 Just right</span><span class="delta up">+4 points</span></div>
+                <div class="info-row"><span>🥵 Too hard</span><span class="delta down">−5 points</span></div>
+                <p class="muted-note" style="margin-top:10px;">Honest answers keep the plan at the right pace — sandbagging just makes next time too easy.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">What actually gets harder</div>
+                <div class="info-row"><span>Tougher exercises</span><span class="muted-note">unlock at higher tiers</span></div>
+                <div class="info-row"><span>Reps &amp; hold times</span><span class="muted-note">grow roughly every 15 points</span></div>
+                <div class="info-row"><span>Rest between exercises</span><span class="muted-note">20s → 15s (T2) → 12s (T4)</span></div>
+                <p class="muted-note" style="margin-top:10px;">Each exercise has its own cap, so doses grow to a sensible limit rather than forever.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">Streak</div>
+                <p class="muted-note">Finish a workout within 48 hours of your last one and the streak keeps counting. Miss the window and it restarts at 1 — consistency beats intensity.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">Staying motivated</div>
+                <div class="info-row"><span>🎯 Weekly goal</span><span class="muted-note">pick 2–5 sessions, Mon–Sun</span></div>
+                <div class="info-row"><span>✨ Twists</span><span class="muted-note">every workout gets a theme</span></div>
+                <div class="info-row"><span>🏅 Achievements</span><span class="muted-note">badges unlock as you train</span></div>
+                <div class="info-row"><span>🟩 The chain</span><span class="muted-note">History marks every day you show up</span></div>
+                <p class="muted-note" style="margin-top:10px;">Focus days, endurance rounds, speedy rests and surprise finishers keep sessions fresh, while the weekly bar and the chain make consistency visible. Show up, tap done, keep the chain alive.</p>
+            </div>
+        </section>
+
+        <!-- ============ ACHIEVEMENTS ============ -->
+        <section class="screen" id="achievements">
+            <header class="topbar">
+                <button class="back-btn" data-back="home">‹ Back</button>
+                <h1>Your <span>Achievements</span></h1>
+                <span></span>
+            </header>
+            <p class="muted-note" id="ach-count" style="margin-bottom:12px;"></p>
+            <div id="ach-grid"></div>
+        </section>
     </div>
 
     <script>
-        const SW_VERSION = '2607121249';
+        const SW_VERSION = '2607121404';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -1110,8 +1381,34 @@ permalink: /personal-trainer/
                 history: [],
                 lastExerciseIds: [],
                 links: {},
-                streak: 0
+                streak: 0,
+                bestStreak: 0,
+                weeklyGoal: 3,
+                achievements: {},
+                lastTwist: null
             };
+        }
+
+        // ---- Week helpers (weeks run Monday–Sunday) ----
+        function weekStartTs(ts) {
+            const d = new Date(ts === undefined ? Date.now() : ts);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+            return d.getTime();
+        }
+
+        function workoutsThisWeek() {
+            const start = weekStartTs();
+            return state.history.filter((h) => h.ts >= start).length;
+        }
+
+        function goalMetWeeks() {
+            const byWeek = {};
+            state.history.forEach((h) => {
+                const w = weekStartTs(h.ts);
+                byWeek[w] = (byWeek[w] || 0) + 1;
+            });
+            return Object.values(byWeek).filter((c) => c >= state.weeklyGoal).length;
         }
 
         function loadState() {
@@ -1177,12 +1474,31 @@ permalink: /personal-trainer/
             return picks;
         }
 
+        // A twist gives each generated workout a theme so sessions don't blur together.
+        const TWISTS = [
+            { id: 'classic', label: 'Classic mix', desc: 'the trusty balanced blend' },
+            { id: 'abs', label: 'Abs day', desc: 'extra belly burn', focus: ['abs'] },
+            { id: 'obliques', label: 'Oblique day', desc: 'all about the twist', focus: ['obliques'] },
+            { id: 'posterior', label: 'Glutes & back day', desc: 'posterior chain power', focus: ['glutes', 'back'] },
+            { id: 'endurance', label: 'Endurance', desc: 'doses up ~20%', doseMult: 1.2 },
+            { id: 'speedy', label: 'Speedy', desc: 'shorter rests, keep moving', restDelta: -5 },
+            { id: 'finisher', label: 'Finisher', desc: 'a max hold to finish strong', finisher: true }
+        ];
+
         function generateWorkout() {
             const durationSecs = state.duration * 60;
             const avg = (state.prog.core + state.prog.pilates) / 2;
             const cap = tierCap(avg);
-            const restSecs = cap >= 4 ? 12 : cap >= 2 ? 15 : 20;
             const rounds = state.duration >= 40 ? 2 : 1;
+
+            // Pick a twist, never the same one twice in a row
+            const twistPool = TWISTS.filter((t) => t.id !== state.lastTwist);
+            const twist = twistPool[Math.floor(Math.random() * twistPool.length)];
+            state.lastTwist = twist.id;
+            saveState();
+
+            let restSecs = cap >= 4 ? 12 : cap >= 2 ? 15 : 20;
+            if (twist.restDelta) restSecs = Math.max(8, restSecs + twist.restDelta);
 
             const warmups = shuffle(EXERCISES.filter((e) => e.disc === 'warmup')).slice(0, 3);
             const cooldowns = shuffle(EXERCISES.filter((e) => e.disc === 'cooldown')).slice(0, 3);
@@ -1195,6 +1511,7 @@ permalink: /personal-trainer/
             const corePool = pickPool('core');
             const pilatesPool = pickPool('pilates');
             const focusCount = {};
+            if (twist.focus) twist.focus.forEach((f) => { focusCount[f] = -3; });
             const avoid = state.lastExerciseIds;
 
             // Rough average time per main slot to size the list, then trim to budget
@@ -1211,7 +1528,11 @@ permalink: /personal-trainer/
                 if (pilatesPicks[i]) main.push(pilatesPicks[i]);
             }
 
-            const workout = { warmups, main, cooldowns, rounds, restSecs };
+            const workout = { warmups, main, cooldowns, rounds, restSecs, twist, doseMult: twist.doseMult || 1 };
+            if (twist.finisher) {
+                const finishers = EXERCISES.filter((e) => e.disc === 'core' && e.type === 'secs' && e.tier <= cap);
+                workout.finisherEx = finishers[Math.floor(Math.random() * finishers.length)];
+            }
             workout.items = buildItems(workout);
             workout.totalSecs = workout.items.reduce((t, it) => t + it.secs, 0);
             return workout;
@@ -1220,7 +1541,11 @@ permalink: /personal-trainer/
         function buildItems(w) {
             const items = [];
             const pushWork = (ex, phase) => {
-                const dose = doseFor(ex, state.prog[ex.disc] !== undefined ? state.prog[ex.disc] : (state.prog.core + state.prog.pilates) / 2);
+                let dose = doseFor(ex, state.prog[ex.disc] !== undefined ? state.prog[ex.disc] : (state.prog.core + state.prog.pilates) / 2);
+                // Endurance twist only scales the main work, not warm-up/cool-down
+                if ((ex.disc === 'core' || ex.disc === 'pilates') && (w.doseMult || 1) !== 1) {
+                    dose = Math.max(1, Math.round(dose * w.doseMult));
+                }
                 if (ex.perSide) {
                     items.push({ kind: 'work', ex, dose, phase, side: 'Left side', secs: ex.type === 'secs' ? dose : dose * 3 });
                     items.push({ kind: 'work', ex, dose, phase, side: 'Right side', secs: ex.type === 'secs' ? dose : dose * 3 });
@@ -1235,6 +1560,10 @@ permalink: /personal-trainer/
                     if (i > 0 || r > 0) items.push({ kind: 'rest', secs: w.restSecs, phase });
                     pushWork(ex, phase);
                 });
+            }
+            if (w.finisherEx) {
+                items.push({ kind: 'rest', secs: w.restSecs, phase: 'Finisher' });
+                items.push({ kind: 'work', ex: w.finisherEx, dose: w.finisherEx.max, phase: 'Finisher', side: null, secs: w.finisherEx.max });
             }
             w.cooldowns.forEach((ex) => pushWork(ex, 'Cool-down'));
             return items;
@@ -1336,7 +1665,7 @@ permalink: /personal-trainer/
             const dy = Math.abs(t.clientY - start.y);
             if (dx < 70 || dy > 60) return;
             const cur = activeScreenId();
-            const canSwipeBack = ['preview', 'library', 'history'].includes(cur)
+            const canSwipeBack = ['preview', 'library', 'history', 'info', 'achievements'].includes(cur)
                 || (cur === 'setup' && state.setupDone);
             if (canSwipeBack) goBack();
         }, { passive: true });
@@ -1366,9 +1695,11 @@ permalink: /personal-trainer/
         // ---- Setup ----
         bindChoiceRow('setup-level', () => {});
         bindChoiceRow('setup-duration', () => {});
+        bindChoiceRow('setup-goal', () => {});
         document.getElementById('setup-go').addEventListener('click', () => {
             const level = selectedValue('setup-level') || 'intermediate';
             state.duration = parseInt(selectedValue('setup-duration') || '25', 10);
+            state.weeklyGoal = parseInt(selectedValue('setup-goal') || '3', 10);
             if (level !== state.level) {
                 state.prog.core = LEVEL_START[level];
                 state.prog.pilates = LEVEL_START[level];
@@ -1387,11 +1718,14 @@ permalink: /personal-trainer/
 
         document.getElementById('nav-settings').addEventListener('click', () => {
             markSelected('setup-duration', state.duration);
+            markSelected('setup-goal', state.weeklyGoal || 3);
             if (state.level) markSelected('setup-level', state.level);
             navigate('setup');
         });
         document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); navigate('library'); });
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
+        document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
+        document.getElementById('nav-achievements').addEventListener('click', () => { renderAchievements(); navigate('achievements'); });
         document.querySelectorAll('[data-back]').forEach((b) =>
             b.addEventListener('click', () => { clearPreviewVideos(); goBack(); }));
 
@@ -1416,6 +1750,16 @@ permalink: /personal-trainer/
                 document.getElementById(`${disc}-bar`).style.width = `${Math.min(100, (score / MAX_SCORE) * 100)}%`;
             });
             markSelected('home-duration', state.duration);
+
+            const goal = state.weeklyGoal || 3;
+            const done = workoutsThisWeek();
+            document.getElementById('week-segs').innerHTML =
+                Array.from({ length: goal }, (_, i) => `<div class="${i < done ? 'done' : ''}"></div>`).join('');
+            document.getElementById('week-label').textContent =
+                done >= goal ? 'Goal met 🎉' : `${done} of ${goal} workouts`;
+
+            const unlocked = Object.keys(state.achievements || {}).length;
+            document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
         }
 
         // ---- Preview ----
@@ -1433,7 +1777,7 @@ permalink: /personal-trainer/
                     const hasVideo = !!youtubeId(linkFor(ex.id));
                     return `
                     <div class="plan-item" data-ex="${ex.id}">
-                        <span class="tier-badge">T${ex.tier}</span>
+                        <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
                         <div>
                             <div class="name">${ex.name}</div>
                             <div class="meta">${ex.disc === 'core' ? 'Core' : ex.disc === 'pilates' ? 'Pilates' : ex.focus}</div>
@@ -1447,6 +1791,7 @@ permalink: /personal-trainer/
             const mins = Math.round(w.totalSecs / 60);
             list.innerHTML =
                 `<p class="muted-note" style="margin-bottom:6px;">≈ ${mins} min · ${w.main.length} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level · tap ▶ to preview</p>` +
+                (w.twist ? `<p class="muted-note" style="margin-bottom:6px;">✨ Today's twist: <strong style="color:var(--text);">${w.twist.label}</strong> — ${w.twist.desc}</p>` : '') +
                 section('Warm-up', w.warmups) +
                 section(w.rounds > 1 ? `Main circuit — ${w.rounds} rounds` : 'Main workout', w.main) +
                 section('Cool-down', w.cooldowns);
@@ -1723,9 +2068,19 @@ permalink: /personal-trainer/
             const mins = Math.max(1, Math.round((Date.now() - player.startedAt) / 60000));
             document.getElementById('complete-summary').textContent =
                 `${mins} min · ${currentWorkout.main.length} exercises${currentWorkout.rounds > 1 ? ` × ${currentWorkout.rounds} rounds` : ''}`;
+
+            // Show the streak/goal this workout is about to secure
+            const prev = state.history[state.history.length - 1];
+            const prospectStreak = prev && (Date.now() - prev.ts) < 48 * 3600 * 1000 ? state.streak + 1 : 1;
+            const goal = state.weeklyGoal || 3;
+            const doneThisWeek = workoutsThisWeek() + 1;
+            document.getElementById('complete-motivate').textContent =
+                `🔥 Streak ${prospectStreak} · ${Math.min(doneThisWeek, goal)} of ${goal} this week${doneThisWeek >= goal ? ' — goal met! 🎉' : ''}`;
+
             document.getElementById('player-bar').style.width = '100%';
             currentWorkout.actualMins = mins;
             navReplace('complete');
+            celebrate();
             beep(880);
             setTimeout(() => beep(1100), 200);
         }
@@ -1753,8 +2108,11 @@ permalink: /personal-trainer/
                     level: levelLabel()
                 });
                 state.lastExerciseIds = currentWorkout.main.map((e) => e.id);
+                state.bestStreak = Math.max(state.bestStreak || 0, state.streak);
+                const unlocked = checkAchievements();
                 saveState();
                 goHome();
+                if (unlocked.length) showAchievementToasts(unlocked);
             });
         });
 
@@ -1771,7 +2129,7 @@ permalink: /personal-trainer/
                     ${EXERCISES.filter((e) => e.disc === disc).map((ex) => `
                         <div class="lib-item" data-id="${ex.id}">
                             <div class="lib-head">
-                                <span class="tier-badge">T${ex.tier}</span>
+                                <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
                                 <span class="name">${ex.name}</span>
                                 <span class="has-link">${linkFor(ex.id) ? '▶' : ''}</span>
                             </div>
@@ -1831,6 +2189,108 @@ permalink: /personal-trainer/
         // =====================================================
         // History
         // =====================================================
+        // =====================================================
+        // Achievements
+        // =====================================================
+        const ACHIEVEMENTS = [
+            { id: 'first', emoji: '🎯', name: 'First workout', desc: 'Complete your first session', test: () => state.history.length >= 1 },
+            { id: 'w5', emoji: '⭐', name: 'Warmed up', desc: 'Complete 5 workouts', test: () => state.history.length >= 5 },
+            { id: 'w10', emoji: '🌟', name: 'Regular', desc: 'Complete 10 workouts', test: () => state.history.length >= 10 },
+            { id: 'w25', emoji: '💪', name: 'Committed', desc: 'Complete 25 workouts', test: () => state.history.length >= 25 },
+            { id: 'w50', emoji: '🏆', name: 'Half century', desc: 'Complete 50 workouts', test: () => state.history.length >= 50 },
+            { id: 'w100', emoji: '👑', name: 'Century club', desc: 'Complete 100 workouts', test: () => state.history.length >= 100 },
+            { id: 's3', emoji: '🔥', name: 'On a roll', desc: 'Reach a 3-workout streak', test: () => (state.bestStreak || 0) >= 3 },
+            { id: 's7', emoji: '🧨', name: 'Week of fire', desc: 'Reach a 7-workout streak', test: () => (state.bestStreak || 0) >= 7 },
+            { id: 's14', emoji: '🚀', name: 'Unstoppable', desc: 'Reach a 14-workout streak', test: () => (state.bestStreak || 0) >= 14 },
+            { id: 's30', emoji: '🌋', name: 'Living legend', desc: 'Reach a 30-workout streak', test: () => (state.bestStreak || 0) >= 30 },
+            { id: 't2', emoji: '🥉', name: 'Moving up', desc: 'Reach Tier 2 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 2 },
+            { id: 't3', emoji: '🥈', name: 'Middle of the pack', desc: 'Reach Tier 3 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 3 },
+            { id: 't4', emoji: '🥇', name: 'Front runner', desc: 'Reach Tier 4 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 4 },
+            { id: 't5', emoji: '💎', name: 'Top tier', desc: 'Reach Tier 5 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 5 },
+            { id: 'elite', emoji: '🦾', name: 'Double elite', desc: 'Tier 5 in both disciplines', test: () => tierCap(state.prog.core) >= 5 && tierCap(state.prog.pilates) >= 5 },
+            { id: 'goal1', emoji: '✅', name: 'Goal getter', desc: 'Hit your weekly goal', test: () => goalMetWeeks() >= 1 },
+            { id: 'goal4', emoji: '📆', name: 'Habit formed', desc: 'Hit your weekly goal in 4 different weeks', test: () => goalMetWeeks() >= 4 },
+            { id: 'early', emoji: '🌅', name: 'Early bird', desc: 'Finish a workout before 8am', test: () => state.history.some((h) => new Date(h.ts).getHours() < 8) },
+            { id: 'night', emoji: '🦉', name: 'Night owl', desc: 'Finish a workout after 9pm', test: () => state.history.some((h) => new Date(h.ts).getHours() >= 21) },
+            { id: 'min300', emoji: '⏱️', name: 'Five hours in', desc: 'Train 300 total minutes', test: () => state.history.reduce((t, h) => t + h.mins, 0) >= 300 }
+        ];
+
+        function checkAchievements() {
+            const newly = [];
+            ACHIEVEMENTS.forEach((a) => {
+                if (!state.achievements[a.id] && a.test()) {
+                    state.achievements[a.id] = Date.now();
+                    newly.push(a);
+                }
+            });
+            return newly;
+        }
+
+        function renderAchievements() {
+            const unlocked = Object.keys(state.achievements).length;
+            document.getElementById('ach-count').textContent =
+                unlocked ? `Unlocked ${unlocked} of ${ACHIEVEMENTS.length} — keep going!` : `${ACHIEVEMENTS.length} badges to earn. Every workout counts.`;
+            document.getElementById('ach-grid').innerHTML = ACHIEVEMENTS.map((a) => `
+                <div class="ach ${state.achievements[a.id] ? 'unlocked' : 'locked'}">
+                    <span class="em">${a.emoji}</span>
+                    <div><div class="nm">${a.name}</div><div class="ds">${a.desc}</div></div>
+                </div>`).join('');
+        }
+
+        function showAchievementToasts(list) {
+            let i = 0;
+            const next = () => {
+                if (i >= list.length) return;
+                const a = list[i++];
+                const el = document.createElement('div');
+                el.className = 'toast';
+                el.innerHTML = `${a.emoji} <div><strong>Achievement unlocked!</strong><br>${a.name}</div>`;
+                document.body.appendChild(el);
+                requestAnimationFrame(() => el.classList.add('show'));
+                setTimeout(() => {
+                    el.classList.remove('show');
+                    setTimeout(() => { el.remove(); next(); }, 350);
+                }, 2600);
+            };
+            next();
+        }
+
+        // Short confetti burst to make finishing feel like a win
+        function celebrate() {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'confetti';
+            document.body.appendChild(canvas);
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const ctx = canvas.getContext('2d');
+            const colors = ['#3ecf8e', '#6bb8ef', '#ef8a5f', '#fbbf24'];
+            const parts = Array.from({ length: 90 }, () => ({
+                x: Math.random() * canvas.width,
+                y: -20 - Math.random() * canvas.height * 0.4,
+                r: 3 + Math.random() * 5,
+                vy: 2 + Math.random() * 3,
+                vx: -1 + Math.random() * 2,
+                rot: Math.random() * Math.PI,
+                vr: -0.1 + Math.random() * 0.2,
+                col: colors[Math.floor(Math.random() * colors.length)]
+            }));
+            const t0 = performance.now();
+            (function tick(t) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                parts.forEach((p) => {
+                    p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot);
+                    ctx.fillStyle = p.col;
+                    ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+                    ctx.restore();
+                });
+                if (t - t0 < 2400) requestAnimationFrame(tick);
+                else canvas.remove();
+            })(t0);
+        }
+
         const FB_EMOJI = { easy: '😴', right: '💪', hard: '🥵' };
 
         function renderHistory() {
@@ -1839,7 +2299,11 @@ permalink: /personal-trainer/
                 list.innerHTML = '<div class="empty-note">No workouts yet. Your sessions will show up here.</div>';
                 return;
             }
-            list.innerHTML = state.history.slice().reverse().map((h) => `
+            const totalMins = state.history.reduce((t, h) => t + h.mins, 0);
+            list.innerHTML =
+                `<div class="muted-note" style="margin-bottom:8px;">🔥 Best streak ${Math.max(state.bestStreak || 0, state.streak)} · ⏱️ ${totalMins} min total</div>` +
+                heatmapHtml() +
+                state.history.slice().reverse().map((h) => `
                 <div class="hist-item">
                     <span class="fb">${FB_EMOJI[h.fb] || '💪'}</span>
                     <div>
@@ -1848,6 +2312,31 @@ permalink: /personal-trainer/
                     </div>
                     <span class="mins">${h.mins} min</span>
                 </div>`).join('');
+        }
+
+        // 12-week "don't break the chain" grid: one cell per day, lit when you trained
+        function heatmapHtml() {
+            const counts = {};
+            state.history.forEach((h) => {
+                const d = new Date(h.ts);
+                d.setHours(0, 0, 0, 0);
+                counts[d.getTime()] = (counts[d.getTime()] || 0) + 1;
+            });
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const start = new Date(today);
+            start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - 77); // Monday, 11 weeks back
+            let cells = '';
+            for (let w = 0; w < 12; w++) {
+                for (let d = 0; d < 7; d++) {
+                    const cur = new Date(start);
+                    cur.setDate(start.getDate() + w * 7 + d);
+                    if (cur > today) { cells += '<div style="visibility:hidden"></div>'; continue; }
+                    const t = cur.getTime();
+                    cells += `<div class="${counts[t] ? 'on' : ''}${t === today.getTime() ? ' td' : ''}"></div>`;
+                }
+            }
+            return `<div class="hm">${cells}</div><p class="muted-note" style="margin:6px 0 12px;">Last 12 weeks — don’t break the chain.</p>`;
         }
 
         // =====================================================
