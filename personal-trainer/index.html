@@ -346,6 +346,8 @@ permalink: /personal-trainer/
         }
 
         .plan-video {
+            /* hidden until its ▶ button loads a video into it */
+            display: none;
             flex-basis: 100%;
             width: 100%;
             position: relative;
@@ -355,6 +357,10 @@ permalink: /personal-trainer/
             overflow: hidden;
             background: #000;
             border: 1px solid var(--border);
+        }
+
+        .plan-item.playing .plan-video {
+            display: block;
         }
 
         .plan-video iframe {
@@ -876,7 +882,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607121249';
+        const SW_VERSION = '2607121258';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
