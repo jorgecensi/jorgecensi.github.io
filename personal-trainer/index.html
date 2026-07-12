@@ -396,6 +396,13 @@ permalink: /personal-trainer/
             justify-content: center;
         }
 
+        /* Tier difficulty ramp: green → blue → yellow → orange → red */
+        .tier-badge.t1 { color: #3ecf8e; border-color: rgba(62, 207, 142, 0.45); background: rgba(62, 207, 142, 0.10); }
+        .tier-badge.t2 { color: var(--blue); border-color: rgba(107, 184, 239, 0.45); background: rgba(107, 184, 239, 0.10); }
+        .tier-badge.t3 { color: var(--warn); border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.10); }
+        .tier-badge.t4 { color: var(--orange); border-color: rgba(239, 138, 95, 0.5); background: rgba(239, 138, 95, 0.10); }
+        .tier-badge.t5 { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.10); }
+
         /* Player */
         #player {
             text-align: center;
@@ -882,7 +889,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607121258';
+        const SW_VERSION = '2607121343';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -1439,7 +1446,7 @@ permalink: /personal-trainer/
                     const hasVideo = !!youtubeId(linkFor(ex.id));
                     return `
                     <div class="plan-item" data-ex="${ex.id}">
-                        <span class="tier-badge">T${ex.tier}</span>
+                        <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
                         <div>
                             <div class="name">${ex.name}</div>
                             <div class="meta">${ex.disc === 'core' ? 'Core' : ex.disc === 'pilates' ? 'Pilates' : ex.focus}</div>
@@ -1777,7 +1784,7 @@ permalink: /personal-trainer/
                     ${EXERCISES.filter((e) => e.disc === disc).map((ex) => `
                         <div class="lib-item" data-id="${ex.id}">
                             <div class="lib-head">
-                                <span class="tier-badge">T${ex.tier}</span>
+                                <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
                                 <span class="name">${ex.name}</span>
                                 <span class="has-link">${linkFor(ex.id) ? '▶' : ''}</span>
                             </div>
