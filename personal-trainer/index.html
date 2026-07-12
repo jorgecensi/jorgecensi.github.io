@@ -6,7 +6,7 @@ permalink: /personal-trainer/
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0f1521">
     <meta name="description" content="Adaptive core fitness and mat pilates workouts that progress with you. Works offline.">
 
@@ -51,6 +51,7 @@ permalink: /personal-trainer/
         html,
         body {
             height: 100%;
+            overscroll-behavior-y: none;
         }
 
         body {
@@ -104,6 +105,11 @@ permalink: /personal-trainer/
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
+            /* comfortable 44px tap target for iOS */
+            min-height: 44px;
+            min-width: 44px;
+            display: inline-flex;
+            align-items: center;
             padding: 6px 0;
         }
 
@@ -695,7 +701,8 @@ permalink: /personal-trainer/
             width: 1.5em;
             height: 1.5em;
             vertical-align: -0.42em;
-            margin-right: 2px;
+            margin-right: 6px;
+            border-radius: 24%;
         }
 
         #nav-settings .ico {
@@ -767,8 +774,8 @@ permalink: /personal-trainer/
             </header>
             <div class="stats-row">
                 <div class="stat accent-green"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
-                <div class="stat accent-orange"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
-                <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
+                <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
+                <div class="stat accent-orange"><img class="stat-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
             </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
@@ -869,7 +876,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607120827';
+        const SW_VERSION = '2607121242';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -1241,6 +1248,99 @@ permalink: /personal-trainer/
             window.scrollTo(0, 0);
         }
 
+        function activeScreenId() {
+            const cur = document.querySelector('.screen.active');
+            return cur ? cur.id : '';
+        }
+
+        // ---- History-backed navigation ----
+        // Standalone iOS PWAs have no system back gesture, so sub-screens are
+        // pushed onto the history stack (Safari swipe / Android back work) and
+        // an in-app edge swipe below triggers the same back navigation.
+        let navDepth = 0;      // pushed entries above the root screen
+        let suppressPop = 0;   // popstates we triggered ourselves and must ignore
+
+        function rootScreenId() {
+            return state.setupDone ? 'home' : 'setup';
+        }
+
+        function navigate(id) {
+            history.pushState({ screen: id }, '');
+            navDepth += 1;
+            show(id);
+        }
+
+        function navReplace(id) {
+            history.replaceState({ screen: id }, '');
+            show(id);
+        }
+
+        // Return straight to the root screen, unwinding whatever was pushed.
+        function goHome() {
+            clearPreviewVideos();
+            renderHome();
+            show(rootScreenId());
+            if (navDepth > 0) {
+                suppressPop += 1;
+                history.go(-navDepth);
+                navDepth = 0;
+            } else {
+                history.replaceState({ screen: rootScreenId() }, '');
+            }
+        }
+
+        function goBack() {
+            if (navDepth > 0) history.back();
+            else goHome();
+        }
+
+        window.addEventListener('popstate', (e) => {
+            if (suppressPop > 0) {
+                suppressPop -= 1;
+                history.replaceState({ screen: rootScreenId() }, '');
+                return;
+            }
+            const cur = activeScreenId();
+            if (cur === 'player' || cur === 'complete') {
+                // don't lose a workout (or its feedback) to a stray back gesture
+                history.pushState({ screen: cur }, '');
+                if (cur === 'player' && window.confirm('Quit this workout? Progress won’t be saved.')) {
+                    stopTimer();
+                    clearVideo();
+                    releaseWakeLock();
+                    goHome();
+                }
+                return;
+            }
+            navDepth = Math.max(0, navDepth - 1);
+            const target = (e.state && e.state.screen) || rootScreenId();
+            clearPreviewVideos();
+            if (target === 'home' || target === 'setup') renderHome();
+            show(target);
+        });
+
+        // ---- Edge swipe-back for standalone iOS ----
+        let swipeStart = null;
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            const t = e.touches[0];
+            if (t.clientX > 40) return;
+            swipeStart = { x: t.clientX, y: t.clientY };
+        }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            if (!swipeStart) return;
+            const start = swipeStart;
+            swipeStart = null;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - start.x;
+            const dy = Math.abs(t.clientY - start.y);
+            if (dx < 70 || dy > 60) return;
+            const cur = activeScreenId();
+            const canSwipeBack = ['preview', 'library', 'history'].includes(cur)
+                || (cur === 'setup' && state.setupDone);
+            if (canSwipeBack) goBack();
+        }, { passive: true });
+
         function bindChoiceRow(rowId, onPick) {
             const row = document.getElementById(rowId);
             row.addEventListener('click', (e) => {
@@ -1276,8 +1376,7 @@ permalink: /personal-trainer/
             state.level = level;
             state.setupDone = true;
             saveState();
-            renderHome();
-            show('home');
+            goHome();
         });
 
         // ---- Home ----
@@ -1289,17 +1388,17 @@ permalink: /personal-trainer/
         document.getElementById('nav-settings').addEventListener('click', () => {
             markSelected('setup-duration', state.duration);
             if (state.level) markSelected('setup-level', state.level);
-            show('setup');
+            navigate('setup');
         });
-        document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); show('library'); });
-        document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); show('history'); });
+        document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); navigate('library'); });
+        document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.querySelectorAll('[data-back]').forEach((b) =>
-            b.addEventListener('click', () => { clearPreviewVideos(); renderHome(); show(b.dataset.back); }));
+            b.addEventListener('click', () => { clearPreviewVideos(); goBack(); }));
 
         document.getElementById('btn-generate').addEventListener('click', () => {
             currentWorkout = generateWorkout();
             renderPreview();
-            show('preview');
+            navigate('preview');
         });
         document.getElementById('btn-regenerate').addEventListener('click', () => {
             currentWorkout = generateWorkout();
@@ -1396,8 +1495,7 @@ permalink: /personal-trainer/
                 stopTimer();
                 clearVideo();
                 releaseWakeLock();
-                renderHome();
-                show('home');
+                goHome();
             }
         });
         document.getElementById('btn-skip').addEventListener('click', () => advance());
@@ -1419,7 +1517,7 @@ permalink: /personal-trainer/
             try {
                 if ('wakeLock' in navigator) player.wakeLock = await navigator.wakeLock.request('screen');
             } catch (e) { /* wake lock is best-effort */ }
-            show('player');
+            navigate('player');
             loadItem();
         }
 
@@ -1627,7 +1725,7 @@ permalink: /personal-trainer/
                 `${mins} min · ${currentWorkout.main.length} exercises${currentWorkout.rounds > 1 ? ` × ${currentWorkout.rounds} rounds` : ''}`;
             document.getElementById('player-bar').style.width = '100%';
             currentWorkout.actualMins = mins;
-            show('complete');
+            navReplace('complete');
             beep(880);
             setTimeout(() => beep(1100), 200);
         }
@@ -1656,8 +1754,7 @@ permalink: /personal-trainer/
                 });
                 state.lastExerciseIds = currentWorkout.main.map((e) => e.id);
                 saveState();
-                renderHome();
-                show('home');
+                goHome();
             });
         });
 
@@ -1756,6 +1853,7 @@ permalink: /personal-trainer/
         // =====================================================
         // Boot
         // =====================================================
+        history.replaceState({ screen: rootScreenId() }, '');
         if (state.setupDone) {
             renderHome();
             show('home');
