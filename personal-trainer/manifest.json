@@ -6,8 +6,8 @@
   "start_url": "/personal-trainer/",
   "scope": "/personal-trainer/",
   "display": "standalone",
-  "background_color": "#0c1512",
-  "theme_color": "#10b981",
+  "background_color": "#0f1521",
+  "theme_color": "#0f1521",
   "orientation": "portrait-primary",
   "icons": [
     {

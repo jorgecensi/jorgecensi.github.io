@@ -7,7 +7,7 @@ permalink: /personal-trainer/
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#10b981">
+    <meta name="theme-color" content="#0f1521">
     <meta name="description" content="Adaptive core fitness and mat pilates workouts that progress with you. Works offline.">
 
     <title>Personal Trainer</title>
@@ -26,14 +26,17 @@ permalink: /personal-trainer/
 
     <style>
         :root {
-            --bg: #0c1512;
-            --surface: #12201b;
-            --surface2: #1a2e26;
-            --border: #24443a;
+            --bg: #0f1521;
+            --surface: #161d2a;
+            --surface2: #1e2735;
+            --border: #2a3546;
             --accent: #10b981;
+            --accent-bright: #3ecf8e;
             --accent-dim: #0d9268;
-            --text: #e8f5ef;
-            --muted: #8fb3a5;
+            --orange: #ef8a5f;
+            --blue: #6bb8ef;
+            --text: #e9eef5;
+            --muted: #8a97a8;
             --danger: #f87171;
             --warn: #fbbf24;
         }
@@ -51,7 +54,8 @@ permalink: /personal-trainer/
         }
 
         body {
-            background: var(--bg);
+            background: linear-gradient(180deg, #131a27 0%, #0e131e 55%, #0b0f18 100%);
+            background-attachment: fixed;
             color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
@@ -208,6 +212,25 @@ permalink: /personal-trainer/
             color: var(--accent);
         }
 
+        /* Per-accent stat cards */
+        .stat.accent-green {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.08);
+        }
+        .stat.accent-green .value { color: var(--accent-bright); }
+
+        .stat.accent-orange {
+            border-color: rgba(239, 138, 95, 0.42);
+            background: rgba(239, 138, 95, 0.08);
+        }
+        .stat.accent-orange .value { color: var(--orange); }
+
+        .stat.accent-blue {
+            border-color: rgba(107, 184, 239, 0.42);
+            background: rgba(107, 184, 239, 0.08);
+        }
+        .stat.accent-blue .value { color: var(--blue); }
+
         .stat .label {
             font-size: 0.7rem;
             color: var(--muted);
@@ -243,11 +266,34 @@ permalink: /personal-trainer/
             font-size: 0.8rem;
         }
 
+        /* Discipline card + per-discipline accents */
+        .disc-card {
+            background:
+                linear-gradient(120deg, rgba(239, 138, 95, 0.10), rgba(107, 184, 239, 0.07));
+        }
+        .level-row.row-core .tier { color: var(--orange); }
+        .level-row.row-pilates .tier { color: var(--blue); }
+        #core-bar { background: var(--orange); }
+        #pilates-bar { background: var(--blue); }
+
         .home-nav {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin-top: 14px;
+        }
+
+        /* Themed action buttons */
+        #btn-generate {
+            background: linear-gradient(135deg, #12c48a, #0fb7a4);
+        }
+        #nav-library {
+            border-color: rgba(107, 184, 239, 0.38);
+            background: rgba(107, 184, 239, 0.09);
+        }
+        #nav-history {
+            border-color: rgba(239, 138, 95, 0.38);
+            background: rgba(239, 138, 95, 0.09);
         }
 
         /* Workout preview */
@@ -720,14 +766,14 @@ permalink: /personal-trainer/
                 <button class="back-btn" id="nav-settings" title="Change level / duration" aria-label="Settings"><img class="ico" src="/img/pt/settings.png" alt=""></button>
             </header>
             <div class="stats-row">
-                <div class="stat"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
-                <div class="stat"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
-                <div class="stat"><img class="stat-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
+                <div class="stat accent-green"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
+                <div class="stat accent-orange"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
+                <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
             </div>
-            <div class="card">
-                <div class="level-row"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
+            <div class="card disc-card">
+                <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="core-bar" style="width:0%"></div></div>
-                <div class="level-row" style="margin-top:14px;"><strong><img class="ico" src="/img/pt/mat-pilates.png" alt="">Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
+                <div class="level-row row-pilates" style="margin-top:14px;"><strong><img class="ico" src="/img/pt/mat-pilates.png" alt="">Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="pilates-bar" style="width:0%"></div></div>
             </div>
             <div class="card">
@@ -823,7 +869,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607120313';
+        const SW_VERSION = '2607120753';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
