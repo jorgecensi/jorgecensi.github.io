@@ -361,6 +361,31 @@ permalink: /personal-trainer/
             margin: 6px 0 12px;
         }
 
+        .player-video {
+            display: none;
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            max-height: 34vh;
+            margin: 12px auto;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid var(--border);
+        }
+
+        .player-video.active {
+            display: block;
+        }
+
+        .player-video iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
         .player-links {
             display: flex;
             gap: 10px;
@@ -654,6 +679,7 @@ permalink: /personal-trainer/
                 <h2 id="player-exname">Exercise</h2>
                 <div id="player-side"></div>
                 <div id="player-display">0:30</div>
+                <div class="player-video" id="player-video"></div>
                 <ul class="cues" id="player-cues"></ul>
                 <div class="player-links" id="player-links"></div>
             </div>
@@ -1127,6 +1153,7 @@ permalink: /personal-trainer/
         document.getElementById('btn-quit').addEventListener('click', () => {
             if (window.confirm('Quit this workout? Progress won’t be saved.')) {
                 stopTimer();
+                clearVideo();
                 releaseWakeLock();
                 renderHome();
                 show('home');
@@ -1195,6 +1222,69 @@ permalink: /personal-trainer/
             return `<a href="${search}" target="_blank" rel="noopener">🔍 Search YouTube</a>`;
         }
 
+        // Pull the 11-char video id out of any common YouTube URL shape.
+        function youtubeId(url) {
+            if (!url) return null;
+            try {
+                const u = new URL(url, window.location.href);
+                const host = u.hostname.replace(/^www\./, '');
+                if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
+                if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+                    if (u.pathname === '/watch') return u.searchParams.get('v');
+                    const m = u.pathname.match(/^\/(?:embed|shorts|v|live)\/([^/?#]+)/);
+                    if (m) return m[1];
+                }
+            } catch (e) { /* fall through to a loose match */ }
+            const loose = String(url).match(/[a-zA-Z0-9_-]{11}/);
+            return loose ? loose[0] : null;
+        }
+
+        // Respect a start timestamp (?t=90 or ?t=1m30s or ?start=90) if the saved link has one.
+        function youtubeStart(url) {
+            try {
+                const t = new URL(url, window.location.href).searchParams.get('start')
+                    || new URL(url, window.location.href).searchParams.get('t');
+                if (!t) return null;
+                if (/^\d+$/.test(t)) return parseInt(t, 10);
+                const h = t.match(/(\d+)h/), m = t.match(/(\d+)m/), s = t.match(/(\d+)s/);
+                const total = (h ? +h[1] * 3600 : 0) + (m ? +m[1] * 60 : 0) + (s ? +s[1] : 0);
+                return total || null;
+            } catch (e) { return null; }
+        }
+
+        function clearVideo() {
+            const videoEl = document.getElementById('player-video');
+            videoEl.innerHTML = '';
+            videoEl.classList.remove('active');
+        }
+
+        // Embed and autoplay the saved form-guide video for an exercise, if there is one.
+        function renderExerciseMedia(ex) {
+            const videoEl = document.getElementById('player-video');
+            const linksEl = document.getElementById('player-links');
+            const saved = state.links[ex.id];
+            const id = youtubeId(saved);
+            if (saved && id) {
+                const params = new URLSearchParams({
+                    autoplay: '1',
+                    mute: '1',
+                    playsinline: '1',
+                    rel: '0',
+                    modestbranding: '1',
+                    loop: '1',
+                    playlist: id
+                });
+                const start = youtubeStart(saved);
+                if (start) params.set('start', String(start));
+                videoEl.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?${params.toString()}" title="${ex.name} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+                videoEl.classList.add('active');
+                linksEl.innerHTML = `<a href="${saved}" target="_blank" rel="noopener">▶ Open on YouTube</a>`;
+            } else {
+                clearVideo();
+                linksEl.innerHTML = youtubeLinksFor(ex);
+            }
+        }
+
         function loadItem() {
             stopTimer();
             const items = currentWorkout.items;
@@ -1225,6 +1315,7 @@ permalink: /personal-trainer/
                 sideEl.textContent = '';
                 cuesEl.innerHTML = '';
                 linksEl.innerHTML = '';
+                clearVideo();
                 displayEl.classList.add('resting');
                 actionBtn.textContent = 'Pause';
                 startCountdown(item.secs);
@@ -1239,7 +1330,7 @@ permalink: /personal-trainer/
             nameEl.textContent = ex.name;
             sideEl.textContent = item.side || '';
             cuesEl.innerHTML = ex.cues.map((c) => `<li>· ${c}</li>`).join('');
-            linksEl.innerHTML = youtubeLinksFor(ex);
+            renderExerciseMedia(ex);
             beep(880);
 
             if (ex.type === 'secs') {
@@ -1278,6 +1369,7 @@ permalink: /personal-trainer/
         // =====================================================
         function finishWorkout() {
             stopTimer();
+            clearVideo();
             releaseWakeLock();
             const mins = Math.max(1, Math.round((Date.now() - player.startedAt) / 60000));
             document.getElementById('complete-summary').textContent =
