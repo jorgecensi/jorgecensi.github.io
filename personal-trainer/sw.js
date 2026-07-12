@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607120247';
+const CACHE_VERSION = '2607120253';
 const CACHE_NAME = `personal-trainer-${CACHE_VERSION}`;
 const OFFLINE_URL = '/personal-trainer/';
 const PRECACHE_URLS = [
@@ -6,7 +6,14 @@ const PRECACHE_URLS = [
     '/personal-trainer/manifest.json',
     '/img/personal-trainer-icon-192.png',
     '/img/personal-trainer-icon-512.png',
-    '/img/favicon.ico'
+    '/img/favicon.ico',
+    '/img/pt/app-logo.png',
+    '/img/pt/settings.png',
+    '/img/pt/core-fitness.png',
+    '/img/pt/mat-pilates.png',
+    '/img/pt/generate-dark.png',
+    '/img/pt/exercise-library.png',
+    '/img/pt/history.png'
 ];
 
 self.addEventListener('install', (event) => {
