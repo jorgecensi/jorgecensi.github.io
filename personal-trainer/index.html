@@ -289,6 +289,52 @@ permalink: /personal-trainer/
             margin-top: 14px;
         }
 
+        /* How-progression-works page */
+        .info-link {
+            display: block;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 10px 0 0;
+            margin-top: 6px;
+            text-align: left;
+        }
+
+        .info-tier {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 0;
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 7px 0;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .info-row .delta {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .info-row .delta.up { color: var(--accent-bright); }
+        .info-row .delta.down { color: var(--danger); }
+
         /* Themed action buttons */
         #btn-generate {
             background: linear-gradient(135deg, #12c48a, #0fb7a4);
@@ -795,6 +841,7 @@ permalink: /personal-trainer/
                 <div class="level-bar"><div id="core-bar" style="width:0%"></div></div>
                 <div class="level-row row-pilates" style="margin-top:14px;"><strong><img class="ico" src="/img/pt/mat-pilates.png" alt="">Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="pilates-bar" style="width:0%"></div></div>
+                <button class="info-link" id="nav-info">ⓘ How progression works</button>
             </div>
             <div class="card">
                 <div class="section-title">Session length</div>
@@ -886,10 +933,52 @@ permalink: /personal-trainer/
             </header>
             <div class="card" id="history-list"></div>
         </section>
+
+        <!-- ============ HOW PROGRESSION WORKS ============ -->
+        <section class="screen" id="info">
+            <header class="topbar">
+                <button class="back-btn" data-back="home">‹ Back</button>
+                <h1>How it <span>Works</span></h1>
+                <span></span>
+            </header>
+
+            <div class="card">
+                <div class="section-title">Tiers</div>
+                <p class="muted-note" style="margin-bottom:10px;">Core Fitness and Mat Pilates each have their own score from 0 to 90. Every 18 points unlocks the next tier, and the bars on the home screen show how far along you are.</p>
+                <div class="info-tier"><span class="tier-badge t1">T1</span><span>Beginner</span></div>
+                <div class="info-tier"><span class="tier-badge t2">T2</span><span>Novice</span></div>
+                <div class="info-tier"><span class="tier-badge t3">T3</span><span>Intermediate</span></div>
+                <div class="info-tier"><span class="tier-badge t4">T4</span><span>Advanced</span></div>
+                <div class="info-tier"><span class="tier-badge t5">T5</span><span>Elite</span></div>
+                <p class="muted-note" style="margin-top:10px;">Workouts draw exercises from your current tier and up to two tiers below it, so new challenges mix with familiar moves. Your Level stat is the average of both disciplines.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">Your feedback drives it</div>
+                <p class="muted-note" style="margin-bottom:10px;">After every workout you say how it felt, and both scores adjust:</p>
+                <div class="info-row"><span>😴 Too easy</span><span class="delta up">+8 points</span></div>
+                <div class="info-row"><span>💪 Just right</span><span class="delta up">+4 points</span></div>
+                <div class="info-row"><span>🥵 Too hard</span><span class="delta down">−5 points</span></div>
+                <p class="muted-note" style="margin-top:10px;">Honest answers keep the plan at the right pace — sandbagging just makes next time too easy.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">What actually gets harder</div>
+                <div class="info-row"><span>Tougher exercises</span><span class="muted-note">unlock at higher tiers</span></div>
+                <div class="info-row"><span>Reps &amp; hold times</span><span class="muted-note">grow roughly every 15 points</span></div>
+                <div class="info-row"><span>Rest between exercises</span><span class="muted-note">20s → 15s (T2) → 12s (T4)</span></div>
+                <p class="muted-note" style="margin-top:10px;">Each exercise has its own cap, so doses grow to a sensible limit rather than forever.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">Streak</div>
+                <p class="muted-note">Finish a workout within 48 hours of your last one and the streak keeps counting. Miss the window and it restarts at 1 — consistency beats intensity.</p>
+            </div>
+        </section>
     </div>
 
     <script>
-        const SW_VERSION = '2607121343';
+        const SW_VERSION = '2607121348';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -1349,7 +1438,7 @@ permalink: /personal-trainer/
             const dy = Math.abs(t.clientY - start.y);
             if (dx < 70 || dy > 60) return;
             const cur = activeScreenId();
-            const canSwipeBack = ['preview', 'library', 'history'].includes(cur)
+            const canSwipeBack = ['preview', 'library', 'history', 'info'].includes(cur)
                 || (cur === 'setup' && state.setupDone);
             if (canSwipeBack) goBack();
         }, { passive: true });
@@ -1405,6 +1494,7 @@ permalink: /personal-trainer/
         });
         document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); navigate('library'); });
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
+        document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
         document.querySelectorAll('[data-back]').forEach((b) =>
             b.addEventListener('click', () => { clearPreviewVideos(); goBack(); }));
 
