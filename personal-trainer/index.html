@@ -871,6 +871,84 @@ permalink: /personal-trainer/
 
         const EX_BY_ID = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
 
+        // Built-in form-guide videos shown by default. A user's own link saved in the
+        // library (state.links) always takes precedence over the preset for that exercise.
+        const PRESET_LINKS = {
+            // Warm-up
+            'wu-march': 'https://youtu.be/Ac8M_Osjy6s?si=QHi9IcmimigdmJOT',
+            'wu-armcircles': 'https://youtu.be/RN40wyH6x9o',
+            'wu-catcow': 'https://youtu.be/WHUevrqeKIg',
+            'wu-sidebend': 'https://youtu.be/Vko-SJok-fk',
+            'wu-hipcircles': 'https://youtu.be/OqR7Tl6SPLQ',
+            'wu-pelvictilt': 'https://youtu.be/6Ayl6IXpgyM',
+            // Core fitness
+            'co-kneeplank': 'https://youtu.be/iDSHokfXqyA?si=d6yIR5_UFTsT-d0O',
+            'co-deadbug': 'https://youtu.be/twDnCxAx9LM',
+            'co-glutebridge': 'https://youtu.be/R1OXPHRqehw',
+            'co-birddog': 'https://youtu.be/wh2spJeDDQs',
+            'co-heeltap': 'https://youtu.be/jfXcyLTuKP4',
+            'co-plank': 'https://youtu.be/fE6rctLE6QU',
+            'co-crunch': 'https://youtu.be/uToiOqWbBGg',
+            'co-mtclimber': 'https://youtu.be/K3Xt4QH4b-U',
+            'co-ksideplank': 'https://youtu.be/8imTmxwFgRg',
+            'co-flutter': 'https://youtu.be/CmVWVOAbYh4',
+            'co-revcrunch': 'https://youtu.be/2rkmoJf0Iqc',
+            'co-sideplank': 'https://youtu.be/sH5PiIUjDW8',
+            'co-bicycle': 'https://youtu.be/hP-ol0LxLZ8',
+            'co-legraise': 'https://youtu.be/FijNSgahpz0',
+            'co-shouldertap': 'https://youtu.be/eyeuugrpLYA',
+            'co-russtwist': 'https://youtu.be/vlsq-839C0U',
+            'co-bearhold': 'https://youtu.be/tdyX_gNTOz0',
+            'co-hollow': 'https://youtu.be/Xk-JcNj6lfY',
+            'co-plankupdown': 'https://youtu.be/SZ8ZQiQcAt4',
+            'co-vup': 'https://youtu.be/0TCWWBmzRQM',
+            'co-hipdip': 'https://youtu.be/4yylMqlnjwU',
+            'co-plankjack': 'https://youtu.be/D1NegdAoJcg',
+            'co-hollowrock': 'https://youtu.be/R-beoEhL0ys',
+            'co-lsit': 'https://youtu.be/ddqfe41Vq1g',
+            'co-pike': 'https://youtu.be/m_XnPxYJXPY',
+            'co-wipers': 'https://youtu.be/tIM5AS3J-JU',
+            'co-longplank': 'https://youtu.be/mLXVonulPlo',
+            // Mat pilates
+            'pi-pelviccurl': 'https://youtu.be/7f9w1IvAe6s',
+            'pi-toetap': 'https://youtu.be/a3aFwz9ish4',
+            'pi-chestlift': 'https://youtu.be/yvSui_HSXy0',
+            'pi-spinestretch': 'https://youtu.be/MnDw-zqe1R0',
+            'pi-sideleg': 'https://youtu.be/4Drg7EeBR_I',
+            'pi-hundredmod': 'https://youtu.be/ku-rTTYenAU',
+            'pi-singleleg': 'https://youtu.be/AmIQhyM1yRM',
+            'pi-bridge': 'https://youtu.be/wu_Q_1fYnOE',
+            'pi-swanprep': 'https://youtu.be/AkdaB_hUSo8',
+            'pi-sidekick': 'https://youtu.be/cUYEwxyOnds',
+            'pi-rollup': 'https://youtu.be/MlJQiupVp-A',
+            'pi-doubleleg': 'https://youtu.be/WgmW1NmQbz0',
+            'pi-crisscross': 'https://youtu.be/S_kNHaJTxhs',
+            'pi-swimming': 'https://youtu.be/4YHYpXSrwhc',
+            'pi-saw': 'https://youtu.be/GKOmzE5yXPI',
+            'pi-scissors': 'https://youtu.be/GP4wMpfFFWY',
+            'pi-hundred': 'https://youtu.be/Bu2iDgLY0D4',
+            'pi-teaserprep': 'https://youtu.be/rJEncRhX3OE',
+            'pi-openleg': 'https://youtu.be/rOY7d3zD-cA',
+            'pi-dbllower': 'https://youtu.be/b4vGCB5iY_E',
+            'pi-kneelkick': 'https://youtu.be/Uyfas4hL9uw',
+            'pi-teaser': 'https://youtu.be/GtULqwNxTtE',
+            'pi-rollover': 'https://youtu.be/EHMQjsWk7Bw',
+            'pi-corkscrew': 'https://youtu.be/2GBd4o1K018',
+            'pi-jackknife': 'https://youtu.be/1iyhjYyAMUg',
+            // Cool-down
+            'cd-child': 'https://youtu.be/CHk_NNL5cQU',
+            'cd-cobra': 'https://youtu.be/1b8XrX2KbXY',
+            'cd-twist': 'https://youtu.be/lyhWPzuGUHc',
+            'cd-knees': 'https://youtu.be/kv0_T28nPno',
+            'cd-hamstring': 'https://youtu.be/EvmskBZK_ws',
+            'cd-mermaid': 'https://youtu.be/CM86rwkQ7SU'
+        };
+
+        // Effective link for an exercise: user override first, then preset.
+        function linkFor(id) {
+            return (state.links && state.links[id]) || PRESET_LINKS[id] || '';
+        }
+
         // =====================================================
         // State
         // =====================================================
@@ -1216,7 +1294,7 @@ permalink: /personal-trainer/
         }
 
         function youtubeLinksFor(ex) {
-            const saved = state.links[ex.id];
+            const saved = linkFor(ex.id);
             const search = `https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + (ex.disc === 'pilates' ? ' mat pilates' : ' exercise form'))}`;
             if (saved) return `<a href="${saved}" target="_blank" rel="noopener">▶ Watch guide</a>`;
             return `<a href="${search}" target="_blank" rel="noopener">🔍 Search YouTube</a>`;
@@ -1262,7 +1340,7 @@ permalink: /personal-trainer/
         function renderExerciseMedia(ex) {
             const videoEl = document.getElementById('player-video');
             const linksEl = document.getElementById('player-links');
-            const saved = state.links[ex.id];
+            const saved = linkFor(ex.id);
             const id = youtubeId(saved);
             if (saved && id) {
                 const params = new URLSearchParams({
@@ -1425,11 +1503,11 @@ permalink: /personal-trainer/
                             <div class="lib-head">
                                 <span class="tier-badge">T${ex.tier}</span>
                                 <span class="name">${ex.name}</span>
-                                <span class="has-link">${state.links[ex.id] ? '▶' : ''}</span>
+                                <span class="has-link">${linkFor(ex.id) ? '▶' : ''}</span>
                             </div>
                             <div class="lib-body">
                                 <div class="lib-cues">${ex.cues.join(' · ')}</div>
-                                <input type="url" placeholder="Paste YouTube link…" value="${state.links[ex.id] || ''}" data-link-for="${ex.id}">
+                                <input type="url" placeholder="Paste YouTube link…" value="${linkFor(ex.id)}" data-link-for="${ex.id}">
                             </div>
                         </div>`).join('')}
                 </div>`).join('');
@@ -1444,7 +1522,7 @@ permalink: /personal-trainer/
                     if (url) state.links[id] = url;
                     else delete state.links[id];
                     saveState();
-                    input.closest('.lib-item').querySelector('.has-link').textContent = url ? '▶' : '';
+                    input.closest('.lib-item').querySelector('.has-link').textContent = linkFor(id) ? '▶' : '';
                 });
             });
         }
