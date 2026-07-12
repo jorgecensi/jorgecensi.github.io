@@ -637,6 +637,14 @@ permalink: /personal-trainer/
             flex-shrink: 0;
         }
 
+        .stat-ico {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 6px;
+        }
+
         .topbar h1 .ico {
             width: 1.5em;
             height: 1.5em;
@@ -712,9 +720,9 @@ permalink: /personal-trainer/
                 <button class="back-btn" id="nav-settings" title="Change level / duration" aria-label="Settings"><img class="ico" src="/img/pt/settings.png" alt=""></button>
             </header>
             <div class="stats-row">
-                <div class="stat"><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
-                <div class="stat"><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
-                <div class="stat"><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
+                <div class="stat"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
+                <div class="stat"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
+                <div class="stat"><img class="stat-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
             </div>
             <div class="card">
                 <div class="level-row"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
@@ -815,7 +823,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607120253';
+        const SW_VERSION = '2607120301';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
