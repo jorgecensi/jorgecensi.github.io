@@ -121,7 +121,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607112358';
+    const SW_VERSION = '2607120040';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -252,6 +252,10 @@ permalink: /elastomania/
     // original.
     const BRAKE_LOCK     = 0.25;   // per-frame lock-up fraction
     const MAX_WHEEL_SPIN = 20;
+    // Terminal velocity for every bike body (px per 16.67ms step). Long
+    // free-falls and monster jumps otherwise build impact speeds that
+    // outrun the collision solver.
+    const MAX_SPEED = 22;
     // Lean ("spin") input: kept very subtle — it nudges the bike's rotation
     // for balance corrections rather than whipping it around. Still strong
     // enough (about 5× the throttle's reaction torque) to hold a wheelie
@@ -601,12 +605,16 @@ permalink: /elastomania/
     }
 
     // ── Terrain segment body ───────────────────────────────────
+    // The collision slab extends 62px below the surface line (only the top
+    // face matters visually — terrain is drawn as a filled polygon). Thick
+    // slabs are cheap insurance against fast bodies stepping across a thin
+    // slab between frames, since Matter has no continuous collision.
     function makeSegment(x1, y1, x2, y2) {
       const cx    = (x1 + x2) / 2;
       const cy    = (y1 + y2) / 2;
       const len   = Math.hypot(x2 - x1, y2 - y1);
       const angle = Math.atan2(y2 - y1, x2 - x1);
-      return Bodies.rectangle(cx, cy + 11, len, 22, {
+      return Bodies.rectangle(cx, cy + 31, len, 62, {
         isStatic: true,
         angle,
         friction: 0.85,
@@ -893,30 +901,32 @@ permalink: /elastomania/
 
     // ── Suspension bump stop ───────────────────────────────────
     // The fork/swingarm is steel: a wheel can never rise above BUMP_STOP_Y
-    // in chassis space. Clamp its position there and cancel the remaining
-    // inward relative velocity, like a fork bottoming out. Without this a
-    // hard enough landing pushes a wheel through the frame and into the
-    // suspension's mirrored equilibrium, where it sticks.
+    // in chassis space. When the suspension bottoms out, push the CHASSIS
+    // away from the wheel and cancel its approach velocity — like the stop
+    // transmitting the blow to the frame. It must never move the WHEEL
+    // downward instead: the wheel is sitting on the ground, and re-embedding
+    // it below the surface every frame while the chassis keeps falling
+    // ratchets the whole bike through the floor on hard landings.
     function applyBumpStops() {
       const cos = Math.cos(chassis.angle), sin = Math.sin(chassis.angle);
       for (const w of [rearWheel, frontWheel]) {
         const dx = w.position.x - chassis.position.x;
         const dy = w.position.y - chassis.position.y;
-        const localX = dx * cos + dy * sin;
         const localY = -dx * sin + dy * cos;
         if (localY >= BUMP_STOP_Y) continue;
-        Body.setPosition(w, {
-          x: chassis.position.x + localX * cos - BUMP_STOP_Y * sin,
-          y: chassis.position.y + localX * sin + BUMP_STOP_Y * cos
-        });
-        // Chassis-local "up" (-y) in world coords; kill velocity into the stop.
+        // Chassis-local "up" (-y) in world coords.
         const upX = sin, upY = -cos;
+        const violation = BUMP_STOP_Y - localY;
+        Body.setPosition(chassis, {
+          x: chassis.position.x + violation * upX,
+          y: chassis.position.y + violation * upY
+        });
         const inward = (w.velocity.x - chassis.velocity.x) * upX
                      + (w.velocity.y - chassis.velocity.y) * upY;
         if (inward > 0) {
-          Body.setVelocity(w, {
-            x: w.velocity.x - inward * upX,
-            y: w.velocity.y - inward * upY
+          Body.setVelocity(chassis, {
+            x: chassis.velocity.x + inward * upX,
+            y: chassis.velocity.y + inward * upY
           });
         }
       }
@@ -1508,6 +1518,15 @@ permalink: /elastomania/
 
       if (state === 'playing') {
         applyControls(dt);
+        for (const b of [rearWheel, frontWheel, chassis]) {
+          const sp = Math.hypot(b.velocity.x, b.velocity.y);
+          if (sp > MAX_SPEED) {
+            Body.setVelocity(b, {
+              x: b.velocity.x * MAX_SPEED / sp,
+              y: b.velocity.y * MAX_SPEED / sp
+            });
+          }
+        }
         Engine.update(engine, dt);
         applyBumpStops();
         alignWheelAxes();
