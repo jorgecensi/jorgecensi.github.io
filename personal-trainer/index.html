@@ -284,9 +284,92 @@ permalink: /personal-trainer/
 
         .home-nav {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 10px;
             margin-top: 14px;
+        }
+
+        /* Compact achievements / records cards on home */
+        #ach-card,
+        #rec-card {
+            margin-top: 14px;
+            margin-bottom: 0;
+        }
+
+        .see-all {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 4px 0;
+        }
+
+        .ach-prog-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 0 0;
+        }
+
+        .ach-prog-row .em {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .ach-prog-row .mid {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ach-prog-row .nm {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .mini-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface2);
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .mini-bar > div {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 3px;
+        }
+
+        .ach-prog-row .pct {
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .rec-prev-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+            padding: 7px 0 0;
+            font-size: 0.9rem;
+        }
+
+        .rec-prev-row .nm {
+            font-weight: 600;
+        }
+
+        .rec-prev-row .val {
+            color: var(--accent-bright);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .rec-prev-row .gain {
+            font-size: 0.75rem;
         }
 
         /* How-progression-works page */
@@ -1022,6 +1105,7 @@ permalink: /personal-trainer/
             </div>
             <p class="muted-note" style="margin-bottom:14px;">All workouts mix core fitness and mat pilates — just a mat, no equipment. The plan adapts every session based on your feedback.</p>
             <button class="btn" id="setup-go">Let's go</button>
+            <button class="btn secondary" id="nav-library" style="margin-top:10px;"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
         </section>
 
         <!-- ============ HOME ============ -->
@@ -1055,11 +1139,16 @@ permalink: /personal-trainer/
                 </div>
             </div>
             <button class="btn" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
+            <div class="card" id="ach-card">
+                <div class="level-row"><strong>🏅 Achievements</strong><button class="see-all" id="nav-achievements">All <span id="ach-badge-count" class="ach-count"></span> ›</button></div>
+                <div id="ach-progress"></div>
+            </div>
+            <div class="card" id="rec-card">
+                <div class="level-row"><strong>📊 Records</strong><button class="see-all" id="nav-records">All ›</button></div>
+                <div id="rec-preview"></div>
+            </div>
             <div class="home-nav">
-                <button class="btn secondary" id="nav-library"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
                 <button class="btn secondary" id="nav-history"><img class="ico" src="/img/pt/history.png" alt="">History</button>
-                <button class="btn secondary" id="nav-records">📊 Records</button>
-                <button class="btn secondary" id="nav-achievements">🏅 Achievements <span id="ach-badge-count" class="ach-count"></span></button>
             </div>
         </section>
 
@@ -1216,7 +1305,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607130520';
+        const SW_VERSION = '2607130527';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -1860,6 +1949,47 @@ permalink: /personal-trainer/
 
             const unlocked = Object.keys(state.achievements || {}).length;
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
+
+            renderAchProgress();
+            renderRecPreview();
+        }
+
+        // The 3 locked badges closest to unlocking, with progress bars
+        function renderAchProgress() {
+            const rows = ACHIEVEMENTS
+                .filter((a) => !state.achievements[a.id])
+                .map((a) => ({ a, cur: a.value(), ratio: Math.min(1, a.value() / a.target) }))
+                .sort((x, y) => y.ratio - x.ratio)
+                .slice(0, 3);
+            document.getElementById('ach-progress').innerHTML = rows.length
+                ? rows.map(({ a, cur, ratio }) => `
+                    <div class="ach-prog-row">
+                        <span class="em">${a.emoji}</span>
+                        <div class="mid"><div class="nm">${a.name}</div><div class="mini-bar"><div style="width:${Math.round(ratio * 100)}%"></div></div></div>
+                        <span class="pct">${Math.floor(Math.min(cur, a.target))}/${a.target}</span>
+                    </div>`).join('')
+                : '<p class="muted-note" style="margin-top:8px;">All badges unlocked — legend. 🏆</p>';
+        }
+
+        // The 3 most recently improved records
+        function renderRecPreview() {
+            const el = document.getElementById('rec-preview');
+            const entries = Object.entries(state.records || {});
+            if (!entries.length) {
+                el.innerHTML = '<p class="muted-note" style="margin-top:8px;">Finish exercises in a workout to set your first records.</p>';
+                return;
+            }
+            const rows = entries
+                .map(([id, r]) => ({ ex: EX_BY_ID[id], r, last: r.hist.length ? r.hist[r.hist.length - 1].ts : 0 }))
+                .filter((x) => x.ex)
+                .sort((a, b) => b.last - a.last)
+                .slice(0, 3);
+            el.innerHTML = rows.map(({ ex, r }) => {
+                const unit = r.type === 'secs' ? 's' : ' reps';
+                const first = r.hist.length ? r.hist[0].v : r.best;
+                const gain = r.best - first;
+                return `<div class="rec-prev-row"><span class="nm">${ex.name}</span><span class="val">${r.best}${unit}${gain > 0 ? ` <span class="gain">▲+${gain}</span>` : ''}</span></div>`;
+            }).join('');
         }
 
         // ---- Preview ----
@@ -2295,40 +2425,43 @@ permalink: /personal-trainer/
         // =====================================================
         // Achievements
         // =====================================================
+        // Each badge tracks a numeric metric toward a target, so partial progress can be shown.
+        const totalMinutes = () => state.history.reduce((t, h) => t + h.mins, 0);
+        const maxDiscTier = () => tierCap(Math.max(state.prog.core, state.prog.pilates));
         const ACHIEVEMENTS = [
-            { id: 'first', emoji: '🎯', name: 'First workout', desc: 'Complete your first session', test: () => state.history.length >= 1 },
-            { id: 'w5', emoji: '⭐', name: 'Warmed up', desc: 'Complete 5 workouts', test: () => state.history.length >= 5 },
-            { id: 'w10', emoji: '🌟', name: 'Regular', desc: 'Complete 10 workouts', test: () => state.history.length >= 10 },
-            { id: 'w25', emoji: '💪', name: 'Committed', desc: 'Complete 25 workouts', test: () => state.history.length >= 25 },
-            { id: 'w50', emoji: '🏆', name: 'Half century', desc: 'Complete 50 workouts', test: () => state.history.length >= 50 },
-            { id: 'w100', emoji: '👑', name: 'Century club', desc: 'Complete 100 workouts', test: () => state.history.length >= 100 },
-            { id: 'w250', emoji: '🗿', name: 'Iron will', desc: 'Complete 250 workouts', test: () => state.history.length >= 250 },
-            { id: 'w500', emoji: '🏛️', name: 'Hall of fame', desc: 'Complete 500 workouts', test: () => state.history.length >= 500 },
-            { id: 's3', emoji: '🔥', name: 'On a roll', desc: 'Reach a 3-workout streak', test: () => (state.bestStreak || 0) >= 3 },
-            { id: 's7', emoji: '🧨', name: 'Week of fire', desc: 'Reach a 7-workout streak', test: () => (state.bestStreak || 0) >= 7 },
-            { id: 's14', emoji: '🚀', name: 'Unstoppable', desc: 'Reach a 14-workout streak', test: () => (state.bestStreak || 0) >= 14 },
-            { id: 's30', emoji: '🌋', name: 'Living legend', desc: 'Reach a 30-workout streak', test: () => (state.bestStreak || 0) >= 30 },
-            { id: 's60', emoji: '☄️', name: 'Comet', desc: 'Reach a 60-workout streak', test: () => (state.bestStreak || 0) >= 60 },
-            { id: 's100', emoji: '🌌', name: 'Immortal', desc: 'Reach a 100-workout streak', test: () => (state.bestStreak || 0) >= 100 },
-            { id: 't2', emoji: '🥉', name: 'Moving up', desc: 'Reach Tier 2 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 2 },
-            { id: 't3', emoji: '🥈', name: 'Middle of the pack', desc: 'Reach Tier 3 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 3 },
-            { id: 't4', emoji: '🥇', name: 'Front runner', desc: 'Reach Tier 4 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 4 },
-            { id: 't5', emoji: '💎', name: 'Top tier', desc: 'Reach Tier 5 in a discipline', test: () => tierCap(Math.max(state.prog.core, state.prog.pilates)) >= 5 },
-            { id: 'elite', emoji: '🦾', name: 'Double elite', desc: 'Tier 5 in both disciplines', test: () => tierCap(state.prog.core) >= 5 && tierCap(state.prog.pilates) >= 5 },
-            { id: 'goal1', emoji: '✅', name: 'Goal getter', desc: 'Hit your weekly goal', test: () => goalMetWeeks() >= 1 },
-            { id: 'goal4', emoji: '📆', name: 'Habit formed', desc: 'Hit your weekly goal in 4 different weeks', test: () => goalMetWeeks() >= 4 },
-            { id: 'goal12', emoji: '🗓️', name: 'Quarter master', desc: 'Hit your weekly goal in 12 different weeks', test: () => goalMetWeeks() >= 12 },
-            { id: 'goal52', emoji: '🧱', name: 'Brick by brick', desc: 'Hit your weekly goal in 52 different weeks', test: () => goalMetWeeks() >= 52 },
-            { id: 'early', emoji: '🌅', name: 'Early bird', desc: 'Finish a workout before 8am', test: () => state.history.some((h) => new Date(h.ts).getHours() < 8) },
-            { id: 'night', emoji: '🦉', name: 'Night owl', desc: 'Finish a workout after 9pm', test: () => state.history.some((h) => new Date(h.ts).getHours() >= 21) },
-            { id: 'min300', emoji: '⏱️', name: 'Five hours in', desc: 'Train 300 total minutes', test: () => state.history.reduce((t, h) => t + h.mins, 0) >= 300 },
-            { id: 'min1000', emoji: '⏳', name: 'Time well spent', desc: 'Train 1,000 total minutes', test: () => state.history.reduce((t, h) => t + h.mins, 0) >= 1000 },
-            { id: 'min3000', emoji: '🏔️', name: 'Mountain of minutes', desc: 'Train 3,000 total minutes', test: () => state.history.reduce((t, h) => t + h.mins, 0) >= 3000 },
-            { id: 'year1', emoji: '🎂', name: 'One-year club', desc: 'Train across a full year', test: () => historySpanDays() >= 365 },
-            { id: 'explorer', emoji: '🧭', name: 'Explorer', desc: 'Set records on 25 different exercises', test: () => recordedExerciseCount() >= 25 },
-            { id: 'pr10', emoji: '📈', name: 'Record breaker', desc: 'Beat your own records 10 times', test: () => improvementCount() >= 10 },
-            { id: 'pr25', emoji: '💥', name: 'Limit pusher', desc: 'Beat your own records 25 times', test: () => improvementCount() >= 25 }
-        ];
+            { id: 'first', emoji: '🎯', name: 'First workout', desc: 'Complete your first session', value: () => state.history.length, target: 1 },
+            { id: 'w5', emoji: '⭐', name: 'Warmed up', desc: 'Complete 5 workouts', value: () => state.history.length, target: 5 },
+            { id: 'w10', emoji: '🌟', name: 'Regular', desc: 'Complete 10 workouts', value: () => state.history.length, target: 10 },
+            { id: 'w25', emoji: '💪', name: 'Committed', desc: 'Complete 25 workouts', value: () => state.history.length, target: 25 },
+            { id: 'w50', emoji: '🏆', name: 'Half century', desc: 'Complete 50 workouts', value: () => state.history.length, target: 50 },
+            { id: 'w100', emoji: '👑', name: 'Century club', desc: 'Complete 100 workouts', value: () => state.history.length, target: 100 },
+            { id: 'w250', emoji: '🗿', name: 'Iron will', desc: 'Complete 250 workouts', value: () => state.history.length, target: 250 },
+            { id: 'w500', emoji: '🏛️', name: 'Hall of fame', desc: 'Complete 500 workouts', value: () => state.history.length, target: 500 },
+            { id: 's3', emoji: '🔥', name: 'On a roll', desc: 'Reach a 3-workout streak', value: () => state.bestStreak || 0, target: 3 },
+            { id: 's7', emoji: '🧨', name: 'Week of fire', desc: 'Reach a 7-workout streak', value: () => state.bestStreak || 0, target: 7 },
+            { id: 's14', emoji: '🚀', name: 'Unstoppable', desc: 'Reach a 14-workout streak', value: () => state.bestStreak || 0, target: 14 },
+            { id: 's30', emoji: '🌋', name: 'Living legend', desc: 'Reach a 30-workout streak', value: () => state.bestStreak || 0, target: 30 },
+            { id: 's60', emoji: '☄️', name: 'Comet', desc: 'Reach a 60-workout streak', value: () => state.bestStreak || 0, target: 60 },
+            { id: 's100', emoji: '🌌', name: 'Immortal', desc: 'Reach a 100-workout streak', value: () => state.bestStreak || 0, target: 100 },
+            { id: 't2', emoji: '🥉', name: 'Moving up', desc: 'Reach Tier 2 in a discipline', value: maxDiscTier, target: 2 },
+            { id: 't3', emoji: '🥈', name: 'Middle of the pack', desc: 'Reach Tier 3 in a discipline', value: maxDiscTier, target: 3 },
+            { id: 't4', emoji: '🥇', name: 'Front runner', desc: 'Reach Tier 4 in a discipline', value: maxDiscTier, target: 4 },
+            { id: 't5', emoji: '💎', name: 'Top tier', desc: 'Reach Tier 5 in a discipline', value: maxDiscTier, target: 5 },
+            { id: 'elite', emoji: '🦾', name: 'Double elite', desc: 'Tier 5 in both disciplines', value: () => Math.min(tierCap(state.prog.core), tierCap(state.prog.pilates)), target: 5 },
+            { id: 'goal1', emoji: '✅', name: 'Goal getter', desc: 'Hit your weekly goal', value: goalMetWeeks, target: 1 },
+            { id: 'goal4', emoji: '📆', name: 'Habit formed', desc: 'Hit your weekly goal in 4 different weeks', value: goalMetWeeks, target: 4 },
+            { id: 'goal12', emoji: '🗓️', name: 'Quarter master', desc: 'Hit your weekly goal in 12 different weeks', value: goalMetWeeks, target: 12 },
+            { id: 'goal52', emoji: '🧱', name: 'Brick by brick', desc: 'Hit your weekly goal in 52 different weeks', value: goalMetWeeks, target: 52 },
+            { id: 'early', emoji: '🌅', name: 'Early bird', desc: 'Finish a workout before 8am', value: () => (state.history.some((h) => new Date(h.ts).getHours() < 8) ? 1 : 0), target: 1 },
+            { id: 'night', emoji: '🦉', name: 'Night owl', desc: 'Finish a workout after 9pm', value: () => (state.history.some((h) => new Date(h.ts).getHours() >= 21) ? 1 : 0), target: 1 },
+            { id: 'min300', emoji: '⏱️', name: 'Five hours in', desc: 'Train 300 total minutes', value: totalMinutes, target: 300 },
+            { id: 'min1000', emoji: '⏳', name: 'Time well spent', desc: 'Train 1,000 total minutes', value: totalMinutes, target: 1000 },
+            { id: 'min3000', emoji: '🏔️', name: 'Mountain of minutes', desc: 'Train 3,000 total minutes', value: totalMinutes, target: 3000 },
+            { id: 'year1', emoji: '🎂', name: 'One-year club', desc: 'Train across a full year', value: historySpanDays, target: 365 },
+            { id: 'explorer', emoji: '🧭', name: 'Explorer', desc: 'Set records on 25 different exercises', value: recordedExerciseCount, target: 25 },
+            { id: 'pr10', emoji: '📈', name: 'Record breaker', desc: 'Beat your own records 10 times', value: improvementCount, target: 10 },
+            { id: 'pr25', emoji: '💥', name: 'Limit pusher', desc: 'Beat your own records 25 times', value: improvementCount, target: 25 }
+        ].map((a) => Object.assign(a, { test: () => a.value() >= a.target }));
 
         function checkAchievements() {
             const newly = [];
