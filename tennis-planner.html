@@ -203,6 +203,11 @@ permalink: /tennis-planner/
             localStorage.setItem(`tennis-planner:availability:${monthId}`, JSON.stringify(data));
         }
         // --- Utility Functions ---
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
         function getNextMonthWednesdays() {
             const today = new Date();
             const year = today.getFullYear();
@@ -265,7 +270,7 @@ permalink: /tennis-planner/
                  Object.values(players).forEach(player => {
                     const playerEl = document.createElement('div');
                     playerEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-lg';
-                    playerEl.innerHTML = `<span class="font-medium">${player.name}</span>`;
+                    playerEl.innerHTML = `<span class="font-medium">${escapeHtml(player.name)}</span>`;
                     const deleteBtn = document.createElement('button');
                     deleteBtn.innerHTML = '&times;';
                     deleteBtn.className = 'text-red-500 font-bold text-xl hover:text-red-700 px-2';
@@ -288,7 +293,7 @@ permalink: /tennis-planner/
                 const tr = document.createElement('tr');
                 tr.className = 'border-b';
 
-                let cells = `<td class="p-2 text-left font-semibold">${player.name}</td>`;
+                let cells = `<td class="p-2 text-left font-semibold">${escapeHtml(player.name)}</td>`;
                 const playerDates = availability[player.id] || [];
                 nextMonthWednesdays.forEach(date => {
                     const isChecked = playerDates.includes(date);
