@@ -1518,6 +1518,23 @@ permalink: /personal-trainer/
             return (state.links && state.links[id]) || PRESET_LINKS[id] || '';
         }
 
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        // Only trust http(s) URLs as clickable links/embeds; user-imported or pasted
+        // values could otherwise carry a javascript:/data: URI.
+        function safeHref(url) {
+            if (!url) return '';
+            try {
+                const u = new URL(url, window.location.href);
+                if (u.protocol === 'http:' || u.protocol === 'https:') return url;
+            } catch (e) { /* invalid URL */ }
+            return '';
+        }
+
         // =====================================================
         // State
         // =====================================================
@@ -1608,7 +1625,9 @@ permalink: /personal-trainer/
         }
 
         function saveState() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) { /* storage full or unavailable (e.g. private browsing) */ }
         }
 
         function tierCap(score) {
@@ -2132,10 +2151,10 @@ permalink: /personal-trainer/
         }
 
         function youtubeLinksFor(ex) {
-            const saved = linkFor(ex.id);
+            const saved = safeHref(linkFor(ex.id));
             const search = `https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + (ex.disc === 'pilates' ? ' mat pilates' : ' exercise form'))}`;
-            if (saved) return `<a href="${saved}" target="_blank" rel="noopener">▶ Watch guide</a>`;
-            return `<a href="${search}" target="_blank" rel="noopener">🔍 Search YouTube</a>`;
+            if (saved) return `<a href="${escapeHtml(saved)}" target="_blank" rel="noopener">▶ Watch guide</a>`;
+            return `<a href="${escapeHtml(search)}" target="_blank" rel="noopener">🔍 Search YouTube</a>`;
         }
 
         // Pull the 11-char video id out of any common YouTube URL shape.
@@ -2201,9 +2220,9 @@ permalink: /personal-trainer/
             const saved = linkFor(ex.id);
             const src = youtubeEmbedSrc(saved, { loop: true });
             if (src) {
-                videoEl.innerHTML = `<iframe src="${src}" title="${ex.name} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+                videoEl.innerHTML = `<iframe src="${escapeHtml(src)}" title="${escapeHtml(ex.name)} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
                 videoEl.classList.add('active');
-                linksEl.innerHTML = `<a href="${saved}" target="_blank" rel="noopener">▶ Open on YouTube</a>`;
+                linksEl.innerHTML = `<a href="${escapeHtml(safeHref(saved))}" target="_blank" rel="noopener">▶ Open on YouTube</a>`;
             } else {
                 clearVideo();
                 linksEl.innerHTML = youtubeLinksFor(ex);
@@ -2368,7 +2387,7 @@ permalink: /personal-trainer/
                             </div>
                             <div class="lib-body">
                                 <div class="lib-cues">${ex.cues.join(' · ')}</div>
-                                <input type="url" placeholder="Paste YouTube link…" value="${linkFor(ex.id)}" data-link-for="${ex.id}">
+                                <input type="url" placeholder="Paste YouTube link…" value="${escapeHtml(linkFor(ex.id))}" data-link-for="${ex.id}">
                             </div>
                         </div>`).join('')}
                 </div>`).join('');

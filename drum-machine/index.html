@@ -967,6 +967,7 @@ function showToast(msg) {
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2200);
 }
+window.showToast = showToast;
 
 // ─── Undo/Redo history ────────────────────────────────────────────────────────
 const HISTORY_MAX = 50;
@@ -2006,7 +2007,10 @@ const BPMDetector = (() => {
                 detectionInterval = setInterval(analyse, 2500);
                 renderBtn();
             })
-            .catch(() => {});
+            .catch((err) => {
+                console.error('Mic access for BPM detection failed', err);
+                showToast('Mic access denied — can\'t detect BPM');
+            });
     }
 
     function stop() {
