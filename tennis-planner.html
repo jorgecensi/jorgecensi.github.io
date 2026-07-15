@@ -273,6 +273,7 @@ permalink: /tennis-planner/
                     playerEl.innerHTML = `<span class="font-medium">${escapeHtml(player.name)}</span>`;
                     const deleteBtn = document.createElement('button');
                     deleteBtn.innerHTML = '&times;';
+                    deleteBtn.setAttribute('aria-label', `Remove ${player.name}`);
                     deleteBtn.className = 'text-red-500 font-bold text-xl hover:text-red-700 px-2';
                     deleteBtn.onclick = () => deletePlayer(player.id);
                     playerEl.appendChild(deleteBtn);
