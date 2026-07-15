@@ -610,7 +610,7 @@ function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 // ============================================================
 function avatarInner(player, fontSize) {
   if (player.photo) return `<img class="avatar-img" src="${player.photo}" alt="${esc(player.name)}">`;
-  return `<div class="avatar-letter" style="background:${player.color};font-size:${fontSize}px">${esc(player.avatar)}</div>`;
+  return `<div class="avatar-letter" style="background:${esc(player.color)};font-size:${fontSize}px">${esc(player.avatar)}</div>`;
 }
 
 function avatarHtml(player, size = 36) {
@@ -696,7 +696,7 @@ function renderStandings() {
     standings.forEach((s, i) => {
       h += `<tr>
         <td class="td-pos">${i + 1}</td>
-        <td><div class="driver-cell"><span class="player-dot" style="background:${s.player.color}"></span>${esc(s.player.name)}</div></td>
+        <td><div class="driver-cell"><span class="player-dot" style="background:${esc(s.player.color)}"></span>${esc(s.player.name)}</div></td>
         <td class="td-pts"><strong>${s.points}</strong></td>
         <td class="td-c">${s.races}</td>
         <td class="td-c">${bestFinish(s.positions)}</td>
@@ -713,7 +713,7 @@ function renderStandings() {
     });
     h += '</tr></thead><tbody>';
     players.forEach(p => {
-      h += `<tr><td class="sticky-col"><div class="driver-cell"><span class="player-dot" style="background:${p.color}"></span>${esc(p.name)}</div></td>`;
+      h += `<tr><td class="sticky-col"><div class="driver-cell"><span class="player-dot" style="background:${esc(p.color)}"></span>${esc(p.name)}</div></td>`;
       CALENDAR.forEach(r => {
         const key  = String(r.round);
         const data = getPlayerRound(p.id, key);
@@ -950,7 +950,7 @@ function openModal(round) {
     const val = existing?.entries?.[p.id]?.lapTime || '';
     h += `<div class="te-row">
       <div class="te-player">
-        <span class="te-pdot" style="background:${p.color}"></span>
+        <span class="te-pdot" style="background:${esc(p.color)}"></span>
         <span class="te-pname">${esc(p.name)}</span>
       </div>
       <input type="text" class="time-input" data-pid="${p.id}"
@@ -1023,7 +1023,7 @@ function updatePreview() {
   entries.forEach((e, i) => {
     h += `<div class="pv-row">
       <span class="pv-pos">${med[i] || 'P'+(i+1)}</span>
-      <span class="pv-name" style="color:${e.player.color}">${esc(e.player.name)}</span>
+      <span class="pv-name" style="color:${esc(e.player.color)}">${esc(e.player.name)}</span>
       <span class="pv-time">${e.lapTime}</span>
       <span class="pv-pts">+${F1_POINTS[i] ?? 0} pts</span>
     </div>`;
