@@ -1,4 +1,5 @@
-const CACHE_NAME = "tennis-planner-v1";
+const CACHE_VERSION = '2607160800';
+const CACHE_NAME = `tennis-planner-${CACHE_VERSION}`;
 const OFFLINE_URL = "/tennis-planner/";
 const PRECACHE_URLS = [
   "/tennis-planner/",

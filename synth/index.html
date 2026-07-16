@@ -1402,6 +1402,7 @@ document.getElementById('install-btn').addEventListener('click', async () => {
 });
 
 if ('serviceWorker' in navigator) {
+  const SW_VERSION = '2607160800';
   let hasRefreshedForUpdate = false;
 
   function showUpdateBanner(registration) {
@@ -1428,7 +1429,7 @@ if ('serviceWorker' in navigator) {
     document.body.appendChild(banner);
   }
 
-  navigator.serviceWorker.register('/synth/sw.js', { scope: '/synth/' }).then(registration => {
+  navigator.serviceWorker.register(`/synth/sw.js?v=${encodeURIComponent(SW_VERSION)}`, { scope: '/synth/' }).then(registration => {
     if (registration.waiting) {
       showUpdateBanner(registration);
     }

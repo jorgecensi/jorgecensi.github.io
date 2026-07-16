@@ -6730,9 +6730,10 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
   root.render(React.createElement(LangProvider, null, React.createElement(App)));
   </script>
   <script>
+    const SW_VERSION = '2607160800';
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/worldcup-2026/sw.js')
+        navigator.serviceWorker.register(`/worldcup-2026/sw.js?v=${encodeURIComponent(SW_VERSION)}`)
           .then(reg => {
             reg.addEventListener('updatefound', () => {
               const newWorker = reg.installing;

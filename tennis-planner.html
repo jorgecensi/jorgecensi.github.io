@@ -185,19 +185,34 @@ permalink: /tennis-planner/
         const copyTooltipText = document.getElementById('copy-tooltip-text');
         // --- localStorage Helpers ---
         function loadSettings() {
-            return JSON.parse(localStorage.getItem('tennis-planner:settings') || '{}');
+            try {
+                return JSON.parse(localStorage.getItem('tennis-planner:settings') || '{}');
+            } catch (e) {
+                console.error('Corrupted tennis-planner:settings, falling back to defaults', e);
+                return {};
+            }
         }
         function saveSettings(data) {
             localStorage.setItem('tennis-planner:settings', JSON.stringify(data));
         }
         function loadPlayers() {
-            return JSON.parse(localStorage.getItem('tennis-planner:players') || '{}');
+            try {
+                return JSON.parse(localStorage.getItem('tennis-planner:players') || '{}');
+            } catch (e) {
+                console.error('Corrupted tennis-planner:players, falling back to defaults', e);
+                return {};
+            }
         }
         function savePlayers(data) {
             localStorage.setItem('tennis-planner:players', JSON.stringify(data));
         }
         function loadAvailability(monthId) {
-            return JSON.parse(localStorage.getItem(`tennis-planner:availability:${monthId}`) || '{}');
+            try {
+                return JSON.parse(localStorage.getItem(`tennis-planner:availability:${monthId}`) || '{}');
+            } catch (e) {
+                console.error('Corrupted tennis-planner:availability, falling back to defaults', e);
+                return {};
+            }
         }
         function saveAvailability(monthId, data) {
             localStorage.setItem(`tennis-planner:availability:${monthId}`, JSON.stringify(data));
@@ -416,10 +431,11 @@ permalink: /tennis-planner/
 
     <!-- PWA: Service Worker Registration & Install Prompt -->
     <script>
+        const SW_VERSION = '2607160800';
         // Service worker registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/tennis-planner-sw.js').then(reg => {
+                navigator.serviceWorker.register(`/tennis-planner-sw.js?v=${encodeURIComponent(SW_VERSION)}`).then(reg => {
                     reg.addEventListener('updatefound', () => {
                         const newWorker = reg.installing;
                         newWorker.addEventListener('statechange', () => {
