@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607160800';
+const CACHE_VERSION = '2607171032';
 const CACHE_NAME = `worldcup-2026-${CACHE_VERSION}`;
 const OFFLINE_URL = '/worldcup-2026/';
 const PRECACHE_URLS = [

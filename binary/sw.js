@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607160800';
+const CACHE_VERSION = '2607171032';
 const CACHE_NAME = `binary-puzzle-en-${CACHE_VERSION}`;
 const OFFLINE_URL = "/binary/";
 const PRECACHE_URLS = [

@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607160800';
+const CACHE_VERSION = '2607171032';
 const CACHE_NAME = `crossfit-timer-${CACHE_VERSION}`;
 const OFFLINE_URL = '/crossfit-timer/';
 const PRECACHE_URLS = [
