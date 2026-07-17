@@ -540,7 +540,8 @@ function load(key, fallback) {
   catch { return fallback; }
 }
 function save(key, val) {
-  localStorage.setItem(`${NS}:${key}`, JSON.stringify(val));
+  try { localStorage.setItem(`${NS}:${key}`, JSON.stringify(val)); }
+  catch (e) { /* localStorage unavailable (private browsing / quota exceeded) */ }
 }
 
 // ============================================================

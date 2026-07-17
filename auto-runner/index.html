@@ -35,7 +35,7 @@ permalink: /auto-runner/
   <canvas id="canvas"></canvas>
 
   <script>
-    const SW_VERSION = '2606071202';
+    const SW_VERSION = '2607171027';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function askUpdate(reg) {
@@ -104,7 +104,11 @@ permalink: /auto-runner/
     let stars, groundX;
     let reviveStars, reviveStarCooldown;
 
-    bestScore = parseInt(localStorage.getItem('ar-best') || '0', 10);
+    try {
+      bestScore = parseInt(localStorage.getItem('ar-best') || '0', 10);
+    } catch (e) {
+      bestScore = 0;
+    }
 
     // ── Players ────────────────────────────────────────────────
     let players;
@@ -432,7 +436,11 @@ permalink: /auto-runner/
       flashAlpha = 0.85;
       if (score > bestScore) {
         bestScore = score;
-        localStorage.setItem('ar-best', bestScore);
+        try {
+          localStorage.setItem('ar-best', bestScore);
+        } catch (e) {
+          // localStorage unavailable (private browsing / quota) — best score just won't persist
+        }
       }
     }
 

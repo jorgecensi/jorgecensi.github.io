@@ -1264,12 +1264,27 @@ function playWoodblock(time, pitch, dest = masterGain) {
     osc.connect(bpf); bpf.connect(g); g.connect(dest); osc.start(time); osc.stop(time + 0.075);
 }
 
+// Small pool of pre-rendered noise buffers per duration, reused across hits
+// instead of re-rendering a fresh buffer (up to ~1.8s / ~79k samples) on every
+// single hit — that generation used to run synchronously on the main thread
+// each time a crash/shaker triggered, causing avoidable GC churn at high BPM.
+// Picking randomly from a small pool keeps hit-to-hit variation.
+const noiseBufferPool = new Map();
+const NOISE_POOL_SIZE = 4;
 function noiseBuffer(dur) {
-    const size = Math.ceil(audioCtx.sampleRate * dur);
-    const buf  = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
-    return buf;
+    let pool = noiseBufferPool.get(dur);
+    if (!pool) {
+        pool = [];
+        const size = Math.ceil(audioCtx.sampleRate * dur);
+        for (let p = 0; p < NOISE_POOL_SIZE; p++) {
+            const buf = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+            pool.push(buf);
+        }
+        noiseBufferPool.set(dur, pool);
+    }
+    return pool[(Math.random() * pool.length) | 0];
 }
 
 // ─── Sample banks ─────────────────────────────────────────────────────────────
@@ -2192,7 +2207,7 @@ document.getElementById('sync-beat-btn').addEventListener('click', () => {
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607141358';
+    const SW_VERSION = '2607171027';
     navigator.serviceWorker.register(
         `/drum-machine/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
         { scope: '/drum-machine/' }
