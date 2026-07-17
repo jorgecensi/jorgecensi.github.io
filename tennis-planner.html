@@ -185,22 +185,28 @@ permalink: /tennis-planner/
         const copyTooltipText = document.getElementById('copy-tooltip-text');
         // --- localStorage Helpers ---
         function loadSettings() {
-            return JSON.parse(localStorage.getItem('tennis-planner:settings') || '{}');
+            try { return JSON.parse(localStorage.getItem('tennis-planner:settings') || '{}'); }
+            catch (e) { return {}; }
         }
         function saveSettings(data) {
-            localStorage.setItem('tennis-planner:settings', JSON.stringify(data));
+            try { localStorage.setItem('tennis-planner:settings', JSON.stringify(data)); }
+            catch (e) { /* localStorage unavailable (private browsing / quota exceeded) */ }
         }
         function loadPlayers() {
-            return JSON.parse(localStorage.getItem('tennis-planner:players') || '{}');
+            try { return JSON.parse(localStorage.getItem('tennis-planner:players') || '{}'); }
+            catch (e) { return {}; }
         }
         function savePlayers(data) {
-            localStorage.setItem('tennis-planner:players', JSON.stringify(data));
+            try { localStorage.setItem('tennis-planner:players', JSON.stringify(data)); }
+            catch (e) { /* localStorage unavailable (private browsing / quota exceeded) */ }
         }
         function loadAvailability(monthId) {
-            return JSON.parse(localStorage.getItem(`tennis-planner:availability:${monthId}`) || '{}');
+            try { return JSON.parse(localStorage.getItem(`tennis-planner:availability:${monthId}`) || '{}'); }
+            catch (e) { return {}; }
         }
         function saveAvailability(monthId, data) {
-            localStorage.setItem(`tennis-planner:availability:${monthId}`, JSON.stringify(data));
+            try { localStorage.setItem(`tennis-planner:availability:${monthId}`, JSON.stringify(data)); }
+            catch (e) { /* localStorage unavailable (private browsing / quota exceeded) */ }
         }
         // --- Utility Functions ---
         function escapeHtml(str) {
@@ -417,9 +423,10 @@ permalink: /tennis-planner/
     <!-- PWA: Service Worker Registration & Install Prompt -->
     <script>
         // Service worker registration
+        const SW_VERSION = '2607171200';
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/tennis-planner-sw.js').then(reg => {
+                navigator.serviceWorker.register(`/tennis-planner-sw.js?v=${encodeURIComponent(SW_VERSION)}`).then(reg => {
                     reg.addEventListener('updatefound', () => {
                         const newWorker = reg.installing;
                         newWorker.addEventListener('statechange', () => {
