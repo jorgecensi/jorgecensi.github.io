@@ -423,7 +423,7 @@ permalink: /tennis-planner/
     <!-- PWA: Service Worker Registration & Install Prompt -->
     <script>
         // Service worker registration
-        const SW_VERSION = '2607171200';
+        const SW_VERSION = '2607171027';
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register(`/tennis-planner-sw.js?v=${encodeURIComponent(SW_VERSION)}`).then(reg => {
