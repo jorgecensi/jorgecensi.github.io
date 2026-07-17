@@ -515,6 +515,7 @@ permalink: /tuner/
         let silenceFrames = 0, inTuneFrames = 0;
         let wasInTune = false;
         const timeBuf = new Float32Array(FFT_SIZE);
+        let corrBuf = null;
 
         // ─── Pitch detection ─────────────────────────────────────────────────────
         function detectPitch(buf, sampleRate) {
@@ -524,7 +525,10 @@ permalink: /tuner/
 
             const minLag = Math.floor(sampleRate / 1500);
             const maxLag = Math.ceil(sampleRate / 70);
-            const corr = new Float32Array(maxLag);
+            // Reused across calls (sampleRate is constant for the session) to avoid
+            // per-frame allocation inside the requestAnimationFrame loop.
+            if (!corrBuf || corrBuf.length < maxLag) corrBuf = new Float32Array(maxLag);
+            const corr = corrBuf;
 
             for (let lag = minLag; lag < maxLag; lag++) {
                 let c = 0;
@@ -789,7 +793,7 @@ permalink: /tuner/
         document.getElementById('btn-ukulele').addEventListener('click', () => switchInstrument('ukulele'));
 
         // ─── Service worker ───────────────────────────────────────────────────────
-        const SW_VERSION = '2604101320';
+        const SW_VERSION = '2607171027';
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register(

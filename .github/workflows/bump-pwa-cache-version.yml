@@ -58,6 +58,8 @@ jobs:
           echo "elastomania=$(check 'elastomania/sw.js elastomania/index.html elastomania/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "squeak_the_geek=$(check 'squeak-the-geek-sw.js squeak-the-geek.html squeak-the-geek-manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "personal_trainer=$(check 'personal-trainer/sw.js personal-trainer/index.html personal-trainer/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "tennis_planner=$(check 'tennis-planner-sw.js tennis-planner.html tennis-planner-manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "worldcup=$(check 'worldcup-2026/sw.js worldcup-2026/index.html worldcup-2026/manifest.json')" >> "${GITHUB_OUTPUT}"
 
       - name: Update PWA version constants
         run: |
@@ -83,6 +85,8 @@ jobs:
               "elastomania":  "${{ steps.changed.outputs.elastomania }}" == "true",
               "squeak_the_geek": "${{ steps.changed.outputs.squeak_the_geek }}" == "true",
               "personal_trainer": "${{ steps.changed.outputs.personal_trainer }}" == "true",
+              "tennis_planner": "${{ steps.changed.outputs.tennis_planner }}" == "true",
+              "worldcup":     "${{ steps.changed.outputs.worldcup }}" == "true",
           }
 
           # On tag/dispatch, bump everything; on push to main, only bump changed PWAs
@@ -112,8 +116,10 @@ jobs:
               versioned_files["drum-machine/index.html"] = ("SW_VERSION", version)
           if bump_all or changed["f1"]:
               versioned_files["f1-championship/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["f1-championship/index.html"] = ("SW_VERSION", version)
           if bump_all or changed["synth"]:
               versioned_files["synth/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["synth/index.html"] = ("SW_VERSION", version)
           if bump_all or changed["tuner"]:
               versioned_files["tuner/sw.js"] = ("CACHE_VERSION", version)
               versioned_files["tuner/index.html"] = ("SW_VERSION", version)
@@ -132,6 +138,12 @@ jobs:
           if bump_all or changed["personal_trainer"]:
               versioned_files["personal-trainer/sw.js"] = ("CACHE_VERSION", version)
               versioned_files["personal-trainer/index.html"] = ("SW_VERSION", version)
+          if bump_all or changed["tennis_planner"]:
+              versioned_files["tennis-planner-sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["tennis-planner.html"] = ("SW_VERSION", version)
+          if bump_all or changed["worldcup"]:
+              versioned_files["worldcup-2026/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["worldcup-2026/index.html"] = ("SW_VERSION", version)
 
           for relative_path, (const_name, ver) in versioned_files.items():
               path = repo / relative_path
@@ -167,7 +179,9 @@ jobs:
             drum-machine/sw.js \
             drum-machine/index.html \
             f1-championship/sw.js \
+            f1-championship/index.html \
             synth/sw.js \
+            synth/index.html \
             tuner/sw.js \
             tuner/index.html \
             auto-runner/sw.js \
@@ -179,6 +193,10 @@ jobs:
             squeak-the-geek-sw.js \
             squeak-the-geek.html \
             personal-trainer/sw.js \
-            personal-trainer/index.html
+            personal-trainer/index.html \
+            tennis-planner-sw.js \
+            tennis-planner.html \
+            worldcup-2026/sw.js \
+            worldcup-2026/index.html
           git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }} [skip ci]"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"
