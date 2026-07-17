@@ -1,4 +1,4 @@
-const APP_VERSION = '2603220405';
+const APP_VERSION = '2607160800';
 
 document.addEventListener("DOMContentLoaded", () => {
     const gridSize = 8;
@@ -532,7 +532,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const isPortugueseRoute = window.location.pathname.startsWith("/pt-BR/binary/");
-        const serviceWorkerUrl = isPortugueseRoute ? "/pt-BR/binary/sw.js" : "/binary/sw.js";
+        const serviceWorkerUrl = (isPortugueseRoute ? "/pt-BR/binary/sw.js" : "/binary/sw.js") + "?v=" + encodeURIComponent(APP_VERSION);
         const scope = isPortugueseRoute ? "/pt-BR/binary/" : "/binary/";
 
         function showUpdateBanner(registration) {

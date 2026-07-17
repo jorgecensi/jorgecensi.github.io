@@ -1142,6 +1142,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if ('serviceWorker' in navigator) {
+    const SW_VERSION = '2607160800';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
@@ -1168,7 +1169,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(banner);
     }
 
-    navigator.serviceWorker.register('/f1-championship/sw.js').then(registration => {
+    navigator.serviceWorker.register(`/f1-championship/sw.js?v=${encodeURIComponent(SW_VERSION)}`).then(registration => {
       if (registration.waiting) {
         showUpdateBanner(registration);
       }

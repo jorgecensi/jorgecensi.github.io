@@ -1305,7 +1305,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607141358';
+        const SW_VERSION = '2607160800';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -2066,7 +2066,7 @@ permalink: /personal-trainer/
             const ex = EX_BY_ID[exId];
             const src = youtubeEmbedSrc(linkFor(exId));
             if (!src) return;
-            slot.innerHTML = `<iframe src="${src}" title="${ex ? ex.name : ''} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+            slot.innerHTML = `<iframe src="${escapeHtml(src)}" title="${escapeHtml(ex ? ex.name : '')} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
             slot.closest('.plan-item').classList.add('playing');
             slot.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
