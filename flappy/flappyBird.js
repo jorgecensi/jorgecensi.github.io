@@ -9,7 +9,7 @@ class FlappyBird {
         
         this.gameState = 'loading';
         this.score = 0;
-        this.highScore = localStorage.getItem('flappyBirdHighScore') || 0;
+        this.highScore = this.readHighScore();
         
         this.bird = {
             x: 50,
@@ -34,7 +34,21 @@ class FlappyBird {
         
         this.init();
     }
-    
+
+    readHighScore() {
+        try {
+            return localStorage.getItem('flappyBirdHighScore') || 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    writeHighScore(score) {
+        try {
+            localStorage.setItem('flappyBirdHighScore', score);
+        } catch (e) { /* storage full or unavailable (e.g. private browsing) */ }
+    }
+
     async init() {
         await this.loadAssets();
         this.setupEventListeners();
@@ -62,6 +76,10 @@ class FlappyBird {
             this.images[file.key].src = file.src;
             await new Promise(resolve => {
                 this.images[file.key].onload = resolve;
+                this.images[file.key].onerror = () => {
+                    console.error(`Failed to load image: ${file.src}`);
+                    resolve();
+                };
             });
         }
         
@@ -170,7 +188,7 @@ class FlappyBird {
                 
                 if (this.score > this.highScore) {
                     this.highScore = this.score;
-                    localStorage.setItem('flappyBirdHighScore', this.highScore);
+                    this.writeHighScore(this.highScore);
                 }
             }
             

@@ -552,7 +552,7 @@
 
 <script>
 // ── Constants ────────────────────────────────────────────────────────────────
-const APP_VERSION = '2603220405';
+const APP_VERSION = '2607141358';
 const KEY_API   = 'curator_api_key';
 const KEY_SRCS  = 'curator_sources';
 const KEY_IDX   = 'curator_idx';
@@ -744,14 +744,14 @@ function renderMain(errors = []) {
     main.innerHTML = `
       <div class="state-screen">
         <p class="state-sub">No videos found.</p>
-        ${errors.map(e => `<p class="error-line">${e}</p>`).join('')}
+        ${errors.map(e => `<p class="error-line">${escHtml(e)}</p>`).join('')}
         <button class="btn-primary" onclick="openModal()">Edit sources</button>
       </div>`;
     return;
   }
 
   const cur = videos[idx];
-  const errHtml = errors.map(e => `<p class="warn-line">⚠ ${e}</p>`).join('');
+  const errHtml = errors.map(e => `<p class="warn-line">⚠ ${escHtml(e)}</p>`).join('');
 
   main.innerHTML = `
     ${errHtml}

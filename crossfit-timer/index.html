@@ -1737,14 +1737,19 @@ class CrossFitTimer {
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         } catch (e) {
-            console.log('Audio not supported');
+            console.error('Audio not supported', e);
         }
     }
     
     loadSettings() {
         // Load settings from localStorage
-        const settings = JSON.parse(localStorage.getItem('crossfitTimerSettings') || '{}');
-        
+        let settings = {};
+        try {
+            settings = JSON.parse(localStorage.getItem('crossfitTimerSettings') || '{}');
+        } catch (e) {
+            console.error('Corrupted crossfitTimerSettings, falling back to defaults', e);
+        }
+
         // Apply saved settings or use defaults
         const defaultCountdown = settings.defaultCountdown || 10;
         const soundEnabled = settings.soundEnabled !== undefined ? settings.soundEnabled : true;
@@ -2043,13 +2048,8 @@ class CrossFitTimer {
         switch(this.currentPhase) {
             case 'countdown':
                 this.playBeep(1200, 300);
-                if (this.config.type === 'tabata') {
-                    this.currentPhase = 'work';
-                    this.timeRemaining = this.workTime;
-                } else {
-                    this.currentPhase = 'work';
-                    this.timeRemaining = this.workTime;
-                }
+                this.currentPhase = 'work';
+                this.timeRemaining = this.workTime;
                 break;
                 
             case 'work':
@@ -2327,7 +2327,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Service Worker Registration for PWA
-const SW_VERSION = '2603250202';
+const SW_VERSION = '2607141358';
 document.getElementById('crossfit-version').textContent = 'v' + SW_VERSION;
 if ('serviceWorker' in navigator) {
     let hasRefreshedForUpdate = false;
@@ -2386,7 +2386,7 @@ if ('serviceWorker' in navigator) {
             window.addEventListener('focus', () => registration.update());
             setInterval(() => registration.update(), 60 * 60 * 1000);
         } catch (error) {
-            console.log('SW registration failed', error);
+            console.error('SW registration failed', error);
         }
     });
 }

@@ -345,7 +345,7 @@ permalink: /squeak-the-geek/
     </div>
 
     <script>
-        const SW_VERSION = '2607060028';
+        const SW_VERSION = '2607141358';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -379,7 +379,7 @@ permalink: /squeak-the-geek/
                         });
                     });
                 })
-                .catch((err) => console.log('SW registration failed:', err));
+                .catch((err) => console.error('SW registration failed:', err));
 
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (hasRefreshedForUpdate) return;
