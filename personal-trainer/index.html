@@ -69,7 +69,8 @@ permalink: /personal-trainer/
             min-height: 100%;
             display: flex;
             flex-direction: column;
-            padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+            /* add margin ON TOP of the safe areas so the iOS home indicator never sits on a button */
+            padding: calc(12px + env(safe-area-inset-top, 4px)) 16px calc(28px + env(safe-area-inset-bottom, 0px));
         }
 
         .screen {
@@ -942,7 +943,7 @@ permalink: /personal-trainer/
         .toast {
             position: fixed;
             left: 50%;
-            bottom: max(24px, env(safe-area-inset-bottom));
+            bottom: calc(20px + env(safe-area-inset-bottom, 4px));
             transform: translate(-50%, 120%);
             display: flex;
             align-items: center;
@@ -1305,7 +1306,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607171032';
+        const SW_VERSION = '2607171039';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
