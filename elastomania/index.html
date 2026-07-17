@@ -62,6 +62,33 @@ permalink: /elastomania/
       outline: none;
     }
     .touch-btn.pressed { background: rgba(255,255,255,0.32); }
+    #throttle-slider {
+      width: 72px;
+      height: 150px;
+      border-radius: 36px;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.25);
+      position: relative;
+      pointer-events: all;
+      touch-action: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #throttle-knob {
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      color: white;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
     #sw-banner {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: #1e4d2b; color: #fff; padding: 12px 16px;
@@ -79,8 +106,10 @@ permalink: /elastomania/
   <canvas id="canvas"></canvas>
   <div id="touch-controls">
     <div class="btn-group">
-      <button class="touch-btn" id="btn-brake" aria-label="Brake">◀</button>
-      <button class="touch-btn" id="btn-accel" aria-label="Accelerator">▶</button>
+      <button class="touch-btn" id="btn-brake" aria-label="Brake">■</button>
+      <div id="throttle-slider" aria-label="Throttle">
+        <div id="throttle-knob">▲</div>
+      </div>
     </div>
     <div class="btn-group">
       <button class="touch-btn" id="btn-switch" aria-label="Switch side">⇄</button>
@@ -92,7 +121,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607100526';
+    const SW_VERSION = '2607121244';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -151,52 +180,101 @@ permalink: /elastomania/
     // ── Constants ──────────────────────────────────────────────
     // WORLD_W varies per level and is declared with the LEVELS data below.
     const WORLD_H = 700;
-    const WHEEL_R = 15;
+    const WHEEL_R = 13;
     const CHASSIS_W = 55;
     const CHASSIS_H = 10;
-    // Half the wheelbase — each wheel hangs from this far ahead of / behind
-    // the chassis centre. Original Elasto Mania geometry: the wheelbase is
-    // roughly 4× the wheel radius and the wheels poke out beyond the frame
-    // front and rear, rather than tucking underneath it.
-    const WHEELBASE_HALF = 28;
-    const BRACE_HALF     = 7;
+    // Half the wheelbase. The original Elasto Mania bike has its wheels well
+    // apart — the wheelbase is about two wheel diameters — with the frame
+    // stretched between them, so the wheels sit at the fork/swingarm tips
+    // rather than tucked under the engine.
+    const WHEELBASE_HALF = 30;
 
-    // Suspension: the main leg from chassis to wheel. Soft and lightly
-    // damped on purpose — the elastic, visibly-bouncing suspension is the
-    // signature of the original game (it's what the "Elasto" in the name
-    // means). Landings compress, the frame bobs, and the wheels spring back.
-    // The second brace link per wheel (see rearBrace/frontBrace) keeps the
-    // geometry from collapsing even though these springs are soft.
+    // Suspension: one soft main leg from above each axle plus two stiffer
+    // braces from points closer to the chassis centre. Soft enough that the
+    // wheels visibly squash into the frame on landings and spring back — the
+    // bouncy Elasto Mania feel — while the three non-collinear attachment
+    // points make the wheel's rest pose the unique intersection of three
+    // circles, so it can't wander around the chassis or flip to the mirror
+    // solution the way a one- or two-link hookup can.
+    const SUSPENSION_ANCHOR_Y  = 5;
     const SUSPENSION_LENGTH    = 15;
-    const SUSPENSION_STIFFNESS = 0.35;
-    const SUSPENSION_DAMPING   = 0.1;
+    const SUSPENSION_STIFFNESS = 0.12;
+    const SUSPENSION_DAMPING   = 0.06;
+    const BRACE_STIFFNESS = 0.18;
+    const BRACE_DAMPING   = 0.06;
+    // The front fork runs noticeably softer than the rear, so it visibly
+    // dives on landings and under braking (about double the rear's travel
+    // on the same bump) while the rear stays planted.
+    const FRONT_SUS_STIFFNESS   = 0.05;
+    const FRONT_SUS_DAMPING     = 0.05;
+    const FRONT_BRACE_STIFFNESS = 0.08;
+    const FRONT_BRACE_DAMPING   = 0.05;
+    // Where a wheel sits in chassis space when the suspension is at rest.
+    const AXLE_REST_Y = SUSPENSION_ANCHOR_Y + SUSPENSION_LENGTH;
+    // Bump stop: a wheel can never rise above this chassis-local height —
+    // the suspension bottoms out. Keeps violent landings from punching a
+    // wheel through the frame into the mirror equilibrium.
+    const BUMP_STOP_Y = 8;
 
-    // Secondary locating link per wheel — see note at rearBrace/frontBrace.
-    // Springy like the main leg so the wheel can visibly travel, but stiff
-    // enough that the wheel can't swing around the chassis.
-    const BRACE_STIFFNESS = 0.5;
-    const BRACE_DAMPING   = 0.12;
+    // Front fork geometry: the fork crown (where the fork enters the frame
+    // art, under the handlebars) and the slider axis from it to the axle's
+    // rest position. The front wheel is kept ON this axis by a gentle
+    // per-frame correction: its perpendicular offset is decayed (capped per
+    // frame so it can never teleport the wheel through an obstacle) and the
+    // perpendicular part of its relative velocity is damped. The springs
+    // stay in charge of the along-axis suspension travel, so the wheel only
+    // moves diagonally along the fork angle.
+    const FORK_CROWN = { x: 23, y: 4 };
+    const FORK_DIR = (() => {
+      const dx = WHEELBASE_HALF - FORK_CROWN.x;
+      const dy = AXLE_REST_Y - FORK_CROWN.y;
+      const len = Math.hypot(dx, dy);
+      return { x: dx / len, y: dy / len };
+    })();
+    const FORK_ALIGN_POS_K   = 0.5;  // perp offset decay per frame
+    const FORK_ALIGN_POS_CAP = 4;    // max perp position correction px/frame
+    const FORK_ALIGN_VEL_K   = 0.4;  // perp relative-velocity damping
 
-    // Throttle: strong, like the original — gassing hard from a standstill
-    // lifts the front wheel, and wheelie balance (throttle + lean) is part
-    // of the core skill set. Brake clamps BOTH wheels toward zero spin (the
-    // original has no reverse; you flip the bike to go the other way).
-    const MOTOR_ACCEL   = 0.14;   // angular accel per 16.67ms frame
-    const BRAKE_ACCEL   = 0.4;
-    const MAX_WHEEL_SPIN  = 20;
-    // Lean ramps chassis rotation up to a capped rate, like the original's
-    // constant-speed rotate keys — holding it flips at a steady pace
-    // (~1.2s per full mid-air flip) instead of winding up ever faster.
-    // The per-frame ramp is small on purpose: it acts like a torque, so on
-    // the ground the wheels/suspension resist it and taps give gentle
-    // wheelie corrections, while in the air the body winds up to full rate.
-    const LEAN_ACCEL    = 0.005;
-    const LEAN_MAX_SPIN = 0.09;
-    // Motor reaction torque: spinning the rear wheel up kicks the frame the
-    // opposite way (nose up under throttle) — this is what makes standstill
-    // wheelies possible in the original. Expressed as the fraction of each
-    // frame's wheel spin-up that is fed back into chassis rotation.
-    const MOTOR_KICK    = 0.02;
+    // Engine torque acts BETWEEN the rear wheel and the frame, like the real
+    // game: gassing spins the wheel up and kicks the frame back (nose-up), so
+    // holding full throttle from a standstill loops you over backwards in
+    // about a second and a half unless you lean forward, and throttle/brake
+    // rotate the bike in mid-air. MOTOR_REACTION scales the
+    // I_wheel/I_chassis reaction reaching the frame — a feel knob. With
+    // both wheels held on their suspension axes there is no trailing-wheel
+    // weight transfer any more, so the reaction torque is the sole wheelie
+    // source (as in the original game). MOTOR_REACTION is the full-kick
+    // value: suddenly opening the throttle at full kick budget lifts the
+    // nose hard (and loops if held), while steady throttle fades toward
+    // KICK_FLOOR of it and just rides with a mild rear-weighted attitude.
+    const MOTOR_ACCEL    = 0.12;   // wheel spin gain per 16.67ms frame
+    const MOTOR_REACTION = 1.6;
+    // Brake couples both wheels to the frame (locks them relative to it, no
+    // reverse thrust) — turn around with the flip key instead, as in the
+    // original.
+    const BRAKE_LOCK     = 0.25;   // per-frame lock-up fraction
+    // Wheel spin cap near the rolling rate at top speed (2.2 rad/step ×
+    // 13px ≈ 29px/step of surface speed). Bounding slip keeps traction
+    // predictable at any attitude instead of letting the wheel rev away.
+    const MAX_WHEEL_SPIN = 2.2;
+    // Throttle kick: wheelies come from SUDDENLY opening the throttle, not
+    // from steady cruising. A "kick budget" is full after coasting and
+    // drains while gas is held — the frame reaction scales from full
+    // (punchy: a flat-out from coast lifts the nose hard) down to
+    // KICK_FLOOR (steady throttle just settles into a mild rear-weighted
+    // attitude).
+    const KICK_FLOOR  = 0.55;
+    const KICK_DRAIN  = 0.010;     // per-frame drain while gassing
+    const KICK_REFILL = 0.007;     // per-frame refill while off throttle
+    // Terminal velocity for every bike body (px per 16.67ms step). Long
+    // free-falls and monster jumps otherwise build impact speeds that
+    // outrun the collision solver.
+    const MAX_SPEED = 22;
+    // Lean ("spin") input: kept very subtle — it nudges the bike's rotation
+    // for balance corrections rather than whipping it around. Still strong
+    // enough (about 5× the throttle's reaction torque) to hold a wheelie
+    // down under full gas.
+    const LEAN_ACCEL     = 0.02;
 
     const SPAWN_X = 80;
     const SPAWN_Y = 400;
@@ -257,25 +335,32 @@ permalink: /elastomania/
       for (let r = 0; r < rampCount; r++) {
         const base = flatStart + 2 + rampZoneSize * (r + 1);
         const jitter = Math.floor((rng() - 0.5) * rampZoneSize * 0.4);
-        rampPositions.add(Math.max(flatStart + 3, Math.min(segCount - 8, base + jitter)));
+        rampPositions.add(Math.max(flatStart + 3, Math.min(segCount - 10, base + jitter)));
       }
 
       while (i < segCount - 2) {
         const x = i * STEP;
 
-        if (rampPositions.has(i) && i < segCount - 7) {
+        if (rampPositions.has(i) && i < segCount - 9) {
           // ── Ramp → cliff → wall obstacle ──
-          // Approach: gentle upslope (ramp), then a cliff drop, then a
-          // steep wall rise. If the player is going too fast they'll
-          // smash into the wall; they need to brake before the ramp.
-          const rampHeight = 40 + Math.round(difficulty * 60 + rng() * 30);
+          // Approach: upslope (ramp), then a cliff drop, then a wall rise.
+          // Geometry is bounded by what the bike can actually do: the bike
+          // can't static-climb slopes past ~40° (tyre/ground friction) and
+          // tops out around 15 px/frame, so both the ramp and the wall are
+          // spread over three segments (≤ ~35° each) and the wall height is
+          // capped. Verified by simulating the bike over the generated
+          // obstacle at every difficulty — the old 2-segment, ~52° walls
+          // were impossible to pass at level 5+ no matter the approach.
+          const rampHeight = 40 + Math.round(difficulty * 50 + rng() * 25);
           const gapWidth = 2 + Math.floor(rng() * 1.5);
-          const wallHeight = 30 + Math.round(difficulty * 50 + rng() * 20);
+          const wallHeight = 20 + Math.round(difficulty * 25 + rng() * 12);
 
-          // Ramp up (2 segments)
+          // Ramp up (3 segments)
           const rampBase = y;
           const rampTop = Math.max(MIN_Y, rampBase - rampHeight);
-          terrain.push([x, Math.round(rampBase - rampHeight * 0.4)]);
+          terrain.push([x, Math.round(rampBase - rampHeight * 0.25)]);
+          i++;
+          terrain.push([i * STEP, Math.round(rampBase - rampHeight * 0.62)]);
           i++;
           terrain.push([i * STEP, rampTop]);
           i++;
@@ -291,9 +376,13 @@ permalink: /elastomania/
             i++;
           }
 
-          // Wall — steep rise the player will crash into if too fast
+          // Wall — a rise that punishes a too-fast approach but stays
+          // climbable with momentum (3 segments)
           const wallTop = Math.max(MIN_Y, cliffBottom - wallHeight - rampHeight * 0.5);
-          terrain.push([i * STEP, Math.round(cliffBottom - (cliffBottom - wallTop) * 0.7)]);
+          const wallRise = cliffBottom - wallTop;
+          terrain.push([i * STEP, Math.round(cliffBottom - wallRise * 0.35)]);
+          i++;
+          terrain.push([i * STEP, Math.round(cliffBottom - wallRise * 0.72)]);
           i++;
           terrain.push([i * STEP, wallTop]);
           i++;
@@ -442,17 +531,21 @@ permalink: /elastomania/
     bikeBodyImg.src    = '/elastomania/img/bike-body.png';
     const bikeWheelImg = new Image();
     bikeWheelImg.src   = '/elastomania/img/bike-wheel.png';
-    // Scale so the art's fork cluster (~x=230) to swingarm/chain cluster
-    // (~x=85) span — where the wheels visually belong — matches the real
-    // wheelbase (56 world units): 56 / (230-85) ≈ 0.386. The anchor sits at
-    // the midpoint between those two clusters (~x=157) and near the bottom
-    // of the engine block (the wheels themselves are separate, unused parts
-    // of the sheet), then nudges down to roughly axle height.
-    const BIKE_BODY_SCALE    = 0.386;
-    const BIKE_BODY_ANCHOR_X = 0.485;
-    const BIKE_BODY_ANCHOR_Y = 0.99;
-    const BIKE_BODY_OFFSET_Y = 13;
-    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.1) / 108;
+    // Axle points in bike-body.png pixel coordinates, solved from the
+    // artist's assembled reference shot: the wheels sit INBOARD of the
+    // sprite tips — the rear fender/prong overhangs the rear wheel and the
+    // front fender arcs above the front wheel — with both axle centres
+    // below the sprite's lower edge (the frame rides on top of the wheels).
+    // Mapping these two points onto the wheels' rest positions in chassis
+    // space (a similarity transform: scale + slight rotation) reproduces
+    // the reference layout exactly.
+    const BODY_ART_REAR_AXLE  = { x: 37,  y: 140 };
+    const BODY_ART_FRONT_AXLE = { x: 273, y: 123 };
+    const BODY_ART_DX = BODY_ART_FRONT_AXLE.x - BODY_ART_REAR_AXLE.x;
+    const BODY_ART_DY = BODY_ART_FRONT_AXLE.y - BODY_ART_REAR_AXLE.y;
+    const BIKE_BODY_SCALE = (WHEELBASE_HALF * 2) / Math.hypot(BODY_ART_DX, BODY_ART_DY);
+    const BIKE_BODY_ROT   = -Math.atan2(BODY_ART_DY, BODY_ART_DX);
+    const BIKE_WHEEL_SCALE   = (WHEEL_R * 2.05) / 108;
     // Only spin the wheel art at a fraction of the real wheel speed so the
     // spokes read as a calm roll instead of a dizzy strobe at full throttle.
     const WHEEL_SPIN_VISUAL  = 0.3;
@@ -462,17 +555,23 @@ permalink: /elastomania/
     // Rider art is a seated/crouched pose; anchor at the hip (where the
     // thighs bend to horizontal) rather than image center, so that point
     // lands on the bike's seat instead of floating above or sinking into it.
-    const RIDER_SCALE    = 0.38;
+    // Size and hip placement match the assembled reference shot: the rider
+    // is big relative to the bike (helmet well above the handlebars, feet
+    // reaching the pegs at the engine bottom).
+    const RIDER_SCALE    = 0.20;
     const RIDER_ANCHOR_X = 0.286;
     const RIDER_ANCHOR_Y = 0.569;
-    const RIDER_OFFSET_X = -5;
-    const RIDER_OFFSET_Y = -17;
+    const RIDER_OFFSET_X = -7;
+    const RIDER_OFFSET_Y = -3;
+    // Lean the rider forward around his hip so his gloves rest on the
+    // handlebar grips instead of hovering above them.
+    const RIDER_TILT     = 0.15;
 
-    // Point on the rider's torso/chest, in chassis-local space (before
-    // rotation) — used as the hit-test spot for ground/terrain crashes so
-    // only the upper body counts as a collision, not the wheels, frame, or
-    // legs clipping a bump.
-    const UPPER_BODY_OFFSET = { x: -14, y: -62 };
+    // Point at the rider's helmet, in chassis-local space (before rotation)
+    // — used as the hit-test spot for ground/terrain crashes so only the
+    // head counts as a collision (as in the original game), not the wheels,
+    // frame, or legs clipping a bump.
+    const UPPER_BODY_OFFSET = { x: 4, y: -27 };
 
     function getUpperBodyPos() {
       const a = chassis.angle;
@@ -487,10 +586,8 @@ permalink: /elastomania/
     }
 
     // ── Physics engine ─────────────────────────────────────────
-    // Gravity tuned down a touch from earlier builds: the original game has
-    // a floaty, hang-time feel in the air that a heavier pull kills.
     const engine = Engine.create();
-    engine.gravity.y = 1.4;
+    engine.gravity.y = 1.8;
     const world = engine.world;
 
     // ── Game state ─────────────────────────────────────────────
@@ -499,8 +596,9 @@ permalink: /elastomania/
     let apples = [];
     let camera  = { x: 0, y: 0 };
     let keys    = {};
-    let touch   = { left: false, right: false, leanFwd: false, leanBack: false };
+    let touch   = { gas: 0, brake: false, leanFwd: false, leanBack: false };
     let facing  = 1; // 1 = the bike drives/faces right, -1 = flipped to the left
+    let throttleKick = 1; // reaction budget: full after coasting, drains while gassing
     let startTime   = 0;
     let elapsedTime = 0;
     let deadTimer   = 0;
@@ -522,12 +620,18 @@ permalink: /elastomania/
     }
 
     // ── Terrain segment body ───────────────────────────────────
+    // The collision slab extends 62px below the surface line (only the top
+    // face matters visually — terrain is drawn as a filled polygon). Thick
+    // slabs are cheap insurance against fast bodies stepping across a thin
+    // slab between frames, since Matter has no continuous collision.
     function makeSegment(x1, y1, x2, y2) {
       const cx    = (x1 + x2) / 2;
       const cy    = (y1 + y2) / 2;
       const len   = Math.hypot(x2 - x1, y2 - y1);
       const angle = Math.atan2(y2 - y1, x2 - x1);
-      return Bodies.rectangle(cx, cy + 11, len, 22, {
+      // Offset the slab centre along the segment's downward NORMAL so the
+      // top face lies exactly on the drawn surface line at any slope.
+      return Bodies.rectangle(cx - 31 * Math.sin(angle), cy + 31 * Math.cos(angle), len, 62, {
         isStatic: true,
         angle,
         friction: 0.85,
@@ -566,45 +670,47 @@ permalink: /elastomania/
         collisionFilter: { category: 0x0004, mask: 0x0000 },
         label: 'chassis'
       });
-      // The thin default rectangle body snap-rotates far too easily, so give
-      // it extra pitch inertia — but only a moderate amount: the original
-      // bike rotates quickly under lean input (mid-air flips are a core
-      // move) and pops the front wheel up under hard throttle.
-      Body.setInertia(chassis, chassis.inertia * 3);
+      // Real bike frames strongly resist pitching (rider + engine mass sits
+      // well away from the wheel axles). The thin default rectangle body is
+      // too easy to snap-rotate — bump pitch inertia up without changing its
+      // mass (so suspension loading stays the same). Tuned together with
+      // MOTOR_REACTION so a held full throttle loops the bike backwards in
+      // roughly a second and a half, like the original.
+      Body.setInertia(chassis, chassis.inertia * 6);
 
-      // Each wheel is hung from the chassis by TWO non-collinear links, not
-      // one. A single distance constraint only pins the wheel's distance
-      // from one chassis point — the chassis is then free to swing around
-      // that point, and "chassis riding above the wheel" is an *unstable*
-      // equilibrium (like a pendulum bob above its pivot): gravity plus any
-      // tiny numerical nudge eventually swings it around to hang below,
-      // which reads as the frame silently collapsing onto the wheels even
-      // though every individual constraint length looks fine. A second link
-      // from a different chassis point locks the angular relationship too,
-      // so the whole leg can only flex straight along its own axis
-      // (compress on landings, overstretch under a hard impact) instead of
-      // rotating around the wheel.
-      const rearConstraint = Constraint.create({
-        bodyA: chassis, bodyB: rearWheel,
-        pointA: { x: -WHEELBASE_HALF, y: 5 }, pointB: { x: 0, y: 0 },
-        stiffness: SUSPENSION_STIFFNESS, damping: SUSPENSION_DAMPING, length: SUSPENSION_LENGTH
-      });
-      const rearBrace = Constraint.create({
-        bodyA: chassis, bodyB: rearWheel,
-        pointA: { x: -BRACE_HALF, y: -3 }, pointB: { x: 0, y: 0 },
-        stiffness: BRACE_STIFFNESS, damping: BRACE_DAMPING
-      });
-
-      const frontConstraint = Constraint.create({
-        bodyA: chassis, bodyB: frontWheel,
-        pointA: { x: WHEELBASE_HALF, y: 5 }, pointB: { x: 0, y: 0 },
-        stiffness: SUSPENSION_STIFFNESS, damping: SUSPENSION_DAMPING, length: SUSPENSION_LENGTH
-      });
-      const frontBrace = Constraint.create({
-        bodyA: chassis, bodyB: frontWheel,
-        pointA: { x: BRACE_HALF, y: -3 }, pointB: { x: 0, y: 0 },
-        stiffness: BRACE_STIFFNESS, damping: BRACE_DAMPING
-      });
+      // Each wheel hangs from the chassis by THREE links: the soft main
+      // suspension leg plus two stiffer braces from separate points. With
+      // only one or two attachment points a soft suspension has a second
+      // (mirrored) equilibrium where the wheel sits beside/above the frame,
+      // and a violent impact can flip the wheel into it, where it sticks.
+      // Three non-collinear anchors make the rest pose unique
+      // (trilateration), so the leg can compress and stretch but not
+      // migrate. Anchor heights sit at or below the chassis centre so drive
+      // force is transmitted below the centre of mass — accelerating pitches
+      // the nose up, as it should.
+      function wheelLinks(wheel, side) {
+        const susStiff  = side > 0 ? FRONT_SUS_STIFFNESS   : SUSPENSION_STIFFNESS;
+        const susDamp   = side > 0 ? FRONT_SUS_DAMPING     : SUSPENSION_DAMPING;
+        const brStiff   = side > 0 ? FRONT_BRACE_STIFFNESS : BRACE_STIFFNESS;
+        const brDamp    = side > 0 ? FRONT_BRACE_DAMPING   : BRACE_DAMPING;
+        return [
+          Constraint.create({
+            bodyA: chassis, bodyB: wheel,
+            pointA: { x: side * WHEELBASE_HALF, y: SUSPENSION_ANCHOR_Y }, pointB: { x: 0, y: 0 },
+            stiffness: susStiff, damping: susDamp, length: SUSPENSION_LENGTH
+          }),
+          Constraint.create({
+            bodyA: chassis, bodyB: wheel,
+            pointA: { x: side * 12, y: 2 }, pointB: { x: 0, y: 0 },
+            stiffness: brStiff, damping: brDamp
+          }),
+          Constraint.create({
+            bodyA: chassis, bodyB: wheel,
+            pointA: { x: side * 24, y: 0 }, pointB: { x: 0, y: 0 },
+            stiffness: brStiff, damping: brDamp
+          })
+        ];
+      }
 
       const terrainBodies = [];
       for (let i = 0; i < TERRAIN.length - 1; i++) {
@@ -629,7 +735,7 @@ permalink: /elastomania/
 
       Composite.add(world, [
         rearWheel, frontWheel, chassis,
-        rearConstraint, rearBrace, frontConstraint, frontBrace,
+        ...wheelLinks(rearWheel, -1), ...wheelLinks(frontWheel, 1),
         floor, wallL, wallR,
         ...terrainBodies
       ]);
@@ -662,8 +768,25 @@ permalink: /elastomania/
     });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
+    // The manifest already declares landscape for the installed app; in the
+    // browser, orientation can only be locked from a user gesture and only
+    // while fullscreen, so try both on the start tap. Each step is
+    // best-effort: iOS Safari supports neither, Android Chrome supports
+    // both — and failing just leaves the game as a normal page.
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+    function tryLockLandscape() {
+      if (!isTouchDevice) return;
+      try {
+        const el = document.documentElement;
+        Promise.resolve(el.requestFullscreen && el.requestFullscreen({ navigationUI: 'hide' }))
+          .then(() => screen.orientation && screen.orientation.lock &&
+                      screen.orientation.lock('landscape'))
+          .catch(() => { /* unsupported (e.g. iOS Safari) — ignore */ });
+      } catch (e) { /* ignore */ }
+    }
+
     canvas.addEventListener('pointerdown', () => {
-      if (state === 'start') startGame();
+      if (state === 'start') { tryLockLandscape(); startGame(); }
       if (state === 'win')   resetToStart();
     });
 
@@ -671,8 +794,8 @@ permalink: /elastomania/
       const el = document.getElementById(id);
       const press = (e) => {
         e.preventDefault();
-        if (state === 'start' && (flag === 'right' || flag === 'left')) {
-          changeSelectedLevel(flag === 'right' ? 1 : -1);
+        if (state === 'start' && flag === 'brake') {
+          changeSelectedLevel(-1);
           return;
         }
         touch[flag] = true;
@@ -684,10 +807,45 @@ permalink: /elastomania/
       el.addEventListener('pointercancel', release);
       el.addEventListener('pointerleave',  release);
     }
-    bindBtn('btn-accel',     'right');
-    bindBtn('btn-brake',     'left');
+    bindBtn('btn-brake',     'brake');
     bindBtn('btn-spin-fwd',  'leanFwd');
     bindBtn('btn-spin-back', 'leanBack');
+
+    // Throttle slider: slide the knob up for more gas — the throttle is
+    // analog (knob height = throttle amount) and snaps shut on release.
+    // On the start screen a tap steps the level selector instead.
+    (function () {
+      const track = document.getElementById('throttle-slider');
+      const knob  = document.getElementById('throttle-knob');
+      const KNOB = 56, PAD = 6;
+      let pointer = null;
+      function setFromClientY(clientY) {
+        const r = track.getBoundingClientRect();
+        const travel = r.height - KNOB - PAD * 2;
+        const fromBottom = (r.bottom - PAD - KNOB / 2) - clientY;
+        const v = Math.max(0, Math.min(1, fromBottom / travel));
+        touch.gas = v;
+        knob.style.bottom = (PAD + v * travel) + 'px';
+      }
+      track.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (state === 'start') { changeSelectedLevel(1); return; }
+        pointer = e.pointerId;
+        track.setPointerCapture(e.pointerId);
+        setFromClientY(e.clientY);
+      });
+      track.addEventListener('pointermove', (e) => {
+        if (pointer === e.pointerId) setFromClientY(e.clientY);
+      });
+      const release = (e) => {
+        if (pointer !== e.pointerId) return;
+        pointer = null;
+        touch.gas = 0;
+        knob.style.bottom = PAD + 'px';
+      };
+      track.addEventListener('pointerup', release);
+      track.addEventListener('pointercancel', release);
+    })();
 
     // Switch-side button: flips which way the bike faces/drives. A one-shot on
     // press (not a held flag) with a short lockout so a single tap flips once.
@@ -711,8 +869,9 @@ permalink: /elastomania/
 
     // ── Controls application ───────────────────────────────────
     function applyControls(dt) {
-      const gas      = keys['ArrowRight'] || keys['KeyD'] || touch.right;
-      const brake    = keys['ArrowLeft']  || keys['KeyA'] || touch.left;
+      // Keyboard throttle is full-on; the touch slider is analog (0..1).
+      const gasAmount = (keys['ArrowRight'] || keys['KeyD']) ? 1 : touch.gas;
+      const brake     = keys['ArrowLeft']  || keys['KeyA'] || touch.brake;
       const leanFwd  = keys['ArrowUp']    || keys['KeyW'] || touch.leanFwd;
       const leanBack = keys['ArrowDown']  || keys['KeyS'] || touch.leanBack;
 
@@ -721,46 +880,158 @@ permalink: /elastomania/
       // animation frame, which spiked torque at high frame rates).
       const scale = dt / 16.67;
 
-      // Drive/brake/lean all respect `facing`, so a flipped bike accelerates,
-      // brakes and spins the correct way relative to the direction it faces.
-      if (gas) {
-        const before = rearWheel.angularVelocity;
-        const t = facing > 0
-          ? Math.min(before + MOTOR_ACCEL * scale,  MAX_WHEEL_SPIN)
-          : Math.max(before - MOTOR_ACCEL * scale, -MAX_WHEEL_SPIN);
-        Body.setAngularVelocity(rearWheel, t);
-        // Equal-and-opposite kick on the frame (see MOTOR_KICK). Signs work
-        // out for both facings: spin-up direction flips with `facing`, so
-        // the reaction always pitches the nose up.
-        Body.setAngularVelocity(chassis, chassis.angularVelocity - (t - before) * MOTOR_KICK);
+      // Spin a wheel and apply the scaled reaction torque to the frame —
+      // engine and brake torque act between wheel and chassis, which is what
+      // makes throttle wheelies, in-air throttle rotation, and the brake
+      // "gyro" behave like the original game.
+      function spinPair(wheel, dOmega) {
+        Body.setAngularVelocity(wheel, wheel.angularVelocity + dOmega);
+        Body.setAngularVelocity(chassis,
+          chassis.angularVelocity - dOmega * MOTOR_REACTION * wheel.inertia / chassis.inertia);
+      }
+
+      // Drive/lean respect `facing`, so a flipped bike accelerates and spins
+      // the correct way relative to the direction it faces. The driven wheel
+      // is always the VISUAL rear wheel: flipping mirrors the sprite around
+      // the chassis centre, so when facing left the physical front body is
+      // the one under the swingarm.
+      const driveWheel = facing > 0 ? rearWheel : frontWheel;
+      if (gasAmount > 0) {
+        throttleKick = Math.max(0, throttleKick - KICK_DRAIN * scale * gasAmount);
+        const room = facing > 0
+          ? MAX_WHEEL_SPIN - driveWheel.angularVelocity
+          : driveWheel.angularVelocity + MAX_WHEEL_SPIN;
+        const d = Math.min(MOTOR_ACCEL * scale * gasAmount, Math.max(0, room));
+        if (d > 0) {
+          Body.setAngularVelocity(driveWheel, driveWheel.angularVelocity + d * facing);
+        }
+        // The frame reaction follows the THROTTLE, not the wheel's spin
+        // headroom, scaled by the kick budget — so a sudden flat-out
+        // pitches the nose up while held throttle settles down.
+        const r = MOTOR_ACCEL * scale * gasAmount * MOTOR_REACTION
+                * (KICK_FLOOR + (1 - KICK_FLOOR) * throttleKick)
+                * driveWheel.inertia / chassis.inertia;
+        Body.setAngularVelocity(chassis, chassis.angularVelocity - r * facing);
+      } else {
+        throttleKick = Math.min(1, throttleKick + KICK_REFILL * scale);
       }
       if (brake) {
-        // Like the original: braking clamps BOTH wheels toward zero spin.
-        // There is no reverse — flip the bike to drive the other way.
-        const step = BRAKE_ACCEL * scale;
+        // Lock both wheels to the frame (no reverse thrust, as in the
+        // original — turn around with the flip key instead).
+        const lock = Math.min(1, BRAKE_LOCK * scale);
         for (const w of [rearWheel, frontWheel]) {
-          const av = w.angularVelocity;
-          Body.setAngularVelocity(w, Math.abs(av) <= step ? 0 : av - Math.sign(av) * step);
+          spinPair(w, (chassis.angularVelocity - w.angularVelocity) * lock);
         }
       }
-      if (leanFwd !== leanBack) {
-        const dir = (leanFwd ? 1 : -1) * facing;
-        const av  = chassis.angularVelocity + LEAN_ACCEL * scale * dir;
-        Body.setAngularVelocity(chassis, dir > 0
-          ? Math.min(av,  LEAN_MAX_SPIN)
-          : Math.max(av, -LEAN_MAX_SPIN));
+      if (leanFwd) {
+        Body.setAngularVelocity(chassis, chassis.angularVelocity + LEAN_ACCEL * scale * facing);
       }
+      if (leanBack) {
+        Body.setAngularVelocity(chassis, chassis.angularVelocity - LEAN_ACCEL * scale * facing);
+      }
+    }
+
+    // ── Suspension bump stop (ground-aware) ────────────────────
+    // The fork/swingarm is steel: a wheel can never rise above BUMP_STOP_Y
+    // in chassis space, so clamp it there — but never place it below the
+    // terrain surface. Re-embedding a grounded wheel below the surface
+    // every frame while the chassis keeps falling ratchets the whole bike
+    // through the floor on hard landings; and shoving the chassis around
+    // instead makes every fork bottom-out on a bump kick the nose up.
+    // Only in the pathological case (the stop position would be
+    // underground) is the chassis's approach velocity cancelled, so the
+    // crush of a monster landing is absorbed without either failure mode.
+    function applyBumpStops() {
+      const cos = Math.cos(chassis.angle), sin = Math.sin(chassis.angle);
+      for (const w of [rearWheel, frontWheel]) {
+        const dx = w.position.x - chassis.position.x;
+        const dy = w.position.y - chassis.position.y;
+        const localX = dx * cos + dy * sin;
+        const localY = -dx * sin + dy * cos;
+        if (localY >= BUMP_STOP_Y) continue;
+        const tx = chassis.position.x + localX * cos - BUMP_STOP_Y * sin;
+        let   ty = chassis.position.y + localX * sin + BUMP_STOP_Y * cos;
+        // Chassis-local "up" (-y) in world coords.
+        const upX = sin, upY = -cos;
+        const groundLimit = getTerrainY(tx) - WHEEL_R + 2;
+        if (ty > groundLimit) {
+          ty = groundLimit;
+          const approach = chassis.velocity.x * -upX + chassis.velocity.y * -upY;
+          if (approach > 0) {
+            Body.setVelocity(chassis, {
+              x: chassis.velocity.x + approach * upX,
+              y: chassis.velocity.y + approach * upY
+            });
+          }
+        }
+        Body.setPosition(w, { x: tx, y: ty });
+        const inward = (w.velocity.x - chassis.velocity.x) * upX
+                     + (w.velocity.y - chassis.velocity.y) * upY;
+        if (inward > 0) {
+          Body.setVelocity(w, {
+            x: w.velocity.x - inward * upX,
+            y: w.velocity.y - inward * upY
+          });
+        }
+      }
+    }
+
+    // ── Wheel axis alignment ───────────────────────────────────
+    // Keep each wheel on its suspension's slider axis: the front wheel
+    // moves only diagonally along the fork angle (crown → axle) and the
+    // rear wheel only straight up and down in chassis space, never
+    // sideways. The correction is deliberately soft and capped: the
+    // springs and the collision solver keep full authority (a hard
+    // projection here can drag a wheel through walls or fight the springs
+    // into stuck states), while the capped perpendicular pull plus
+    // velocity damping keeps the visible off-axis error under about a
+    // pixel in normal riding and lets brutal impacts flex for only a few
+    // frames.
+    function alignWheelToAxis(w, restX, dir) {
+      const cos = Math.cos(chassis.angle), sin = Math.sin(chassis.angle);
+      const dx = w.position.x - chassis.position.x;
+      const dy = w.position.y - chassis.position.y;
+      const localX = dx * cos + dy * sin;
+      const localY = -dx * sin + dy * cos;
+      // Perpendicular offset from the axis, in chassis space.
+      const o = (localX - restX) * -dir.y + (localY - AXLE_REST_Y) * dir.x;
+      const corr = Math.max(-FORK_ALIGN_POS_CAP,
+                   Math.min(FORK_ALIGN_POS_CAP, o * FORK_ALIGN_POS_K));
+      if (Math.abs(corr) > 0.01) {
+        const nx = localX - corr * -dir.y;
+        const ny = localY - corr * dir.x;
+        Body.setPosition(w, {
+          x: chassis.position.x + nx * cos - ny * sin,
+          y: chassis.position.y + nx * sin + ny * cos
+        });
+      }
+      // Damp the perpendicular part of the wheel's relative velocity.
+      const px = -dir.y * cos - dir.x * sin;
+      const py = -dir.y * sin + dir.x * cos;
+      const pv = ((w.velocity.x - chassis.velocity.x) * px
+                + (w.velocity.y - chassis.velocity.y) * py) * FORK_ALIGN_VEL_K;
+      Body.setVelocity(w, {
+        x: w.velocity.x - pv * px,
+        y: w.velocity.y - pv * py
+      });
+    }
+
+    const REAR_AXIS_DIR = { x: 0, y: 1 }; // straight down in chassis space
+
+    function alignWheelAxes() {
+      alignWheelToAxis(frontWheel, WHEELBASE_HALF, FORK_DIR);
+      alignWheelToAxis(rearWheel, -WHEELBASE_HALF, REAR_AXIS_DIR);
     }
 
     // ── Death detection ────────────────────────────────────────
     function checkDeath() {
       if (state !== 'playing') return;
 
-      // Only the rider's upper body counts as a crash — the wheels, frame,
-      // and legs can clip a bump or scrape a slope without ending the run.
-      // Note there is deliberately NO "you are upside down" check: like the
-      // original game, full mid-air flips and loops are legal moves — you
-      // only die when the rider's head actually meets the ground.
+      // Only the rider's head counts as a crash — the wheels, frame, and
+      // legs can clip a bump or scrape a slope without ending the run, and
+      // full mid-air loops are fine (as in the original game): being upside
+      // down only kills once the head actually meets the ground, which it
+      // does on its own if the bike comes to rest inverted.
       const upperBody = getUpperBodyPos();
       const groundY = getTerrainY(upperBody.x);
       if (upperBody.y > groundY) { die(); return; }
@@ -768,15 +1039,24 @@ permalink: /elastomania/
     }
 
     // ── Apple & flower checks ──────────────────────────────────
+    // Apples and the flower are taken by touching them with a wheel or the
+    // head, as in the original — not by the bike's centre passing nearby.
+    function touchPoints() {
+      return [
+        { p: rearWheel.position,  r: WHEEL_R + 10 },
+        { p: frontWheel.position, r: WHEEL_R + 10 },
+        { p: getUpperBodyPos(),   r: 18 }
+      ];
+    }
+
     function checkApples() {
       if (state !== 'playing') return;
-      const cx = chassis.position.x, cy = chassis.position.y;
+      const pts = touchPoints();
       for (const apple of apples) {
-        if (!apple.collected) {
-          const dx = cx - apple.x, dy = cy - apple.y;
-          if (dx * dx + dy * dy < 35 * 35) {
-            apple.collected = true;
-          }
+        if (apple.collected) continue;
+        for (const t of pts) {
+          const dx = t.p.x - apple.x, dy = t.p.y - apple.y;
+          if (dx * dx + dy * dy < t.r * t.r) { apple.collected = true; break; }
         }
       }
     }
@@ -784,9 +1064,11 @@ permalink: /elastomania/
     function checkWin() {
       if (state !== 'playing') return;
       if (!apples.every(a => a.collected)) return;
-      const dx = chassis.position.x - FLOWER_DATA.x;
-      const dy = chassis.position.y - FLOWER_DATA.y;
-      if (dx * dx + dy * dy < 45 * 45) win();
+      for (const t of touchPoints()) {
+        const dx = t.p.x - FLOWER_DATA.x, dy = t.p.y - FLOWER_DATA.y;
+        const r = t.r + 12;
+        if (dx * dx + dy * dy < r * r) { win(); return; }
+      }
     }
 
     // ── State transitions ──────────────────────────────────────
@@ -795,6 +1077,7 @@ permalink: /elastomania/
       initPickups();
       initPhysics();
       facing = 1;
+      throttleKick = 1;
       state = 'playing';
       startTime = performance.now();
       lastTs = performance.now();
@@ -808,6 +1091,7 @@ permalink: /elastomania/
     function respawn() {
       initPhysics(); // keeps apples collected state
       facing = 1;
+      throttleKick = 1;
       state = 'playing';
       lastTs = performance.now();
     }
@@ -879,25 +1163,53 @@ permalink: /elastomania/
       // left, so the frame, wheels and rider all point the other way.
       if (facing < 0) { ctx.translate(cp.x, 0); ctx.scale(-1, 1); ctx.translate(-cp.x, 0); }
 
-      // Frame lines
-      ctx.strokeStyle = '#2a2a3a';
-      ctx.lineWidth = 3;
+      // Suspension animation: the swingarm pivots from the frame down to the
+      // actual rear wheel centre and the front fork telescopes from the fork
+      // crown to the actual front wheel centre, so both visibly compress,
+      // stretch and flex with the physics. Their frame-side ends are fixed
+      // in chassis space (points read off the body art: swingarm pivot by
+      // the engine, fork crown under the handlebars).
+      const cos = Math.cos(ca), sin = Math.sin(ca);
+      const localPt = (lx, ly) => ({
+        x: cp.x + lx * cos - ly * sin,
+        y: cp.y + lx * sin + ly * cos
+      });
+      const swingarmPivot = localPt(-14, 15);
+      const forkCrown     = localPt(FORK_CROWN.x, FORK_CROWN.y);
       ctx.lineCap = 'round';
+      // Rear swingarm: single dark arm.
+      ctx.strokeStyle = '#2a2a3a';
+      ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.moveTo(rp.x, rp.y); ctx.lineTo(cp.x, cp.y);
-      ctx.moveTo(fp.x, fp.y); ctx.lineTo(cp.x, cp.y);
+      ctx.moveTo(swingarmPivot.x, swingarmPivot.y); ctx.lineTo(rp.x, rp.y);
+      ctx.stroke();
+      // Front fork: dark outer tube with a lighter slider core, so the
+      // telescoping motion reads clearly.
+      ctx.strokeStyle = '#2a2a3a';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(forkCrown.x, forkCrown.y); ctx.lineTo(fp.x, fp.y);
+      ctx.stroke();
+      ctx.strokeStyle = '#9a9aa8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(forkCrown.x, forkCrown.y);
+      ctx.lineTo((forkCrown.x + fp.x) / 2, (forkCrown.y + fp.y) / 2);
       ctx.stroke();
 
       drawWheel(rp, rearWheel.angle);
       drawWheel(fp, frontWheel.angle);
 
-      // Chassis body
+      // Chassis body: place the art so its measured rear-axle pixel sits on
+      // the rear wheel's rest position, rotated so the art's axle line runs
+      // along the real wheelbase.
       ctx.save();
       ctx.translate(cp.x, cp.y);
       ctx.rotate(ca);
-      const bw = bikeBodyImg.width * BIKE_BODY_SCALE;
-      const bh = bikeBodyImg.height * BIKE_BODY_SCALE;
-      ctx.drawImage(bikeBodyImg, -bw * BIKE_BODY_ANCHOR_X, -bh * BIKE_BODY_ANCHOR_Y + BIKE_BODY_OFFSET_Y, bw, bh);
+      ctx.translate(-WHEELBASE_HALF, AXLE_REST_Y);
+      ctx.rotate(BIKE_BODY_ROT);
+      ctx.scale(BIKE_BODY_SCALE, BIKE_BODY_SCALE);
+      ctx.drawImage(bikeBodyImg, -BODY_ART_REAR_AXLE.x, -BODY_ART_REAR_AXLE.y);
       ctx.restore();
 
       // Rider
@@ -905,6 +1217,7 @@ permalink: /elastomania/
       ctx.translate(cp.x, cp.y);
       ctx.rotate(ca);
       ctx.translate(RIDER_OFFSET_X, RIDER_OFFSET_Y);
+      ctx.rotate(RIDER_TILT);
       const rw = riderImg.width * RIDER_SCALE;
       const rh = riderImg.height * RIDER_SCALE;
       ctx.drawImage(riderImg, -rw * RIDER_ANCHOR_X, -rh * RIDER_ANCHOR_Y, rw, rh);
@@ -1135,6 +1448,13 @@ permalink: /elastomania/
         cx, cy + 100
       );
 
+      // Nudge phone players toward landscape — the game is built wide.
+      if (isTouchDevice && canvas.height > canvas.width) {
+        ctx.font = 'bold 17px system-ui, sans-serif';
+        ctx.fillStyle = '#ffe08a';
+        ctx.fillText('↻ Rotate your device to landscape', cx, cy + 136);
+      }
+
       ctx.restore();
     }
 
@@ -1244,7 +1564,18 @@ permalink: /elastomania/
 
       if (state === 'playing') {
         applyControls(dt);
+        for (const b of [rearWheel, frontWheel, chassis]) {
+          const sp = Math.hypot(b.velocity.x, b.velocity.y);
+          if (sp > MAX_SPEED) {
+            Body.setVelocity(b, {
+              x: b.velocity.x * MAX_SPEED / sp,
+              y: b.velocity.y * MAX_SPEED / sp
+            });
+          }
+        }
         Engine.update(engine, dt);
+        applyBumpStops();
+        alignWheelAxes();
         checkApples();
         checkDeath();
         checkWin();

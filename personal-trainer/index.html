@@ -6,8 +6,8 @@ permalink: /personal-trainer/
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#10b981">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0f1521">
     <meta name="description" content="Adaptive core fitness and mat pilates workouts that progress with you. Works offline.">
 
     <title>Personal Trainer</title>
@@ -26,14 +26,17 @@ permalink: /personal-trainer/
 
     <style>
         :root {
-            --bg: #0c1512;
-            --surface: #12201b;
-            --surface2: #1a2e26;
-            --border: #24443a;
+            --bg: #0f1521;
+            --surface: #161d2a;
+            --surface2: #1e2735;
+            --border: #2a3546;
             --accent: #10b981;
+            --accent-bright: #3ecf8e;
             --accent-dim: #0d9268;
-            --text: #e8f5ef;
-            --muted: #8fb3a5;
+            --orange: #ef8a5f;
+            --blue: #6bb8ef;
+            --text: #e9eef5;
+            --muted: #8a97a8;
             --danger: #f87171;
             --warn: #fbbf24;
         }
@@ -48,10 +51,12 @@ permalink: /personal-trainer/
         html,
         body {
             height: 100%;
+            overscroll-behavior-y: none;
         }
 
         body {
-            background: var(--bg);
+            background: linear-gradient(180deg, #131a27 0%, #0e131e 55%, #0b0f18 100%);
+            background-attachment: fixed;
             color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
@@ -64,7 +69,8 @@ permalink: /personal-trainer/
             min-height: 100%;
             display: flex;
             flex-direction: column;
-            padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+            /* add margin ON TOP of the safe areas so the iOS home indicator never sits on a button */
+            padding: calc(12px + env(safe-area-inset-top, 4px)) 16px calc(28px + env(safe-area-inset-bottom, 0px));
         }
 
         .screen {
@@ -100,6 +106,11 @@ permalink: /personal-trainer/
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
+            /* comfortable 44px tap target for iOS */
+            min-height: 44px;
+            min-width: 44px;
+            display: inline-flex;
+            align-items: center;
             padding: 6px 0;
         }
 
@@ -208,6 +219,25 @@ permalink: /personal-trainer/
             color: var(--accent);
         }
 
+        /* Per-accent stat cards */
+        .stat.accent-green {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.08);
+        }
+        .stat.accent-green .value { color: var(--accent-bright); }
+
+        .stat.accent-orange {
+            border-color: rgba(239, 138, 95, 0.42);
+            background: rgba(239, 138, 95, 0.08);
+        }
+        .stat.accent-orange .value { color: var(--orange); }
+
+        .stat.accent-blue {
+            border-color: rgba(107, 184, 239, 0.42);
+            background: rgba(107, 184, 239, 0.08);
+        }
+        .stat.accent-blue .value { color: var(--blue); }
+
         .stat .label {
             font-size: 0.7rem;
             color: var(--muted);
@@ -243,16 +273,169 @@ permalink: /personal-trainer/
             font-size: 0.8rem;
         }
 
+        /* Discipline card + per-discipline accents */
+        .disc-card {
+            background:
+                linear-gradient(120deg, rgba(239, 138, 95, 0.10), rgba(107, 184, 239, 0.07));
+        }
+        .level-row.row-core .tier { color: var(--orange); }
+        .level-row.row-pilates .tier { color: var(--blue); }
+        #core-bar { background: var(--orange); }
+        #pilates-bar { background: var(--blue); }
+
         .home-nav {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 10px;
             margin-top: 14px;
+        }
+
+        /* Compact achievements / records cards on home */
+        #ach-card,
+        #rec-card {
+            margin-top: 14px;
+            margin-bottom: 0;
+        }
+
+        .see-all {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 4px 0;
+        }
+
+        .ach-prog-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 0 0;
+        }
+
+        .ach-prog-row .em {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .ach-prog-row .mid {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ach-prog-row .nm {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .mini-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface2);
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .mini-bar > div {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 3px;
+        }
+
+        .ach-prog-row .pct {
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .rec-prev-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+            padding: 7px 0 0;
+            font-size: 0.9rem;
+        }
+
+        .rec-prev-row .nm {
+            font-weight: 600;
+        }
+
+        .rec-prev-row .val {
+            color: var(--accent-bright);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .rec-prev-row .gain {
+            font-size: 0.75rem;
+        }
+
+        /* How-progression-works page */
+        .info-link {
+            display: block;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 10px 0 0;
+            margin-top: 6px;
+            text-align: left;
+        }
+
+        .info-tier {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 0;
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 7px 0;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .info-row .delta {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .info-row .delta.up { color: var(--accent-bright); }
+        .info-row .delta.down { color: var(--danger); }
+
+        /* Themed action buttons */
+        #btn-generate {
+            background: linear-gradient(135deg, #12c48a, #0fb7a4);
+        }
+        #nav-library {
+            border-color: rgba(107, 184, 239, 0.38);
+            background: rgba(107, 184, 239, 0.09);
+        }
+        #nav-history {
+            border-color: rgba(239, 138, 95, 0.38);
+            background: rgba(239, 138, 95, 0.09);
         }
 
         /* Workout preview */
         .plan-item {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 12px;
             padding: 10px 0;
@@ -269,6 +452,53 @@ permalink: /personal-trainer/
             font-weight: 700;
             font-size: 0.9rem;
             white-space: nowrap;
+        }
+
+        .plan-play {
+            flex-shrink: 0;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--accent);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .plan-item.playing .plan-play {
+            background: var(--accent);
+            color: #06281d;
+            border-color: var(--accent);
+        }
+
+        .plan-video {
+            /* hidden until its ▶ button loads a video into it */
+            display: none;
+            flex-basis: 100%;
+            width: 100%;
+            position: relative;
+            aspect-ratio: 16 / 9;
+            margin-top: 4px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid var(--border);
+        }
+
+        .plan-item.playing .plan-video {
+            display: block;
+        }
+
+        .plan-video iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
         }
 
         .plan-item .name {
@@ -295,6 +525,13 @@ permalink: /personal-trainer/
             align-items: center;
             justify-content: center;
         }
+
+        /* Tier difficulty ramp: green → blue → yellow → orange → red */
+        .tier-badge.t1 { color: #3ecf8e; border-color: rgba(62, 207, 142, 0.45); background: rgba(62, 207, 142, 0.10); }
+        .tier-badge.t2 { color: var(--blue); border-color: rgba(107, 184, 239, 0.45); background: rgba(107, 184, 239, 0.10); }
+        .tier-badge.t3 { color: var(--warn); border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.10); }
+        .tier-badge.t4 { color: var(--orange); border-color: rgba(239, 138, 95, 0.5); background: rgba(239, 138, 95, 0.10); }
+        .tier-badge.t5 { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.10); }
 
         /* Player */
         #player {
@@ -359,6 +596,31 @@ permalink: /personal-trainer/
             font-size: 0.95rem;
             line-height: 1.7;
             margin: 6px 0 12px;
+        }
+
+        .player-video {
+            display: none;
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            max-height: 34vh;
+            margin: 12px auto;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid var(--border);
+        }
+
+        .player-video.active {
+            display: block;
+        }
+
+        .player-video iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
         }
 
         .player-links {
@@ -563,6 +825,242 @@ permalink: /personal-trainer/
             font-size: 1.2rem;
             color: #06281d;
         }
+
+        /* App glyph icons */
+        .ico {
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .stat-ico {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 6px;
+        }
+
+        .topbar h1 .ico {
+            width: 1.5em;
+            height: 1.5em;
+            vertical-align: -0.42em;
+            margin-right: 6px;
+            border-radius: 24%;
+        }
+
+        #nav-settings .ico {
+            width: 26px;
+            height: 26px;
+            display: block;
+        }
+
+        .btn .ico {
+            width: 1.4em;
+            height: 1.4em;
+            vertical-align: -0.38em;
+            margin-right: 8px;
+        }
+
+        .level-row strong {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .level-row .ico {
+            width: 1.4em;
+            height: 1.4em;
+        }
+
+        /* Weekly goal */
+        .week-segs {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .week-segs div {
+            flex: 1;
+            height: 10px;
+            border-radius: 5px;
+            background: var(--surface2);
+        }
+
+        .week-segs div.done {
+            background: linear-gradient(90deg, #12c48a, #0fb7a4);
+        }
+
+        /* Achievements */
+        .ach-count {
+            color: var(--muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        #ach-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .ach {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .ach.unlocked {
+            border-color: rgba(16, 185, 129, 0.45);
+            background: rgba(16, 185, 129, 0.07);
+        }
+
+        .ach.locked {
+            opacity: 0.45;
+            filter: grayscale(1);
+        }
+
+        .ach .em {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .ach .nm {
+            font-weight: 700;
+            font-size: 0.88rem;
+        }
+
+        .ach .ds {
+            font-size: 0.74rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        /* Achievement toast */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(20px + env(safe-area-inset-bottom, 4px));
+            transform: translate(-50%, 120%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface2);
+            border: 1px solid rgba(16, 185, 129, 0.55);
+            border-radius: 14px;
+            padding: 12px 18px;
+            font-size: 1.4rem;
+            z-index: 80;
+            transition: transform 0.3s ease;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+            max-width: 90vw;
+        }
+
+        .toast.show {
+            transform: translate(-50%, 0);
+        }
+
+        .toast div {
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 70;
+        }
+
+        /* Personal records */
+        .rec-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .rec-item:last-child {
+            border-bottom: none;
+        }
+
+        .rec-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .rec-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .rec-head .name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .rec-best {
+            color: var(--accent-bright);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .rec-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface2);
+            overflow: hidden;
+            margin: 6px 0 4px;
+        }
+
+        .rec-bar > div {
+            height: 100%;
+            background: linear-gradient(90deg, #12c48a, #0fb7a4);
+            border-radius: 3px;
+        }
+
+        .rec-sub {
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+
+        .rec-sub .gain {
+            color: var(--accent-bright);
+            font-weight: 700;
+        }
+
+        /* History heatmap */
+        .hm {
+            display: grid;
+            grid-template-rows: repeat(7, 12px);
+            grid-auto-flow: column;
+            grid-auto-columns: 12px;
+            gap: 4px;
+            justify-content: start;
+            margin: 4px 0;
+        }
+
+        .hm div {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            background: var(--surface2);
+        }
+
+        .hm .on {
+            background: var(--accent);
+        }
+
+        .hm .td {
+            outline: 1px solid var(--muted);
+        }
     </style>
 </head>
 
@@ -579,7 +1077,7 @@ permalink: /personal-trainer/
         <!-- ============ SETUP ============ -->
         <section class="screen" id="setup">
             <header class="topbar">
-                <h1>💪 Personal <span>Trainer</span></h1>
+                <h1><img class="ico" src="/img/pt/app-logo.png" alt="">Personal <span>Trainer</span></h1>
             </header>
             <div class="card">
                 <div class="section-title">Your fitness level</div>
@@ -597,26 +1095,41 @@ permalink: /personal-trainer/
                     <div class="choice" data-v="40">40 min<small>Full</small></div>
                 </div>
             </div>
+            <div class="card">
+                <div class="section-title">Weekly goal</div>
+                <div class="choice-row" id="setup-goal" style="grid-template-columns:repeat(4,1fr);">
+                    <div class="choice" data-v="2">2×<small>a week</small></div>
+                    <div class="choice selected" data-v="3">3×<small>a week</small></div>
+                    <div class="choice" data-v="4">4×<small>a week</small></div>
+                    <div class="choice" data-v="5">5×<small>a week</small></div>
+                </div>
+            </div>
             <p class="muted-note" style="margin-bottom:14px;">All workouts mix core fitness and mat pilates — just a mat, no equipment. The plan adapts every session based on your feedback.</p>
             <button class="btn" id="setup-go">Let's go</button>
+            <button class="btn secondary" id="nav-library" style="margin-top:10px;"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
         </section>
 
         <!-- ============ HOME ============ -->
         <section class="screen" id="home">
             <header class="topbar">
-                <h1>💪 Personal <span>Trainer</span></h1>
-                <button class="back-btn" id="nav-settings" title="Change level / duration">⚙︎</button>
+                <h1><img class="ico" src="/img/pt/app-logo.png" alt="">Personal <span>Trainer</span></h1>
+                <button class="back-btn" id="nav-settings" title="Change level / duration" aria-label="Settings"><img class="ico" src="/img/pt/settings.png" alt=""></button>
             </header>
             <div class="stats-row">
-                <div class="stat"><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
-                <div class="stat"><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
-                <div class="stat"><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
+                <div class="stat accent-green"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
+                <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
+                <div class="stat accent-orange"><img class="stat-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
             </div>
-            <div class="card">
-                <div class="level-row"><strong>Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
+            <div class="card" id="weekly-card">
+                <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
+                <div class="week-segs" id="week-segs"></div>
+            </div>
+            <div class="card disc-card">
+                <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="core-bar" style="width:0%"></div></div>
-                <div class="level-row" style="margin-top:14px;"><strong>Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
+                <div class="level-row row-pilates" style="margin-top:14px;"><strong><img class="ico" src="/img/pt/mat-pilates.png" alt="">Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="pilates-bar" style="width:0%"></div></div>
+                <button class="info-link" id="nav-info">ⓘ How progression works</button>
             </div>
             <div class="card">
                 <div class="section-title">Session length</div>
@@ -626,10 +1139,17 @@ permalink: /personal-trainer/
                     <div class="choice" data-v="40">40 min</div>
                 </div>
             </div>
-            <button class="btn" id="btn-generate">Generate today's workout</button>
+            <button class="btn" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
+            <div class="card" id="ach-card">
+                <div class="level-row"><strong>🏅 Achievements</strong><button class="see-all" id="nav-achievements">All <span id="ach-badge-count" class="ach-count"></span> ›</button></div>
+                <div id="ach-progress"></div>
+            </div>
+            <div class="card" id="rec-card">
+                <div class="level-row"><strong>📊 Records</strong><button class="see-all" id="nav-records">All ›</button></div>
+                <div id="rec-preview"></div>
+            </div>
             <div class="home-nav">
-                <button class="btn secondary" id="nav-library">📚 Exercise library</button>
-                <button class="btn secondary" id="nav-history">📈 History</button>
+                <button class="btn secondary" id="nav-history"><img class="ico" src="/img/pt/history.png" alt="">History</button>
             </div>
         </section>
 
@@ -654,6 +1174,7 @@ permalink: /personal-trainer/
                 <h2 id="player-exname">Exercise</h2>
                 <div id="player-side"></div>
                 <div id="player-display">0:30</div>
+                <div class="player-video" id="player-video"></div>
                 <ul class="cues" id="player-cues"></ul>
                 <div class="player-links" id="player-links"></div>
             </div>
@@ -673,6 +1194,7 @@ permalink: /personal-trainer/
             <div class="big-emoji">🎉</div>
             <div class="card" style="text-align:center;">
                 <div id="complete-summary" style="font-size:1.05rem;font-weight:600;"></div>
+                <div id="complete-motivate" class="muted-note" style="margin-top:8px;"></div>
                 <p class="muted-note" style="margin-top:6px;">How did it feel? Your answer tunes the next workout.</p>
                 <div class="feedback-row">
                     <button class="btn secondary" data-fb="easy">😴<br>Too easy</button>
@@ -707,10 +1229,84 @@ permalink: /personal-trainer/
             </header>
             <div class="card" id="history-list"></div>
         </section>
+
+        <!-- ============ HOW PROGRESSION WORKS ============ -->
+        <section class="screen" id="info">
+            <header class="topbar">
+                <button class="back-btn" data-back="home">‹ Back</button>
+                <h1>How it <span>Works</span></h1>
+                <span></span>
+            </header>
+
+            <div class="card">
+                <div class="section-title">Tiers</div>
+                <p class="muted-note" style="margin-bottom:10px;">Core Fitness and Mat Pilates each have their own score from 0 to 90. Every 18 points unlocks the next tier, and the bars on the home screen show how far along you are.</p>
+                <div class="info-tier"><span class="tier-badge t1">T1</span><span>Beginner</span></div>
+                <div class="info-tier"><span class="tier-badge t2">T2</span><span>Novice</span></div>
+                <div class="info-tier"><span class="tier-badge t3">T3</span><span>Intermediate</span></div>
+                <div class="info-tier"><span class="tier-badge t4">T4</span><span>Advanced</span></div>
+                <div class="info-tier"><span class="tier-badge t5">T5</span><span>Elite</span></div>
+                <p class="muted-note" style="margin-top:10px;">Workouts draw exercises from your current tier and up to two tiers below it, so new challenges mix with familiar moves. Your Level stat is the average of both disciplines.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">Your feedback drives it</div>
+                <p class="muted-note" style="margin-bottom:10px;">After every workout you say how it felt, and both scores adjust:</p>
+                <div class="info-row"><span>😴 Too easy</span><span class="delta up">+8 points</span></div>
+                <div class="info-row"><span>💪 Just right</span><span class="delta up">+4 points</span></div>
+                <div class="info-row"><span>🥵 Too hard</span><span class="delta down">−5 points</span></div>
+                <p class="muted-note" style="margin-top:10px;">Honest answers keep the plan at the right pace — sandbagging just makes next time too easy.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">What actually gets harder</div>
+                <div class="info-row"><span>Tougher exercises</span><span class="muted-note">unlock at higher tiers</span></div>
+                <div class="info-row"><span>Reps &amp; hold times</span><span class="muted-note">grow roughly every 15 points</span></div>
+                <div class="info-row"><span>Rest between exercises</span><span class="muted-note">20s → 15s (T2) → 12s (T4)</span></div>
+                <p class="muted-note" style="margin-top:10px;">Each exercise has its own cap, so doses grow to a sensible limit rather than forever.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">Streak</div>
+                <p class="muted-note">Finish a workout within 48 hours of your last one and the streak keeps counting. Miss the window and it restarts at 1 — consistency beats intensity.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">Staying motivated</div>
+                <div class="info-row"><span>🎯 Weekly goal</span><span class="muted-note">pick 2–5 sessions, Mon–Sun</span></div>
+                <div class="info-row"><span>✨ Twists</span><span class="muted-note">every workout gets a theme</span></div>
+                <div class="info-row"><span>🏅 Achievements</span><span class="muted-note">badges unlock as you train</span></div>
+                <div class="info-row"><span>📊 Records</span><span class="muted-note">best hold &amp; rep count per exercise</span></div>
+                <div class="info-row"><span>🟩 The chain</span><span class="muted-note">History marks every day you show up</span></div>
+                <p class="muted-note" style="margin-top:10px;">Focus days, endurance rounds, speedy rests and surprise finishers keep sessions fresh, while the weekly bar and the chain make consistency visible. A record is the biggest dose you actually finish — skipped exercises don't count — so your plank holds and rep counts climb as you do. Show up, tap done, keep the chain alive.</p>
+            </div>
+        </section>
+
+        <!-- ============ ACHIEVEMENTS ============ -->
+        <section class="screen" id="achievements">
+            <header class="topbar">
+                <button class="back-btn" data-back="home">‹ Back</button>
+                <h1>Your <span>Achievements</span></h1>
+                <span></span>
+            </header>
+            <p class="muted-note" id="ach-count" style="margin-bottom:12px;"></p>
+            <div id="ach-grid"></div>
+        </section>
+
+        <!-- ============ RECORDS ============ -->
+        <section class="screen" id="records">
+            <header class="topbar">
+                <button class="back-btn" data-back="home">‹ Back</button>
+                <h1>Your <span>Records</span></h1>
+                <span></span>
+            </header>
+            <p class="muted-note" id="rec-note" style="margin-bottom:12px;"></p>
+            <div id="records-list"></div>
+        </section>
     </div>
 
     <script>
-        const SW_VERSION = '2607090250';
+        const SW_VERSION = '2607171042';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -845,6 +1441,101 @@ permalink: /personal-trainer/
 
         const EX_BY_ID = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
 
+        // Built-in form-guide videos shown by default. A user's own link saved in the
+        // library (state.links) always takes precedence over the preset for that exercise.
+        const PRESET_LINKS = {
+            // Warm-up
+            'wu-march': 'https://youtu.be/KTMxYf6_kOI',
+            'wu-armcircles': 'https://youtu.be/D40wm6vbI_0',
+            'wu-catcow': 'https://youtu.be/TWmG67J2wj0',
+            'wu-sidebend': 'https://youtu.be/fHyCshP7U1Y',
+            'wu-hipcircles': 'https://youtu.be/JYqLwajOGjI',
+            'wu-pelvictilt': 'https://youtu.be/RZi6di5IjW8',
+            // Core fitness
+            'co-kneeplank': 'https://youtu.be/iDSHokfXqyA?si=d6yIR5_UFTsT-d0O',
+            'co-deadbug': 'https://youtu.be/g_BYB0R-4Ws',
+            'co-glutebridge': 'https://youtu.be/N48d7sm8dbU',
+            'co-birddog': 'https://youtu.be/ZdAHe9_HeEw',
+            'co-heeltap': 'https://youtu.be/jfXcyLTuKP4',
+            'co-plank': 'https://youtu.be/fE6rctLE6QU',
+            'co-crunch': 'https://youtu.be/HiRsmHH7psA',
+            'co-mtclimber': 'https://youtu.be/w2iTOneGPdU',
+            'co-ksideplank': 'https://youtu.be/lvpPNjRQONQ',
+            'co-flutter': 'https://youtu.be/WRnq49TAv-w',
+            'co-revcrunch': 'https://youtu.be/XY8KzdDcMFg',
+            'co-sideplank': 'https://youtu.be/Fum_2H2cog4',
+            'co-bicycle': 'https://youtu.be/QtptPxZq4R8',
+            'co-legraise': 'https://youtu.be/Cwuxy8eo7iw',
+            'co-shouldertap': 'https://youtu.be/Ub3x9gt0UlQ',
+            'co-russtwist': 'https://youtu.be/NrBUdmJSTXk',
+            'co-bearhold': 'https://youtu.be/CILKLy84EDk',
+            'co-hollow': 'https://youtu.be/0yPin8hSc8o',
+            'co-plankupdown': 'https://youtu.be/AAPpXm-q7lc',
+            'co-vup': 'https://youtu.be/0TCWWBmzRQM',
+            'co-hipdip': 'https://youtu.be/7BaVvUuxj6Q',
+            'co-plankjack': 'https://youtu.be/3VpkyIcnT64',
+            'co-hollowrock': 'https://youtu.be/ixfvk6ERKtI',
+            'co-lsit': 'https://youtu.be/Qcde45O8lzo',
+            'co-pike': 'https://youtu.be/G-2oFuWRgNI',
+            'co-wipers': 'https://youtu.be/ggmcWcfSeq4',
+            'co-longplank': 'https://youtu.be/XM96fe7jAXE',
+            // Mat pilates
+            'pi-pelviccurl': 'https://youtu.be/7f9w1IvAe6s',
+            'pi-toetap': 'https://youtu.be/hlnfZBQwPaA',
+            'pi-chestlift': 'https://youtu.be/8R7_5qW2k1o',
+            'pi-spinestretch': 'https://youtu.be/XZGuNaEV-nM',
+            'pi-sideleg': 'https://youtu.be/9a8r12qqFHs',
+            'pi-hundredmod': 'https://youtu.be/UaqpuUzs1i8',
+            'pi-singleleg': 'https://youtu.be/Ad4lgW4ieAM',
+            'pi-bridge': 'https://youtu.be/QFv_Fex3Mko',
+            'pi-swanprep': 'https://youtu.be/KAotX1bDGps',
+            'pi-sidekick': 'https://youtu.be/nG9JfDHJJlY',
+            'pi-rollup': 'https://youtu.be/H_-JE2yN1W0',
+            'pi-doubleleg': 'https://youtu.be/fuwzt4d7FuY',
+            'pi-crisscross': 'https://youtu.be/gzaCxDVQL90',
+            'pi-swimming': 'https://youtu.be/rbcvbbtB6E0',
+            'pi-saw': 'https://youtu.be/1XcU-WsTcaU',
+            'pi-scissors': 'https://youtu.be/tugL2lM4Syk',
+            'pi-hundred': 'https://youtu.be/Bu2iDgLY0D4',
+            'pi-teaserprep': 'https://youtu.be/9qqEKdfjyFI',
+            'pi-openleg': 'https://youtu.be/rOY7d3zD-cA',
+            'pi-dbllower': 'https://youtu.be/b4vGCB5iY_E',
+            'pi-kneelkick': 'https://youtu.be/Uyfas4hL9uw',
+            'pi-teaser': 'https://youtu.be/UJ5gZQSqlXo',
+            'pi-rollover': 'https://youtu.be/Y5YdoRMCCKM',
+            'pi-corkscrew': 'https://youtu.be/2GBd4o1K018',
+            'pi-jackknife': 'https://youtu.be/OA1MloQcPu0',
+            // Cool-down
+            'cd-child': 'https://youtu.be/_ZX_zTOBgp8',
+            'cd-cobra': 'https://youtu.be/YYudWYM5Q9g',
+            'cd-twist': 'https://youtu.be/TeAhhVD2q1c',
+            'cd-knees': 'https://youtu.be/SkrV4wjkhJY',
+            'cd-hamstring': 'https://youtu.be/5P3E8Pec_L8',
+            'cd-mermaid': 'https://youtu.be/eRyVvrN5CLU'
+        };
+
+        // Effective link for an exercise: user override first, then preset.
+        function linkFor(id) {
+            return (state.links && state.links[id]) || PRESET_LINKS[id] || '';
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        // Only trust http(s) URLs as clickable links/embeds; user-imported or pasted
+        // values could otherwise carry a javascript:/data: URI.
+        function safeHref(url) {
+            if (!url) return '';
+            try {
+                const u = new URL(url, window.location.href);
+                if (u.protocol === 'http:' || u.protocol === 'https:') return url;
+            } catch (e) { /* invalid URL */ }
+            return '';
+        }
+
         // =====================================================
         // State
         // =====================================================
@@ -866,8 +1557,64 @@ permalink: /personal-trainer/
                 history: [],
                 lastExerciseIds: [],
                 links: {},
-                streak: 0
+                streak: 0,
+                bestStreak: 0,
+                weeklyGoal: 3,
+                achievements: {},
+                lastTwist: null,
+                records: {}
             };
+        }
+
+        // ---- Personal records ----
+        // A record is the biggest dose actually completed for an exercise
+        // (countdown ran out or ✓ Done was tapped — skips don't count).
+        function recordCompletion(item) {
+            const ex = item.ex;
+            if (ex.disc !== 'core' && ex.disc !== 'pilates') return;
+            const rec = state.records[ex.id] || (state.records[ex.id] = { type: ex.type, best: 0, hist: [] });
+            if (item.dose > rec.best) {
+                rec.best = item.dose;
+                rec.hist.push({ ts: Date.now(), v: item.dose });
+                if (rec.hist.length > 30) rec.hist.shift();
+                saveState();
+            }
+        }
+
+        function recordedExerciseCount() {
+            return Object.keys(state.records || {}).length;
+        }
+
+        function improvementCount() {
+            return Object.values(state.records || {})
+                .reduce((t, r) => t + Math.max(0, (r.hist ? r.hist.length : 0) - 1), 0);
+        }
+
+        function historySpanDays() {
+            if (state.history.length < 2) return 0;
+            return (state.history[state.history.length - 1].ts - state.history[0].ts) / 86400000;
+        }
+
+        // ---- Week helpers (weeks run Monday–Sunday) ----
+        function weekStartTs(ts) {
+            const d = new Date(ts === undefined ? Date.now() : ts);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+            return d.getTime();
+        }
+
+        function workoutsThisWeek() {
+            const start = weekStartTs();
+            return state.history.filter((h) => h.ts >= start).length;
+        }
+
+        function goalMetWeeks() {
+            const byWeek = {};
+            state.history.forEach((h) => {
+                const w = weekStartTs(h.ts);
+                byWeek[w] = (byWeek[w] || 0) + 1;
+            });
+            return Object.values(byWeek).filter((c) => c >= state.weeklyGoal).length;
         }
 
         function loadState() {
@@ -879,7 +1626,9 @@ permalink: /personal-trainer/
         }
 
         function saveState() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) { /* storage full or unavailable (e.g. private browsing) */ }
         }
 
         function tierCap(score) {
@@ -933,12 +1682,31 @@ permalink: /personal-trainer/
             return picks;
         }
 
+        // A twist gives each generated workout a theme so sessions don't blur together.
+        const TWISTS = [
+            { id: 'classic', label: 'Classic mix', desc: 'the trusty balanced blend' },
+            { id: 'abs', label: 'Abs day', desc: 'extra belly burn', focus: ['abs'] },
+            { id: 'obliques', label: 'Oblique day', desc: 'all about the twist', focus: ['obliques'] },
+            { id: 'posterior', label: 'Glutes & back day', desc: 'posterior chain power', focus: ['glutes', 'back'] },
+            { id: 'endurance', label: 'Endurance', desc: 'doses up ~20%', doseMult: 1.2 },
+            { id: 'speedy', label: 'Speedy', desc: 'shorter rests, keep moving', restDelta: -5 },
+            { id: 'finisher', label: 'Finisher', desc: 'a max hold to finish strong', finisher: true }
+        ];
+
         function generateWorkout() {
             const durationSecs = state.duration * 60;
             const avg = (state.prog.core + state.prog.pilates) / 2;
             const cap = tierCap(avg);
-            const restSecs = cap >= 4 ? 12 : cap >= 2 ? 15 : 20;
             const rounds = state.duration >= 40 ? 2 : 1;
+
+            // Pick a twist, never the same one twice in a row
+            const twistPool = TWISTS.filter((t) => t.id !== state.lastTwist);
+            const twist = twistPool[Math.floor(Math.random() * twistPool.length)];
+            state.lastTwist = twist.id;
+            saveState();
+
+            let restSecs = cap >= 4 ? 12 : cap >= 2 ? 15 : 20;
+            if (twist.restDelta) restSecs = Math.max(8, restSecs + twist.restDelta);
 
             const warmups = shuffle(EXERCISES.filter((e) => e.disc === 'warmup')).slice(0, 3);
             const cooldowns = shuffle(EXERCISES.filter((e) => e.disc === 'cooldown')).slice(0, 3);
@@ -951,6 +1719,7 @@ permalink: /personal-trainer/
             const corePool = pickPool('core');
             const pilatesPool = pickPool('pilates');
             const focusCount = {};
+            if (twist.focus) twist.focus.forEach((f) => { focusCount[f] = -3; });
             const avoid = state.lastExerciseIds;
 
             // Rough average time per main slot to size the list, then trim to budget
@@ -967,7 +1736,11 @@ permalink: /personal-trainer/
                 if (pilatesPicks[i]) main.push(pilatesPicks[i]);
             }
 
-            const workout = { warmups, main, cooldowns, rounds, restSecs };
+            const workout = { warmups, main, cooldowns, rounds, restSecs, twist, doseMult: twist.doseMult || 1 };
+            if (twist.finisher) {
+                const finishers = EXERCISES.filter((e) => e.disc === 'core' && e.type === 'secs' && e.tier <= cap);
+                workout.finisherEx = finishers[Math.floor(Math.random() * finishers.length)];
+            }
             workout.items = buildItems(workout);
             workout.totalSecs = workout.items.reduce((t, it) => t + it.secs, 0);
             return workout;
@@ -976,7 +1749,11 @@ permalink: /personal-trainer/
         function buildItems(w) {
             const items = [];
             const pushWork = (ex, phase) => {
-                const dose = doseFor(ex, state.prog[ex.disc] !== undefined ? state.prog[ex.disc] : (state.prog.core + state.prog.pilates) / 2);
+                let dose = doseFor(ex, state.prog[ex.disc] !== undefined ? state.prog[ex.disc] : (state.prog.core + state.prog.pilates) / 2);
+                // Endurance twist only scales the main work, not warm-up/cool-down
+                if ((ex.disc === 'core' || ex.disc === 'pilates') && (w.doseMult || 1) !== 1) {
+                    dose = Math.max(1, Math.round(dose * w.doseMult));
+                }
                 if (ex.perSide) {
                     items.push({ kind: 'work', ex, dose, phase, side: 'Left side', secs: ex.type === 'secs' ? dose : dose * 3 });
                     items.push({ kind: 'work', ex, dose, phase, side: 'Right side', secs: ex.type === 'secs' ? dose : dose * 3 });
@@ -992,6 +1769,10 @@ permalink: /personal-trainer/
                     pushWork(ex, phase);
                 });
             }
+            if (w.finisherEx) {
+                items.push({ kind: 'rest', secs: w.restSecs, phase: 'Finisher' });
+                items.push({ kind: 'work', ex: w.finisherEx, dose: w.finisherEx.max, phase: 'Finisher', side: null, secs: w.finisherEx.max });
+            }
             w.cooldowns.forEach((ex) => pushWork(ex, 'Cool-down'));
             return items;
         }
@@ -1003,6 +1784,99 @@ permalink: /personal-trainer/
             document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
             window.scrollTo(0, 0);
         }
+
+        function activeScreenId() {
+            const cur = document.querySelector('.screen.active');
+            return cur ? cur.id : '';
+        }
+
+        // ---- History-backed navigation ----
+        // Standalone iOS PWAs have no system back gesture, so sub-screens are
+        // pushed onto the history stack (Safari swipe / Android back work) and
+        // an in-app edge swipe below triggers the same back navigation.
+        let navDepth = 0;      // pushed entries above the root screen
+        let suppressPop = 0;   // popstates we triggered ourselves and must ignore
+
+        function rootScreenId() {
+            return state.setupDone ? 'home' : 'setup';
+        }
+
+        function navigate(id) {
+            history.pushState({ screen: id }, '');
+            navDepth += 1;
+            show(id);
+        }
+
+        function navReplace(id) {
+            history.replaceState({ screen: id }, '');
+            show(id);
+        }
+
+        // Return straight to the root screen, unwinding whatever was pushed.
+        function goHome() {
+            clearPreviewVideos();
+            renderHome();
+            show(rootScreenId());
+            if (navDepth > 0) {
+                suppressPop += 1;
+                history.go(-navDepth);
+                navDepth = 0;
+            } else {
+                history.replaceState({ screen: rootScreenId() }, '');
+            }
+        }
+
+        function goBack() {
+            if (navDepth > 0) history.back();
+            else goHome();
+        }
+
+        window.addEventListener('popstate', (e) => {
+            if (suppressPop > 0) {
+                suppressPop -= 1;
+                history.replaceState({ screen: rootScreenId() }, '');
+                return;
+            }
+            const cur = activeScreenId();
+            if (cur === 'player' || cur === 'complete') {
+                // don't lose a workout (or its feedback) to a stray back gesture
+                history.pushState({ screen: cur }, '');
+                if (cur === 'player' && window.confirm('Quit this workout? Progress won’t be saved.')) {
+                    stopTimer();
+                    clearVideo();
+                    releaseWakeLock();
+                    goHome();
+                }
+                return;
+            }
+            navDepth = Math.max(0, navDepth - 1);
+            const target = (e.state && e.state.screen) || rootScreenId();
+            clearPreviewVideos();
+            if (target === 'home' || target === 'setup') renderHome();
+            show(target);
+        });
+
+        // ---- Edge swipe-back for standalone iOS ----
+        let swipeStart = null;
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            const t = e.touches[0];
+            if (t.clientX > 40) return;
+            swipeStart = { x: t.clientX, y: t.clientY };
+        }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            if (!swipeStart) return;
+            const start = swipeStart;
+            swipeStart = null;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - start.x;
+            const dy = Math.abs(t.clientY - start.y);
+            if (dx < 70 || dy > 60) return;
+            const cur = activeScreenId();
+            const canSwipeBack = ['preview', 'library', 'history', 'info', 'achievements', 'records'].includes(cur)
+                || (cur === 'setup' && state.setupDone);
+            if (canSwipeBack) goBack();
+        }, { passive: true });
 
         function bindChoiceRow(rowId, onPick) {
             const row = document.getElementById(rowId);
@@ -1029,9 +1903,11 @@ permalink: /personal-trainer/
         // ---- Setup ----
         bindChoiceRow('setup-level', () => {});
         bindChoiceRow('setup-duration', () => {});
+        bindChoiceRow('setup-goal', () => {});
         document.getElementById('setup-go').addEventListener('click', () => {
             const level = selectedValue('setup-level') || 'intermediate';
             state.duration = parseInt(selectedValue('setup-duration') || '25', 10);
+            state.weeklyGoal = parseInt(selectedValue('setup-goal') || '3', 10);
             if (level !== state.level) {
                 state.prog.core = LEVEL_START[level];
                 state.prog.pilates = LEVEL_START[level];
@@ -1039,8 +1915,7 @@ permalink: /personal-trainer/
             state.level = level;
             state.setupDone = true;
             saveState();
-            renderHome();
-            show('home');
+            goHome();
         });
 
         // ---- Home ----
@@ -1051,18 +1926,22 @@ permalink: /personal-trainer/
 
         document.getElementById('nav-settings').addEventListener('click', () => {
             markSelected('setup-duration', state.duration);
+            markSelected('setup-goal', state.weeklyGoal || 3);
             if (state.level) markSelected('setup-level', state.level);
-            show('setup');
+            navigate('setup');
         });
-        document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); show('library'); });
-        document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); show('history'); });
+        document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); navigate('library'); });
+        document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
+        document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
+        document.getElementById('nav-achievements').addEventListener('click', () => { renderAchievements(); navigate('achievements'); });
+        document.getElementById('nav-records').addEventListener('click', () => { renderRecords(); navigate('records'); });
         document.querySelectorAll('[data-back]').forEach((b) =>
-            b.addEventListener('click', () => { renderHome(); show(b.dataset.back); }));
+            b.addEventListener('click', () => { clearPreviewVideos(); goBack(); }));
 
         document.getElementById('btn-generate').addEventListener('click', () => {
             currentWorkout = generateWorkout();
             renderPreview();
-            show('preview');
+            navigate('preview');
         });
         document.getElementById('btn-regenerate').addEventListener('click', () => {
             currentWorkout = generateWorkout();
@@ -1080,6 +1959,57 @@ permalink: /personal-trainer/
                 document.getElementById(`${disc}-bar`).style.width = `${Math.min(100, (score / MAX_SCORE) * 100)}%`;
             });
             markSelected('home-duration', state.duration);
+
+            const goal = state.weeklyGoal || 3;
+            const done = workoutsThisWeek();
+            document.getElementById('week-segs').innerHTML =
+                Array.from({ length: goal }, (_, i) => `<div class="${i < done ? 'done' : ''}"></div>`).join('');
+            document.getElementById('week-label').textContent =
+                done >= goal ? 'Goal met 🎉' : `${done} of ${goal} workouts`;
+
+            const unlocked = Object.keys(state.achievements || {}).length;
+            document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
+
+            renderAchProgress();
+            renderRecPreview();
+        }
+
+        // The 3 locked badges closest to unlocking, with progress bars
+        function renderAchProgress() {
+            const rows = ACHIEVEMENTS
+                .filter((a) => !state.achievements[a.id])
+                .map((a) => ({ a, cur: a.value(), ratio: Math.min(1, a.value() / a.target) }))
+                .sort((x, y) => y.ratio - x.ratio)
+                .slice(0, 3);
+            document.getElementById('ach-progress').innerHTML = rows.length
+                ? rows.map(({ a, cur, ratio }) => `
+                    <div class="ach-prog-row">
+                        <span class="em">${a.emoji}</span>
+                        <div class="mid"><div class="nm">${a.name}</div><div class="mini-bar"><div style="width:${Math.round(ratio * 100)}%"></div></div></div>
+                        <span class="pct">${Math.floor(Math.min(cur, a.target))}/${a.target}</span>
+                    </div>`).join('')
+                : '<p class="muted-note" style="margin-top:8px;">All badges unlocked — legend. 🏆</p>';
+        }
+
+        // The 3 most recently improved records
+        function renderRecPreview() {
+            const el = document.getElementById('rec-preview');
+            const entries = Object.entries(state.records || {});
+            if (!entries.length) {
+                el.innerHTML = '<p class="muted-note" style="margin-top:8px;">Finish exercises in a workout to set your first records.</p>';
+                return;
+            }
+            const rows = entries
+                .map(([id, r]) => ({ ex: EX_BY_ID[id], r, last: r.hist.length ? r.hist[r.hist.length - 1].ts : 0 }))
+                .filter((x) => x.ex)
+                .sort((a, b) => b.last - a.last)
+                .slice(0, 3);
+            el.innerHTML = rows.map(({ ex, r }) => {
+                const unit = r.type === 'secs' ? 's' : ' reps';
+                const first = r.hist.length ? r.hist[0].v : r.best;
+                const gain = r.best - first;
+                return `<div class="rec-prev-row"><span class="nm">${ex.name}</span><span class="val">${r.best}${unit}${gain > 0 ? ` <span class="gain">▲+${gain}</span>` : ''}</span></div>`;
+            }).join('');
         }
 
         // ---- Preview ----
@@ -1093,22 +2023,53 @@ permalink: /personal-trainer/
             const list = document.getElementById('preview-list');
             const section = (title, exs) => `
                 <div class="section-title">${title}</div>
-                ${exs.map((ex) => `
-                    <div class="plan-item">
-                        <span class="tier-badge">T${ex.tier}</span>
+                ${exs.map((ex) => {
+                    const hasVideo = !!youtubeId(linkFor(ex.id));
+                    return `
+                    <div class="plan-item" data-ex="${ex.id}">
+                        <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
                         <div>
                             <div class="name">${ex.name}</div>
                             <div class="meta">${ex.disc === 'core' ? 'Core' : ex.disc === 'pilates' ? 'Pilates' : ex.focus}</div>
                         </div>
                         <span class="dose">${doseLabel(ex, doseFor(ex, state.prog[ex.disc] ?? 0))}</span>
-                    </div>`).join('')}`;
+                        ${hasVideo ? `<button class="plan-play" data-play="${ex.id}" aria-label="Preview ${ex.name} video">▶</button>` : ''}
+                        ${hasVideo ? `<div class="plan-video" id="pv-${ex.id}"></div>` : ''}
+                    </div>`;
+                }).join('')}`;
 
             const mins = Math.round(w.totalSecs / 60);
             list.innerHTML =
-                `<p class="muted-note" style="margin-bottom:6px;">≈ ${mins} min · ${w.main.length} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level</p>` +
+                `<p class="muted-note" style="margin-bottom:6px;">≈ ${mins} min · ${w.main.length} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level · tap ▶ to preview</p>` +
+                (w.twist ? `<p class="muted-note" style="margin-bottom:6px;">✨ Today's twist: <strong style="color:var(--text);">${w.twist.label}</strong> — ${w.twist.desc}</p>` : '') +
                 section('Warm-up', w.warmups) +
                 section(w.rounds > 1 ? `Main circuit — ${w.rounds} rounds` : 'Main workout', w.main) +
                 section('Cool-down', w.cooldowns);
+
+            list.querySelectorAll('[data-play]').forEach((btn) => {
+                btn.addEventListener('click', () => togglePreviewVideo(btn.dataset.play));
+            });
+        }
+
+        // Stop and remove every inline preview video on the workout preview screen.
+        function clearPreviewVideos() {
+            document.querySelectorAll('#preview-list .plan-video').forEach((slot) => { slot.innerHTML = ''; });
+            document.querySelectorAll('#preview-list .plan-item.playing').forEach((item) => item.classList.remove('playing'));
+        }
+
+        // Toggle the inline form video for one exercise; only one plays at a time.
+        function togglePreviewVideo(exId) {
+            const slot = document.getElementById(`pv-${exId}`);
+            if (!slot) return;
+            const isOpen = slot.childElementCount > 0;
+            clearPreviewVideos();
+            if (isOpen) return;
+            const ex = EX_BY_ID[exId];
+            const src = youtubeEmbedSrc(linkFor(exId));
+            if (!src) return;
+            slot.innerHTML = `<iframe src="${escapeHtml(src)}" title="${escapeHtml(ex ? ex.name : '')} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+            slot.closest('.plan-item').classList.add('playing');
+            slot.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
 
         // =====================================================
@@ -1127,15 +2088,16 @@ permalink: /personal-trainer/
         document.getElementById('btn-quit').addEventListener('click', () => {
             if (window.confirm('Quit this workout? Progress won’t be saved.')) {
                 stopTimer();
+                clearVideo();
                 releaseWakeLock();
-                renderHome();
-                show('home');
+                goHome();
             }
         });
         document.getElementById('btn-skip').addEventListener('click', () => advance());
         document.getElementById('btn-main-action').addEventListener('click', () => {
             const item = currentWorkout.items[player.idx];
             if (item.kind === 'work' && item.ex.type === 'reps') {
+                recordCompletion(item);
                 advance();
             } else {
                 player.paused = !player.paused;
@@ -1144,13 +2106,14 @@ permalink: /personal-trainer/
         });
 
         async function startWorkout() {
+            clearPreviewVideos();
             player.idx = 0;
             player.paused = false;
             player.startedAt = Date.now();
             try {
                 if ('wakeLock' in navigator) player.wakeLock = await navigator.wakeLock.request('screen');
             } catch (e) { /* wake lock is best-effort */ }
-            show('player');
+            navigate('player');
             loadItem();
         }
 
@@ -1189,10 +2152,82 @@ permalink: /personal-trainer/
         }
 
         function youtubeLinksFor(ex) {
-            const saved = state.links[ex.id];
+            const saved = safeHref(linkFor(ex.id));
             const search = `https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + (ex.disc === 'pilates' ? ' mat pilates' : ' exercise form'))}`;
-            if (saved) return `<a href="${saved}" target="_blank" rel="noopener">▶ Watch guide</a>`;
-            return `<a href="${search}" target="_blank" rel="noopener">🔍 Search YouTube</a>`;
+            if (saved) return `<a href="${escapeHtml(saved)}" target="_blank" rel="noopener">▶ Watch guide</a>`;
+            return `<a href="${escapeHtml(search)}" target="_blank" rel="noopener">🔍 Search YouTube</a>`;
+        }
+
+        // Pull the 11-char video id out of any common YouTube URL shape.
+        function youtubeId(url) {
+            if (!url) return null;
+            try {
+                const u = new URL(url, window.location.href);
+                const host = u.hostname.replace(/^www\./, '');
+                if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
+                if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+                    if (u.pathname === '/watch') return u.searchParams.get('v');
+                    const m = u.pathname.match(/^\/(?:embed|shorts|v|live)\/([^/?#]+)/);
+                    if (m) return m[1];
+                }
+            } catch (e) { /* fall through to a loose match */ }
+            const loose = String(url).match(/[a-zA-Z0-9_-]{11}/);
+            return loose ? loose[0] : null;
+        }
+
+        // Respect a start timestamp (?t=90 or ?t=1m30s or ?start=90) if the saved link has one.
+        function youtubeStart(url) {
+            try {
+                const t = new URL(url, window.location.href).searchParams.get('start')
+                    || new URL(url, window.location.href).searchParams.get('t');
+                if (!t) return null;
+                if (/^\d+$/.test(t)) return parseInt(t, 10);
+                const h = t.match(/(\d+)h/), m = t.match(/(\d+)m/), s = t.match(/(\d+)s/);
+                const total = (h ? +h[1] * 3600 : 0) + (m ? +m[1] * 60 : 0) + (s ? +s[1] : 0);
+                return total || null;
+            } catch (e) { return null; }
+        }
+
+        // Build an autoplaying, muted embed URL for a saved link, or null if it isn't a video.
+        function youtubeEmbedSrc(link, { loop = false } = {}) {
+            const id = youtubeId(link);
+            if (!id) return null;
+            const params = new URLSearchParams({
+                autoplay: '1',
+                mute: '1',
+                playsinline: '1',
+                rel: '0',
+                modestbranding: '1'
+            });
+            if (loop) {
+                params.set('loop', '1');
+                params.set('playlist', id);
+            }
+            const start = youtubeStart(link);
+            if (start) params.set('start', String(start));
+            return `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`;
+        }
+
+        function clearVideo() {
+            const videoEl = document.getElementById('player-video');
+            videoEl.innerHTML = '';
+            videoEl.classList.remove('active');
+        }
+
+        // Embed and autoplay the saved form-guide video for an exercise, if there is one.
+        function renderExerciseMedia(ex) {
+            const videoEl = document.getElementById('player-video');
+            const linksEl = document.getElementById('player-links');
+            const saved = linkFor(ex.id);
+            const src = youtubeEmbedSrc(saved, { loop: true });
+            if (src) {
+                videoEl.innerHTML = `<iframe src="${escapeHtml(src)}" title="${escapeHtml(ex.name)} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+                videoEl.classList.add('active');
+                linksEl.innerHTML = `<a href="${escapeHtml(safeHref(saved))}" target="_blank" rel="noopener">▶ Open on YouTube</a>`;
+            } else {
+                clearVideo();
+                linksEl.innerHTML = youtubeLinksFor(ex);
+            }
         }
 
         function loadItem() {
@@ -1225,6 +2260,7 @@ permalink: /personal-trainer/
                 sideEl.textContent = '';
                 cuesEl.innerHTML = '';
                 linksEl.innerHTML = '';
+                clearVideo();
                 displayEl.classList.add('resting');
                 actionBtn.textContent = 'Pause';
                 startCountdown(item.secs);
@@ -1239,7 +2275,7 @@ permalink: /personal-trainer/
             nameEl.textContent = ex.name;
             sideEl.textContent = item.side || '';
             cuesEl.innerHTML = ex.cues.map((c) => `<li>· ${c}</li>`).join('');
-            linksEl.innerHTML = youtubeLinksFor(ex);
+            renderExerciseMedia(ex);
             beep(880);
 
             if (ex.type === 'secs') {
@@ -1259,6 +2295,8 @@ permalink: /personal-trainer/
                 if (player.paused) return;
                 player.remaining -= 1;
                 if (player.remaining <= 0) {
+                    const item = currentWorkout.items[player.idx];
+                    if (item && item.kind === 'work') recordCompletion(item);
                     advance();
                     return;
                 }
@@ -1278,13 +2316,24 @@ permalink: /personal-trainer/
         // =====================================================
         function finishWorkout() {
             stopTimer();
+            clearVideo();
             releaseWakeLock();
             const mins = Math.max(1, Math.round((Date.now() - player.startedAt) / 60000));
             document.getElementById('complete-summary').textContent =
                 `${mins} min · ${currentWorkout.main.length} exercises${currentWorkout.rounds > 1 ? ` × ${currentWorkout.rounds} rounds` : ''}`;
+
+            // Show the streak/goal this workout is about to secure
+            const prev = state.history[state.history.length - 1];
+            const prospectStreak = prev && (Date.now() - prev.ts) < 48 * 3600 * 1000 ? state.streak + 1 : 1;
+            const goal = state.weeklyGoal || 3;
+            const doneThisWeek = workoutsThisWeek() + 1;
+            document.getElementById('complete-motivate').textContent =
+                `🔥 Streak ${prospectStreak} · ${Math.min(doneThisWeek, goal)} of ${goal} this week${doneThisWeek >= goal ? ' — goal met! 🎉' : ''}`;
+
             document.getElementById('player-bar').style.width = '100%';
             currentWorkout.actualMins = mins;
-            show('complete');
+            navReplace('complete');
+            celebrate();
             beep(880);
             setTimeout(() => beep(1100), 200);
         }
@@ -1312,9 +2361,11 @@ permalink: /personal-trainer/
                     level: levelLabel()
                 });
                 state.lastExerciseIds = currentWorkout.main.map((e) => e.id);
+                state.bestStreak = Math.max(state.bestStreak || 0, state.streak);
+                const unlocked = checkAchievements();
                 saveState();
-                renderHome();
-                show('home');
+                goHome();
+                if (unlocked.length) showAchievementToasts(unlocked);
             });
         });
 
@@ -1331,13 +2382,13 @@ permalink: /personal-trainer/
                     ${EXERCISES.filter((e) => e.disc === disc).map((ex) => `
                         <div class="lib-item" data-id="${ex.id}">
                             <div class="lib-head">
-                                <span class="tier-badge">T${ex.tier}</span>
+                                <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
                                 <span class="name">${ex.name}</span>
-                                <span class="has-link">${state.links[ex.id] ? '▶' : ''}</span>
+                                <span class="has-link">${linkFor(ex.id) ? '▶' : ''}</span>
                             </div>
                             <div class="lib-body">
                                 <div class="lib-cues">${ex.cues.join(' · ')}</div>
-                                <input type="url" placeholder="Paste YouTube link…" value="${state.links[ex.id] || ''}" data-link-for="${ex.id}">
+                                <input type="url" placeholder="Paste YouTube link…" value="${escapeHtml(linkFor(ex.id))}" data-link-for="${ex.id}">
                             </div>
                         </div>`).join('')}
                 </div>`).join('');
@@ -1352,7 +2403,7 @@ permalink: /personal-trainer/
                     if (url) state.links[id] = url;
                     else delete state.links[id];
                     saveState();
-                    input.closest('.lib-item').querySelector('.has-link').textContent = url ? '▶' : '';
+                    input.closest('.lib-item').querySelector('.has-link').textContent = linkFor(id) ? '▶' : '';
                 });
             });
         }
@@ -1391,6 +2442,162 @@ permalink: /personal-trainer/
         // =====================================================
         // History
         // =====================================================
+        // =====================================================
+        // Achievements
+        // =====================================================
+        // Each badge tracks a numeric metric toward a target, so partial progress can be shown.
+        const totalMinutes = () => state.history.reduce((t, h) => t + h.mins, 0);
+        const maxDiscTier = () => tierCap(Math.max(state.prog.core, state.prog.pilates));
+        const ACHIEVEMENTS = [
+            { id: 'first', emoji: '🎯', name: 'First workout', desc: 'Complete your first session', value: () => state.history.length, target: 1 },
+            { id: 'w5', emoji: '⭐', name: 'Warmed up', desc: 'Complete 5 workouts', value: () => state.history.length, target: 5 },
+            { id: 'w10', emoji: '🌟', name: 'Regular', desc: 'Complete 10 workouts', value: () => state.history.length, target: 10 },
+            { id: 'w25', emoji: '💪', name: 'Committed', desc: 'Complete 25 workouts', value: () => state.history.length, target: 25 },
+            { id: 'w50', emoji: '🏆', name: 'Half century', desc: 'Complete 50 workouts', value: () => state.history.length, target: 50 },
+            { id: 'w100', emoji: '👑', name: 'Century club', desc: 'Complete 100 workouts', value: () => state.history.length, target: 100 },
+            { id: 'w250', emoji: '🗿', name: 'Iron will', desc: 'Complete 250 workouts', value: () => state.history.length, target: 250 },
+            { id: 'w500', emoji: '🏛️', name: 'Hall of fame', desc: 'Complete 500 workouts', value: () => state.history.length, target: 500 },
+            { id: 's3', emoji: '🔥', name: 'On a roll', desc: 'Reach a 3-workout streak', value: () => state.bestStreak || 0, target: 3 },
+            { id: 's7', emoji: '🧨', name: 'Week of fire', desc: 'Reach a 7-workout streak', value: () => state.bestStreak || 0, target: 7 },
+            { id: 's14', emoji: '🚀', name: 'Unstoppable', desc: 'Reach a 14-workout streak', value: () => state.bestStreak || 0, target: 14 },
+            { id: 's30', emoji: '🌋', name: 'Living legend', desc: 'Reach a 30-workout streak', value: () => state.bestStreak || 0, target: 30 },
+            { id: 's60', emoji: '☄️', name: 'Comet', desc: 'Reach a 60-workout streak', value: () => state.bestStreak || 0, target: 60 },
+            { id: 's100', emoji: '🌌', name: 'Immortal', desc: 'Reach a 100-workout streak', value: () => state.bestStreak || 0, target: 100 },
+            { id: 't2', emoji: '🥉', name: 'Moving up', desc: 'Reach Tier 2 in a discipline', value: maxDiscTier, target: 2 },
+            { id: 't3', emoji: '🥈', name: 'Middle of the pack', desc: 'Reach Tier 3 in a discipline', value: maxDiscTier, target: 3 },
+            { id: 't4', emoji: '🥇', name: 'Front runner', desc: 'Reach Tier 4 in a discipline', value: maxDiscTier, target: 4 },
+            { id: 't5', emoji: '💎', name: 'Top tier', desc: 'Reach Tier 5 in a discipline', value: maxDiscTier, target: 5 },
+            { id: 'elite', emoji: '🦾', name: 'Double elite', desc: 'Tier 5 in both disciplines', value: () => Math.min(tierCap(state.prog.core), tierCap(state.prog.pilates)), target: 5 },
+            { id: 'goal1', emoji: '✅', name: 'Goal getter', desc: 'Hit your weekly goal', value: goalMetWeeks, target: 1 },
+            { id: 'goal4', emoji: '📆', name: 'Habit formed', desc: 'Hit your weekly goal in 4 different weeks', value: goalMetWeeks, target: 4 },
+            { id: 'goal12', emoji: '🗓️', name: 'Quarter master', desc: 'Hit your weekly goal in 12 different weeks', value: goalMetWeeks, target: 12 },
+            { id: 'goal52', emoji: '🧱', name: 'Brick by brick', desc: 'Hit your weekly goal in 52 different weeks', value: goalMetWeeks, target: 52 },
+            { id: 'early', emoji: '🌅', name: 'Early bird', desc: 'Finish a workout before 8am', value: () => (state.history.some((h) => new Date(h.ts).getHours() < 8) ? 1 : 0), target: 1 },
+            { id: 'night', emoji: '🦉', name: 'Night owl', desc: 'Finish a workout after 9pm', value: () => (state.history.some((h) => new Date(h.ts).getHours() >= 21) ? 1 : 0), target: 1 },
+            { id: 'min300', emoji: '⏱️', name: 'Five hours in', desc: 'Train 300 total minutes', value: totalMinutes, target: 300 },
+            { id: 'min1000', emoji: '⏳', name: 'Time well spent', desc: 'Train 1,000 total minutes', value: totalMinutes, target: 1000 },
+            { id: 'min3000', emoji: '🏔️', name: 'Mountain of minutes', desc: 'Train 3,000 total minutes', value: totalMinutes, target: 3000 },
+            { id: 'year1', emoji: '🎂', name: 'One-year club', desc: 'Train across a full year', value: historySpanDays, target: 365 },
+            { id: 'explorer', emoji: '🧭', name: 'Explorer', desc: 'Set records on 25 different exercises', value: recordedExerciseCount, target: 25 },
+            { id: 'pr10', emoji: '📈', name: 'Record breaker', desc: 'Beat your own records 10 times', value: improvementCount, target: 10 },
+            { id: 'pr25', emoji: '💥', name: 'Limit pusher', desc: 'Beat your own records 25 times', value: improvementCount, target: 25 }
+        ].map((a) => Object.assign(a, { test: () => a.value() >= a.target }));
+
+        function checkAchievements() {
+            const newly = [];
+            ACHIEVEMENTS.forEach((a) => {
+                if (!state.achievements[a.id] && a.test()) {
+                    state.achievements[a.id] = Date.now();
+                    newly.push(a);
+                }
+            });
+            return newly;
+        }
+
+        function renderAchievements() {
+            const unlocked = Object.keys(state.achievements).length;
+            document.getElementById('ach-count').textContent =
+                unlocked ? `Unlocked ${unlocked} of ${ACHIEVEMENTS.length} — keep going!` : `${ACHIEVEMENTS.length} badges to earn. Every workout counts.`;
+            document.getElementById('ach-grid').innerHTML = ACHIEVEMENTS.map((a) => `
+                <div class="ach ${state.achievements[a.id] ? 'unlocked' : 'locked'}">
+                    <span class="em">${a.emoji}</span>
+                    <div><div class="nm">${a.name}</div><div class="ds">${a.desc}</div></div>
+                </div>`).join('');
+        }
+
+        // =====================================================
+        // Personal records page
+        // =====================================================
+        function renderRecords() {
+            const list = document.getElementById('records-list');
+            const ids = Object.keys(state.records || {});
+            document.getElementById('rec-note').textContent = ids.length
+                ? 'Your best completed dose per exercise — finish it (don’t skip) to count. Doses grow as you progress, so watch these climb.'
+                : '';
+            if (!ids.length) {
+                list.innerHTML = '<div class="card"><div class="empty-note">No records yet. Finish exercises in a workout — skipped ones don’t count.</div></div>';
+                return;
+            }
+            list.innerHTML = ['core', 'pilates'].map((disc) => {
+                const exs = ids.map((id) => EX_BY_ID[id])
+                    .filter((e) => e && e.disc === disc)
+                    .sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
+                if (!exs.length) return '';
+                return `<div class="card">
+                    <div class="section-title">${disc === 'core' ? 'Core Fitness' : 'Mat Pilates'}</div>
+                    ${exs.map((ex) => {
+                        const rec = state.records[ex.id];
+                        const unit = rec.type === 'secs' ? 's' : ' reps';
+                        const pct = Math.min(100, (rec.best / ex.max) * 100);
+                        const first = rec.hist.length ? rec.hist[0].v : rec.best;
+                        const gain = rec.best - first;
+                        return `<div class="rec-item">
+                            <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
+                            <div class="rec-main">
+                                <div class="rec-head"><span class="name">${ex.name}${ex.perSide ? ' <span style="color:var(--muted);font-weight:400;font-size:0.75rem;">/side</span>' : ''}</span><span class="rec-best">${rec.best}${unit}</span></div>
+                                <div class="rec-bar"><div style="width:${pct}%"></div></div>
+                                <div class="rec-sub">${gain > 0 ? `<span class="gain">▲ +${gain}${unit}</span> since first (${first}${unit})` : 'first record set'} · cap ${ex.max}${unit}</div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            }).join('');
+        }
+
+        function showAchievementToasts(list) {
+            let i = 0;
+            const next = () => {
+                if (i >= list.length) return;
+                const a = list[i++];
+                const el = document.createElement('div');
+                el.className = 'toast';
+                el.innerHTML = `${a.emoji} <div><strong>Achievement unlocked!</strong><br>${a.name}</div>`;
+                document.body.appendChild(el);
+                requestAnimationFrame(() => el.classList.add('show'));
+                setTimeout(() => {
+                    el.classList.remove('show');
+                    setTimeout(() => { el.remove(); next(); }, 350);
+                }, 2600);
+            };
+            next();
+        }
+
+        // Short confetti burst to make finishing feel like a win
+        function celebrate() {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'confetti';
+            document.body.appendChild(canvas);
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const ctx = canvas.getContext('2d');
+            const colors = ['#3ecf8e', '#6bb8ef', '#ef8a5f', '#fbbf24'];
+            const parts = Array.from({ length: 90 }, () => ({
+                x: Math.random() * canvas.width,
+                y: -20 - Math.random() * canvas.height * 0.4,
+                r: 3 + Math.random() * 5,
+                vy: 2 + Math.random() * 3,
+                vx: -1 + Math.random() * 2,
+                rot: Math.random() * Math.PI,
+                vr: -0.1 + Math.random() * 0.2,
+                col: colors[Math.floor(Math.random() * colors.length)]
+            }));
+            const t0 = performance.now();
+            (function tick(t) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                parts.forEach((p) => {
+                    p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot);
+                    ctx.fillStyle = p.col;
+                    ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+                    ctx.restore();
+                });
+                if (t - t0 < 2400) requestAnimationFrame(tick);
+                else canvas.remove();
+            })(t0);
+        }
+
         const FB_EMOJI = { easy: '😴', right: '💪', hard: '🥵' };
 
         function renderHistory() {
@@ -1399,7 +2606,11 @@ permalink: /personal-trainer/
                 list.innerHTML = '<div class="empty-note">No workouts yet. Your sessions will show up here.</div>';
                 return;
             }
-            list.innerHTML = state.history.slice().reverse().map((h) => `
+            const totalMins = state.history.reduce((t, h) => t + h.mins, 0);
+            list.innerHTML =
+                `<div class="muted-note" style="margin-bottom:8px;">🔥 Best streak ${Math.max(state.bestStreak || 0, state.streak)} · ⏱️ ${totalMins} min total</div>` +
+                heatmapHtml() +
+                state.history.slice().reverse().map((h) => `
                 <div class="hist-item">
                     <span class="fb">${FB_EMOJI[h.fb] || '💪'}</span>
                     <div>
@@ -1410,9 +2621,35 @@ permalink: /personal-trainer/
                 </div>`).join('');
         }
 
+        // 12-week "don't break the chain" grid: one cell per day, lit when you trained
+        function heatmapHtml() {
+            const counts = {};
+            state.history.forEach((h) => {
+                const d = new Date(h.ts);
+                d.setHours(0, 0, 0, 0);
+                counts[d.getTime()] = (counts[d.getTime()] || 0) + 1;
+            });
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const start = new Date(today);
+            start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - 77); // Monday, 11 weeks back
+            let cells = '';
+            for (let w = 0; w < 12; w++) {
+                for (let d = 0; d < 7; d++) {
+                    const cur = new Date(start);
+                    cur.setDate(start.getDate() + w * 7 + d);
+                    if (cur > today) { cells += '<div style="visibility:hidden"></div>'; continue; }
+                    const t = cur.getTime();
+                    cells += `<div class="${counts[t] ? 'on' : ''}${t === today.getTime() ? ' td' : ''}"></div>`;
+                }
+            }
+            return `<div class="hm">${cells}</div><p class="muted-note" style="margin:6px 0 12px;">Last 12 weeks — don’t break the chain.</p>`;
+        }
+
         // =====================================================
         // Boot
         // =====================================================
+        history.replaceState({ screen: rootScreenId() }, '');
         if (state.setupDone) {
             renderHome();
             show('home');
