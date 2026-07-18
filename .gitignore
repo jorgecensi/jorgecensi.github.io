@@ -2,4 +2,4 @@
 _site/
 vendor
 .DS_Store
-.claude/worktrees/
+.claude/worktrees/node_modules/
