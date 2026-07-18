@@ -309,13 +309,23 @@ permalink: /personal-trainer/
         }
 
         .see-all {
-            background: none;
-            border: none;
             color: var(--accent);
             font-weight: 700;
             font-size: 0.85rem;
-            cursor: pointer;
             padding: 4px 0;
+        }
+
+        .clickable-card {
+            cursor: pointer;
+            transition: transform 0.1s, border-color 0.15s;
+        }
+
+        .clickable-card:active {
+            transform: scale(0.985);
+        }
+
+        .clickable-card:hover {
+            border-color: rgba(16, 185, 129, 0.35);
         }
 
         .ach-prog-row {
@@ -948,7 +958,7 @@ permalink: /personal-trainer/
             padding: 12px;
             display: flex;
             gap: 10px;
-            align-items: center;
+            align-items: flex-start;
         }
 
         .ach.unlocked {
@@ -957,13 +967,18 @@ permalink: /personal-trainer/
         }
 
         .ach.locked {
-            opacity: 0.45;
+            opacity: 0.6;
             filter: grayscale(1);
         }
 
         .ach .em {
             font-size: 1.6rem;
             flex-shrink: 0;
+        }
+
+        .ach-main {
+            flex: 1;
+            min-width: 0;
         }
 
         .ach .nm {
@@ -975,6 +990,21 @@ permalink: /personal-trainer/
             font-size: 0.74rem;
             color: var(--muted);
             margin-top: 2px;
+        }
+
+        .ach .mini-bar {
+            margin-top: 8px;
+        }
+
+        .ach-frac {
+            font-size: 0.72rem;
+            color: var(--muted);
+            font-weight: 700;
+            margin-top: 3px;
+        }
+
+        .ach.unlocked .mini-bar > div {
+            background: var(--accent-bright, var(--accent));
         }
 
         /* Achievement toast */
@@ -1178,12 +1208,12 @@ permalink: /personal-trainer/
                 </div>
             </div>
             <button class="btn" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
-            <div class="card" id="ach-card">
-                <div class="level-row"><strong>🏅 Achievements</strong><button class="see-all" id="nav-achievements">All <span id="ach-badge-count" class="ach-count"></span> ›</button></div>
+            <div class="card clickable-card" id="ach-card" role="button" tabindex="0">
+                <div class="level-row"><strong>🏅 Achievements</strong><span class="see-all">All <span id="ach-badge-count" class="ach-count"></span> ›</span></div>
                 <div id="ach-progress"></div>
             </div>
-            <div class="card" id="rec-card">
-                <div class="level-row"><strong>📊 Records</strong><button class="see-all" id="nav-records">All ›</button></div>
+            <div class="card clickable-card" id="rec-card" role="button" tabindex="0">
+                <div class="level-row"><strong>📊 Records</strong><span class="see-all">All ›</span></div>
                 <div id="rec-preview"></div>
             </div>
             <div class="home-nav">
@@ -1975,8 +2005,18 @@ permalink: /personal-trainer/
         document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); navigate('library'); });
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
-        document.getElementById('nav-achievements').addEventListener('click', () => { renderAchievements(); navigate('achievements'); });
-        document.getElementById('nav-records').addEventListener('click', () => { renderRecords(); navigate('records'); });
+        function bindClickableCard(id, handler) {
+            const el = document.getElementById(id);
+            el.addEventListener('click', handler);
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handler();
+                }
+            });
+        }
+        bindClickableCard('ach-card', () => { renderAchievements(); navigate('achievements'); });
+        bindClickableCard('rec-card', () => { renderRecords(); navigate('records'); });
         document.querySelectorAll('[data-back]').forEach((b) =>
             b.addEventListener('click', () => { clearPreviewVideos(); clearLibraryVideos(); goBack(); }));
 
@@ -2570,11 +2610,21 @@ permalink: /personal-trainer/
             const unlocked = Object.keys(state.achievements).length;
             document.getElementById('ach-count').textContent =
                 unlocked ? `Unlocked ${unlocked} of ${ACHIEVEMENTS.length} — keep going!` : `${ACHIEVEMENTS.length} badges to earn. Every workout counts.`;
-            document.getElementById('ach-grid').innerHTML = ACHIEVEMENTS.map((a) => `
-                <div class="ach ${state.achievements[a.id] ? 'unlocked' : 'locked'}">
+            document.getElementById('ach-grid').innerHTML = ACHIEVEMENTS.map((a) => {
+                const isUnlocked = !!state.achievements[a.id];
+                const cur = Math.floor(Math.min(a.value(), a.target));
+                const ratio = isUnlocked ? 1 : Math.min(1, a.value() / a.target);
+                return `
+                <div class="ach ${isUnlocked ? 'unlocked' : 'locked'}">
                     <span class="em">${a.emoji}</span>
-                    <div><div class="nm">${a.name}</div><div class="ds">${a.desc}</div></div>
-                </div>`).join('');
+                    <div class="ach-main">
+                        <div class="nm">${a.name}</div>
+                        <div class="ds">${a.desc}</div>
+                        <div class="mini-bar"><div style="width:${Math.round(ratio * 100)}%"></div></div>
+                        <div class="ach-frac">${cur}/${a.target}</div>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         // =====================================================
