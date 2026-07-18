@@ -61,6 +61,12 @@ permalink: /personal-trainer/
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             justify-content: center;
+            /* Without this, #app is a stretched flex item clamped to body's height —
+               its content (and bottom safe-area padding) then overflows the box
+               instead of growing it, so the page scrolls past the padding entirely
+               on any screen taller than one viewport. flex-start lets #app size to
+               its own content so the padding always wraps the true bottom edge. */
+            align-items: flex-start;
         }
 
         #app {

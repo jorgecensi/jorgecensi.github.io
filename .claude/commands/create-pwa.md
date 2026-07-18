@@ -228,6 +228,8 @@ Every button or control near the bottom of the screen — a CTA at the end of a 
 
 Check every place the new app touches the bottom of the viewport, not just one global rule — a fixed bottom nav needs it as much as a single "Start" button at the end of a form.
 
+**Gotcha — verify the padding can actually apply.** Reserving the safe area only works if the element carrying that padding is free to grow with its content. If you center a max-width app shell with `body { display: flex; justify-content: center; }` (no `flex-direction`/`align-items` override), the shell becomes a *stretched* flex item clamped to `body`'s height — on any screen taller than one viewport, its content (and the bottom padding) overflows the box instead of growing it, so the page scrolls right past the reserved padding and buttons end up flush against the edge again. This bit `personal-trainer/index.html` after it already had the `env(safe-area-inset-bottom)` padding in place. If you use this centering pattern, add `align-items: flex-start;` to `body` (or use `margin: 0 auto` on the shell instead of flex centering) — then check a screen with enough content to require scrolling, not just the first short screen, since the bug is invisible until content overflows.
+
 ### `<slug>.html`
 
 This is a **standalone** HTML file (not using Jekyll layouts) that is self-contained, similar to `flappy.html`. Include the service worker registration script and implement the app content described by the user. Structure:
