@@ -304,7 +304,7 @@ permalink: /squeak-the-geek/
             <div class="key-indicator" id="keyIndicator">🔑</div>
         </div>
         <div id="canvasWrap">
-            <canvas id="canvas"></canvas>
+            <canvas id="canvas" role="img" aria-label="Squeak the Geek game screen"></canvas>
         </div>
     </div>
 
@@ -346,7 +346,7 @@ permalink: /squeak-the-geek/
     </div>
 
     <script>
-        const SW_VERSION = '2607181249';
+        const SW_VERSION = '2607181800';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -426,22 +426,28 @@ permalink: /squeak-the-geek/
             const LAST_PLAYER_KEY = 'squeakTheGeekLastPlayer';
             const NEW_PLAYER_VALUE = '__new__';
 
+            function safeGetItem(key) {
+                try { return localStorage.getItem(key); } catch (e) { return null; }
+            }
+            function safeSetItem(key, value) {
+                try { localStorage.setItem(key, value); } catch (e) {}
+            }
             function loadPlayers() {
-                try { return JSON.parse(localStorage.getItem(PLAYERS_KEY)) || {}; } catch (e) { return {}; }
+                try { return JSON.parse(safeGetItem(PLAYERS_KEY)) || {}; } catch (e) { return {}; }
             }
             function savePlayers(players) {
-                localStorage.setItem(PLAYERS_KEY, JSON.stringify(players));
+                safeSetItem(PLAYERS_KEY, JSON.stringify(players));
             }
 
             // One-time migration from the old single global high score.
             (function migrateOldHighScore() {
                 const players = loadPlayers();
-                const oldScore = localStorage.getItem('squeakTheGeekHighScore');
+                const oldScore = safeGetItem('squeakTheGeekHighScore');
                 if (Object.keys(players).length === 0 && oldScore) {
                     players['Player'] = parseInt(oldScore, 10) || 0;
                     savePlayers(players);
                 }
-                localStorage.removeItem('squeakTheGeekHighScore');
+                try { localStorage.removeItem('squeakTheGeekHighScore'); } catch (e) {}
             })();
 
             let currentPlayerName = '';
@@ -449,7 +455,7 @@ permalink: /squeak-the-geek/
             function refreshPlayerUI() {
                 const players = loadPlayers();
                 const names = Object.keys(players).sort((a, b) => (players[b] || 0) - (players[a] || 0));
-                const lastPlayer = localStorage.getItem(LAST_PLAYER_KEY);
+                const lastPlayer = safeGetItem(LAST_PLAYER_KEY);
 
                 playerSelectEl.innerHTML = '';
                 for (const name of names) {
@@ -900,6 +906,7 @@ permalink: /squeak-the-geek/
 
             function bindDpad(id, dir) {
                 const el = document.getElementById(id);
+                if (!el) return;
                 const down = (e) => { e.preventDefault(); ensureAudio(); dpadDir = dir; el.classList.add('pressed'); };
                 const up = (e) => { if (dpadDir === dir) dpadDir = null; el.classList.remove('pressed'); };
                 el.addEventListener('pointerdown', down);
@@ -1097,7 +1104,7 @@ permalink: /squeak-the-geek/
                     return;
                 }
                 currentPlayerName = name;
-                localStorage.setItem(LAST_PLAYER_KEY, name);
+                safeSetItem(LAST_PLAYER_KEY, name);
                 const players = loadPlayers();
                 if (!(name in players)) { players[name] = 0; savePlayers(players); }
 

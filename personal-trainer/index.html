@@ -1333,7 +1333,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607180928';
+        const SW_VERSION = '2607181800';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -1370,7 +1370,9 @@ permalink: /personal-trainer/
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredInstallPrompt = e;
-            if (!localStorage.getItem('pt-install-dismissed')) {
+            let dismissed = false;
+            try { dismissed = !!localStorage.getItem('pt-install-dismissed'); } catch (e) {}
+            if (!dismissed) {
                 document.getElementById('install-banner').style.display = 'flex';
             }
         });
@@ -1382,7 +1384,7 @@ permalink: /personal-trainer/
             }
         });
         document.getElementById('install-dismiss').addEventListener('click', () => {
-            localStorage.setItem('pt-install-dismissed', '1');
+            try { localStorage.setItem('pt-install-dismissed', '1'); } catch (e) {}
             document.getElementById('install-banner').style.display = 'none';
         });
 

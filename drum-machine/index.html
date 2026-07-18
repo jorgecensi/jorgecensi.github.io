@@ -859,7 +859,8 @@ function saveState() {
 
 function migrateLegacyState() {
     // New format: dm_slots. Legacy: dm_state. Migrate if needed.
-    const slotsRaw = localStorage.getItem('dm_slots');
+    let slotsRaw = null;
+    try { slotsRaw = localStorage.getItem('dm_slots'); } catch(e) {}
     if (slotsRaw) {
         try {
             const parsed = JSON.parse(slotsRaw);
@@ -870,7 +871,8 @@ function migrateLegacyState() {
             }
         } catch(e) {}
     }
-    const legacyRaw = localStorage.getItem('dm_state');
+    let legacyRaw = null;
+    try { legacyRaw = localStorage.getItem('dm_state'); } catch(e) {}
     if (legacyRaw) {
         try {
             const legacy = JSON.parse(legacyRaw);
@@ -1055,7 +1057,11 @@ let audioCtx, masterGain, filterNode, distortionNode;
 
 function initAudio() {
     if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+        return;
+    }
     masterGain = audioCtx.createGain();
     masterGain.gain.value = 0.8;
 
@@ -2207,7 +2213,7 @@ document.getElementById('sync-beat-btn').addEventListener('click', () => {
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607171027';
+    const SW_VERSION = '2607181500';
     navigator.serviceWorker.register(
         `/drum-machine/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
         { scope: '/drum-machine/' }

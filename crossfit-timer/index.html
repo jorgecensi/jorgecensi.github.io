@@ -1546,10 +1546,8 @@ class CrossFitTimer {
             this.wakeLock = await navigator.wakeLock.request('screen');
 
             this.wakeLock.addEventListener('release', () => {
-                console.log('Wake Lock was released');                
                 this.wakeLock = null;
             });
-            console.log('Wake Lock is active');                        
         }
         catch(err) {
             console.error(err);
@@ -2327,7 +2325,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Service Worker Registration for PWA
-const SW_VERSION = '2607171032';
+const SW_VERSION = '2607181500';
 document.getElementById('crossfit-version').textContent = 'v' + SW_VERSION;
 if ('serviceWorker' in navigator) {
     let hasRefreshedForUpdate = false;

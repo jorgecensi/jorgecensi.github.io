@@ -692,7 +692,11 @@ class Synth {
 
   _init() {
     if (this.ctx) return;
-    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      return;
+    }
 
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.value = 0.65;
@@ -1402,7 +1406,7 @@ document.getElementById('install-btn').addEventListener('click', async () => {
 });
 
 if ('serviceWorker' in navigator) {
-  const SW_VERSION = '2607171032';
+  const SW_VERSION = '2607181500';
   let hasRefreshedForUpdate = false;
 
   function showUpdateBanner(registration) {

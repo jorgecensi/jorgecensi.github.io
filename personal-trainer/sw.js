@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607180928';
+const CACHE_VERSION = '2607181800';
 const CACHE_NAME = `personal-trainer-${CACHE_VERSION}`;
 const OFFLINE_URL = '/personal-trainer/';
 const PRECACHE_URLS = [
@@ -53,8 +53,10 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(event.request)
                 .then((networkResponse) => {
-                    const clone = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    if (networkResponse.ok) {
+                        const clone = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    }
                     return networkResponse;
                 })
                 .catch(() =>

@@ -1,9 +1,10 @@
-const CACHE_VERSION = '2607171032';
+const CACHE_VERSION = '2607181500';
 const CACHE_NAME = `worldcup-2026-${CACHE_VERSION}`;
 const OFFLINE_URL = '/worldcup-2026/';
 const PRECACHE_URLS = [
   '/worldcup-2026/',
   '/worldcup-2026/manifest.json',
+  '/worldcup-2026/scores.json',
   '/worldcup-2026/icons/icon-192.png',
   '/worldcup-2026/icons/icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
@@ -43,8 +44,8 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const isNav = event.request.mode === 'navigate';
   if (isNav) {
-    event.respondWith(fetch(event.request).then((r) => { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)); return r; }).catch(() => caches.match(event.request).then((c) => c || caches.match(OFFLINE_URL))));
+    event.respondWith(fetch(event.request).then((r) => { if (r.ok) { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)); } return r; }).catch(() => caches.match(event.request).then((c) => c || caches.match(OFFLINE_URL))));
     return;
   }
-  event.respondWith(caches.match(event.request).then((cached) => { const nf = fetch(event.request).then((r) => { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)); return r; }).catch(() => cached); return cached || nf; }));
+  event.respondWith(caches.match(event.request).then((cached) => { const nf = fetch(event.request).then((r) => { if (r.ok) { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)); } return r; }).catch(() => cached); return cached || nf; }));
 });

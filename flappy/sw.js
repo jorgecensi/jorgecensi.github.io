@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607181249';
+const CACHE_VERSION = '2607181800';
 const CACHE_NAME = `flappy-bird-${CACHE_VERSION}`;
 const OFFLINE_URL = '/flappy/';
 const PRECACHE_URLS = [
@@ -48,8 +48,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          if (networkResponse.ok) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
           return networkResponse;
         })
         .catch(() => caches.match(event.request).then((cached) => cached || caches.match(OFFLINE_URL)))
@@ -62,8 +64,10 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request).then((cachedResponse) => {
         const networkFetch = fetch(event.request)
           .then((networkResponse) => {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+            if (networkResponse.ok) {
+              const responseClone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+            }
             return networkResponse;
           })
           .catch(() => cachedResponse);
