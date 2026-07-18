@@ -1848,22 +1848,37 @@ function buildMarks() {
   g.innerHTML = html;
 }
 
-// Tire-barrier walls lining the outside of the corners, plus a pit sign.
+// A small group of tire barriers at each corner apex (not a continuous wall),
+// every barrier in the group sharing the same orientation. Plus a pit sign.
 function buildBarriers() {
   const g = document.getElementById('chase-dressing');
   if (!g) return;
   const L = chase.L;
   let html = '';
-  for (let d = 0; d < L; d += 20) {
-    const da = curveAt(d);
-    if (Math.abs(da) < 0.05) continue;
-    const sign = da > 0 ? -1 : 1;          // outside of the turn
-    const s = lutAt(d);
-    const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
-    const cx = s.x + nx * 40, cy = s.y + ny * 40;
-    const deg = (s.angle * 180 / Math.PI).toFixed(1);
-    html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><image href="racing/tire-barrier.png" x="-9" y="-11" width="18" height="22" preserveAspectRatio="xMidYMid meet"/></g>`;
+  // Find each corner as a run of high curvature, and keep its apex.
+  const corners = [];
+  let inCorner = false, apexD = 0, apexC = 0;
+  for (let d = 0; d < L; d += 8) {
+    const c = Math.abs(curveAt(d));
+    if (c > 0.06) {
+      if (!inCorner) { inCorner = true; apexD = d; apexC = c; }
+      else if (c > apexC) { apexC = c; apexD = d; }
+    } else if (inCorner) { corners.push(apexD); inCorner = false; }
   }
+  if (inCorner) corners.push(apexD);
+  // Cluster of 3 tire barriers at each apex, all the same orientation.
+  corners.forEach(d => {
+    const s = lutAt(d);
+    const da = curveAt(d);
+    const sign = da > 0 ? -1 : 1;                 // outside of the turn
+    const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
+    const tx = Math.cos(s.angle), ty = Math.sin(s.angle);
+    const deg = (s.angle * 180 / Math.PI).toFixed(1);
+    for (let k = -1; k <= 1; k++) {
+      const gx = s.x + nx * 40 + tx * k * 17, gy = s.y + ny * 40 + ty * k * 17;
+      html += `<g transform="translate(${gx.toFixed(1)} ${gy.toFixed(1)}) rotate(${deg})"><image href="racing/tire-barrier.png" x="-10" y="-12" width="20" height="24" preserveAspectRatio="xMidYMid meet"/></g>`;
+    }
+  });
   // Pit sign + a couple of cones just after the start/finish line.
   const ps = lutAt(CHASE.STARTLINE_PAD + 40);
   const pnx = -Math.sin(ps.angle), pny = Math.cos(ps.angle);
@@ -2041,7 +2056,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181445';
+    const SW_VERSION = '2607181449';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
