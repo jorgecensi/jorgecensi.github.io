@@ -444,7 +444,7 @@ permalink: /f1-championship/
     }
     #chase-svg {
       flex: 1; min-width: 0; height: 100%;
-      background: radial-gradient(ellipse at center, #14112a 0%, #0a0814 78%);
+      background: radial-gradient(ellipse at center, #163b23 0%, #0c2415 82%);
       border-radius: var(--rsm);
     }
     .track-under { fill: none; stroke: #2a2740; stroke-width: 64; stroke-linejoin: round; stroke-linecap: round; }
@@ -697,7 +697,6 @@ permalink: /f1-championship/
         <path id="chase-track-edge"  class="track-edge"/>
         <path id="chase-track-under" class="track-under"/>
         <path id="chase-track-line"  class="track-line"/>
-        <g id="chase-marks"></g>
         <g id="chase-scenery"></g>
         <g id="chase-dressing"></g>
         <g id="chase-stands"></g>
@@ -1835,25 +1834,6 @@ function curveAt(d) {
   return da;
 }
 
-// Rubber skid marks on the tarmac through the corners, plus a few oil spills.
-function buildMarks() {
-  const g = document.getElementById('chase-marks');
-  if (!g) return;
-  const L = chase.L;
-  let html = '';
-  for (let d = 0; d < L; d += 52) {
-    if (Math.abs(curveAt(d)) < 0.05) continue;
-    const s = lutAt(d);
-    const deg = (s.angle * 180 / Math.PI).toFixed(1);
-    html += `<g transform="translate(${s.x.toFixed(1)} ${s.y.toFixed(1)}) rotate(${deg})" opacity="0.4"><image href="racing/skid.png" x="-16" y="-9" width="32" height="18" preserveAspectRatio="xMidYMid meet"/></g>`;
-  }
-  [0.19, 0.52, 0.83].forEach(t => {
-    const s = lutAt(t * L);
-    html += `<image href="racing/oil.png" x="${(s.x - 15).toFixed(1)}" y="${(s.y - 8).toFixed(1)}" width="30" height="16" opacity="0.65" preserveAspectRatio="xMidYMid meet"/>`;
-  });
-  g.innerHTML = html;
-}
-
 // A small group of tire barriers at each corner apex (not a continuous wall),
 // every barrier in the group sharing the same orientation. Plus a pit sign.
 function buildBarriers() {
@@ -1877,7 +1857,7 @@ function buildBarriers() {
     const s = lutAt(d);
     const sign = curveAt(d) > 0 ? -1 : 1;         // outside of the turn
     const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
-    const bx = s.x + nx * 40, by = s.y + ny * 40;
+    const bx = s.x + nx * 52, by = s.y + ny * 52;
     for (let k = -1; k <= 1; k++) {
       html += `<image href="racing/tire-barrier.png" x="${(bx + k * 18 - 10).toFixed(1)}" y="${(by - 12).toFixed(1)}" width="20" height="24" preserveAspectRatio="xMidYMid meet"/>`;
     }
@@ -1915,7 +1895,6 @@ function openChase() {
 
   buildChaseCars();
   buildStartLine();
-  buildMarks();
   buildScenery();
   buildBarriers();
   buildStands();
@@ -1946,7 +1925,6 @@ function closeChase() {
   document.getElementById('chase-labels').innerHTML = '';
   document.getElementById('chase-stands').innerHTML = '';
   document.getElementById('chase-scenery').innerHTML = '';
-  document.getElementById('chase-marks').innerHTML = '';
   document.getElementById('chase-dressing').innerHTML = '';
   document.getElementById('chase-tower').innerHTML = '';
   document.getElementById('chase-lights').innerHTML = '';
@@ -2059,7 +2037,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181507';
+    const SW_VERSION = '2607181513';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
