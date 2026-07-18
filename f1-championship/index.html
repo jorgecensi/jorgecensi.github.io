@@ -697,6 +697,7 @@ permalink: /f1-championship/
         <path id="chase-track-edge"  class="track-edge"/>
         <path id="chase-track-under" class="track-under"/>
         <path id="chase-track-line"  class="track-line"/>
+        <g id="chase-scenery"></g>
         <g id="chase-stands"></g>
         <g id="chase-startline"></g>
         <g id="chase-cars"></g>
@@ -1372,6 +1373,7 @@ const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300
   'C 150 88 130 150 170 200 C 200 238 190 270 140 285 C 70 306 40 350 55 405 ' +
   'C 70 460 160 490 300 490 Z';
 
+const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca']);
 const CHASE = {
   ROUND_MS: 2600, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
   SIDE_LANE: 16, CLUSTER_GAP: 46, ROW_GAP: 46, LANE_SMOOTH: 0.08,
@@ -1770,17 +1772,50 @@ function buildStands() {
     const cx = s.x + nx * off, cy = s.y + ny * off;
     const deg = (s.angle * 180 / Math.PI).toFixed(1);
     const name = race.name.replace(/ Grand Prix$/, '');
-    const fx = (s.x + nx * (off - 1)).toFixed(1), fy = (s.y + ny * (off - 1)).toFixed(1);
-    const lx = (s.x + nx * (off + 16)).toFixed(1), ly = (s.y + ny * (off + 16)).toFixed(1);
     html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})">
         <rect class="stand-body" x="-30" y="-9" width="60" height="18" rx="2"/>
         <rect class="stand-roof" x="-30" y="-9" width="60" height="4" rx="2"/>
         <line class="stand-tier" x1="-26" y1="1" x2="26" y2="1"/>
         <line class="stand-tier" x1="-26" y1="5" x2="26" y2="5"/>
-      </g>
-      <text class="stand-flag" x="${fx}" y="${fy}">${race.flag}</text>
-      <text class="stand-label" x="${lx}" y="${ly}">${esc(name)}</text>`;
+      </g>`;
+    if (LANDMARK_CC.has(race.cc)) {
+      // National landmark sitting just beyond the grandstand.
+      const W = 50, H = 42;
+      const ex = s.x + nx * (off + 24), ey = s.y + ny * (off + 24);
+      const lx = (s.x + nx * (off + 52)).toFixed(1), ly = (s.y + ny * (off + 52)).toFixed(1);
+      html += `<image href="landmarks/${race.cc}.png" x="${(ex - W / 2).toFixed(1)}" y="${(ey - H / 2).toFixed(1)}" width="${W}" height="${H}" preserveAspectRatio="xMidYMid meet"/>
+        <text class="stand-label" x="${lx}" y="${ly}">${esc(name)}</text>`;
+    } else {
+      const fx = (s.x + nx * (off - 1)).toFixed(1), fy = (s.y + ny * (off - 1)).toFixed(1);
+      const lx = (s.x + nx * (off + 16)).toFixed(1), ly = (s.y + ny * (off + 16)).toFixed(1);
+      html += `<text class="stand-flag" x="${fx}" y="${fy}">${race.flag}</text>
+        <text class="stand-label" x="${lx}" y="${ly}">${esc(name)}</text>`;
+    }
   });
+  g.innerHTML = html;
+}
+
+// Scenery (trees, bushes, rocks) ringing the outside of the circuit.
+const SCENERY = [['tree', 34], ['pine', 26], ['tree', 30], ['bush', 24], ['rock', 26],
+                 ['pine', 24], ['flowers', 28], ['tree', 38], ['bush', 20], ['rock', 22]];
+function buildScenery() {
+  const g = document.getElementById('chase-scenery');
+  if (!g) return;
+  const L = chase.L;
+  let html = '', ti = 0;
+  for (let d = 24; d < L; d += 70) {
+    const s = lutAt(d);
+    let da = lutAt(d + 45).angle - lutAt(d - 45).angle;
+    while (da > Math.PI) da -= 2 * Math.PI;
+    while (da < -Math.PI) da += 2 * Math.PI;
+    const sign = da > 0.05 ? -1 : 1;
+    const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
+    const rnd = Math.abs(Math.sin(d * 12.9898)) % 1;
+    const offv = 94 + rnd * 46;
+    const [name, w] = SCENERY[ti++ % SCENERY.length];
+    const cx = s.x + nx * offv, cy = s.y + ny * offv;
+    html += `<image href="scenery/${name}.png" x="${(cx - w / 2).toFixed(1)}" y="${(cy - w / 2).toFixed(1)}" width="${w}" height="${w}" preserveAspectRatio="xMidYMid meet"/>`;
+  }
   g.innerHTML = html;
 }
 
@@ -1805,6 +1840,7 @@ function openChase() {
 
   buildChaseCars();
   buildStartLine();
+  buildScenery();
   buildStands();
   const scrub = document.getElementById('chase-scrub');
   scrub.max = chase.frames.length - 1;
@@ -1832,6 +1868,7 @@ function closeChase() {
   document.getElementById('chase-cars').innerHTML = '';
   document.getElementById('chase-labels').innerHTML = '';
   document.getElementById('chase-stands').innerHTML = '';
+  document.getElementById('chase-scenery').innerHTML = '';
   document.getElementById('chase-tower').innerHTML = '';
   document.getElementById('chase-lights').innerHTML = '';
   document.getElementById('chase-overlay').classList.add('hidden');
@@ -1943,7 +1980,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181422';
+    const SW_VERSION = '2607181431';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
