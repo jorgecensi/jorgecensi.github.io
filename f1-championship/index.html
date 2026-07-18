@@ -1377,8 +1377,6 @@ const chase = {
 };
 
 function lerp(a, b, t) { return a + (b - a) * t; }
-function easeInOutCubic(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2; }
-function easeOutBack(t) { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2); }
 
 function buildChaseLUT() {
   chase.lut = [];
@@ -1418,7 +1416,7 @@ function distOf(pts, roundNum) {
 // Cars launch from a staggered starting grid; the offset blends out over round 1.
 function staggerFactor(seg, u) {
   if (seg <= 0) return 1;
-  if (seg === 1) return 1 - easeInOutCubic(u);
+  if (seg === 1) return 1 - u;
   return 0;
 }
 
@@ -1489,11 +1487,11 @@ function renderChaseFrame(seg, u, snap) {
   chase.cars.forEach((car, i) => {
     const fPrev = chase.frames[Math.max(seg - 1, 0)];
     const fNext = chase.frames[seg];
-    const overtaking = seg > 0 && fNext.pos[car.pid] < fPrev.pos[car.pid];
-    const e = overtaking ? easeOutBack(u) : easeInOutCubic(u);
     const dPrev = distOf(fPrev.points[car.pid], fPrev.round);
     const dNext = distOf(fNext.points[car.pid], fNext.round);
-    const d = lerp(dPrev, dNext, e) - i * CHASE.GRID_GAP * stag;
+    // Linear interpolation keeps the cars moving at a steady speed between races
+    // rather than easing to a stop at every race result.
+    const d = lerp(dPrev, dNext, u) - i * CHASE.GRID_GAP * stag;
     const lat = laneOffsetOf(i, n, car.pid, seg, u);
     placeCar(car, d, lat);
     const pts = Math.round(lerp(fPrev.points[car.pid], fNext.points[car.pid], u));
@@ -1879,7 +1877,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181007';
+    const SW_VERSION = '2607181241';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
