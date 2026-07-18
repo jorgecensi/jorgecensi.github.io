@@ -1759,7 +1759,6 @@ function buildStands() {
   const g = document.getElementById('chase-stands');
   if (!g) return;
   const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
-  const off = CHASE.STAND_OFFSET;
   let html = '';
   CALENDAR.forEach(race => {
     const d = CHASE.STARTLINE_PAD + (race.round / chase.lastRound) * usable;
@@ -1771,6 +1770,13 @@ function buildStands() {
     while (da < -Math.PI) da += 2 * Math.PI;
     const sideSign = da > 0.05 ? -1 : 1;   // left turn -> flip to the right side
     const nx = -Math.sin(s.angle) * sideSign, ny = Math.cos(s.angle) * sideSign;
+    const tx = Math.cos(s.angle), ty = Math.sin(s.angle);
+    // Push the stand out until it (and its ends) clear the track everywhere.
+    let off = CHASE.STAND_OFFSET;
+    const clashes = o => onTrack(s.x + nx * o, s.y + ny * o, 12) ||
+      onTrack(s.x + nx * o + tx * 28, s.y + ny * o + ty * 28, 8) ||
+      onTrack(s.x + nx * o - tx * 28, s.y + ny * o - ty * 28, 8);
+    while (off < 104 && clashes(off)) off += 8;
     const cx = s.x + nx * off, cy = s.y + ny * off;
     const deg = (s.angle * 180 / Math.PI).toFixed(1);
     const name = race.name.replace(/ Grand Prix$/, '');
@@ -1806,22 +1812,25 @@ function buildScenery() {
   const L = chase.L;
   const rnd = n => Math.abs(Math.sin(n * 12.9898) * 43758.5453) % 1;
   let html = '', ti = 0;
-  const place = (s, nx, ny, offv, along, name, w) => {
-    const tx = Math.cos(s.angle), ty = Math.sin(s.angle);
-    const cx = s.x + nx * offv + tx * along, cy = s.y + ny * offv + ty * along;
-    return `<image href="scenery/${name}.png" x="${(cx - w / 2).toFixed(1)}" y="${(cy - w / 2).toFixed(1)}" width="${w}" height="${w}" preserveAspectRatio="xMidYMid meet"/>`;
-  };
   for (let d = 18; d < L; d += 40) {
     const s = lutAt(d);
     const sign = curveAt(d) > 0.03 ? -1 : 1;
     const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
+    const tx = Math.cos(s.angle), ty = Math.sin(s.angle);
     // Two to three staggered rows of greenery filling the outfield.
     const rows = 2 + (rnd(d) > 0.55 ? 1 : 0);
     for (let r = 0; r < rows; r++) {
       const [name, w] = SCENERY[ti++ % SCENERY.length];
-      const offv = 86 + r * 34 + rnd(d + r * 3.1) * 22;
       const along = (rnd(d + r * 7.7) - 0.5) * 34;
-      html += place(s, nx, ny, offv, along, name, w);
+      // Find a spot clear of the racing surface, pushing outward if needed.
+      let offv = 86 + r * 34 + rnd(d + r * 3.1) * 22, cx, cy, ok = false;
+      for (let t = 0; t < 4; t++) {
+        cx = s.x + nx * offv + tx * along; cy = s.y + ny * offv + ty * along;
+        if (!onTrack(cx, cy, w / 2 - 2)) { ok = true; break; }
+        offv += 24;
+      }
+      if (!ok) continue;
+      html += `<image href="scenery/${name}.png" x="${(cx - w / 2).toFixed(1)}" y="${(cy - w / 2).toFixed(1)}" width="${w}" height="${w}" preserveAspectRatio="xMidYMid meet"/>`;
     }
   }
   g.innerHTML = html;
@@ -1832,6 +1841,20 @@ function curveAt(d) {
   while (da > Math.PI) da -= 2 * Math.PI;
   while (da < -Math.PI) da += 2 * Math.PI;
   return da;
+}
+
+// True if (x,y) lands within `clearance` of the asphalt anywhere on the lap —
+// used to keep scenery and barriers off the track, including where it loops
+// back near itself (e.g. the two halves of an S-curve).
+const TRACK_HALF = 36;
+function onTrack(x, y, clearance) {
+  const lim = TRACK_HALF + clearance, lim2 = lim * lim;
+  const lut = chase.lut;
+  for (let i = 0; i < lut.length; i += 2) {
+    const dx = x - lut[i].x, dy = y - lut[i].y;
+    if (dx * dx + dy * dy < lim2) return true;
+  }
+  return false;
 }
 
 // A small group of tire barriers at each corner apex (not a continuous wall),
@@ -1852,14 +1875,19 @@ function buildBarriers() {
     } else if (inCorner) { corners.push(apexD); inCorner = false; }
   }
   if (inCorner) corners.push(apexD);
-  // Cluster of 3 tire barriers at each apex, all kept upright (unrotated).
+  // Cluster of 3 tire barriers at each apex, all kept upright (unrotated),
+  // pushed just far enough out to clear the track (and any looping section).
   corners.forEach(d => {
     const s = lutAt(d);
     const sign = curveAt(d) > 0 ? -1 : 1;         // outside of the turn
     const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
-    const bx = s.x + nx * 52, by = s.y + ny * 52;
+    let off = 50;
+    while (off < 110 && onTrack(s.x + nx * off, s.y + ny * off, 13)) off += 8;
+    const bx = s.x + nx * off, by = s.y + ny * off;
     for (let k = -1; k <= 1; k++) {
-      html += `<image href="racing/tire-barrier.png" x="${(bx + k * 18 - 10).toFixed(1)}" y="${(by - 12).toFixed(1)}" width="20" height="24" preserveAspectRatio="xMidYMid meet"/>`;
+      const gx = bx + k * 18;
+      if (onTrack(gx, by, 11)) continue;
+      html += `<image href="racing/tire-barrier.png" x="${(gx - 10).toFixed(1)}" y="${(by - 12).toFixed(1)}" width="20" height="24" preserveAspectRatio="xMidYMid meet"/>`;
     }
   });
   // Pit sign + a couple of cones just after the start/finish line.
@@ -2037,7 +2065,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181513';
+    const SW_VERSION = '2607182239';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
