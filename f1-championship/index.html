@@ -447,8 +447,8 @@ permalink: /f1-championship/
       background: radial-gradient(ellipse at center, #14112a 0%, #0a0814 78%);
       border-radius: var(--rsm);
     }
-    .track-under { fill: none; stroke: #2a2740; stroke-width: 56; stroke-linejoin: round; stroke-linecap: round; }
-    .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 62; stroke-linejoin: round; stroke-linecap: round; }
+    .track-under { fill: none; stroke: #2a2740; stroke-width: 64; stroke-linejoin: round; stroke-linecap: round; }
+    .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 72; stroke-linejoin: round; stroke-linecap: round; }
     .track-line  { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 2.5; stroke-dasharray: 10 14; }
     .chase-label {
       font: 700 11px 'Inter', system-ui, sans-serif;
@@ -1364,7 +1364,7 @@ const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300
 
 const CHASE = {
   ROUND_MS: 2600, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
-  LANE_W: 10, SWERVE_AMPL: 11, GRID_GAP: 26,
+  SIDE_LANE: 16, CLUSTER_GAP: 46, ROW_GAP: 46, LANE_SMOOTH: 0.25,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
   LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8,
   CAM_MIN_W: 300, CAM_PAD: 62, CAM_LERP: 0.16, LABEL_DY: 20
@@ -1372,7 +1372,7 @@ const CHASE = {
 
 const chase = {
   frames: [], seg: 0, u: 0, playing: false, raf: null, lastTs: 0,
-  path: null, L: 0, lut: [], maxPts: 1, lastRound: 1, cars: [], timeouts: [], finished: false,
+  path: null, L: 0, lut: [], lastRound: 1, cars: [], timeouts: [], finished: false,
   cam: null
 };
 
@@ -1404,36 +1404,20 @@ function lutAt(d) {
   return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), angle: a.angle + da * t };
 }
 
-// Cumulative points -> distance along the track. The track spans the whole
-// season: progress is scaled by how far through the calendar this round is, so
+// Where the current points leader sits: their progress tracks the calendar, so
 // the leader only reaches the finish line once the final race is entered.
-function distOf(pts, roundNum) {
+function leaderDistAt(roundNum) {
   const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
-  const seasonFrac = chase.lastRound ? Math.min(roundNum / chase.lastRound, 1) : 1;
-  return CHASE.STARTLINE_PAD + (pts / chase.maxPts) * usable * seasonFrac;
+  const frac = chase.lastRound ? Math.min(roundNum / chase.lastRound, 1) : 1;
+  return CHASE.STARTLINE_PAD + frac * usable;
 }
 
-// Cars launch from a staggered starting grid; the offset blends out over round 1.
-function staggerFactor(seg, u) {
-  if (seg <= 0) return 1;
-  if (seg === 1) return 1 - u;
-  return 0;
-}
-
-function laneOffsetOf(idx, n, pid, seg, u) {
-  let lane = (idx - (n - 1) / 2) * CHASE.LANE_W;
-  if (seg > 0) {
-    const prev = chase.frames[seg - 1].pos[pid];
-    const now = chase.frames[seg].pos[pid];
-    if (now < prev) {
-      const dir = lane <= 0 ? 1 : -1;
-      lane += Math.sin(u * Math.PI) * CHASE.SWERVE_AMPL * dir;
-    } else if (now > prev) {
-      const dir = lane <= 0 ? -1 : 1;
-      lane += Math.sin(u * Math.PI) * CHASE.SWERVE_AMPL * 0.4 * dir;
-    }
-  }
-  return lane;
+// Track distance per championship point. Scaled by the maximum points possible
+// over the whole season (25 * rounds) so a car can never be pushed behind the
+// start line, and the gap between two cars is exactly their points difference.
+function distPerPoint() {
+  const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
+  return usable / (25 * (chase.lastRound || 1));
 }
 
 function placeCar(car, d, lateral) {
@@ -1482,20 +1466,52 @@ function updateCamera(snap) {
 }
 
 function renderChaseFrame(seg, u, snap) {
-  const n = chase.cars.length;
-  const stag = staggerFactor(seg, u);
-  chase.cars.forEach((car, i) => {
-    const fPrev = chase.frames[Math.max(seg - 1, 0)];
-    const fNext = chase.frames[seg];
-    const dPrev = distOf(fPrev.points[car.pid], fPrev.round);
-    const dNext = distOf(fNext.points[car.pid], fNext.round);
-    // Linear interpolation keeps the cars moving at a steady speed between races
-    // rather than easing to a stop at every race result.
-    const d = lerp(dPrev, dNext, u) - i * CHASE.GRID_GAP * stag;
-    const lat = laneOffsetOf(i, n, car.pid, seg, u);
-    placeCar(car, d, lat);
-    const pts = Math.round(lerp(fPrev.points[car.pid], fNext.points[car.pid], u));
-    car.ptsEl.textContent = pts;
+  const fPrev = chase.frames[Math.max(seg - 1, 0)];
+  const fNext = chase.frames[seg];
+  // Place the leader by season progress, then set every other car behind by its
+  // points gap to the leader: the distance between cars is their points
+  // difference, and cars level on points share the same distance.
+  const roundNow = lerp(fPrev.round, fNext.round, u);
+  const front = leaderDistAt(roundNow);
+  const perPt = distPerPoint();
+  const items = chase.cars.map(car => ({
+    car,
+    pts: lerp(fPrev.points[car.pid], fNext.points[car.pid], u),
+    pos: fNext.pos[car.pid]
+  }));
+  const leaderPts = Math.max(...items.map(it => it.pts));
+  items.forEach(it => { it.d = front - (leaderPts - it.pts) * perPt; });
+  items.sort((a, b) => b.d - a.d || a.pos - b.pos);
+  // Group cars that are close in points. A lone car runs single-file on the
+  // racing line; cars with (near-)equal points sit beside each other, and a
+  // bigger group (e.g. the all-square starting grid) staggers two-by-two.
+  const clusters = [];
+  items.forEach(it => {
+    const c = clusters[clusters.length - 1];
+    if (!c || c[c.length - 1].d - it.d > CHASE.CLUSTER_GAP) clusters.push([it]);
+    else c.push(it);
+  });
+  clusters.forEach(cl => {
+    const m = cl.length, frontD = cl[0].d;
+    cl.forEach((it, k) => {
+      let lane = 0, extra = 0;
+      if (m === 2) {
+        lane = k === 0 ? -CHASE.SIDE_LANE : CHASE.SIDE_LANE;
+      } else if (m >= 3) {
+        const col = k % 2, row = (k - col) / 2;
+        lane = col === 0 ? -CHASE.SIDE_LANE : CHASE.SIDE_LANE;
+        extra = (frontD - row * CHASE.ROW_GAP) - it.d;
+      }
+      // Smooth the lateral offset and any cluster stagger so cars glide as
+      // clusters form and break up rather than snapping.
+      if (snap) { it.car._lane = lane; it.car._extra = extra; }
+      else {
+        it.car._lane += (lane - it.car._lane) * CHASE.LANE_SMOOTH;
+        it.car._extra += (extra - it.car._extra) * CHASE.LANE_SMOOTH;
+      }
+      placeCar(it.car, it.d + it.car._extra, it.car._lane);
+      it.car.ptsEl.textContent = Math.round(it.pts);
+    });
   });
   updateCamera(snap);
 }
@@ -1694,6 +1710,7 @@ function buildChaseCars() {
 
     chase.cars.push({
       pid: p.id, el: img, label, row,
+      _lane: 0, _extra: 0,   // smoothed lateral offset + cluster stagger
       posEl: row.querySelector('.tw-pos'),
       ptsEl: row.querySelector('.tw-pts')
     });
@@ -1735,8 +1752,6 @@ function openChase() {
   chase.path = document.getElementById('chase-track-under');
   chase.L = chase.path.getTotalLength();
   buildChaseLUT();
-  const last = chase.frames[chase.frames.length - 1].points;
-  chase.maxPts = Math.max(1, ...Object.values(last));
   chase.lastRound = CALENDAR[CALENDAR.length - 1].round;
 
   buildChaseCars();
@@ -1877,7 +1892,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181312';
+    const SW_VERSION = '2607181352';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
