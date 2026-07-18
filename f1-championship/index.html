@@ -447,8 +447,8 @@ permalink: /f1-championship/
       background: radial-gradient(ellipse at center, #14112a 0%, #0a0814 78%);
       border-radius: var(--rsm);
     }
-    .track-under { fill: none; stroke: #2a2740; stroke-width: 46; stroke-linejoin: round; stroke-linecap: round; }
-    .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 50; stroke-linejoin: round; stroke-linecap: round; }
+    .track-under { fill: none; stroke: #2a2740; stroke-width: 56; stroke-linejoin: round; stroke-linecap: round; }
+    .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 62; stroke-linejoin: round; stroke-linecap: round; }
     .track-line  { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 2.5; stroke-dasharray: 10 14; }
     .chase-label {
       font: 700 11px 'Inter', system-ui, sans-serif;
@@ -1363,16 +1363,16 @@ const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300
   'C 70 460 160 490 300 490 Z';
 
 const CHASE = {
-  ROUND_MS: 1400, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
-  LANE_W: 8, SWERVE_AMPL: 10, GRID_GAP: 24,
+  ROUND_MS: 2600, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
+  LANE_W: 10, SWERVE_AMPL: 11, GRID_GAP: 26,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
-  LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 24,
+  LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8,
   CAM_MIN_W: 300, CAM_PAD: 62, CAM_LERP: 0.16, LABEL_DY: 20
 };
 
 const chase = {
   frames: [], seg: 0, u: 0, playing: false, raf: null, lastTs: 0,
-  path: null, L: 0, lut: [], maxPts: 1, cars: [], timeouts: [], finished: false,
+  path: null, L: 0, lut: [], maxPts: 1, lastRound: 1, cars: [], timeouts: [], finished: false,
   cam: null
 };
 
@@ -1406,11 +1406,13 @@ function lutAt(d) {
   return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), angle: a.angle + da * t };
 }
 
-// Cumulative points -> distance along the track. Leader's final total maps to
-// ~95% of a lap.
-function distOf(pts) {
+// Cumulative points -> distance along the track. The track spans the whole
+// season: progress is scaled by how far through the calendar this round is, so
+// the leader only reaches the finish line once the final race is entered.
+function distOf(pts, roundNum) {
   const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
-  return CHASE.STARTLINE_PAD + (pts / chase.maxPts) * usable;
+  const seasonFrac = chase.lastRound ? Math.min(roundNum / chase.lastRound, 1) : 1;
+  return CHASE.STARTLINE_PAD + (pts / chase.maxPts) * usable * seasonFrac;
 }
 
 // Cars launch from a staggered starting grid; the offset blends out over round 1.
@@ -1489,8 +1491,8 @@ function renderChaseFrame(seg, u, snap) {
     const fNext = chase.frames[seg];
     const overtaking = seg > 0 && fNext.pos[car.pid] < fPrev.pos[car.pid];
     const e = overtaking ? easeOutBack(u) : easeInOutCubic(u);
-    const dPrev = distOf(fPrev.points[car.pid]);
-    const dNext = distOf(fNext.points[car.pid]);
+    const dPrev = distOf(fPrev.points[car.pid], fPrev.round);
+    const dNext = distOf(fNext.points[car.pid], fNext.round);
     const d = lerp(dPrev, dNext, e) - i * CHASE.GRID_GAP * stag;
     const lat = laneOffsetOf(i, n, car.pid, seg, u);
     placeCar(car, d, lat);
@@ -1605,10 +1607,12 @@ function finishChase() {
   const f = chase.frames[chase.frames.length - 1];
   const winnerId = Object.keys(f.pos).find(id => f.pos[id] === 1);
   const p = players.find(x => x.id === winnerId);
+  const seasonDone = f.round >= chase.lastRound;
+  const title = seasonDone ? 'Champion' : 'Leader';
   const el = document.getElementById('chase-winner');
-  el.innerHTML = `<div class="cw-trophy">🏆</div>
-    <div class="cw-name">${p ? esc(p.name) : 'Champion'}</div>
-    <div class="cw-sub">${f.points[winnerId] || 0} pts · Champion</div>`;
+  el.innerHTML = `<div class="cw-trophy">${seasonDone ? '🏆' : '🏁'}</div>
+    <div class="cw-name">${p ? esc(p.name) : title}</div>
+    <div class="cw-sub">${f.points[winnerId] || 0} pts · ${title}</div>`;
   el.classList.remove('hidden');
   document.getElementById('btn-chase-play').textContent = '↺';
 }
@@ -1703,7 +1707,7 @@ function buildStartLine() {
   g.innerHTML = '';
   const s = lutAt(2);
   const deg = s.angle * 180 / Math.PI;
-  const cols = 2, rows = 8, sq = 5;
+  const cols = 2, rows = 11, sq = 5;
   let inner = '';
   for (let c = 0; c < cols; c++) {
     for (let r = 0; r < rows; r++) {
@@ -1735,6 +1739,7 @@ function openChase() {
   buildChaseLUT();
   const last = chase.frames[chase.frames.length - 1].points;
   chase.maxPts = Math.max(1, ...Object.values(last));
+  chase.lastRound = CALENDAR[CALENDAR.length - 1].round;
 
   buildChaseCars();
   buildStartLine();
@@ -1874,7 +1879,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607180929';
+    const SW_VERSION = '2607181002';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
