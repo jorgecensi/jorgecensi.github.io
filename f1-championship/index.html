@@ -455,6 +455,15 @@ permalink: /f1-championship/
       text-anchor: middle; paint-order: stroke;
       stroke: #0a0814; stroke-width: 3.5px; stroke-linejoin: round;
     }
+    .stand-body { fill: #17152b; stroke: #322e4e; stroke-width: 1.5; }
+    .stand-roof { fill: #4b4788; }
+    .stand-tier { stroke: #322e4e; stroke-width: 1.1; }
+    .stand-label {
+      font: 600 10px 'Inter', system-ui, sans-serif;
+      fill: #c4c0e4; text-anchor: middle; dominant-baseline: middle;
+      paint-order: stroke; stroke: #0a0814; stroke-width: 3px; stroke-linejoin: round;
+    }
+    .stand-flag { font-size: 11px; text-anchor: middle; dominant-baseline: middle; }
 
     #chase-tower {
       position: relative; width: 152px; flex-shrink: 0;
@@ -688,6 +697,7 @@ permalink: /f1-championship/
         <path id="chase-track-edge"  class="track-edge"/>
         <path id="chase-track-under" class="track-under"/>
         <path id="chase-track-line"  class="track-line"/>
+        <g id="chase-stands"></g>
         <g id="chase-startline"></g>
         <g id="chase-cars"></g>
         <g id="chase-labels"></g>
@@ -1364,9 +1374,9 @@ const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300
 
 const CHASE = {
   ROUND_MS: 2600, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
-  SIDE_LANE: 16, CLUSTER_GAP: 46, ROW_GAP: 46, LANE_SMOOTH: 0.25,
+  SIDE_LANE: 16, CLUSTER_GAP: 46, ROW_GAP: 46, LANE_SMOOTH: 0.08,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
-  LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8,
+  LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
   CAM_MIN_W: 300, CAM_PAD: 62, CAM_LERP: 0.16, LABEL_DY: 20
 };
 
@@ -1496,7 +1506,10 @@ function renderChaseFrame(seg, u, snap) {
     cl.forEach((it, k) => {
       let lane = 0, extra = 0;
       if (m === 2) {
-        lane = k === 0 ? -CHASE.SIDE_LANE : CHASE.SIDE_LANE;
+        // Side is fixed by car identity, not race order, so two cars fighting
+        // never swap sides mid-pass — they hold their line and merge back.
+        const other = cl[1 - k].car;
+        lane = it.car.idx < other.idx ? -CHASE.SIDE_LANE : CHASE.SIDE_LANE;
       } else if (m >= 3) {
         const col = k % 2, row = (k - col) / 2;
         lane = col === 0 ? -CHASE.SIDE_LANE : CHASE.SIDE_LANE;
@@ -1709,7 +1722,7 @@ function buildChaseCars() {
     tower.appendChild(row);
 
     chase.cars.push({
-      pid: p.id, el: img, label, row,
+      pid: p.id, el: img, label, row, idx: i,
       _lane: 0, _extra: 0,   // smoothed lateral offset + cluster stagger
       posEl: row.querySelector('.tw-pos'),
       ptsEl: row.querySelector('.tw-pts')
@@ -1735,6 +1748,36 @@ function buildStartLine() {
   g.innerHTML = inner;
 }
 
+// Trackside grandstands, one per race, placed at the point of the lap that
+// matches how far through the season that race is — so each stand carries the
+// flag and name of that race day, and the pack passes them in calendar order.
+function buildStands() {
+  const g = document.getElementById('chase-stands');
+  if (!g) return;
+  const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
+  const off = CHASE.STAND_OFFSET;
+  let html = '';
+  CALENDAR.forEach(race => {
+    const d = CHASE.STARTLINE_PAD + (race.round / chase.lastRound) * usable;
+    const s = lutAt(d);
+    const nx = -Math.sin(s.angle), ny = Math.cos(s.angle);
+    const cx = s.x + nx * off, cy = s.y + ny * off;
+    const deg = (s.angle * 180 / Math.PI).toFixed(1);
+    const name = race.name.replace(/ Grand Prix$/, '');
+    const fx = (s.x + nx * (off - 1)).toFixed(1), fy = (s.y + ny * (off - 1)).toFixed(1);
+    const lx = (s.x + nx * (off + 16)).toFixed(1), ly = (s.y + ny * (off + 16)).toFixed(1);
+    html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})">
+        <rect class="stand-body" x="-30" y="-9" width="60" height="18" rx="2"/>
+        <rect class="stand-roof" x="-30" y="-9" width="60" height="4" rx="2"/>
+        <line class="stand-tier" x1="-26" y1="1" x2="26" y2="1"/>
+        <line class="stand-tier" x1="-26" y1="5" x2="26" y2="5"/>
+      </g>
+      <text class="stand-flag" x="${fx}" y="${fy}">${race.flag}</text>
+      <text class="stand-label" x="${lx}" y="${ly}">${esc(name)}</text>`;
+  });
+  g.innerHTML = html;
+}
+
 function openChase() {
   chase.frames = buildChampionshipFrames();
   if (chase.frames.length < 2) return;
@@ -1756,6 +1799,7 @@ function openChase() {
 
   buildChaseCars();
   buildStartLine();
+  buildStands();
   const scrub = document.getElementById('chase-scrub');
   scrub.max = chase.frames.length - 1;
 
@@ -1781,6 +1825,7 @@ function closeChase() {
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   document.getElementById('chase-cars').innerHTML = '';
   document.getElementById('chase-labels').innerHTML = '';
+  document.getElementById('chase-stands').innerHTML = '';
   document.getElementById('chase-tower').innerHTML = '';
   document.getElementById('chase-lights').innerHTML = '';
   document.getElementById('chase-overlay').classList.add('hidden');
@@ -1892,7 +1937,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181355';
+    const SW_VERSION = '2607181410';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
