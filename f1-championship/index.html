@@ -447,8 +447,8 @@ permalink: /f1-championship/
       background: radial-gradient(ellipse at center, #14112a 0%, #0a0814 78%);
       border-radius: var(--rsm);
     }
-    .track-under { fill: none; stroke: #2a2740; stroke-width: 56; stroke-linejoin: round; stroke-linecap: round; }
-    .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 62; stroke-linejoin: round; stroke-linecap: round; }
+    .track-under { fill: none; stroke: #2a2740; stroke-width: 64; stroke-linejoin: round; stroke-linecap: round; }
+    .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 72; stroke-linejoin: round; stroke-linecap: round; }
     .track-line  { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 2.5; stroke-dasharray: 10 14; }
     .chase-label {
       font: 700 11px 'Inter', system-ui, sans-serif;
@@ -1364,7 +1364,7 @@ const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300
 
 const CHASE = {
   ROUND_MS: 2600, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
-  LANE_W: 11, MIN_GAP: 30,
+  LANE_W: 13, OVERTAKE_LANE: 20, MIN_GAP: 48,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
   LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8,
   CAM_MIN_W: 300, CAM_PAD: 62, CAM_LERP: 0.16, LABEL_DY: 20
@@ -1461,29 +1461,34 @@ function updateCamera(snap) {
 function renderChaseFrame(seg, u, snap) {
   const fPrev = chase.frames[Math.max(seg - 1, 0)];
   const fNext = chase.frames[seg];
-  // Points-based target distance for each car (linear interpolation keeps a
-  // steady speed rather than easing to a stop at every race result).
-  const items = chase.cars.map(car => {
-    const dPrev = distOf(fPrev.points[car.pid], fPrev.round);
-    const dNext = distOf(fNext.points[car.pid], fNext.round);
-    return {
-      car,
-      d: lerp(dPrev, dNext, u),
-      pts: Math.round(lerp(fPrev.points[car.pid], fNext.points[car.pid], u)),
-      pos: fNext.pos[car.pid]
-    };
+  // Front of the pack advances with points/season progress (linear = steady
+  // speed) so the leader reaches the finish line only at the final race.
+  let front = -Infinity;
+  chase.cars.forEach(car => {
+    const d = lerp(distOf(fPrev.points[car.pid], fPrev.round),
+                   distOf(fNext.points[car.pid], fNext.round), u);
+    if (d > front) front = d;
   });
-  // Order leader -> back, then lay them out like an F1 starting grid: enforce a
-  // minimum gap so cars never overlap and alternate them left/right of the
-  // racing line, giving the staggered two-by-two formation.
-  items.sort((a, b) => b.d - a.d || a.pos - b.pos);
-  let lastD = Infinity;
-  items.forEach((it, k) => {
-    if (it.d > lastD - CHASE.MIN_GAP) it.d = lastD - CHASE.MIN_GAP;
-    lastD = it.d;
-    const lane = (k % 2 === 0 ? -1 : 1) * CHASE.LANE_W;
-    placeCar(it.car, it.d, lane);
-    it.car.ptsEl.textContent = it.pts;
+  // Grid weight: 1 on the starting grid, blending to 0 across the first race
+  // (turn one). On the grid the field is a staggered two-by-two; once racing it
+  // settles into a single file, using a second lane only to overtake.
+  const gridW = seg <= 0 ? 1 : seg === 1 ? 1 - u : 0;
+  chase.cars.forEach(car => {
+    const prevRank = fPrev.pos[car.pid];
+    const nextRank = fNext.pos[car.pid];
+    const rank = lerp(prevRank, nextRank, u);
+    const d = front - (rank - 1) * CHASE.MIN_GAP;
+    // Single-file racing line; a car gaining places pulls out to pass, then
+    // tucks back in.
+    let laneRace = 0;
+    if (seg > 0 && nextRank < prevRank) {
+      laneRace = car.side * CHASE.OVERTAKE_LANE * Math.sin(u * Math.PI);
+    }
+    // Staggered starting grid: alternate cars left/right of the line.
+    const laneGrid = ((Math.round(prevRank) - 1) % 2 === 0 ? -1 : 1) * CHASE.LANE_W;
+    const lane = laneRace * (1 - gridW) + laneGrid * gridW;
+    placeCar(car, d, lane);
+    car.ptsEl.textContent = Math.round(lerp(fPrev.points[car.pid], fNext.points[car.pid], u));
   });
   updateCamera(snap);
 }
@@ -1682,6 +1687,7 @@ function buildChaseCars() {
 
     chase.cars.push({
       pid: p.id, el: img, label, row,
+      side: i % 2 === 0 ? 1 : -1,   // which way this car pulls out to overtake
       posEl: row.querySelector('.tw-pos'),
       ptsEl: row.querySelector('.tw-pts')
     });
@@ -1865,7 +1871,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181325';
+    const SW_VERSION = '2607181336';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
