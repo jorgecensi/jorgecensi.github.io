@@ -695,9 +695,36 @@ permalink: /personal-trainer/
             font-size: 0.95rem;
         }
 
-        .lib-head .has-link {
+        .lib-head .lib-play {
             margin-left: auto;
-            font-size: 0.85rem;
+        }
+
+        .lib-head .lib-play.hidden {
+            display: none;
+        }
+
+        .lib-video {
+            display: none;
+            width: 100%;
+            position: relative;
+            aspect-ratio: 16 / 9;
+            margin-top: 10px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid var(--border);
+        }
+
+        .lib-item.playing .lib-video {
+            display: block;
+        }
+
+        .lib-video iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
         }
 
         .lib-body {
@@ -1211,7 +1238,7 @@ permalink: /personal-trainer/
                 <h1>Exercise <span>Library</span></h1>
                 <span></span>
             </header>
-            <p class="muted-note" style="margin-bottom:12px;">Tap an exercise to read the cues and paste a YouTube link as a form guide. Links show up as “Watch guide” during workouts.</p>
+            <p class="muted-note" style="margin-bottom:12px;">Tap ▶ to watch the form guide right here, or tap an exercise to read the cues and paste your own YouTube link.</p>
             <div class="lib-actions">
                 <button class="btn secondary" id="btn-export">Export links</button>
                 <button class="btn secondary" id="btn-import">Import links</button>
@@ -1815,6 +1842,7 @@ permalink: /personal-trainer/
         // Return straight to the root screen, unwinding whatever was pushed.
         function goHome() {
             clearPreviewVideos();
+            clearLibraryVideos();
             renderHome();
             show(rootScreenId());
             if (navDepth > 0) {
@@ -1852,6 +1880,7 @@ permalink: /personal-trainer/
             navDepth = Math.max(0, navDepth - 1);
             const target = (e.state && e.state.screen) || rootScreenId();
             clearPreviewVideos();
+            clearLibraryVideos();
             if (target === 'home' || target === 'setup') renderHome();
             show(target);
         });
@@ -1936,7 +1965,7 @@ permalink: /personal-trainer/
         document.getElementById('nav-achievements').addEventListener('click', () => { renderAchievements(); navigate('achievements'); });
         document.getElementById('nav-records').addEventListener('click', () => { renderRecords(); navigate('records'); });
         document.querySelectorAll('[data-back]').forEach((b) =>
-            b.addEventListener('click', () => { clearPreviewVideos(); goBack(); }));
+            b.addEventListener('click', () => { clearPreviewVideos(); clearLibraryVideos(); goBack(); }));
 
         document.getElementById('btn-generate').addEventListener('click', () => {
             currentWorkout = generateWorkout();
@@ -2374,6 +2403,27 @@ permalink: /personal-trainer/
         // =====================================================
         const DISC_TITLES = { warmup: 'Warm-up', core: 'Core Fitness', pilates: 'Mat Pilates', cooldown: 'Cool-down' };
 
+        // Stop and remove every inline preview video in the exercise library.
+        function clearLibraryVideos() {
+            document.querySelectorAll('#library-list .lib-video').forEach((slot) => { slot.innerHTML = ''; });
+            document.querySelectorAll('#library-list .lib-item.playing').forEach((item) => item.classList.remove('playing'));
+        }
+
+        // Toggle the inline form video for one library exercise; only one plays at a time.
+        function toggleLibraryVideo(exId) {
+            const slot = document.getElementById(`lv-${exId}`);
+            if (!slot) return;
+            const isOpen = slot.childElementCount > 0;
+            clearLibraryVideos();
+            if (isOpen) return;
+            const ex = EX_BY_ID[exId];
+            const src = youtubeEmbedSrc(linkFor(exId));
+            if (!src) return;
+            slot.innerHTML = `<iframe src="${escapeHtml(src)}" title="${escapeHtml(ex ? ex.name : '')} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+            slot.closest('.lib-item').classList.add('playing');
+            slot.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+
         function renderLibrary() {
             const list = document.getElementById('library-list');
             list.innerHTML = ['core', 'pilates', 'warmup', 'cooldown'].map((disc) => `
@@ -2384,8 +2434,9 @@ permalink: /personal-trainer/
                             <div class="lib-head">
                                 <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
                                 <span class="name">${ex.name}</span>
-                                <span class="has-link">${linkFor(ex.id) ? '▶' : ''}</span>
+                                <button class="plan-play lib-play${linkFor(ex.id) ? '' : ' hidden'}" data-play="${ex.id}" aria-label="Preview ${escapeHtml(ex.name)} video">▶</button>
                             </div>
+                            <div class="lib-video" id="lv-${ex.id}"></div>
                             <div class="lib-body">
                                 <div class="lib-cues">${ex.cues.join(' · ')}</div>
                                 <input type="url" placeholder="Paste YouTube link…" value="${escapeHtml(linkFor(ex.id))}" data-link-for="${ex.id}">
@@ -2396,6 +2447,12 @@ permalink: /personal-trainer/
             list.querySelectorAll('.lib-head').forEach((head) => {
                 head.addEventListener('click', () => head.parentElement.classList.toggle('open'));
             });
+            list.querySelectorAll('[data-play]').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleLibraryVideo(btn.dataset.play);
+                });
+            });
             list.querySelectorAll('[data-link-for]').forEach((input) => {
                 input.addEventListener('change', () => {
                     const id = input.dataset.linkFor;
@@ -2403,7 +2460,9 @@ permalink: /personal-trainer/
                     if (url) state.links[id] = url;
                     else delete state.links[id];
                     saveState();
-                    input.closest('.lib-item').querySelector('.has-link').textContent = linkFor(id) ? '▶' : '';
+                    const item = input.closest('.lib-item');
+                    item.querySelector('.lib-play').classList.toggle('hidden', !linkFor(id));
+                    if (item.classList.contains('playing')) clearLibraryVideos();
                 });
             });
         }
