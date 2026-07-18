@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607171027';
+const CACHE_VERSION = '2607181249';
 const CACHE_NAME = `auto-runner-${CACHE_VERSION}`;
 const OFFLINE_URL = '/auto-runner/';
 const PRECACHE_URLS = [
