@@ -1805,19 +1805,25 @@ function buildScenery() {
   const g = document.getElementById('chase-scenery');
   if (!g) return;
   const L = chase.L;
+  const rnd = n => Math.abs(Math.sin(n * 12.9898) * 43758.5453) % 1;
   let html = '', ti = 0;
-  for (let d = 24; d < L; d += 70) {
+  const place = (s, nx, ny, offv, along, name, w) => {
+    const tx = Math.cos(s.angle), ty = Math.sin(s.angle);
+    const cx = s.x + nx * offv + tx * along, cy = s.y + ny * offv + ty * along;
+    return `<image href="scenery/${name}.png" x="${(cx - w / 2).toFixed(1)}" y="${(cy - w / 2).toFixed(1)}" width="${w}" height="${w}" preserveAspectRatio="xMidYMid meet"/>`;
+  };
+  for (let d = 18; d < L; d += 40) {
     const s = lutAt(d);
-    let da = lutAt(d + 45).angle - lutAt(d - 45).angle;
-    while (da > Math.PI) da -= 2 * Math.PI;
-    while (da < -Math.PI) da += 2 * Math.PI;
-    const sign = da > 0.05 ? -1 : 1;
+    const sign = curveAt(d) > 0.03 ? -1 : 1;
     const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
-    const rnd = Math.abs(Math.sin(d * 12.9898)) % 1;
-    const offv = 94 + rnd * 46;
-    const [name, w] = SCENERY[ti++ % SCENERY.length];
-    const cx = s.x + nx * offv, cy = s.y + ny * offv;
-    html += `<image href="scenery/${name}.png" x="${(cx - w / 2).toFixed(1)}" y="${(cy - w / 2).toFixed(1)}" width="${w}" height="${w}" preserveAspectRatio="xMidYMid meet"/>`;
+    // Two to three staggered rows of greenery filling the outfield.
+    const rows = 2 + (rnd(d) > 0.55 ? 1 : 0);
+    for (let r = 0; r < rows; r++) {
+      const [name, w] = SCENERY[ti++ % SCENERY.length];
+      const offv = 86 + r * 34 + rnd(d + r * 3.1) * 22;
+      const along = (rnd(d + r * 7.7) - 0.5) * 34;
+      html += place(s, nx, ny, offv, along, name, w);
+    }
   }
   g.innerHTML = html;
 }
@@ -1866,17 +1872,14 @@ function buildBarriers() {
     } else if (inCorner) { corners.push(apexD); inCorner = false; }
   }
   if (inCorner) corners.push(apexD);
-  // Cluster of 3 tire barriers at each apex, all the same orientation.
+  // Cluster of 3 tire barriers at each apex, all kept upright (unrotated).
   corners.forEach(d => {
     const s = lutAt(d);
-    const da = curveAt(d);
-    const sign = da > 0 ? -1 : 1;                 // outside of the turn
+    const sign = curveAt(d) > 0 ? -1 : 1;         // outside of the turn
     const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
-    const tx = Math.cos(s.angle), ty = Math.sin(s.angle);
-    const deg = (s.angle * 180 / Math.PI).toFixed(1);
+    const bx = s.x + nx * 40, by = s.y + ny * 40;
     for (let k = -1; k <= 1; k++) {
-      const gx = s.x + nx * 40 + tx * k * 17, gy = s.y + ny * 40 + ty * k * 17;
-      html += `<g transform="translate(${gx.toFixed(1)} ${gy.toFixed(1)}) rotate(${deg})"><image href="racing/tire-barrier.png" x="-10" y="-12" width="20" height="24" preserveAspectRatio="xMidYMid meet"/></g>`;
+      html += `<image href="racing/tire-barrier.png" x="${(bx + k * 18 - 10).toFixed(1)}" y="${(by - 12).toFixed(1)}" width="20" height="24" preserveAspectRatio="xMidYMid meet"/>`;
     }
   });
   // Pit sign + a couple of cones just after the start/finish line.
@@ -2056,7 +2059,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181453';
+    const SW_VERSION = '2607181507';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
