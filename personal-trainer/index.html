@@ -52,11 +52,15 @@ permalink: /personal-trainer/
         body {
             height: 100%;
             overscroll-behavior-y: none;
+            /* Same background as body: if the shell (#app) ever renders shorter
+               than the true visible viewport — mobile browsers resize their
+               toolbar dynamically, so 100% height can under- or over-shoot it —
+               this is what shows through instead of the browser's default white. */
+            background: linear-gradient(180deg, #131a27 0%, #0e131e 55%, #0b0f18 100%);
+            background-attachment: fixed;
         }
 
         body {
-            background: linear-gradient(180deg, #131a27 0%, #0e131e 55%, #0b0f18 100%);
-            background-attachment: fixed;
             color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
@@ -73,6 +77,7 @@ permalink: /personal-trainer/
             width: 100%;
             max-width: 520px;
             min-height: 100%;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             /* add margin ON TOP of the safe areas so the iOS home indicator never sits on a button */
