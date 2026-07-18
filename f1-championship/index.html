@@ -450,6 +450,11 @@ permalink: /f1-championship/
     .track-under { fill: none; stroke: #2a2740; stroke-width: 46; stroke-linejoin: round; stroke-linecap: round; }
     .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 50; stroke-linejoin: round; stroke-linecap: round; }
     .track-line  { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 2.5; stroke-dasharray: 10 14; }
+    .chase-label {
+      font: 700 11px 'Inter', system-ui, sans-serif;
+      text-anchor: middle; paint-order: stroke;
+      stroke: #0a0814; stroke-width: 3.5px; stroke-linejoin: round;
+    }
 
     #chase-tower {
       position: relative; width: 152px; flex-shrink: 0;
@@ -476,8 +481,8 @@ permalink: /f1-championship/
 
     /* Countdown lights */
     #chase-lights {
-      position: absolute; top: 16%; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 0.55rem; z-index: 5; pointer-events: none;
+      position: absolute; top: 5%; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 0.5rem; z-index: 5; pointer-events: none;
       transition: opacity 0.4s ease;
     }
     #chase-lights.hidden { display: none; }
@@ -685,6 +690,7 @@ permalink: /f1-championship/
         <path id="chase-track-line"  class="track-line"/>
         <g id="chase-startline"></g>
         <g id="chase-cars"></g>
+        <g id="chase-labels"></g>
       </svg>
       <div id="chase-lights" class="hidden"></div>
       <div id="chase-callout" class="hidden"></div>
@@ -1359,13 +1365,15 @@ const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300
 const CHASE = {
   ROUND_MS: 1400, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
   LANE_W: 8, SWERVE_AMPL: 10, GRID_GAP: 24,
-  CAR_LEN: 46, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
-  LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 24
+  CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
+  LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 24,
+  CAM_MIN_W: 300, CAM_PAD: 62, CAM_LERP: 0.16, LABEL_DY: 20
 };
 
 const chase = {
   frames: [], seg: 0, u: 0, playing: false, raf: null, lastTs: 0,
-  path: null, L: 0, lut: [], maxPts: 1, cars: [], timeouts: [], finished: false
+  path: null, L: 0, lut: [], maxPts: 1, cars: [], timeouts: [], finished: false,
+  cam: null
 };
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -1399,12 +1407,17 @@ function lutAt(d) {
 }
 
 // Cumulative points -> distance along the track. Leader's final total maps to
-// ~95% of a lap. During the first segment cars launch from a staggered grid.
-function distOf(pts, idx, u, isSeg1) {
+// ~95% of a lap.
+function distOf(pts) {
   const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
-  let d = CHASE.STARTLINE_PAD + (pts / chase.maxPts) * usable;
-  if (isSeg1) d -= idx * CHASE.GRID_GAP * (1 - u);
-  return d;
+  return CHASE.STARTLINE_PAD + (pts / chase.maxPts) * usable;
+}
+
+// Cars launch from a staggered starting grid; the offset blends out over round 1.
+function staggerFactor(seg, u) {
+  if (seg <= 0) return 1;
+  if (seg === 1) return 1 - easeInOutCubic(u);
+  return 0;
 }
 
 function laneOffsetOf(idx, n, pid, seg, u) {
@@ -1429,26 +1442,62 @@ function placeCar(car, d, lateral) {
   const cx = s.x + nx * lateral, cy = s.y + ny * lateral;
   const deg = s.angle * 180 / Math.PI + CHASE.SPRITE_HEADING;
   const w = CHASE.CAR_LEN, h = CHASE.CAR_LEN * CHASE.CAR_ASPECT;
+  car._x = cx; car._y = cy;
   car.el.setAttribute('transform',
     `translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg.toFixed(1)}) translate(${-w/2} ${-h/2})`);
+  car.label.setAttribute('x', cx.toFixed(1));
+  car.label.setAttribute('y', (cy - CHASE.LABEL_DY).toFixed(1));
 }
 
-function renderChaseFrame(seg, u) {
+// Follow-camera: keep the pack framed and zoomed in (players stay close in
+// points, so the whole track is never needed). Reads live element aspect so
+// it fills in both orientations. snap=true jumps (open/scrub); else eases.
+function updateCamera(snap) {
+  if (!chase.cars.length) return;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  chase.cars.forEach(c => {
+    minX = Math.min(minX, c._x); maxX = Math.max(maxX, c._x);
+    minY = Math.min(minY, c._y); maxY = Math.max(maxY, c._y);
+  });
+  const svg = document.getElementById('chase-svg');
+  const ar = (svg.clientWidth && svg.clientHeight) ? svg.clientWidth / svg.clientHeight : 1000 / 560;
+  const pad = CHASE.CAM_PAD;
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  const spanW = (maxX - minX) + pad * 2, spanH = (maxY - minY) + pad * 2;
+  let w = Math.max(spanW, spanH * ar, CHASE.CAM_MIN_W);
+  w = Math.min(w, 1120);
+  const h = w / ar;
+  const target = { x: cx - w / 2, y: cy - h / 2, w, h };
+  if (snap || !chase.cam) {
+    chase.cam = target;
+  } else {
+    const s = CHASE.CAM_LERP;
+    chase.cam.x += (target.x - chase.cam.x) * s;
+    chase.cam.y += (target.y - chase.cam.y) * s;
+    chase.cam.w += (target.w - chase.cam.w) * s;
+    chase.cam.h += (target.h - chase.cam.h) * s;
+  }
+  const c = chase.cam;
+  svg.setAttribute('viewBox', `${c.x.toFixed(1)} ${c.y.toFixed(1)} ${c.w.toFixed(1)} ${c.h.toFixed(1)}`);
+}
+
+function renderChaseFrame(seg, u, snap) {
   const n = chase.cars.length;
-  const isSeg1 = seg === 1;
+  const stag = staggerFactor(seg, u);
   chase.cars.forEach((car, i) => {
     const fPrev = chase.frames[Math.max(seg - 1, 0)];
     const fNext = chase.frames[seg];
     const overtaking = seg > 0 && fNext.pos[car.pid] < fPrev.pos[car.pid];
     const e = overtaking ? easeOutBack(u) : easeInOutCubic(u);
-    const dPrev = distOf(fPrev.points[car.pid], i, u, isSeg1);
-    const dNext = distOf(fNext.points[car.pid], i, u, isSeg1);
-    const d = lerp(dPrev, dNext, e);
+    const dPrev = distOf(fPrev.points[car.pid]);
+    const dNext = distOf(fNext.points[car.pid]);
+    const d = lerp(dPrev, dNext, e) - i * CHASE.GRID_GAP * stag;
     const lat = laneOffsetOf(i, n, car.pid, seg, u);
     placeCar(car, d, lat);
     const pts = Math.round(lerp(fPrev.points[car.pid], fNext.points[car.pid], u));
     car.ptsEl.textContent = pts;
   });
+  updateCamera(snap);
 }
 
 function updateChaseTower(seg) {
@@ -1523,11 +1572,11 @@ function chaseTick(ts) {
     advanceSegment();
   }
   if (chase.seg >= chase.frames.length - 1) {
-    renderChaseFrame(chase.frames.length - 1, 1);
+    renderChaseFrame(chase.frames.length - 1, 1, false);
     chasePause();
     return;
   }
-  renderChaseFrame(chase.seg + 1, chase.u);
+  renderChaseFrame(chase.seg + 1, chase.u, false);
   chase.raf = requestAnimationFrame(chaseTick);
 }
 
@@ -1598,7 +1647,8 @@ function replayChase() {
   document.getElementById('chase-callout').classList.add('hidden');
   setChaseHud(0);
   updateChaseTower(0);
-  renderChaseFrame(0, 0);
+  chase.cam = null;
+  renderChaseFrame(0, 0, true);
   chaseCountdown(true);
 }
 
@@ -1609,8 +1659,10 @@ function clearChaseTimeouts() {
 
 function buildChaseCars() {
   const grp = document.getElementById('chase-cars');
+  const labels = document.getElementById('chase-labels');
   const tower = document.getElementById('chase-tower');
   grp.innerHTML = '';
+  labels.innerHTML = '';
   tower.innerHTML = '';
   chase.cars = [];
   players.forEach((p, i) => {
@@ -1624,6 +1676,12 @@ function buildChaseCars() {
     img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     grp.appendChild(img);
 
+    const label = document.createElementNS(SVGNS, 'text');
+    label.setAttribute('class', 'chase-label');
+    label.setAttribute('fill', p.color);
+    label.textContent = p.name;
+    labels.appendChild(label);
+
     const row = document.createElement('div');
     row.className = 'tw-row';
     row.innerHTML = `<span class="tw-pos"></span>
@@ -1633,7 +1691,7 @@ function buildChaseCars() {
     tower.appendChild(row);
 
     chase.cars.push({
-      pid: p.id, el: img, row,
+      pid: p.id, el: img, label, row,
       posEl: row.querySelector('.tw-pos'),
       ptsEl: row.querySelector('.tw-pts')
     });
@@ -1664,6 +1722,7 @@ function openChase() {
   chase.finished = false;
   chase.seg = 0;
   chase.u = 0;
+  chase.cam = null;
 
   const overlay = document.getElementById('chase-overlay');
   document.getElementById('chase-track-edge').setAttribute('d', TRACK_D);
@@ -1686,7 +1745,7 @@ function openChase() {
   document.getElementById('chase-callout').classList.add('hidden');
   setChaseHud(0);
   updateChaseTower(0);
-  renderChaseFrame(0, 0);
+  renderChaseFrame(0, 0, true);
 
   overlay.requestFullscreen?.().catch(() => {});
   try { screen.orientation?.lock?.('landscape').catch(() => {}); } catch (e) {}
@@ -1703,6 +1762,7 @@ function closeChase() {
   try { screen.orientation?.unlock?.(); } catch (e) {}
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   document.getElementById('chase-cars').innerHTML = '';
+  document.getElementById('chase-labels').innerHTML = '';
   document.getElementById('chase-tower').innerHTML = '';
   document.getElementById('chase-lights').innerHTML = '';
   document.getElementById('chase-overlay').classList.add('hidden');
@@ -1722,7 +1782,7 @@ function scrubChase(v) {
   else document.getElementById('btn-chase-play').textContent = '▶';
   setChaseHud(chase.seg);
   updateChaseTower(chase.seg);
-  renderChaseFrame(chase.seg, 1);
+  renderChaseFrame(chase.seg, 1, true);
 }
 
 document.getElementById('btn-chase-close').addEventListener('click', closeChase);
@@ -1814,7 +1874,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607180759';
+    const SW_VERSION = '2607180902';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
