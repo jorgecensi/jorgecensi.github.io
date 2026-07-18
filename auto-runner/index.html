@@ -42,7 +42,7 @@ permalink: /auto-runner/
         if (document.getElementById('sw-banner')) return;
         const b = document.createElement('div');
         b.id = 'sw-banner';
-        b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a1833;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;font-size:14px;border-top:2px solid #7c78ff';
+        b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a1833;color:#fff;padding:10px 16px;padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));display:flex;align-items:center;justify-content:space-between;z-index:9999;font-size:14px;border-top:2px solid #7c78ff';
         b.innerHTML = '<span>Update available.</span><button style="background:#7c78ff;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold">Refresh</button>';
         b.querySelector('button').onclick = () => reg.waiting && reg.waiting.postMessage({ type: 'SKIP_WAITING' });
         document.body.appendChild(b);

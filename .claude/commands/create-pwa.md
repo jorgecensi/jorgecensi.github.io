@@ -217,6 +217,17 @@ self.addEventListener('fetch', (event) => {
 });
 ```
 
+### Safe-area bottom padding (required — do not skip)
+
+Every button or control near the bottom of the screen — a CTA at the end of a scrolling page, a fixed/sticky control bar, a floating action button, an install banner — **must** reserve space for the device's home-indicator/gesture-bar safe area, or it ends up uncomfortably close to (or under) the bottom edge on notched iOS/Android phones. Several apps in this repo shipped without this and had to be patched later — bake it in from the start instead:
+
+- Define `--safe-bottom: env(safe-area-inset-bottom, 0px);` on `:root` (or `body`) in the new app's `<style>` block.
+- Give the outermost scrolling container (the `<body>` or a `#app`/`.container` wrapper) `padding-bottom: calc(<base>px + var(--safe-bottom));` — never a bare px value — so the last button on the page always clears the safe area. `<base>` is normally 16–28px depending on the app's spacing scale.
+- Any `position: fixed`/`sticky` bottom bar or floating button gets the same treatment: `padding-bottom: calc(<base>px + var(--safe-bottom));` or `bottom: calc(<base>px + var(--safe-bottom));` instead of a fixed value.
+- Reference implementations already in this repo: `tuner/index.html`, `personal-trainer/index.html`, `crossfit-timer/index.html`, `f1-championship/index.html` — all use this pattern (`env(safe-area-inset-bottom, ...)`) on both their outer container and any fixed bottom controls.
+
+Check every place the new app touches the bottom of the viewport, not just one global rule — a fixed bottom nav needs it as much as a single "Start" button at the end of a form.
+
 ### `<slug>.html`
 
 This is a **standalone** HTML file (not using Jekyll layouts) that is self-contained, similar to `flappy.html`. Include the service worker registration script and implement the app content described by the user. Structure:
@@ -249,6 +260,15 @@ permalink: /<slug>/
     <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
 
     <style>
+        :root {
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* Give the outermost container bottom padding like:
+           padding-bottom: calc(20px + var(--safe-bottom));
+           Apply the same calc() to any fixed/sticky bottom bar or button — see
+           "Safe-area bottom padding" above. Never use a bare px value at the bottom. */
+
         /* App styles here */
     </style>
 </head>
