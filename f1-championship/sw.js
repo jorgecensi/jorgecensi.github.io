@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607181431';
+const CACHE_VERSION = '2607181445';
 const CACHE_NAME = `f1-championship-${CACHE_VERSION}`;
 const OFFLINE_URL = '/f1-championship/';
 const PRECACHE_URLS = [
@@ -8,8 +8,10 @@ const PRECACHE_URLS = [
   '/f1-championship/icons/icon-512.png',
   '/f1-championship/icons/apple-touch-icon.png',
   ...Array.from({ length: 20 }, (_, i) => `/f1-championship/cars/car-${String(i + 1).padStart(2, '0')}.png`),
-  ...['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca'].map(c => `/f1-championship/landmarks/${c}.png`),
-  ...['tree', 'pine', 'hedge', 'bush', 'flowers', 'rock'].map(s => `/f1-championship/scenery/${s}.png`)
+  ...['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca',
+      'bh', 'sa', 'cn', 'es', 'at', 'be', 'nl', 'br'].map(c => `/f1-championship/landmarks/${c}.png`),
+  ...['tree', 'pine', 'hedge', 'bush', 'flowers', 'rock'].map(s => `/f1-championship/scenery/${s}.png`),
+  ...['tire-barrier', 'skid', 'oil', 'cone', 'pit', 'wing', 'barrier'].map(s => `/f1-championship/racing/${s}.png`)
 ];
 
 self.addEventListener('install', (event) => {

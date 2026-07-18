@@ -697,7 +697,9 @@ permalink: /f1-championship/
         <path id="chase-track-edge"  class="track-edge"/>
         <path id="chase-track-under" class="track-under"/>
         <path id="chase-track-line"  class="track-line"/>
+        <g id="chase-marks"></g>
         <g id="chase-scenery"></g>
+        <g id="chase-dressing"></g>
         <g id="chase-stands"></g>
         <g id="chase-startline"></g>
         <g id="chase-cars"></g>
@@ -1373,7 +1375,8 @@ const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300
   'C 150 88 130 150 170 200 C 200 238 190 270 140 285 C 70 306 40 350 55 405 ' +
   'C 70 460 160 490 300 490 Z';
 
-const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca']);
+const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca',
+  'bh', 'sa', 'cn', 'es', 'at', 'be', 'nl', 'br']);
 const CHASE = {
   ROUND_MS: 2600, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
   SIDE_LANE: 16, CLUSTER_GAP: 46, ROW_GAP: 46, LANE_SMOOTH: 0.08,
@@ -1819,6 +1822,60 @@ function buildScenery() {
   g.innerHTML = html;
 }
 
+function curveAt(d) {
+  let da = lutAt(d + 30).angle - lutAt(d - 30).angle;
+  while (da > Math.PI) da -= 2 * Math.PI;
+  while (da < -Math.PI) da += 2 * Math.PI;
+  return da;
+}
+
+// Rubber skid marks on the tarmac through the corners, plus a few oil spills.
+function buildMarks() {
+  const g = document.getElementById('chase-marks');
+  if (!g) return;
+  const L = chase.L;
+  let html = '';
+  for (let d = 0; d < L; d += 52) {
+    if (Math.abs(curveAt(d)) < 0.05) continue;
+    const s = lutAt(d);
+    const deg = (s.angle * 180 / Math.PI).toFixed(1);
+    html += `<g transform="translate(${s.x.toFixed(1)} ${s.y.toFixed(1)}) rotate(${deg})" opacity="0.4"><image href="racing/skid.png" x="-16" y="-9" width="32" height="18" preserveAspectRatio="xMidYMid meet"/></g>`;
+  }
+  [0.19, 0.52, 0.83].forEach(t => {
+    const s = lutAt(t * L);
+    html += `<image href="racing/oil.png" x="${(s.x - 15).toFixed(1)}" y="${(s.y - 8).toFixed(1)}" width="30" height="16" opacity="0.65" preserveAspectRatio="xMidYMid meet"/>`;
+  });
+  g.innerHTML = html;
+}
+
+// Tire-barrier walls lining the outside of the corners, plus a pit sign.
+function buildBarriers() {
+  const g = document.getElementById('chase-dressing');
+  if (!g) return;
+  const L = chase.L;
+  let html = '';
+  for (let d = 0; d < L; d += 20) {
+    const da = curveAt(d);
+    if (Math.abs(da) < 0.05) continue;
+    const sign = da > 0 ? -1 : 1;          // outside of the turn
+    const s = lutAt(d);
+    const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
+    const cx = s.x + nx * 40, cy = s.y + ny * 40;
+    const deg = (s.angle * 180 / Math.PI).toFixed(1);
+    html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><image href="racing/tire-barrier.png" x="-9" y="-11" width="18" height="22" preserveAspectRatio="xMidYMid meet"/></g>`;
+  }
+  // Pit sign + a couple of cones just after the start/finish line.
+  const ps = lutAt(CHASE.STARTLINE_PAD + 40);
+  const pnx = -Math.sin(ps.angle), pny = Math.cos(ps.angle);
+  html += `<image href="racing/pit.png" x="${(ps.x + pnx * 44 - 12).toFixed(1)}" y="${(ps.y + pny * 44 - 16).toFixed(1)}" width="24" height="32" preserveAspectRatio="xMidYMid meet"/>`;
+  [18, 34].forEach(o => {
+    const c = lutAt(CHASE.STARTLINE_PAD + 18);
+    const cnx = -Math.sin(c.angle), cny = Math.cos(c.angle);
+    html += `<image href="racing/cone.png" x="${(c.x + cnx * o - 5).toFixed(1)}" y="${(c.y + cny * o - 7).toFixed(1)}" width="10" height="14" preserveAspectRatio="xMidYMid meet"/>`;
+  });
+  g.innerHTML = html;
+}
+
 function openChase() {
   chase.frames = buildChampionshipFrames();
   if (chase.frames.length < 2) return;
@@ -1840,7 +1897,9 @@ function openChase() {
 
   buildChaseCars();
   buildStartLine();
+  buildMarks();
   buildScenery();
+  buildBarriers();
   buildStands();
   const scrub = document.getElementById('chase-scrub');
   scrub.max = chase.frames.length - 1;
@@ -1869,6 +1928,8 @@ function closeChase() {
   document.getElementById('chase-labels').innerHTML = '';
   document.getElementById('chase-stands').innerHTML = '';
   document.getElementById('chase-scenery').innerHTML = '';
+  document.getElementById('chase-marks').innerHTML = '';
+  document.getElementById('chase-dressing').innerHTML = '';
   document.getElementById('chase-tower').innerHTML = '';
   document.getElementById('chase-lights').innerHTML = '';
   document.getElementById('chase-overlay').classList.add('hidden');
@@ -1980,7 +2041,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181431';
+    const SW_VERSION = '2607181445';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
