@@ -1,10 +1,12 @@
-const CACHE_VERSION = '2607171032';
+const CACHE_VERSION = '2607180251';
 const CACHE_NAME = `f1-championship-${CACHE_VERSION}`;
 const OFFLINE_URL = '/f1-championship/';
 const PRECACHE_URLS = [
   '/f1-championship/',
   '/f1-championship/manifest.json',
-  '/f1-championship/icons/icon.svg'
+  '/f1-championship/icons/icon-192.png',
+  '/f1-championship/icons/icon-512.png',
+  '/f1-championship/icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {
