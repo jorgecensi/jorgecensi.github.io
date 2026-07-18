@@ -39,6 +39,10 @@ body {
 
 body.no-site-chrome {
   padding-top: 0;
+  /* Chrome-hidden pages skip the site footer, so their own bottom content
+     (buttons, controls) becomes the last thing on screen — reserve room
+     for the home-indicator/gesture-bar safe area so it isn't flush to it. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 body::before {
