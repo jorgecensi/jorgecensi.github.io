@@ -151,7 +151,8 @@ class FlappyBird {
         // Add first pipe
         this.pipes.push({
             x: this.canvas.width,
-            y: Math.floor(Math.random() * (this.canvas.height - this.gap - this.ground.height - 100)) - 200
+            y: Math.floor(Math.random() * (this.canvas.height - this.gap - this.ground.height - 100)) - 200,
+            spawnedNext: false
         });
     }
     
@@ -167,11 +168,14 @@ class FlappyBird {
             const pipe = this.pipes[i];
             pipe.x -= this.pipeSpeed;
             
-            // Add new pipe
-            if (pipe.x === this.canvas.width - 150) {
+            // Add new pipe once this one has traveled far enough (threshold, not exact
+            // equality, so it can't be skipped if x steps past the trigger point in one frame)
+            if (!pipe.spawnedNext && pipe.x <= this.canvas.width - 150) {
+                pipe.spawnedNext = true;
                 this.pipes.push({
                     x: this.canvas.width,
-                    y: Math.floor(Math.random() * (this.canvas.height - this.gap - this.ground.height - 100)) - 200
+                    y: Math.floor(Math.random() * (this.canvas.height - this.gap - this.ground.height - 100)) - 200,
+                    spawnedNext: false
                 });
             }
             

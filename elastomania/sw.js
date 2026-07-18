@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607171110';
+const CACHE_VERSION = '2607181500';
 const CACHE_NAME = `elastomania-${CACHE_VERSION}`;
 const OFFLINE_URL = '/elastomania/';
 const PRECACHE_URLS = [
@@ -48,7 +48,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((res) => {
-          caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
+          if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
           return res;
         })
         .catch(() =>
@@ -63,7 +63,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request).then((cached) => {
         const network = fetch(event.request)
           .then((res) => {
-            caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
+            if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
             return res;
           })
           .catch(() => cached);

@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607171032';
+const CACHE_VERSION = '2607181500';
 const CACHE_NAME = `tennis-planner-${CACHE_VERSION}`;
 const OFFLINE_URL = "/tennis-planner/";
 const PRECACHE_URLS = [
@@ -12,7 +12,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {

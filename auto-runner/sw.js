@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607171027';
+const CACHE_VERSION = '2607181500';
 const CACHE_NAME = `auto-runner-${CACHE_VERSION}`;
 const OFFLINE_URL = '/auto-runner/';
 const PRECACHE_URLS = [
@@ -47,7 +47,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((res) => {
-          caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
+          if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
           return res;
         })
         .catch(() =>
@@ -62,7 +62,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request).then((cached) => {
         const network = fetch(event.request)
           .then((res) => {
-            caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
+            if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
             return res;
           })
           .catch(() => cached);

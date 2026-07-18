@@ -103,7 +103,7 @@ permalink: /elastomania/
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <canvas id="canvas" role="img" aria-label="Elasto Mania physics game screen"></canvas>
   <div id="touch-controls">
     <div class="btn-group">
       <button class="touch-btn" id="btn-brake" aria-label="Brake">■</button>
@@ -121,7 +121,7 @@ permalink: /elastomania/
   </div>
 
   <script>
-    const SW_VERSION = '2607171110';
+    const SW_VERSION = '2607181500';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -528,8 +528,10 @@ permalink: /elastomania/
 
     // ── Sprites ────────────────────────────────────────────────
     const bikeBodyImg  = new Image();
+    bikeBodyImg.onerror = () => console.warn('Elastomania: failed to load bike-body.png');
     bikeBodyImg.src    = '/elastomania/img/bike-body.png';
     const bikeWheelImg = new Image();
+    bikeWheelImg.onerror = () => console.warn('Elastomania: failed to load bike-wheel.png');
     bikeWheelImg.src   = '/elastomania/img/bike-wheel.png';
     // Axle points in bike-body.png pixel coordinates, solved from the
     // artist's assembled reference shot: the wheels sit INBOARD of the
@@ -551,6 +553,7 @@ permalink: /elastomania/
     const WHEEL_SPIN_VISUAL  = 0.3;
 
     const riderImg = new Image();
+    riderImg.onerror = () => console.warn('Elastomania: failed to load rider.png');
     riderImg.src   = '/elastomania/img/rider.png';
     // Rider art is a seated/crouched pose; anchor at the hip (where the
     // thighs bend to horizontal) rather than image center, so that point
@@ -792,6 +795,7 @@ permalink: /elastomania/
 
     function bindBtn(id, flag) {
       const el = document.getElementById(id);
+      if (!el) return;
       const press = (e) => {
         e.preventDefault();
         if (state === 'start' && flag === 'brake') {

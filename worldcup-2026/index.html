@@ -487,6 +487,7 @@ const TRANSLATIONS = {
     // Score refresh
     refresh_scores: "Refresh scores",
     refreshing_scores: "Refreshing…",
+    refresh_failed: "Couldn't refresh scores. Check your connection and try again.",
     last_updated: "Updated {time}",
   },
   'pt-BR': {
@@ -772,6 +773,7 @@ const TRANSLATIONS = {
     // Atualização de placar
     refresh_scores: "Atualizar placares",
     refreshing_scores: "Atualizando…",
+    refresh_failed: "Não foi possível atualizar os placares. Verifique sua conexão e tente novamente.",
     last_updated: "Atualizado {time}",
   },
 };
@@ -4425,6 +4427,7 @@ function App(){
 
   // Score refresh
   const [refreshing,setRefreshing]=useState(false);
+  const [refreshError,setRefreshError]=useState(false);
   const [lastUpdated,setLastUpdated]=useState(()=>{
     try{ return localStorage.getItem(UPDATED_KEY)||null; }catch(e){ return null; }
   });
@@ -4754,19 +4757,21 @@ function App(){
   const handleRefreshScores=useCallback(async()=>{
     if(refreshing) return;
     setRefreshing(true);
+    setRefreshError(false);
     try{
       const res=await fetch('/worldcup-2026/scores.json?t='+Date.now());
-      if(res.ok){
-        const data=await res.json();
-        if(data&&data.updated){
-          setLastUpdated(data.updated);
-          try{ localStorage.setItem(UPDATED_KEY,data.updated); }catch(_){}
-        }
-        if(data&&(Object.keys(data.group||{}).length||Object.keys(data.ko||{}).length)){
-          applyAutoScores(data);
-        }
+      if(!res.ok) throw new Error('scores.json responded with '+res.status);
+      const data=await res.json();
+      if(data&&data.updated){
+        setLastUpdated(data.updated);
+        try{ localStorage.setItem(UPDATED_KEY,data.updated); }catch(_){}
       }
-    }catch(_){}
+      if(data&&(Object.keys(data.group||{}).length||Object.keys(data.ko||{}).length)){
+        applyAutoScores(data);
+      }
+    }catch(_){
+      setRefreshError(true);
+    }
     setRefreshing(false);
   },[refreshing,applyAutoScores]);
 
@@ -4944,9 +4949,9 @@ function App(){
 
       {/* MAIN */}
       <div style={{maxWidth:1040,margin:"0 auto",padding:view==="bracket"?(isMobile?"8px 0":"12px 0"):(isMobile?"12px 10px":"20px 24px"),overflowX:view==="bracket"?"visible":"hidden",zoom:view==="bracket"?1:(isMobile?1.2:1)}}>
-        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} onRefreshScores={handleRefreshScores} refreshing={refreshing} lastUpdated={lastUpdated}/>}
+        {view==="fixtures"  && <FixturesView  groupMatches={groupMatches} onScore={updateGroupScore} isMobile={isMobile} navHeight={navHeight} initialFilter={fixtureFilter} onFilterUsed={()=>setFixtureFilter(null)} collapsingMatchId={collapsingMatchId} onCollapseAnimEnd={handleCollapseAnimEnd} onRefreshScores={handleRefreshScores} refreshing={refreshing} refreshError={refreshError} lastUpdated={lastUpdated}/>}
         {view==="standings" && <StandingsView groupMatches={groupMatches} isMobile={isMobile} onShowFixtures={g=>{setFixtureFilter(g);setView("fixtures");}}/>}
-        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} onRefreshScores={handleRefreshScores} refreshing={refreshing} lastUpdated={lastUpdated}/>}
+        {view==="knockout"  && <KnockoutView  ko={ko} onScore={updateKOScore} isMobile={isMobile} navHeight={navHeight} groupMatches={groupMatches} onRefreshScores={handleRefreshScores} refreshing={refreshing} refreshError={refreshError} lastUpdated={lastUpdated}/>}
         {view==="bracket"   && <BracketView   ko={ko} groupMatches={groupMatches} isMobile={isMobile} navHeight={navHeight}/>}
         {view==="stats"     && <GlobalStats   stats={globalStats} groupMatches={groupMatches} ko={ko} isMobile={isMobile}/>}
         {view==="guesses"   && <GuessesView   groupMatches={groupMatches} ko={ko} predictions={predictions} onGroupPred={updateGroupPred} onKOPred={updateKOPred} isMobile={isMobile} navHeight={navHeight} rivals={rivals} playerName={playerName} onShare={()=>{setShareModalMode('rival');setShowShareModal(true);}} onRemoveRival={handleRemoveRival} onResolveLink={handleResolvePastedLink}/>}
@@ -5057,7 +5062,7 @@ function CollapseTransition({onDone, children}){
 
 // ─── FIXTURES VIEW ─────────────────────────────────────────────────────────────
 // All 72 group matches sorted chronologically, grouped by date
-function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd,onRefreshScores,refreshing,lastUpdated}){
+function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onFilterUsed,collapsingMatchId,onCollapseAnimEnd,onRefreshScores,refreshing,refreshError,lastUpdated}){
   const { t } = useLang();
   const [filter,setFilter]=useState(initialFilter||"ALL");
   const dateRefs=useRef({});
@@ -5184,6 +5189,7 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
             {refreshing?t('refreshing_scores'):t('refresh_scores')}
           </button>
           {formatUpdated(lastUpdated)&&<span style={{fontSize:10,color:"#555"}}>{t('last_updated').replace('{time}',formatUpdated(lastUpdated))}</span>}
+          {refreshError&&!refreshing&&<span style={{fontSize:10,color:"#e05252"}}>{t('refresh_failed')}</span>}
         </div>
         <span style={{fontSize:10,color:"#555"}}>{t('played_count').replace('{n}',scored)}</span>
       </div>
@@ -5281,17 +5287,28 @@ function FixturesView({groupMatches,onScore,isMobile,navHeight,initialFilter,onF
 // ─── STANDINGS VIEW ────────────────────────────────────────────────────────────
 function StandingsView({groupMatches,isMobile,onShowFixtures}){
   const { t } = useLang();
-  const thirdPlaces=Object.entries(GROUPS).map(([g,teams])=>{
-    const s=computeStandings(teams,groupMatches[g]);
+  const groupStandings=useMemo(()=>{
+    const map={};
+    Object.entries(GROUPS).forEach(([g,teams])=>{
+      map[g]={
+        standings:computeStandings(teams,groupMatches[g]),
+        qualStatuses:getGroupQualStatuses(teams,groupMatches[g],groupMatches),
+      };
+    });
+    return map;
+  },[groupMatches]);
+
+  const thirdPlaces=useMemo(()=>Object.entries(GROUPS).map(([g])=>{
+    const s=groupStandings[g].standings;
     return {...s[2],group:g};
-  }).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
+  }).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf),[groupStandings]);
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:16}}>
         {Object.entries(GROUPS).map(([g,teams])=>{
-          const standings=computeStandings(teams,groupMatches[g]);
-          const qualStatuses=getGroupQualStatuses(teams,groupMatches[g],groupMatches);
+          const standings=groupStandings[g].standings;
+          const qualStatuses=groupStandings[g].qualStatuses;
           const played=groupMatches[g].filter(m=>m.homeScore!==null).length;
           return(
             <div key={g} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,overflow:"hidden"}}>
@@ -5405,7 +5422,7 @@ function StandingsView({groupMatches,isMobile,onShowFixtures}){
 }
 
 // ─── KNOCKOUT VIEW ─────────────────────────────────────────────────────────────
-function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScores,refreshing,lastUpdated}){
+function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScores,refreshing,refreshError,lastUpdated}){
   const { t } = useLang();
   const ROUNDS=[
     {key:"r32",label:"R32",fullLabel:t('round_r32')},
@@ -5474,6 +5491,7 @@ function KnockoutView({ko,onScore,isMobile,navHeight,groupMatches,onRefreshScore
         <SLabel style={{margin:0}}>{currentRound?.fullLabel}</SLabel>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
           {formatUpdated(lastUpdated)&&<span style={{fontSize:10,color:"#555"}}>{t('last_updated').replace('{time}',formatUpdated(lastUpdated))}</span>}
+          {refreshError&&!refreshing&&<span style={{fontSize:10,color:"#e05252"}}>{t('refresh_failed')}</span>}
           <button onClick={onRefreshScores} disabled={refreshing} title={t('refresh_scores')} style={{
             display:"flex",alignItems:"center",gap:5,background:"transparent",
             border:`1px solid ${BORDER}`,borderRadius:20,
@@ -6730,7 +6748,7 @@ function GlobalStats({stats,groupMatches,ko,isMobile}){
   root.render(React.createElement(LangProvider, null, React.createElement(App)));
   </script>
   <script>
-    const SW_VERSION = '2607171032';
+    const SW_VERSION = '2607181500';
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register(`/worldcup-2026/sw.js?v=${encodeURIComponent(SW_VERSION)}`)

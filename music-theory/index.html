@@ -912,9 +912,18 @@ title: Music Theory
       return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
     }
 
+    async function ensureAudioStarted() {
+      try {
+        await Tone.start();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
     async function playNote(midi) {
       if (!samplerReady) return;
-      await Tone.start();
+      if (!(await ensureAudioStarted())) return;
       sampler.triggerAttackRelease(midiToNoteName(midi), '8n');
     }
 
@@ -922,7 +931,7 @@ title: Music Theory
 
     async function startNote(midi) {
       if (!samplerReady) return;
-      await Tone.start();
+      if (!(await ensureAudioStarted())) return;
       if (!heldNotes.has(midi)) {
         heldNotes.add(midi);
         sampler.triggerAttack(midiToNoteName(midi));
@@ -939,21 +948,21 @@ title: Music Theory
 
     async function playChord(midiNotes) {
       if (!samplerReady) return;
-      await Tone.start();
+      if (!(await ensureAudioStarted())) return;
       const now = Tone.now();
       midiNotes.forEach(m => sampler.triggerAttackRelease(midiToNoteName(m), '2n', now));
     }
 
     async function playArpeggiated(midiNotes, step = 0.13) {
       if (!samplerReady) return;
-      await Tone.start();
+      if (!(await ensureAudioStarted())) return;
       const now = Tone.now();
       midiNotes.forEach((m, i) => sampler.triggerAttackRelease(midiToNoteName(m), '4n', now + i * step));
     }
 
     async function playScaleSequence(midiNotes) {
       if (!samplerReady) return;
-      await Tone.start();
+      if (!(await ensureAudioStarted())) return;
       const now = Tone.now();
       const step = 0.22;
       midiNotes.forEach((m, i) => sampler.triggerAttackRelease(midiToNoteName(m), '8n', now + i * step));
@@ -1595,7 +1604,7 @@ title: Music Theory
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2606071202';
+        const SW_VERSION = '2607181500';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
