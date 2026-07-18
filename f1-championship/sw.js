@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607180902';
+const CACHE_VERSION = '2607180929';
 const CACHE_NAME = `f1-championship-${CACHE_VERSION}`;
 const OFFLINE_URL = '/f1-championship/';
 const PRECACHE_URLS = [
