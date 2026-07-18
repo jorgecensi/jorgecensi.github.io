@@ -1760,7 +1760,13 @@ function buildStands() {
   CALENDAR.forEach(race => {
     const d = CHASE.STARTLINE_PAD + (race.round / chase.lastRound) * usable;
     const s = lutAt(d);
-    const nx = -Math.sin(s.angle), ny = Math.cos(s.angle);
+    // Place the stand on the outside of any turn (away from the curve's centre)
+    // where there's room, rather than cramped on the inside of a corner.
+    let da = lutAt(d + 45).angle - lutAt(d - 45).angle;
+    while (da > Math.PI) da -= 2 * Math.PI;
+    while (da < -Math.PI) da += 2 * Math.PI;
+    const sideSign = da > 0.05 ? -1 : 1;   // left turn -> flip to the right side
+    const nx = -Math.sin(s.angle) * sideSign, ny = Math.cos(s.angle) * sideSign;
     const cx = s.x + nx * off, cy = s.y + ny * off;
     const deg = (s.angle * 180 / Math.PI).toFixed(1);
     const name = race.name.replace(/ Grand Prix$/, '');
@@ -1937,7 +1943,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181412';
+    const SW_VERSION = '2607181422';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
