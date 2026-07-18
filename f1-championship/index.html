@@ -1364,7 +1364,7 @@ const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300
 
 const CHASE = {
   ROUND_MS: 2600, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
-  LANE_W: 10, SWERVE_AMPL: 11, GRID_GAP: 26,
+  LANE_W: 11, MIN_GAP: 30,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
   LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8,
   CAM_MIN_W: 300, CAM_PAD: 62, CAM_LERP: 0.16, LABEL_DY: 20
@@ -1413,29 +1413,6 @@ function distOf(pts, roundNum) {
   return CHASE.STARTLINE_PAD + (pts / chase.maxPts) * usable * seasonFrac;
 }
 
-// Cars launch from a staggered starting grid; the offset blends out over round 1.
-function staggerFactor(seg, u) {
-  if (seg <= 0) return 1;
-  if (seg === 1) return 1 - u;
-  return 0;
-}
-
-function laneOffsetOf(idx, n, pid, seg, u) {
-  let lane = (idx - (n - 1) / 2) * CHASE.LANE_W;
-  if (seg > 0) {
-    const prev = chase.frames[seg - 1].pos[pid];
-    const now = chase.frames[seg].pos[pid];
-    if (now < prev) {
-      const dir = lane <= 0 ? 1 : -1;
-      lane += Math.sin(u * Math.PI) * CHASE.SWERVE_AMPL * dir;
-    } else if (now > prev) {
-      const dir = lane <= 0 ? -1 : 1;
-      lane += Math.sin(u * Math.PI) * CHASE.SWERVE_AMPL * 0.4 * dir;
-    }
-  }
-  return lane;
-}
-
 function placeCar(car, d, lateral) {
   const s = lutAt(d);
   const nx = -Math.sin(s.angle), ny = Math.cos(s.angle);
@@ -1482,20 +1459,31 @@ function updateCamera(snap) {
 }
 
 function renderChaseFrame(seg, u, snap) {
-  const n = chase.cars.length;
-  const stag = staggerFactor(seg, u);
-  chase.cars.forEach((car, i) => {
-    const fPrev = chase.frames[Math.max(seg - 1, 0)];
-    const fNext = chase.frames[seg];
+  const fPrev = chase.frames[Math.max(seg - 1, 0)];
+  const fNext = chase.frames[seg];
+  // Points-based target distance for each car (linear interpolation keeps a
+  // steady speed rather than easing to a stop at every race result).
+  const items = chase.cars.map(car => {
     const dPrev = distOf(fPrev.points[car.pid], fPrev.round);
     const dNext = distOf(fNext.points[car.pid], fNext.round);
-    // Linear interpolation keeps the cars moving at a steady speed between races
-    // rather than easing to a stop at every race result.
-    const d = lerp(dPrev, dNext, u) - i * CHASE.GRID_GAP * stag;
-    const lat = laneOffsetOf(i, n, car.pid, seg, u);
-    placeCar(car, d, lat);
-    const pts = Math.round(lerp(fPrev.points[car.pid], fNext.points[car.pid], u));
-    car.ptsEl.textContent = pts;
+    return {
+      car,
+      d: lerp(dPrev, dNext, u),
+      pts: Math.round(lerp(fPrev.points[car.pid], fNext.points[car.pid], u)),
+      pos: fNext.pos[car.pid]
+    };
+  });
+  // Order leader -> back, then lay them out like an F1 starting grid: enforce a
+  // minimum gap so cars never overlap and alternate them left/right of the
+  // racing line, giving the staggered two-by-two formation.
+  items.sort((a, b) => b.d - a.d || a.pos - b.pos);
+  let lastD = Infinity;
+  items.forEach((it, k) => {
+    if (it.d > lastD - CHASE.MIN_GAP) it.d = lastD - CHASE.MIN_GAP;
+    lastD = it.d;
+    const lane = (k % 2 === 0 ? -1 : 1) * CHASE.LANE_W;
+    placeCar(it.car, it.d, lane);
+    it.car.ptsEl.textContent = it.pts;
   });
   updateCamera(snap);
 }
@@ -1877,7 +1865,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607181312';
+    const SW_VERSION = '2607181325';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
