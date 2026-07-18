@@ -100,7 +100,7 @@ permalink: /squeak-the-geek/
         #dpad {
             position: fixed;
             right: 18px;
-            bottom: 18px;
+            bottom: calc(18px + env(safe-area-inset-bottom, 0px));
             width: 140px;
             height: 140px;
             display: none;
@@ -273,6 +273,7 @@ permalink: /squeak-the-geek/
             background: #1e3a8a;
             color: #fff;
             padding: 12px 16px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -345,7 +346,7 @@ permalink: /squeak-the-geek/
     </div>
 
     <script>
-        const SW_VERSION = '2607181500';
+        const SW_VERSION = '2607181800';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;

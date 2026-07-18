@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607181500';
+const CACHE_VERSION = '2607181800';
 const CACHE_NAME = `flappy-bird-${CACHE_VERSION}`;
 const OFFLINE_URL = '/flappy/';
 const PRECACHE_URLS = [

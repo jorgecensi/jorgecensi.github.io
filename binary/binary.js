@@ -1,4 +1,4 @@
-const APP_VERSION = '2607171032';
+const APP_VERSION = '2607181249';
 
 document.addEventListener("DOMContentLoaded", () => {
     const gridSize = 8;
@@ -544,6 +544,7 @@ document.addEventListener("DOMContentLoaded", () => {
             banner.style.cssText = [
                 "position:fixed", "bottom:0", "left:0", "right:0",
                 "background:#1e1d3a", "color:#e2e8f0", "padding:12px 16px",
+                "padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px))",
                 "display:flex", "align-items:center", "justify-content:space-between",
                 "z-index:9999", "font-family:inherit", "font-size:14px",
                 "border-top:1px solid #6366f1"
