@@ -412,6 +412,194 @@ permalink: /f1-championship/
     .cf-actions { display: flex; gap: 0.5rem; }
     .cf-actions button { flex: 1; }
 
+    /* ─── CHAMPIONSHIP RACE ─── */
+    #chase-overlay {
+      position: fixed; inset: 0; z-index: 400;
+      background: #0a0814; display: flex;
+    }
+    #chase-overlay.hidden { display: none; }
+    #chase-stage {
+      flex: 1; display: flex; flex-direction: column;
+      height: 100dvh; overflow: hidden;
+      padding: env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);
+    }
+    .chase-hud {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #chase-flag { font-size: 1.6rem; line-height: 1; }
+    #chase-rname { font-size: 0.9rem; font-weight: 700; line-height: 1.2; }
+    #chase-rmeta { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; }
+    #btn-chase-close {
+      margin-left: auto; background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 50%;
+      width: 34px; height: 34px; font-size: 1rem; cursor: pointer;
+      flex-shrink: 0; line-height: 1;
+    }
+    #btn-chase-close:hover { border-color: var(--bhover); }
+    .chase-main {
+      flex: 1; position: relative; display: flex; gap: 0.6rem;
+      padding: 0.6rem 0.9rem; min-height: 0;
+    }
+    #chase-svg {
+      flex: 1; min-width: 0; height: 100%;
+      background: radial-gradient(ellipse at center, #14112a 0%, #0a0814 78%);
+      border-radius: var(--rsm);
+    }
+    .track-under { fill: none; stroke: #2a2740; stroke-width: 46; stroke-linejoin: round; stroke-linecap: round; }
+    .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 50; stroke-linejoin: round; stroke-linecap: round; }
+    .track-line  { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 2.5; stroke-dasharray: 10 14; }
+    .chase-label {
+      font: 700 11px 'Inter', system-ui, sans-serif;
+      text-anchor: middle; paint-order: stroke;
+      stroke: #0a0814; stroke-width: 3.5px; stroke-linejoin: round;
+    }
+
+    #chase-tower {
+      position: relative; width: 152px; flex-shrink: 0;
+      align-self: stretch;
+    }
+    .tw-row {
+      position: absolute; left: 0; right: 0; height: 30px;
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0 0.45rem; border-radius: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      transform: translateY(calc((var(--rank, 1) - 1) * 32px));
+      transition: transform 0.55s cubic-bezier(.4,0,.2,1);
+      overflow: hidden;
+    }
+    .tw-pos { font-size: 0.72rem; font-weight: 700; color: var(--muted); width: 1.1rem; flex-shrink: 0; }
+    .tw-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .tw-name { font-size: 0.74rem; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tw-pts { font-family: 'DM Mono', monospace; font-size: 0.74rem; font-weight: 700; color: var(--accent2); flex-shrink: 0; }
+    .tw-row.gained { animation: twFlash 0.7s ease; }
+    @keyframes twFlash {
+      0% { background: var(--accent); }
+      100% { background: var(--surface); }
+    }
+
+    /* Countdown lights */
+    #chase-lights {
+      position: absolute; top: 5%; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 0.5rem; z-index: 5; pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    #chase-lights.hidden { display: none; }
+    .light-pod {
+      background: #0c0a16; border: 1px solid #2a2740; border-radius: 8px;
+      padding: 6px; display: flex; flex-direction: column; gap: 5px;
+    }
+    .light-dot {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #1c1a2b; box-shadow: inset 0 0 4px rgba(0,0,0,0.6);
+    }
+    .light-pod.on .light-dot {
+      background: #ff2d2d;
+      box-shadow: 0 0 16px 3px rgba(255,45,45,0.65), inset 0 0 4px rgba(255,120,120,0.5);
+    }
+    @media (max-width: 520px) {
+      .light-dot { width: 15px; height: 15px; }
+    }
+
+    /* Overtake callout */
+    #chase-callout {
+      position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: #fff; font-size: 0.78rem; font-weight: 700;
+      padding: 0.3rem 0.7rem; border-radius: 20px; z-index: 6; pointer-events: none;
+      white-space: nowrap; box-shadow: 0 4px 14px rgba(99,102,241,0.5);
+    }
+    #chase-callout.hidden { display: none; }
+    #chase-callout.show { animation: calloutPop 1.5s ease forwards; }
+    @keyframes calloutPop {
+      0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.8); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.05); }
+      25% { transform: translateX(-50%) translateY(0) scale(1); }
+      80% { opacity: 1; }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(1); }
+    }
+
+    /* Winner banner */
+    #chase-winner {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 0.4rem;
+      z-index: 7; pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(10,8,20,0.55) 0%, rgba(10,8,20,0.15) 60%, transparent 100%);
+    }
+    #chase-winner.hidden { display: none; }
+    .cw-trophy { font-size: 3rem; animation: winnerPop 0.6s cubic-bezier(.2,1.4,.4,1) both; }
+    .cw-name { font-size: 1.5rem; font-weight: 800; color: var(--gold); text-shadow: 0 2px 12px rgba(245,158,11,0.5); animation: winnerPop 0.6s 0.1s cubic-bezier(.2,1.4,.4,1) both; }
+    .cw-sub { font-size: 0.85rem; color: var(--text); font-weight: 600; animation: winnerPop 0.6s 0.2s cubic-bezier(.2,1.4,.4,1) both; }
+    @keyframes winnerPop {
+      0% { opacity: 0; transform: scale(0.5); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Controls */
+    .chase-controls {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.6rem 0.9rem calc(0.6rem + env(safe-area-inset-bottom,0));
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .chase-btn {
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 50%;
+      width: 40px; height: 40px; font-size: 1rem; cursor: pointer;
+      flex-shrink: 0; line-height: 1; display: flex; align-items: center; justify-content: center;
+    }
+    .chase-btn:hover { border-color: var(--bhover); }
+    #chase-scrub {
+      flex: 1; -webkit-appearance: none; appearance: none;
+      height: 6px; border-radius: 3px; outline: none; cursor: pointer;
+      background: linear-gradient(to right, var(--accent) var(--fill,0%), var(--surface2) var(--fill,0%));
+    }
+    #chase-scrub::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--accent); cursor: pointer;
+    }
+    #chase-scrub::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--accent); cursor: pointer;
+    }
+    #chase-round-lbl {
+      font-family: 'DM Mono', monospace; font-size: 0.75rem;
+      color: var(--muted); flex-shrink: 0; min-width: 3.2rem; text-align: right;
+    }
+    .chase-rotate-hint {
+      position: absolute; top: 0.5rem; left: 50%; transform: translateX(-50%);
+      font-size: 0.68rem; color: var(--muted); background: rgba(26,24,37,0.85);
+      padding: 0.25rem 0.6rem; border-radius: 20px; z-index: 4; pointer-events: none;
+      display: none;
+    }
+    @media (orientation: portrait) {
+      .chase-main { flex-direction: column; }
+      #chase-svg { flex: 1 1 auto; }
+      #chase-tower {
+        width: auto; flex: 0 0 auto; height: auto;
+        display: flex; flex-wrap: wrap; align-content: flex-start;
+        gap: 4px;
+      }
+      .tw-row {
+        position: static; transform: none; order: var(--rank, 1);
+        width: calc(50% - 2px); height: 28px; transition: none;
+      }
+      .chase-rotate-hint { display: block; }
+    }
+
+    /* Car picker (Settings) */
+    .car-thumb {
+      width: 58px; height: 26px; object-fit: contain;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; cursor: pointer; flex-shrink: 0; padding: 2px;
+    }
+    .car-thumb.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .car-picker {
+      display: flex; gap: 0.4rem; overflow-x: auto;
+      padding: 0.5rem 0 0.6rem; -webkit-overflow-scrolling: touch;
+      border-bottom: 1px solid var(--border);
+    }
+
     /* ─── INSTALL BANNER ─── */
     #install-banner {
       position: fixed;
@@ -484,6 +672,41 @@ permalink: /f1-championship/
   </div>
 </div>
 
+<!-- Championship Race -->
+<div id="chase-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Championship race replay">
+  <div id="chase-stage">
+    <div class="chase-hud">
+      <span id="chase-flag">🏁</span>
+      <div>
+        <div id="chase-rname">Championship Race</div>
+        <div id="chase-rmeta">On the grid</div>
+      </div>
+      <button id="btn-chase-close" aria-label="Close">✕</button>
+    </div>
+    <div class="chase-main">
+      <svg id="chase-svg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet">
+        <path id="chase-track-edge"  class="track-edge"/>
+        <path id="chase-track-under" class="track-under"/>
+        <path id="chase-track-line"  class="track-line"/>
+        <g id="chase-startline"></g>
+        <g id="chase-cars"></g>
+        <g id="chase-labels"></g>
+      </svg>
+      <div id="chase-lights" class="hidden"></div>
+      <div id="chase-callout" class="hidden"></div>
+      <div id="chase-winner" class="hidden"></div>
+      <div class="chase-rotate-hint">↻ Rotate for the full track</div>
+      <div id="chase-tower"></div>
+    </div>
+    <div class="chase-controls">
+      <button class="chase-btn" id="btn-chase-play" aria-label="Play or pause">⏸</button>
+      <button class="chase-btn" id="btn-chase-replay" aria-label="Replay">↺</button>
+      <input type="range" id="chase-scrub" min="0" max="1" value="0" step="1" aria-label="Scrub races">
+      <span id="chase-round-lbl">R0</span>
+    </div>
+  </div>
+</div>
+
 <!-- Install Banner -->
 <div id="install-banner" class="hidden">
   <span class="ib-text">Add F1 Championship to your home screen</span>
@@ -532,6 +755,14 @@ const NS           = 'f1-championship';
 let players = [];
 let results = {};
 let config  = {};
+let openCarPickerPid = null;
+
+// Lowest car livery index (0-19) not yet used by another player.
+function nextFreeCar() {
+  const used = new Set(players.map(p => p.car).filter(c => c != null));
+  for (let i = 0; i < 20; i++) if (!used.has(i)) return i;
+  return players.length % 20;
+}
 
 // ============================================================
 // STORAGE
@@ -587,6 +818,32 @@ function getStandings() {
 function getPlayerRound(pid, rk) {
   const rank = getRaceRankings(rk).find(r => r.player.id === pid);
   return rank ? { points: rank.points, position: rank.position } : null;
+}
+
+// Build cumulative-per-round frames for the Championship Race replay.
+// Returns [{round, race, points:{pid:cum}, gains:{pid:g}, pos:{pid:rank}}] with a
+// synthetic starting-grid frame at index 0. length === 1 means no results yet.
+function buildChampionshipFrames() {
+  const cum = {}, wins = {};
+  players.forEach(p => { cum[p.id] = 0; wins[p.id] = 0; });
+  const orderOf = () => players
+    .map((p, i) => ({ id: p.id, pts: cum[p.id], w: wins[p.id], i }))
+    .sort((a, b) => b.pts - a.pts || b.w - a.w || a.i - b.i);
+  const posMap = () => Object.fromEntries(orderOf().map((e, i) => [e.id, i + 1]));
+
+  const frames = [{ round: 0, race: null, points: { ...cum }, gains: {}, pos: posMap() }];
+  for (const race of CALENDAR) {
+    const ranks = getRaceRankings(String(race.round));
+    if (!ranks.length) continue;
+    const gains = {};
+    for (const r of ranks) {
+      gains[r.player.id] = r.points;
+      cum[r.player.id] += r.points;
+      if (r.position === 1) wins[r.player.id] += 1;
+    }
+    frames.push({ round: race.round, race, points: { ...cum }, gains, pos: posMap() });
+  }
+  return frames;
 }
 
 function bestFinish(pos) {
@@ -692,6 +949,9 @@ function renderStandings() {
     });
     h += '</div>';
 
+    // Championship Race replay
+    h += '<button class="btn-primary" id="btn-open-chase" style="width:100%;margin:0 0 1.1rem">🏁 Championship Race</button>';
+
     // Standings table
     h += '<div class="sec-title">Driver Standings</div>';
     h += '<div class="tbl-wrap"><table class="stbl"><thead><tr><th>Pos</th><th>Driver</th><th>Pts</th><th class="td-c">Races</th><th class="td-c">Best</th></tr></thead><tbody>';
@@ -729,6 +989,7 @@ function renderStandings() {
   }
 
   document.getElementById('view-standings').innerHTML = h;
+  document.getElementById('btn-open-chase')?.addEventListener('click', openChase);
 }
 
 // ============================================================
@@ -780,11 +1041,21 @@ function renderSettings() {
   // Players
   h += '<div class="set-card"><div class="set-title">Players</div>';
   players.forEach(p => {
+    const carN = String((p.car ?? 0) + 1).padStart(2, '0');
     h += `<div class="player-row">
       ${avatarEditHtml(p, 42)}
       <span class="player-rname">${esc(p.name)}</span>
+      <img class="car-thumb" data-pick-pid="${p.id}" src="cars/car-${carN}.png" alt="Car for ${esc(p.name)}" title="Tap to change car">
       <button class="btn-rm" data-pid="${p.id}" aria-label="Remove ${esc(p.name)}"${players.length <= 1 ? ' disabled' : ''}>✕</button>
     </div>`;
+    if (openCarPickerPid === p.id) {
+      h += `<div class="car-picker" data-pid="${p.id}">`;
+      for (let i = 0; i < 20; i++) {
+        const n = String(i + 1).padStart(2, '0');
+        h += `<img class="car-thumb${(p.car ?? 0) === i ? ' sel' : ''}" data-car="${i}" data-set-pid="${p.id}" src="cars/car-${n}.png" alt="Car ${n}">`;
+      }
+      h += '</div>';
+    }
   });
   if (players.length < 6) {
     h += `<div class="add-form">
@@ -820,6 +1091,16 @@ function renderSettings() {
 
   // Wire events
   document.querySelectorAll('.btn-rm').forEach(b => b.addEventListener('click', () => removePlayer(b.dataset.pid)));
+  document.querySelectorAll('.car-thumb[data-pick-pid]').forEach(t => t.addEventListener('click', () => {
+    openCarPickerPid = openCarPickerPid === t.dataset.pickPid ? null : t.dataset.pickPid;
+    renderSettings();
+  }));
+  document.querySelectorAll('.car-thumb[data-set-pid]').forEach(t => t.addEventListener('click', () => {
+    const p = players.find(x => x.id === t.dataset.setPid);
+    if (p) { p.car = +t.dataset.car; save('players', players); }
+    openCarPickerPid = null;
+    renderSettings();
+  }));
   document.querySelectorAll('.avatar-edit').forEach(wrap => {
     const fileInput = wrap.querySelector('.avatar-file-input');
     wrap.addEventListener('click', () => fileInput.click());
@@ -866,7 +1147,7 @@ function addPlayer() {
   if (!inp) return;
   const name = inp.value.trim();
   if (!name || players.length >= 6) return;
-  players.push({ id: uid(), name, color: PLR_COLORS[players.length % PLR_COLORS.length], avatar: name.charAt(0).toUpperCase() });
+  players.push({ id: uid(), name, color: PLR_COLORS[players.length % PLR_COLORS.length], avatar: name.charAt(0).toUpperCase(), car: nextFreeCar() });
   save('players', players);
   renderSettings();
   renderStandings();
@@ -1068,6 +1349,451 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
 });
 
 // ============================================================
+// CHAMPIONSHIP RACE (animated progression)
+// ============================================================
+const SVGNS = 'http://www.w3.org/2000/svg';
+const XLINKNS = 'http://www.w3.org/1999/xlink';
+
+// A hand-drawn closed circuit inside the 1000x560 viewBox. Path point 0 (the
+// bottom straight) is the start/finish line and the direction of travel.
+const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300 850 290 ' +
+  'C 815 283 805 265 815 245 C 825 225 860 220 890 205 C 940 180 950 130 900 90 ' +
+  'C 855 55 780 60 700 78 L 520 118 C 470 129 430 120 400 90 C 365 55 300 50 240 65 ' +
+  'C 150 88 130 150 170 200 C 200 238 190 270 140 285 C 70 306 40 350 55 405 ' +
+  'C 70 460 160 490 300 490 Z';
+
+const CHASE = {
+  ROUND_MS: 1400, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
+  LANE_W: 8, SWERVE_AMPL: 10, GRID_GAP: 24,
+  CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
+  LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 24,
+  CAM_MIN_W: 300, CAM_PAD: 62, CAM_LERP: 0.16, LABEL_DY: 20
+};
+
+const chase = {
+  frames: [], seg: 0, u: 0, playing: false, raf: null, lastTs: 0,
+  path: null, L: 0, lut: [], maxPts: 1, cars: [], timeouts: [], finished: false,
+  cam: null
+};
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function easeInOutCubic(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2; }
+function easeOutBack(t) { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2); }
+
+function buildChaseLUT() {
+  chase.lut = [];
+  const N = CHASE.LUT_N, L = chase.L;
+  for (let i = 0; i <= N; i++) {
+    const pt = chase.path.getPointAtLength((i / N) * L);
+    chase.lut.push({ x: pt.x, y: pt.y, angle: 0 });
+  }
+  for (let i = 0; i <= N; i++) {
+    const a = chase.lut[Math.max(0, i - 1)], b = chase.lut[Math.min(N, i + 1)];
+    chase.lut[i].angle = Math.atan2(b.y - a.y, b.x - a.x);
+  }
+}
+
+function lutAt(d) {
+  const L = chase.L;
+  d = ((d % L) + L) % L;
+  const N = CHASE.LUT_N;
+  const f = (d / L) * N;
+  const i = Math.floor(f), t = f - i;
+  const a = chase.lut[i], b = chase.lut[Math.min(N, i + 1)];
+  let da = b.angle - a.angle;
+  if (da > Math.PI) da -= 2 * Math.PI;
+  if (da < -Math.PI) da += 2 * Math.PI;
+  return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), angle: a.angle + da * t };
+}
+
+// Cumulative points -> distance along the track. Leader's final total maps to
+// ~95% of a lap.
+function distOf(pts) {
+  const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
+  return CHASE.STARTLINE_PAD + (pts / chase.maxPts) * usable;
+}
+
+// Cars launch from a staggered starting grid; the offset blends out over round 1.
+function staggerFactor(seg, u) {
+  if (seg <= 0) return 1;
+  if (seg === 1) return 1 - easeInOutCubic(u);
+  return 0;
+}
+
+function laneOffsetOf(idx, n, pid, seg, u) {
+  let lane = (idx - (n - 1) / 2) * CHASE.LANE_W;
+  if (seg > 0) {
+    const prev = chase.frames[seg - 1].pos[pid];
+    const now = chase.frames[seg].pos[pid];
+    if (now < prev) {
+      const dir = lane <= 0 ? 1 : -1;
+      lane += Math.sin(u * Math.PI) * CHASE.SWERVE_AMPL * dir;
+    } else if (now > prev) {
+      const dir = lane <= 0 ? -1 : 1;
+      lane += Math.sin(u * Math.PI) * CHASE.SWERVE_AMPL * 0.4 * dir;
+    }
+  }
+  return lane;
+}
+
+function placeCar(car, d, lateral) {
+  const s = lutAt(d);
+  const nx = -Math.sin(s.angle), ny = Math.cos(s.angle);
+  const cx = s.x + nx * lateral, cy = s.y + ny * lateral;
+  const deg = s.angle * 180 / Math.PI + CHASE.SPRITE_HEADING;
+  const w = CHASE.CAR_LEN, h = CHASE.CAR_LEN * CHASE.CAR_ASPECT;
+  car._x = cx; car._y = cy;
+  car.el.setAttribute('transform',
+    `translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg.toFixed(1)}) translate(${-w/2} ${-h/2})`);
+  car.label.setAttribute('x', cx.toFixed(1));
+  car.label.setAttribute('y', (cy - CHASE.LABEL_DY).toFixed(1));
+}
+
+// Follow-camera: keep the pack framed and zoomed in (players stay close in
+// points, so the whole track is never needed). Reads live element aspect so
+// it fills in both orientations. snap=true jumps (open/scrub); else eases.
+function updateCamera(snap) {
+  if (!chase.cars.length) return;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  chase.cars.forEach(c => {
+    minX = Math.min(minX, c._x); maxX = Math.max(maxX, c._x);
+    minY = Math.min(minY, c._y); maxY = Math.max(maxY, c._y);
+  });
+  const svg = document.getElementById('chase-svg');
+  const ar = (svg.clientWidth && svg.clientHeight) ? svg.clientWidth / svg.clientHeight : 1000 / 560;
+  const pad = CHASE.CAM_PAD;
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  const spanW = (maxX - minX) + pad * 2, spanH = (maxY - minY) + pad * 2;
+  let w = Math.max(spanW, spanH * ar, CHASE.CAM_MIN_W);
+  w = Math.min(w, 1120);
+  const h = w / ar;
+  const target = { x: cx - w / 2, y: cy - h / 2, w, h };
+  if (snap || !chase.cam) {
+    chase.cam = target;
+  } else {
+    const s = CHASE.CAM_LERP;
+    chase.cam.x += (target.x - chase.cam.x) * s;
+    chase.cam.y += (target.y - chase.cam.y) * s;
+    chase.cam.w += (target.w - chase.cam.w) * s;
+    chase.cam.h += (target.h - chase.cam.h) * s;
+  }
+  const c = chase.cam;
+  svg.setAttribute('viewBox', `${c.x.toFixed(1)} ${c.y.toFixed(1)} ${c.w.toFixed(1)} ${c.h.toFixed(1)}`);
+}
+
+function renderChaseFrame(seg, u, snap) {
+  const n = chase.cars.length;
+  const stag = staggerFactor(seg, u);
+  chase.cars.forEach((car, i) => {
+    const fPrev = chase.frames[Math.max(seg - 1, 0)];
+    const fNext = chase.frames[seg];
+    const overtaking = seg > 0 && fNext.pos[car.pid] < fPrev.pos[car.pid];
+    const e = overtaking ? easeOutBack(u) : easeInOutCubic(u);
+    const dPrev = distOf(fPrev.points[car.pid]);
+    const dNext = distOf(fNext.points[car.pid]);
+    const d = lerp(dPrev, dNext, e) - i * CHASE.GRID_GAP * stag;
+    const lat = laneOffsetOf(i, n, car.pid, seg, u);
+    placeCar(car, d, lat);
+    const pts = Math.round(lerp(fPrev.points[car.pid], fNext.points[car.pid], u));
+    car.ptsEl.textContent = pts;
+  });
+  updateCamera(snap);
+}
+
+function updateChaseTower(seg) {
+  const f = chase.frames[seg];
+  chase.cars.forEach(car => {
+    const rank = f.pos[car.pid];
+    car.row.style.setProperty('--rank', rank);
+    car.row.style.order = rank;
+    car.posEl.textContent = rank;
+  });
+}
+
+function setChaseHud(seg) {
+  const f = chase.frames[seg];
+  if (f.race) {
+    document.getElementById('chase-flag').textContent = f.race.flag;
+    document.getElementById('chase-rname').textContent = f.race.name;
+    document.getElementById('chase-rmeta').textContent = `${f.race.circuit} · R${f.round}`;
+  } else {
+    document.getElementById('chase-flag').textContent = '🏁';
+    document.getElementById('chase-rname').textContent = 'On the grid';
+    document.getElementById('chase-rmeta').textContent = 'Lights out soon';
+  }
+  document.getElementById('chase-round-lbl').textContent = `R${f.round}`;
+  const scrub = document.getElementById('chase-scrub');
+  scrub.value = seg;
+  scrub.style.setProperty('--fill', (chase.frames.length > 1 ? seg / (chase.frames.length - 1) * 100 : 0) + '%');
+}
+
+function flashGains(seg) {
+  const f = chase.frames[seg];
+  chase.cars.forEach(car => {
+    if (f.gains[car.pid]) {
+      car.row.classList.remove('gained');
+      void car.row.offsetWidth;
+      car.row.classList.add('gained');
+    }
+  });
+  // Overtake callout for the biggest position climber this round.
+  const prev = chase.frames[seg - 1];
+  let best = null, bestGain = 0;
+  chase.cars.forEach(car => {
+    const climb = prev.pos[car.pid] - f.pos[car.pid];
+    if (climb > bestGain) { bestGain = climb; best = { pid: car.pid, pos: f.pos[car.pid] }; }
+  });
+  if (best) {
+    const p = players.find(x => x.id === best.pid);
+    const el = document.getElementById('chase-callout');
+    el.textContent = `${p ? p.name : ''} ▲ P${best.pos}`;
+    el.classList.remove('hidden'); el.classList.remove('show');
+    void el.offsetWidth; el.classList.add('show');
+  }
+}
+
+function advanceSegment() {
+  chase.seg += 1;
+  chase.u = 0;
+  setChaseHud(chase.seg);
+  updateChaseTower(chase.seg);
+  flashGains(chase.seg);
+  if (chase.seg >= chase.frames.length - 1) finishChase();
+}
+
+function chaseTick(ts) {
+  if (!chase.playing) return;
+  if (!chase.lastTs) chase.lastTs = ts;
+  const dt = ts - chase.lastTs;
+  chase.lastTs = ts;
+  chase.u += dt / CHASE.ROUND_MS;
+  while (chase.u >= 1 && chase.seg < chase.frames.length - 1) {
+    chase.u -= 1;
+    advanceSegment();
+  }
+  if (chase.seg >= chase.frames.length - 1) {
+    renderChaseFrame(chase.frames.length - 1, 1, false);
+    chasePause();
+    return;
+  }
+  renderChaseFrame(chase.seg + 1, chase.u, false);
+  chase.raf = requestAnimationFrame(chaseTick);
+}
+
+function chasePlay() {
+  if (chase.finished) return;
+  chase.playing = true;
+  chase.lastTs = 0;
+  document.getElementById('btn-chase-play').textContent = '⏸';
+  chase.raf = requestAnimationFrame(chaseTick);
+}
+
+function chasePause() {
+  chase.playing = false;
+  if (chase.raf) cancelAnimationFrame(chase.raf);
+  chase.raf = null;
+  document.getElementById('btn-chase-play').textContent = chase.finished ? '↺' : '▶';
+}
+
+function toggleChase() {
+  if (chase.finished) { replayChase(); return; }
+  chase.playing ? chasePause() : chasePlay();
+}
+
+function finishChase() {
+  chase.finished = true;
+  const f = chase.frames[chase.frames.length - 1];
+  const winnerId = Object.keys(f.pos).find(id => f.pos[id] === 1);
+  const p = players.find(x => x.id === winnerId);
+  const el = document.getElementById('chase-winner');
+  el.innerHTML = `<div class="cw-trophy">🏆</div>
+    <div class="cw-name">${p ? esc(p.name) : 'Champion'}</div>
+    <div class="cw-sub">${f.points[winnerId] || 0} pts · Champion</div>`;
+  el.classList.remove('hidden');
+  document.getElementById('btn-chase-play').textContent = '↺';
+}
+
+function chaseCountdown(fast) {
+  const box = document.getElementById('chase-lights');
+  box.innerHTML = '';
+  box.classList.remove('hidden');
+  const pods = [];
+  for (let i = 0; i < 5; i++) {
+    const pod = document.createElement('div');
+    pod.className = 'light-pod';
+    pod.innerHTML = '<div class="light-dot"></div><div class="light-dot"></div>';
+    box.appendChild(pod);
+    pods.push(pod);
+  }
+  const step = fast ? CHASE.FAST_LIGHT_MS : CHASE.LIGHT_MS;
+  pods.forEach((pod, i) => {
+    chase.timeouts.push(setTimeout(() => pod.classList.add('on'), step * (i + 1)));
+  });
+  const hold = step * 6 + 400 + Math.random() * 500;
+  chase.timeouts.push(setTimeout(() => {
+    pods.forEach(pod => pod.classList.remove('on'));
+    box.classList.add('hidden');
+    chasePlay();
+  }, hold));
+}
+
+function replayChase() {
+  clearChaseTimeouts();
+  chasePause();
+  chase.seg = 0;
+  chase.u = 0;
+  chase.finished = false;
+  document.getElementById('chase-winner').classList.add('hidden');
+  document.getElementById('chase-callout').classList.add('hidden');
+  setChaseHud(0);
+  updateChaseTower(0);
+  chase.cam = null;
+  renderChaseFrame(0, 0, true);
+  chaseCountdown(true);
+}
+
+function clearChaseTimeouts() {
+  chase.timeouts.forEach(t => clearTimeout(t));
+  chase.timeouts = [];
+}
+
+function buildChaseCars() {
+  const grp = document.getElementById('chase-cars');
+  const labels = document.getElementById('chase-labels');
+  const tower = document.getElementById('chase-tower');
+  grp.innerHTML = '';
+  labels.innerHTML = '';
+  tower.innerHTML = '';
+  chase.cars = [];
+  players.forEach((p, i) => {
+    const carN = String((p.car ?? 0) + 1).padStart(2, '0');
+    const img = document.createElementNS(SVGNS, 'image');
+    const href = `cars/car-${carN}.png`;
+    img.setAttributeNS(XLINKNS, 'href', href);
+    img.setAttribute('href', href);
+    img.setAttribute('width', CHASE.CAR_LEN);
+    img.setAttribute('height', CHASE.CAR_LEN * CHASE.CAR_ASPECT);
+    img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    grp.appendChild(img);
+
+    const label = document.createElementNS(SVGNS, 'text');
+    label.setAttribute('class', 'chase-label');
+    label.setAttribute('fill', p.color);
+    label.textContent = p.name;
+    labels.appendChild(label);
+
+    const row = document.createElement('div');
+    row.className = 'tw-row';
+    row.innerHTML = `<span class="tw-pos"></span>
+      <span class="tw-dot" style="background:${esc(p.color)}"></span>
+      <span class="tw-name">${esc(p.name)}</span>
+      <span class="tw-pts">0</span>`;
+    tower.appendChild(row);
+
+    chase.cars.push({
+      pid: p.id, el: img, label, row,
+      posEl: row.querySelector('.tw-pos'),
+      ptsEl: row.querySelector('.tw-pts')
+    });
+  });
+}
+
+function buildStartLine() {
+  const g = document.getElementById('chase-startline');
+  g.innerHTML = '';
+  const s = lutAt(2);
+  const deg = s.angle * 180 / Math.PI;
+  const cols = 2, rows = 8, sq = 5;
+  let inner = '';
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      if ((r + c) % 2 === 0) {
+        inner += `<rect x="${c * sq}" y="${-rows * sq / 2 + r * sq}" width="${sq}" height="${sq}" fill="#fff"/>`;
+      }
+    }
+  }
+  g.setAttribute('transform', `translate(${s.x} ${s.y}) rotate(${deg}) translate(-5 0)`);
+  g.innerHTML = inner;
+}
+
+function openChase() {
+  chase.frames = buildChampionshipFrames();
+  if (chase.frames.length < 2) return;
+  chase.finished = false;
+  chase.seg = 0;
+  chase.u = 0;
+  chase.cam = null;
+
+  const overlay = document.getElementById('chase-overlay');
+  document.getElementById('chase-track-edge').setAttribute('d', TRACK_D);
+  document.getElementById('chase-track-under').setAttribute('d', TRACK_D);
+  document.getElementById('chase-track-line').setAttribute('d', TRACK_D);
+  overlay.classList.remove('hidden');   // unhide before measuring geometry
+
+  chase.path = document.getElementById('chase-track-under');
+  chase.L = chase.path.getTotalLength();
+  buildChaseLUT();
+  const last = chase.frames[chase.frames.length - 1].points;
+  chase.maxPts = Math.max(1, ...Object.values(last));
+
+  buildChaseCars();
+  buildStartLine();
+  const scrub = document.getElementById('chase-scrub');
+  scrub.max = chase.frames.length - 1;
+
+  document.getElementById('chase-winner').classList.add('hidden');
+  document.getElementById('chase-callout').classList.add('hidden');
+  setChaseHud(0);
+  updateChaseTower(0);
+  renderChaseFrame(0, 0, true);
+
+  overlay.requestFullscreen?.().catch(() => {});
+  try { screen.orientation?.lock?.('landscape').catch(() => {}); } catch (e) {}
+
+  document.addEventListener('keydown', chaseKeyHandler);
+  chaseCountdown(false);
+}
+
+function closeChase() {
+  chasePause();
+  clearChaseTimeouts();
+  chase.finished = false;
+  document.removeEventListener('keydown', chaseKeyHandler);
+  try { screen.orientation?.unlock?.(); } catch (e) {}
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  document.getElementById('chase-cars').innerHTML = '';
+  document.getElementById('chase-labels').innerHTML = '';
+  document.getElementById('chase-tower').innerHTML = '';
+  document.getElementById('chase-lights').innerHTML = '';
+  document.getElementById('chase-overlay').classList.add('hidden');
+}
+
+function chaseKeyHandler(e) { if (e.key === 'Escape') closeChase(); }
+
+function scrubChase(v) {
+  chasePause();
+  clearChaseTimeouts();
+  document.getElementById('chase-lights').classList.add('hidden');
+  chase.seg = Math.min(v, chase.frames.length - 1);
+  chase.u = 0;
+  chase.finished = chase.seg >= chase.frames.length - 1;
+  document.getElementById('chase-winner').classList.toggle('hidden', !chase.finished);
+  if (chase.finished) finishChase();
+  else document.getElementById('btn-chase-play').textContent = '▶';
+  setChaseHud(chase.seg);
+  updateChaseTower(chase.seg);
+  renderChaseFrame(chase.seg, 1, true);
+}
+
+document.getElementById('btn-chase-close').addEventListener('click', closeChase);
+document.getElementById('btn-chase-play').addEventListener('click', toggleChase);
+document.getElementById('btn-chase-replay').addEventListener('click', replayChase);
+document.getElementById('chase-scrub').addEventListener('input', e => scrubChase(+e.target.value));
+document.getElementById('chase-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('chase-overlay')) closeChase();
+});
+
+// ============================================================
 // CONFIRM DIALOG
 // ============================================================
 let confirmCb = null;
@@ -1136,14 +1862,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (players.length === 0) {
     players = [
-      { id: uid(), name: 'Player 1', color: PLR_COLORS[0], avatar: 'P' },
-      { id: uid(), name: 'Player 2', color: PLR_COLORS[1], avatar: 'P' },
+      { id: uid(), name: 'Player 1', color: PLR_COLORS[0], avatar: 'P', car: 0 },
+      { id: uid(), name: 'Player 2', color: PLR_COLORS[1], avatar: 'P', car: 1 },
     ];
     save('players', players);
   }
 
+  // Backfill car liveries for players saved before the Championship Race feature.
+  let migrated = false;
+  players.forEach((p, i) => { if (p.car == null) { p.car = i % 20; migrated = true; } });
+  if (migrated) save('players', players);
+
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607180254';
+    const SW_VERSION = '2607180902';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
