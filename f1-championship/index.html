@@ -1383,17 +1383,17 @@ function catmullRomClosed(pts) {
   return d + ' Z';
 }
 
-// A long, flowing circuit (~3x the old track) so overtakes have room to play
-// out. Built as a wavy loop with straighter runs and tighter turns.
-const TRACK_D = (() => {
-  const cx = 1150, cy = 700, rx = 1080, ry = 640, N = 30, pts = [];
-  for (let i = 0; i < N; i++) {
-    const t = i / N * Math.PI * 2;
-    const w = 1 + 0.20 * Math.sin(4 * t + 0.7) + 0.13 * Math.sin(7 * t + 0.3) + 0.05 * Math.sin(2 * t);
-    pts.push([cx + rx * w * Math.cos(t), cy + ry * w * Math.sin(t)]);
-  }
-  return catmullRomClosed(pts);
-})();
+// A long circuit (~3x the old track) with a proper start/finish straight along
+// the bottom (points 0-3 are colinear, so the grid forms on a straight) and a
+// flowing set of turns around the rest of the lap.
+const TRACK_D = catmullRomClosed([
+  [560, 1330], [980, 1340], [1380, 1335], [1720, 1290],   // start/finish straight -> T1
+  [1990, 1130], [2130, 880], [2030, 650], [2160, 450],    // right side + kink
+  [2010, 255], [1760, 210], [1520, 305], [1300, 220],     // top-right, esses
+  [1055, 320], [810, 240], [575, 305], [335, 250],        // esses across the top
+  [175, 455], [255, 705], [135, 920], [255, 1110],        // top-left, left side, chicane
+  [185, 1290], [300, 1345]                                 // sweep back onto the straight
+]);
 
 const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca',
   'bh', 'sa', 'cn', 'es', 'at', 'be', 'nl', 'br']);
@@ -1402,7 +1402,7 @@ const CHASE = {
   SIDE_LANE: 16, CLUSTER_GAP: 46, ROW_GAP: 46, LANE_SMOOTH: 0.08,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
   LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
-  CAM_MIN_W: 300, CAM_PAD: 62, CAM_LERP: 0.16, LABEL_DY: 20
+  CAM_MIN_W: 470, CAM_PAD: 130, CAM_LERP: 0.16, LABEL_DY: 20
 };
 
 const chase = {
@@ -1866,22 +1866,22 @@ function curveAt(d) {
   return da;
 }
 
-// Red-and-white kerbs along both edges of the track through the tighter turns.
+// Red-and-white kerbs on the inside edge (apex) of the tighter turns.
 function buildKerbs() {
   const g = document.getElementById('chase-kerbs');
   if (!g) return;
   const L = chase.L, step = 11;
-  let html = '', seg = [0, 0];
+  let html = '', seg = 0;
   for (let d = 0; d < L; d += step) {
-    if (Math.abs(curveAt(d)) < 0.07) { seg = [0, 0]; continue; }   // tight turns only
+    const da = curveAt(d);
+    if (Math.abs(da) < 0.07) { seg = 0; continue; }   // tight turns only
     const s = lutAt(d);
     const deg = (s.angle * 180 / Math.PI).toFixed(1);
-    [-1, 1].forEach((edge, ei) => {
-      const nx = -Math.sin(s.angle) * edge, ny = Math.cos(s.angle) * edge;
-      const cx = s.x + nx * 30, cy = s.y + ny * 30;
-      const cls = (seg[ei]++ % 2 === 0) ? 'kerb-r' : 'kerb-w';
-      html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><rect class="${cls}" x="${(-step / 2 - 0.5).toFixed(1)}" y="-4" width="${(step + 1).toFixed(1)}" height="8"/></g>`;
-    });
+    const edge = da > 0 ? 1 : -1;                       // inside of the turn (apex)
+    const nx = -Math.sin(s.angle) * edge, ny = Math.cos(s.angle) * edge;
+    const cx = s.x + nx * 30, cy = s.y + ny * 30;
+    const cls = (seg++ % 2 === 0) ? 'kerb-r' : 'kerb-w';
+    html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><rect class="${cls}" x="${(-step / 2 - 0.5).toFixed(1)}" y="-4" width="${(step + 1).toFixed(1)}" height="8"/></g>`;
   }
   g.innerHTML = html;
 }
@@ -2110,7 +2110,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607190738';
+    const SW_VERSION = '2607191105';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
