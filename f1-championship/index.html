@@ -450,6 +450,8 @@ permalink: /f1-championship/
     .track-under { fill: none; stroke: #2a2740; stroke-width: 64; stroke-linejoin: round; stroke-linecap: round; }
     .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 72; stroke-linejoin: round; stroke-linecap: round; }
     .track-line  { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 2.5; stroke-dasharray: 10 14; }
+    .kerb-r { fill: #d83a3a; }
+    .kerb-w { fill: #e8e8e8; }
     .chase-label {
       font: 700 11px 'Inter', system-ui, sans-serif;
       text-anchor: middle; paint-order: stroke;
@@ -697,6 +699,7 @@ permalink: /f1-championship/
         <path id="chase-track-edge"  class="track-edge"/>
         <path id="chase-track-under" class="track-under"/>
         <path id="chase-track-line"  class="track-line"/>
+        <g id="chase-kerbs"></g>
         <g id="chase-scenery"></g>
         <g id="chase-dressing"></g>
         <g id="chase-stands"></g>
@@ -1843,6 +1846,26 @@ function curveAt(d) {
   return da;
 }
 
+// Red-and-white kerbs along both edges of the track through the tighter turns.
+function buildKerbs() {
+  const g = document.getElementById('chase-kerbs');
+  if (!g) return;
+  const L = chase.L, step = 11;
+  let html = '', seg = [0, 0];
+  for (let d = 0; d < L; d += step) {
+    if (Math.abs(curveAt(d)) < 0.07) { seg = [0, 0]; continue; }   // tight turns only
+    const s = lutAt(d);
+    const deg = (s.angle * 180 / Math.PI).toFixed(1);
+    [-1, 1].forEach((edge, ei) => {
+      const nx = -Math.sin(s.angle) * edge, ny = Math.cos(s.angle) * edge;
+      const cx = s.x + nx * 30, cy = s.y + ny * 30;
+      const cls = (seg[ei]++ % 2 === 0) ? 'kerb-r' : 'kerb-w';
+      html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><rect class="${cls}" x="${(-step / 2 - 0.5).toFixed(1)}" y="-4" width="${(step + 1).toFixed(1)}" height="8"/></g>`;
+    });
+  }
+  g.innerHTML = html;
+}
+
 // True if (x,y) lands within `clearance` of the asphalt anywhere on the lap —
 // used to keep scenery and barriers off the track, including where it loops
 // back near itself (e.g. the two halves of an S-curve).
@@ -1923,6 +1946,7 @@ function openChase() {
 
   buildChaseCars();
   buildStartLine();
+  buildKerbs();
   buildScenery();
   buildBarriers();
   buildStands();
@@ -1954,6 +1978,7 @@ function closeChase() {
   document.getElementById('chase-stands').innerHTML = '';
   document.getElementById('chase-scenery').innerHTML = '';
   document.getElementById('chase-dressing').innerHTML = '';
+  document.getElementById('chase-kerbs').innerHTML = '';
   document.getElementById('chase-tower').innerHTML = '';
   document.getElementById('chase-lights').innerHTML = '';
   document.getElementById('chase-overlay').classList.add('hidden');
@@ -2065,7 +2090,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607182357';
+    const SW_VERSION = '2607190656';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
