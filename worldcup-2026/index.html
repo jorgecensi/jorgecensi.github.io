@@ -4740,13 +4740,21 @@ function App(){
         ['r32','r16','qf','sf','final','third'].forEach(round=>{
           next[round].forEach((m,idx)=>{
             if(!m.teamA||!m.teamB) return;
-            const key=[m.teamA,m.teamB].sort().join('|');
+            const sorted=[m.teamA,m.teamB].sort();
+            const key=sorted.join('|');
             const s=data.ko[key];
             if(!s) return;
-            if(s.scoreA!=null) next[round][idx].scoreA=s.scoreA;
-            if(s.scoreB!=null) next[round][idx].scoreB=s.scoreB;
-            next[round][idx].penA=s.penA??null;
-            next[round][idx].penB=s.penB??null;
+            // scores.json stores scoreA/scoreB relative to the sorted team
+            // order, which may not match this match's teamA/teamB order.
+            const swap=m.teamA!==sorted[0];
+            const sA=swap?s.scoreB:s.scoreA;
+            const sB=swap?s.scoreA:s.scoreB;
+            const pA=swap?s.penB:s.penA;
+            const pB=swap?s.penA:s.penB;
+            if(sA!=null) next[round][idx].scoreA=sA;
+            if(sB!=null) next[round][idx].scoreB=sB;
+            next[round][idx].penA=pA??null;
+            next[round][idx].penB=pB??null;
           });
         });
         return propagateKO(next,groupMatches);
