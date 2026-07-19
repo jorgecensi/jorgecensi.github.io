@@ -450,6 +450,8 @@ permalink: /f1-championship/
     .track-under { fill: none; stroke: #2a2740; stroke-width: 64; stroke-linejoin: round; stroke-linecap: round; }
     .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 72; stroke-linejoin: round; stroke-linecap: round; }
     .track-line  { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 2.5; stroke-dasharray: 10 14; }
+    .kerb-r { fill: #d83a3a; }
+    .kerb-w { fill: #e8e8e8; }
     .chase-label {
       font: 700 11px 'Inter', system-ui, sans-serif;
       text-anchor: middle; paint-order: stroke;
@@ -697,6 +699,7 @@ permalink: /f1-championship/
         <path id="chase-track-edge"  class="track-edge"/>
         <path id="chase-track-under" class="track-under"/>
         <path id="chase-track-line"  class="track-line"/>
+        <g id="chase-kerbs"></g>
         <g id="chase-scenery"></g>
         <g id="chase-dressing"></g>
         <g id="chase-stands"></g>
@@ -1366,22 +1369,40 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
 const SVGNS = 'http://www.w3.org/2000/svg';
 const XLINKNS = 'http://www.w3.org/1999/xlink';
 
-// A hand-drawn closed circuit inside the 1000x560 viewBox. Path point 0 (the
-// bottom straight) is the start/finish line and the direction of travel.
-const TRACK_D = 'M 300 490 L 760 490 C 880 490 960 455 960 380 C 960 315 905 300 850 290 ' +
-  'C 815 283 805 265 815 245 C 825 225 860 220 890 205 C 940 180 950 130 900 90 ' +
-  'C 855 55 780 60 700 78 L 520 118 C 470 129 430 120 400 90 C 365 55 300 50 240 65 ' +
-  'C 150 88 130 150 170 200 C 200 238 190 270 140 285 C 70 306 40 350 55 405 ' +
-  'C 70 460 160 490 300 490 Z';
+// Smooth closed circuit through a set of waypoints (Catmull-Rom -> cubic
+// beziers). The camera follows the pack, so the path can be large.
+function catmullRomClosed(pts) {
+  const n = pts.length;
+  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d + ' Z';
+}
+
+// A long circuit (~3x the old track) with a proper start/finish straight along
+// the bottom (points 0-3 are colinear, so the grid forms on a straight) and a
+// flowing set of turns around the rest of the lap.
+const TRACK_D = catmullRomClosed([
+  [560, 1330], [980, 1340], [1380, 1335], [1720, 1290],   // start/finish straight -> T1
+  [1990, 1130], [2130, 880], [2030, 650], [2160, 450],    // right side + kink
+  [2010, 255], [1760, 210], [1520, 305], [1300, 220],     // top-right, esses
+  [1055, 320], [810, 240], [575, 305], [335, 250],        // esses across the top
+  [175, 455], [255, 705], [135, 920], [255, 1110],        // top-left, left side, chicane
+  [185, 1290], [300, 1345]                                 // sweep back onto the straight
+]);
 
 const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca',
   'bh', 'sa', 'cn', 'es', 'at', 'be', 'nl', 'br']);
 const CHASE = {
-  ROUND_MS: 2600, LIGHT_MS: 600, FAST_LIGHT_MS: 340,
+  ROUND_MS: 4200, LIGHT_MS: 600, FAST_LIGHT_MS: 340, MAX_PTS_DIST: 7,
   SIDE_LANE: 16, CLUSTER_GAP: 46, ROW_GAP: 46, LANE_SMOOTH: 0.08,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
   LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
-  CAM_MIN_W: 300, CAM_PAD: 62, CAM_LERP: 0.16, LABEL_DY: 20
+  CAM_MIN_W: 470, CAM_PAD: 130, CAM_LERP: 0.16, LABEL_DY: 20
 };
 
 const chase = {
@@ -1429,9 +1450,11 @@ function leaderDistAt(roundNum) {
 // Track distance per championship point. Scaled by the maximum points possible
 // over the whole season (25 * rounds) so a car can never be pushed behind the
 // start line, and the gap between two cars is exactly their points difference.
+// Capped so a much longer track doesn't spread the pack out of frame — the
+// extra length just gives overtakes more room and time.
 function distPerPoint() {
   const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
-  return usable / (25 * (chase.lastRound || 1));
+  return Math.min(usable / (25 * (chase.lastRound || 1)), CHASE.MAX_PTS_DIST);
 }
 
 function placeCar(car, d, lateral) {
@@ -1843,6 +1866,26 @@ function curveAt(d) {
   return da;
 }
 
+// Red-and-white kerbs on the inside edge (apex) of the tighter turns.
+function buildKerbs() {
+  const g = document.getElementById('chase-kerbs');
+  if (!g) return;
+  const L = chase.L, step = 11;
+  let html = '', seg = 0;
+  for (let d = 0; d < L; d += step) {
+    const da = curveAt(d);
+    if (Math.abs(da) < 0.07) { seg = 0; continue; }   // tight turns only
+    const s = lutAt(d);
+    const deg = (s.angle * 180 / Math.PI).toFixed(1);
+    const edge = da > 0 ? 1 : -1;                       // inside of the turn (apex)
+    const nx = -Math.sin(s.angle) * edge, ny = Math.cos(s.angle) * edge;
+    const cx = s.x + nx * 30, cy = s.y + ny * 30;
+    const cls = (seg++ % 2 === 0) ? 'kerb-r' : 'kerb-w';
+    html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><rect class="${cls}" x="${(-step / 2 - 0.5).toFixed(1)}" y="-4" width="${(step + 1).toFixed(1)}" height="8"/></g>`;
+  }
+  g.innerHTML = html;
+}
+
 // True if (x,y) lands within `clearance` of the asphalt anywhere on the lap —
 // used to keep scenery and barriers off the track, including where it loops
 // back near itself (e.g. the two halves of an S-curve).
@@ -1923,6 +1966,7 @@ function openChase() {
 
   buildChaseCars();
   buildStartLine();
+  buildKerbs();
   buildScenery();
   buildBarriers();
   buildStands();
@@ -1954,6 +1998,7 @@ function closeChase() {
   document.getElementById('chase-stands').innerHTML = '';
   document.getElementById('chase-scenery').innerHTML = '';
   document.getElementById('chase-dressing').innerHTML = '';
+  document.getElementById('chase-kerbs').innerHTML = '';
   document.getElementById('chase-tower').innerHTML = '';
   document.getElementById('chase-lights').innerHTML = '';
   document.getElementById('chase-overlay').classList.add('hidden');
@@ -2065,7 +2110,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607182357';
+    const SW_VERSION = '2607191105';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
