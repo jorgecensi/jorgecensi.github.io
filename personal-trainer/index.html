@@ -1850,6 +1850,15 @@ permalink: /personal-trainer/
         // =====================================================
         // Screens / navigation
         // =====================================================
+        // The browser's own scroll-position restoration on history back/forward
+        // fights with the manual scrollTo(0,0) below, and in standalone iOS PWAs
+        // that mismatch is what flashes the native (white) layer underneath for
+        // a frame during a back navigation — most visible in the bottom safe
+        // area since the rest of the screen is usually covered by content.
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+
         function show(id) {
             document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
             window.scrollTo(0, 0);
