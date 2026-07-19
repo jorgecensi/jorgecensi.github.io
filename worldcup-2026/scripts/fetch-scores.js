@@ -138,10 +138,15 @@ async function main() {
       const appRound = STAGE_MAP[stage];
       if (!appRound) { console.warn(`Unknown stage: "${stage}"`); continue; }
 
-      // Store by sorted team pair; the app resolves to the correct match at read time
-      const key  = [apiHome, apiAway].sort().join('|');
+      // Store by sorted team pair, with scoreA/scoreB relative to that sorted
+      // order (not home/away) — the app looks up by sorted key and has no
+      // other way to know which team was home.
+      const sorted = [apiHome, apiAway].sort();
+      const key    = sorted.join('|');
+      const [sA, sB] = apiHome === sorted[0] ? [scoreH, scoreA] : [scoreA, scoreH];
+      const [pA, pB] = apiHome === sorted[0] ? [penH, penA] : [penA, penH];
       const prev = newKO[key] || {};
-      const next = { scoreA: scoreH, scoreB: scoreA, penA: penH, penB: penA };
+      const next = { scoreA: sA, scoreB: sB, penA: pA, penB: pB };
       if (JSON.stringify(prev) !== JSON.stringify(next)) {
         newKO[key] = next;
         changed = true;
