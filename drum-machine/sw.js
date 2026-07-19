@@ -4,6 +4,8 @@ const OFFLINE_URL = '/drum-machine/';
 const PRECACHE_URLS = [
     '/drum-machine/',
     '/drum-machine/manifest.json',
+    '/img/drum-machine-icon-192.png',
+    '/img/drum-machine-icon-512.png',
 ];
 
 self.addEventListener('install', event => {
@@ -17,12 +19,11 @@ self.addEventListener('activate', event => {
         caches.keys().then(keys =>
             Promise.all(
                 keys
-                    .filter(key => key !== CACHE_NAME)
+                    .filter(key => key !== CACHE_NAME && key.startsWith('drum-machine-'))
                     .map(key => caches.delete(key))
             )
-        )
+        ).then(() => self.clients.claim())
     );
-    self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {

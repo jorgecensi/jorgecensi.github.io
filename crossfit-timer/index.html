@@ -1772,7 +1772,11 @@ class CrossFitTimer {
             displayMode: this.displayModeSelect.value
         };
         
-        localStorage.setItem('crossfitTimerSettings', JSON.stringify(settings));
+        try {
+            localStorage.setItem('crossfitTimerSettings', JSON.stringify(settings));
+        } catch (e) {
+            console.error('Failed to save crossfitTimerSettings', e);
+        }
         this.displayMode = settings.displayMode;
         
         // Show confirmation

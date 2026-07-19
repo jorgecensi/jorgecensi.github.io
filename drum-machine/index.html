@@ -2226,7 +2226,7 @@ if ('serviceWorker' in navigator) {
                 }
             });
         });
-    }).catch(() => {});
+    }).catch(err => console.warn('SW registration failed', err));
 
     document.getElementById('update-btn').addEventListener('click', () => {
         navigator.serviceWorker.getRegistration('/drum-machine/').then(reg => {

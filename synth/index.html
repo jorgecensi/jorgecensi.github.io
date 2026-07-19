@@ -1280,7 +1280,9 @@ const KeyDetector = (() => {
       rafId = setInterval(collect, 50);
       detectionInterval = setInterval(detectKey, 2500);
       renderBtn();
-    } catch(e) {}
+    } catch(e) {
+      console.error('Mic access for key detection failed', e);
+    }
   }
 
   function stop() {
@@ -1456,7 +1458,7 @@ if ('serviceWorker' in navigator) {
 
     window.addEventListener('focus', () => registration.update());
     setInterval(() => registration.update(), 60 * 60 * 1000);
-  }).catch(() => {});
+  }).catch(err => console.warn('SW registration failed', err));
 }
 
 // ─── Init ──────────────────────────────────────────────────────────────────

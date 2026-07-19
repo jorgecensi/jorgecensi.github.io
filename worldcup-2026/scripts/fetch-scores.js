@@ -89,6 +89,10 @@ function fetch_json(urlPath) {
       let raw = '';
       res.on('data', c => raw += c);
       res.on('end', () => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`HTTP ${res.statusCode}: ${raw.slice(0,300)}`));
+          return;
+        }
         try { resolve(JSON.parse(raw)); }
         catch(e) { reject(new Error(`JSON parse: ${e.message}\nBody: ${raw.slice(0,300)}`)); }
       });

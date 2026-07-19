@@ -58,16 +58,16 @@ class FlappyBird {
     
     async loadAssets() {
         const imageFiles = [
-            { key: 'bird', src: 'img/bird.png' },
-            { key: 'bg', src: 'img/bg.png' },
-            { key: 'fg', src: 'img/fg.png' },
-            { key: 'pipeNorth', src: 'img/pipeNorth.png' },
-            { key: 'pipeSouth', src: 'img/pipeSouth.png' }
+            { key: 'bird', src: '/img/bird.png' },
+            { key: 'bg', src: '/img/bg.png' },
+            { key: 'fg', src: '/img/fg.png' },
+            { key: 'pipeNorth', src: '/img/pipeNorth.png' },
+            { key: 'pipeSouth', src: '/img/pipeSouth.png' }
         ];
-        
+
         const soundFiles = [
-            { key: 'fly', src: 'sounds/fly.mp3' },
-            { key: 'score', src: 'sounds/score.mp3' }
+            { key: 'fly', src: '/sounds/fly.mp3' },
+            { key: 'score', src: '/sounds/score.mp3' }
         ];
         
         // Load images

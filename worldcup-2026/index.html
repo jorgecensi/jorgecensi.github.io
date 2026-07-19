@@ -4769,7 +4769,8 @@ function App(){
       if(data&&(Object.keys(data.group||{}).length||Object.keys(data.ko||{}).length)){
         applyAutoScores(data);
       }
-    }catch(_){
+    }catch(e){
+      console.error('Score refresh failed',e);
       setRefreshError(true);
     }
     setRefreshing(false);

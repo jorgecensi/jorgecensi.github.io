@@ -22,14 +22,14 @@ self.addEventListener('message', e => {
   }
 });
 
-// Activate: clean old caches
+// Activate: clean old curator caches only (Cache Storage is shared across
+// all apps on this origin — deleting unscoped keys would wipe other PWAs).
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
+      Promise.all(keys.filter(k => k !== CACHE && k.startsWith('curator-')).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // Fetch: app shell from cache, API calls always network

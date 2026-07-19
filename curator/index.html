@@ -710,7 +710,14 @@ async function loadFeed() {
     else errors.push(`${sources[i].raw}: ${r.reason?.message || 'unknown error'}`);
   });
 
-  const noShorts = await filterShorts(all);
+  let noShorts;
+  try {
+    noShorts = await filterShorts(all);
+  } catch (e) {
+    console.error('filterShorts failed', e);
+    errors.push(`Filtering Shorts failed: ${e?.message || 'unknown error'}`);
+    noShorts = all;
+  }
   noShorts.sort((a, b) => new Date(b.published) - new Date(a.published));
   videos = noShorts;
   status = 'done';

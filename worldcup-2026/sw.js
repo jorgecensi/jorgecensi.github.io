@@ -14,7 +14,13 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS.map((url) => new Request(url, { cache: 'reload' })))));
+  // Cache each URL independently so a single failed request (e.g. a CDN
+  // hiccup) doesn't abort cache.addAll() and leave the app with no SW at all.
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => Promise.all(
+    PRECACHE_URLS.map((url) =>
+      cache.add(new Request(url, { cache: 'reload' })).catch((err) => console.warn('Precache failed for', url, err))
+    )
+  )));
 });
 self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys().then((cacheNames) => Promise.all(cacheNames.map((cacheName) => {
