@@ -440,6 +440,74 @@ permalink: /personal-trainer/
         .info-row .delta.up { color: var(--accent-bright); }
         .info-row .delta.down { color: var(--danger); }
 
+        .topbar-actions {
+            display: flex;
+            gap: 2px;
+        }
+
+        /* How-the-generator-works modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(4, 8, 14, 0.72);
+            z-index: 300;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 520px;
+            max-height: 82vh;
+            overflow-y: auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px 20px 0 0;
+            padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+            animation: modal-slide-up 0.2s ease;
+        }
+
+        @keyframes modal-slide-up {
+            from { transform: translateY(24px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .modal-head h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .modal-head h2 span {
+            color: var(--accent);
+        }
+
+        .modal-close {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         /* Themed action buttons */
         #btn-generate {
             background: linear-gradient(135deg, #12c48a, #0fb7a4);
@@ -1226,7 +1294,10 @@ permalink: /personal-trainer/
             <header class="topbar">
                 <button class="back-btn" data-back="home">‹ Back</button>
                 <h1>Today's <span>Workout</span></h1>
-                <button class="back-btn" id="btn-regenerate" title="Regenerate">🔀</button>
+                <div class="topbar-actions">
+                    <button class="back-btn" id="btn-generator-info" title="How this workout is built" aria-label="How this workout is built">ⓘ</button>
+                    <button class="back-btn" id="btn-regenerate" title="Regenerate">🔀</button>
+                </div>
             </header>
             <div class="card" style="flex:1;overflow-y:auto;" id="preview-list"></div>
             <button class="btn" id="btn-start">Start workout</button>
@@ -1371,6 +1442,45 @@ permalink: /personal-trainer/
             <p class="muted-note" id="rec-note" style="margin-bottom:12px;"></p>
             <div id="records-list"></div>
         </section>
+    </div>
+
+    <!-- ============ HOW THE GENERATOR WORKS (modal) ============ -->
+    <div class="modal-overlay" id="generator-info-modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2>How the <span>Generator</span> Works</h2>
+                <button class="modal-close" id="close-generator-info" aria-label="Close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="card">
+                    <div class="section-title">The shape of a session</div>
+                    <div class="info-row"><span>🔥 Warm-up</span><span class="muted-note">3 easy moves</span></div>
+                    <div class="info-row"><span>💪 Main circuit</span><span class="muted-note">Core + Pilates, alternating</span></div>
+                    <div class="info-row"><span>🧘 Cool-down</span><span class="muted-note">3 stretches</span></div>
+                    <p class="muted-note" style="margin-top:10px;">Your session length sets the time budget, then the main circuit is filled with as many exercises as fit. Pick 40 minutes and the circuit repeats for a second round instead of just adding more moves.</p>
+                </div>
+
+                <div class="card">
+                    <div class="section-title">Picking the exercises</div>
+                    <p class="muted-note">Each pick comes from your current tier in that discipline (Core or Pilates), down to two tiers below it — so it's mostly familiar with a few fresh challenges mixed in. The list stays balanced across ab, oblique, back and glute focus, and skips whatever you did in your very last session so two sessions in a row don't feel identical.</p>
+                </div>
+
+                <div class="card">
+                    <div class="section-title">Today's twist</div>
+                    <p class="muted-note">Every workout gets a random theme, never the same one twice in a row: a focus day (abs, obliques, or glutes &amp; back), an endurance day with doses up ~20%, a speedy day with shorter rests, a finisher with one max-effort hold at the end, or the classic balanced mix.</p>
+                </div>
+
+                <div class="card">
+                    <div class="section-title">Rest between exercises</div>
+                    <p class="muted-note">Higher tiers rest less between moves — 20s at Tier 1, down to 12s at Tier 4+ — and a speedy twist shortens it further. Warm-up and cool-down moves get a short breather too, just enough to get set up for the next one.</p>
+                </div>
+
+                <div class="card">
+                    <div class="section-title">Not feeling this mix?</div>
+                    <p class="muted-note">Tap 🔀 on the preview screen to reshuffle before you start — as many times as you like, no penalty. Once you're training, your post-workout feedback (too easy / just right / too hard) is what actually moves the difficulty needle — see <strong style="color:var(--text);">How Progression Works</strong> for that part.</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1909,6 +2019,7 @@ permalink: /personal-trainer/
         function goHome() {
             clearPreviewVideos();
             clearLibraryVideos();
+            closeGeneratorInfo();
             renderHome();
             show(rootScreenId());
             if (navDepth > 0) {
@@ -1947,6 +2058,7 @@ permalink: /personal-trainer/
             const target = (e.state && e.state.screen) || rootScreenId();
             clearPreviewVideos();
             clearLibraryVideos();
+            closeGeneratorInfo();
             if (target === 'home' || target === 'setup') renderHome();
             show(target);
         });
@@ -2028,6 +2140,23 @@ permalink: /personal-trainer/
         document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); navigate('library'); });
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
+
+        // ---- How-the-generator-works modal ----
+        const generatorInfoModal = document.getElementById('generator-info-modal');
+        function openGeneratorInfo() {
+            generatorInfoModal.classList.add('open');
+        }
+        function closeGeneratorInfo() {
+            generatorInfoModal.classList.remove('open');
+        }
+        document.getElementById('btn-generator-info').addEventListener('click', openGeneratorInfo);
+        document.getElementById('close-generator-info').addEventListener('click', closeGeneratorInfo);
+        generatorInfoModal.addEventListener('click', (e) => {
+            if (e.target === generatorInfoModal) closeGeneratorInfo();
+        });
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && generatorInfoModal.classList.contains('open')) closeGeneratorInfo();
+        });
         function bindClickableCard(id, handler) {
             const el = document.getElementById(id);
             el.addEventListener('click', handler);
@@ -2041,7 +2170,7 @@ permalink: /personal-trainer/
         bindClickableCard('ach-card', () => { renderAchievements(); navigate('achievements'); });
         bindClickableCard('rec-card', () => { renderRecords(); navigate('records'); });
         document.querySelectorAll('[data-back]').forEach((b) =>
-            b.addEventListener('click', () => { clearPreviewVideos(); clearLibraryVideos(); goBack(); }));
+            b.addEventListener('click', () => { clearPreviewVideos(); clearLibraryVideos(); closeGeneratorInfo(); goBack(); }));
 
         document.getElementById('btn-generate').addEventListener('click', () => {
             currentWorkout = generateWorkout();
