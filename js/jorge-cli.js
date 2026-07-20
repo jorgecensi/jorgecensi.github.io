@@ -85,7 +85,7 @@
 
   <span class="cli-accent">GigHub</span>
     App for freelancers to manage gigs and clients
-    <a href="https://github.com/jorgecensi" target="_blank" class="cli-link">github.com/jorgecensi</a>
+    <a href="https://github.com/jorgecensi" target="_blank" rel="noopener noreferrer" class="cli-link">github.com/jorgecensi</a>
 
   <span class="cli-accent">Marcador Canastra</span>
     Score tracker for the classic Brazilian card game
@@ -117,9 +117,9 @@
   const CONTACT_TEXT = `
 <span class="cli-comment"># get in touch</span>
 
-  <span class="cli-accent">GitHub</span>    <a href="https://github.com/jorgecensi" target="_blank" class="cli-link">github.com/jorgecensi</a>
-  <span class="cli-accent">LinkedIn</span>  <a href="https://linkedin.com/in/jorgecensi" target="_blank" class="cli-link">linkedin.com/in/jorgecensi</a>
-  <span class="cli-accent">X</span>         <a href="https://x.com/jorgecensi" target="_blank" class="cli-link">x.com/jorgecensi</a>
+  <span class="cli-accent">GitHub</span>    <a href="https://github.com/jorgecensi" target="_blank" rel="noopener noreferrer" class="cli-link">github.com/jorgecensi</a>
+  <span class="cli-accent">LinkedIn</span>  <a href="https://linkedin.com/in/jorgecensi" target="_blank" rel="noopener noreferrer" class="cli-link">linkedin.com/in/jorgecensi</a>
+  <span class="cli-accent">X</span>         <a href="https://x.com/jorgecensi" target="_blank" rel="noopener noreferrer" class="cli-link">x.com/jorgecensi</a>
 `;
 
   const COFFEE_TEXT = `
@@ -139,13 +139,13 @@
 
   Executing <span class="cli-accent">hire jorge</span>...
 
-  ✓ Checking availability............. <span style="color:var(--color-green)">OPEN</span>
-  ✓ Verifying skills.................. <span style="color:var(--color-green)">VERIFIED</span>
-  ✓ Confirming AI expertise........... <span style="color:var(--color-green)">CONFIRMED</span>
-  ✓ Calculating culture fit........... <span style="color:var(--color-green)">HIGH</span>
+  ✓ Checking availability............. <span style="color:var(--green)">OPEN</span>
+  ✓ Verifying skills.................. <span style="color:var(--green)">VERIFIED</span>
+  ✓ Confirming AI expertise........... <span style="color:var(--green)">CONFIRMED</span>
+  ✓ Calculating culture fit........... <span style="color:var(--green)">HIGH</span>
 
   <span class="cli-accent">Result:</span> Great idea. Reach out on LinkedIn.
-  <a href="https://linkedin.com/in/jorgecensi" target="_blank" class="cli-link">→ linkedin.com/in/jorgecensi</a>
+  <a href="https://linkedin.com/in/jorgecensi" target="_blank" rel="noopener noreferrer" class="cli-link">→ linkedin.com/in/jorgecensi</a>
 `;
 
   const LS_TEXT = `

@@ -1487,7 +1487,7 @@ footer .footer-copy {
 }
 
 .cli-boot {
-  color: var(--color-primary-light);
+  color: var(--primary-light);
 }
 
 .cli-echoed {
@@ -1502,29 +1502,29 @@ footer .footer-copy {
 }
 
 .cli-prompt {
-  color: var(--color-primary-light);
+  color: var(--primary-light);
   user-select: none;
   margin-right: 6px;
 }
 
 .cli-key {
-  color: var(--color-accent);
+  color: var(--accent);
   background: rgba(245, 158, 11, 0.1);
   padding: 1px 5px;
   border-radius: 3px;
   font-size: 0.8em;
 }
 
-.cli-accent  { color: var(--color-primary-light); }
+.cli-accent  { color: var(--primary-light); }
 .cli-comment { color: var(--text-muted); font-style: italic; }
 .cli-muted   { color: var(--text-muted); }
 .cli-error   { color: #fc8181; }
 
 .cli-link {
-  color: var(--color-cyan);
+  color: var(--cyan);
   text-decoration: none;
 }
-.cli-link:hover { text-decoration: underline; color: var(--color-cyan); }
+.cli-link:hover { text-decoration: underline; color: var(--cyan); }
 
 #jorge-cli-inputline {
   display: flex;
@@ -1543,7 +1543,7 @@ footer .footer-copy {
   color: var(--text-primary);
   font-family: inherit;
   font-size: 0.82rem;
-  caret-color: var(--color-primary-light);
+  caret-color: var(--primary-light);
   padding: 0;
 }
 

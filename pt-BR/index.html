@@ -41,6 +41,12 @@ ref: home
             <p>Seu feed pessoal do YouTube. Sem algoritmo, sem recomendações — você decide o que entra. Funciona offline como PWA.</p>
             <span class="app-tag">PWA</span>
         </a>
+        <a class="app-card" href="/auto-runner/">
+            <span class="app-icon">🏃</span>
+            <h3>Auto Runner</h3>
+            <p>Jogo cooperativo para 2 jogadores em side-scroller. Toque no seu lado para pular. Um erro e os dois reiniciam — sobrevivam juntos.</p>
+            <span class="app-tag">Jogo</span>
+        </a>
         <a class="app-card" href="/flappy/">
             <span class="app-icon">🐦</span>
             <h3>{{ t.apps_page.flappy_title }}</h3>
@@ -65,11 +71,41 @@ ref: home
             <p>Um sequenciador circular inspirado no Dato Drum. Crie batidas com 4 vozes, efeitos e controle de BPM.</p>
             <span class="app-tag">PWA</span>
         </a>
+        <a class="app-card" href="/f1-championship/">
+            <span class="app-icon">🏎️</span>
+            <h3>F1 Championship</h3>
+            <p>Acompanhe seu campeonato de tempos de volta ao longo da temporada completa de F1 2026. Compita corrida a corrida, ganhe pontos e veja quem lidera a classificação.</p>
+            <span class="app-tag">PWA</span>
+        </a>
+        <a class="app-card" href="/worldcup-2026/">
+            <span class="app-icon">⚽</span>
+            <h3>World Cup 2026</h3>
+            <p>Placar interativo para as 48 seleções — classificação dos grupos, chave eliminatória com pênaltis e estatísticas ao vivo. Todos os horários em AEST.</p>
+            <span class="app-tag">PWA</span>
+        </a>
         <a class="app-card" href="/tuner/">
             <span class="app-icon">🎸</span>
             <h3>Tuner</h3>
             <p>Afine seu violão ou ukulele em tempo real. Detecção de tom por autocorrelação — preciso ao centésimo. Funciona offline como PWA.</p>
             <span class="app-tag">PWA</span>
+        </a>
+        <a class="app-card" href="/music-theory/">
+            <span class="app-icon">🎹</span>
+            <h3>Music Theory</h3>
+            <p>Aprenda escalas, acordes e intervalos em um teclado de piano interativo. Toque qualquer tecla para ouvir, selecione uma escala para vê-la acender. Funciona offline.</p>
+            <span class="app-tag">PWA de Música</span>
+        </a>
+        <a class="app-card" href="/elastomania/">
+            <span class="app-icon">🏍️</span>
+            <h3>Elasto Mania</h3>
+            <p>Um jogo de física de motocicleta. Colete todas as maçãs, alcance a flor — sem cair.</p>
+            <span class="app-tag">Jogo</span>
+        </a>
+        <a class="app-card" href="/squeak-the-geek/">
+            <span class="app-icon">🐸</span>
+            <h3>Squeak the Geek</h3>
+            <p>Um quebra-cabeça de labirinto de tijolos inspirado em Zeek the Geek. Colete as flores, empurre blocos de cristal e desvie do sapo.</p>
+            <span class="app-tag">Jogo</span>
         </a>
         <a class="app-card" href="/personal-trainer/">
             <span class="app-icon">💪</span>
@@ -84,7 +120,7 @@ ref: home
     {% for post in site.posts %}
     <article class="postitem">
         <ul class="meta">
-            <li class="category"><a href="">{{ post.tags }}</a></li>
+            <li class="category">{% for tag in post.tags %}<a href="/pt-BR/search.html">{{ tag }}</a>{% unless forloop.last %}, {% endunless %}{% endfor %}</li>
             <li class="date"><a href="{{ post.url }}"><time datetime="{{post.date}}">{{ post.date | date: "%d/%m/%Y" }}</time></a></li>
         </ul>
         <h2 class="title">

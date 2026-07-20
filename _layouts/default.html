@@ -29,7 +29,7 @@
     <link rel="apple-touch-icon" href="/img/synth-icon-192.png">
     <link rel="manifest" href="/synth/manifest.json">
     {% endif %}
-    {% seo %}
+    {% seo title=false %}
 </head>
 
 <body{% if page.hide_site_chrome %} class="no-site-chrome"{% endif %}>
@@ -57,13 +57,13 @@
                         <a class="nav-link" href="{% if lang == 'pt-BR' %}/pt-BR/blog{% else %}/blog{% endif %}">{{ t.nav.blog }}</a>
                     </li>
                     <li class="nav-item ms-lg-3 nav-social">
-                        <a class="nav-link" href="https://github.com/jorgecensi" target="_blank" title="GitHub"><i class="fab fa-github"></i></a>
+                        <a class="nav-link" href="https://github.com/jorgecensi" target="_blank" rel="noopener noreferrer" title="GitHub"><i class="fab fa-github"></i></a>
                     </li>
                     <li class="nav-item nav-social">
-                        <a class="nav-link" href="https://linkedin.com/in/jorgecensi" target="_blank" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                        <a class="nav-link" href="https://linkedin.com/in/jorgecensi" target="_blank" rel="noopener noreferrer" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
                     </li>
                     <li class="nav-item nav-social">
-                        <a class="nav-link" href="https://x.com/jorgecensi" target="_blank" title="X"><i class="fab fa-x-twitter"></i></a>
+                        <a class="nav-link" href="https://x.com/jorgecensi" target="_blank" rel="noopener noreferrer" title="X"><i class="fab fa-x-twitter"></i></a>
                     </li>
                     <li class="nav-item ms-lg-2">
                         {% include lang-switcher.html %}
@@ -84,9 +84,9 @@
             </div>
             <p class="footer-tagline">{{ t.footer.tagline }}</p>
             <ul class="footer-social">
-                <li><a href="https://github.com/jorgecensi" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></li>
-                <li><a href="https://linkedin.com/in/jorgecensi" target="_blank" title="LinkedIn"><i class="fab fa-linkedin"></i></a></li>
-                <li><a href="https://x.com/jorgecensi" target="_blank" title="X"><i class="fab fa-x-twitter"></i></a></li>
+                <li><a href="https://github.com/jorgecensi" target="_blank" rel="noopener noreferrer" title="GitHub"><i class="fab fa-github"></i></a></li>
+                <li><a href="https://linkedin.com/in/jorgecensi" target="_blank" rel="noopener noreferrer" title="LinkedIn"><i class="fab fa-linkedin"></i></a></li>
+                <li><a href="https://x.com/jorgecensi" target="_blank" rel="noopener noreferrer" title="X"><i class="fab fa-x-twitter"></i></a></li>
             </ul>
             <p class="footer-copy">&copy; {{ 'now' | date: '%Y' }} Jorge Censi. {{ t.footer.copy_suffix }}</p>
         </div>
