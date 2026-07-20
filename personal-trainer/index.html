@@ -687,6 +687,33 @@ permalink: /personal-trainer/
             margin: 6px 0 12px;
         }
 
+        .mistake-note {
+            display: none;
+            gap: 8px;
+            align-items: flex-start;
+            text-align: left;
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin: 0 0 12px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: var(--text);
+        }
+
+        .mistake-note:not(:empty) {
+            display: flex;
+        }
+
+        .mistake-note strong {
+            color: var(--warn);
+        }
+
+        .mistake-icon {
+            flex-shrink: 0;
+        }
+
         .player-video {
             display: none;
             position: relative;
@@ -845,6 +872,24 @@ permalink: /personal-trainer/
             font-size: 0.8rem;
             line-height: 1.6;
             margin-bottom: 8px;
+        }
+
+        .lib-mistake {
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            font-size: 0.78rem;
+            line-height: 1.5;
+            color: var(--text);
+        }
+
+        .lib-mistake strong {
+            color: var(--warn);
         }
 
         .lib-actions {
@@ -1315,6 +1360,7 @@ permalink: /personal-trainer/
                 <div id="player-display">0:30</div>
                 <div class="player-video" id="player-video"></div>
                 <ul class="cues" id="player-cues"></ul>
+                <div class="mistake-note" id="player-mistake"></div>
                 <div class="player-links" id="player-links"></div>
             </div>
             <div>
@@ -1546,78 +1592,78 @@ permalink: /personal-trainer/
         // =====================================================
         const EXERCISES = [
             // ---- Warm-up ----
-            ['wu-march', 'March in Place', 'warmup', 'full', 1, 'secs', 40, 0, 40, 0, ['Lift knees to hip height', 'Swing arms naturally, breathe easy']],
-            ['wu-armcircles', 'Arm Circles', 'warmup', 'full', 1, 'secs', 30, 0, 30, 0, ['Big slow circles, both directions', 'Keep shoulders away from ears']],
-            ['wu-catcow', 'Cat-Cow', 'warmup', 'back', 1, 'secs', 40, 0, 40, 0, ['Move with your breath', 'Round up on exhale, arch on inhale']],
-            ['wu-sidebend', 'Standing Side Bend', 'warmup', 'obliques', 1, 'secs', 30, 0, 30, 0, ['Reach up and over, ribs long', 'Keep hips square']],
-            ['wu-hipcircles', 'Hip Circles', 'warmup', 'glutes', 1, 'secs', 30, 0, 30, 0, ['Hands on hips, slow circles', 'Both directions']],
-            ['wu-pelvictilt', 'Pelvic Tilts', 'warmup', 'abs', 1, 'secs', 40, 0, 40, 0, ['Lie down, rock pelvis gently', 'Press lower back into the mat, release']],
+            ['wu-march', 'March in Place', 'warmup', 'full', 1, 'secs', 40, 0, 40, 0, ['Lift knees to hip height', 'Swing arms naturally, breathe easy'], 'Barely lifting the feet turns this into a shuffle — drive the knees up with purpose to actually raise your heart rate.'],
+            ['wu-armcircles', 'Arm Circles', 'warmup', 'full', 1, 'secs', 30, 0, 30, 0, ['Big slow circles, both directions', 'Keep shoulders away from ears'], 'Tiny circles from the wrist do little — circle from the shoulder with a big, controlled range.'],
+            ['wu-catcow', 'Cat-Cow', 'warmup', 'back', 1, 'secs', 40, 0, 40, 0, ['Move with your breath', 'Round up on exhale, arch on inhale'], 'Moving only the upper back skips the point — let the movement travel through your whole spine, one segment at a time.'],
+            ['wu-sidebend', 'Standing Side Bend', 'warmup', 'obliques', 1, 'secs', 30, 0, 30, 0, ['Reach up and over, ribs long', 'Keep hips square'], 'Leaning forward instead of sideways turns this into a slouch — reach straight overhead and to the side, hips staying square.'],
+            ['wu-hipcircles', 'Hip Circles', 'warmup', 'glutes', 1, 'secs', 30, 0, 30, 0, ['Hands on hips, slow circles', 'Both directions'], 'Small, stiff circles from the knees miss the joint you’re trying to open — make the circles bigger and let them come from the hips.'],
+            ['wu-pelvictilt', 'Pelvic Tilts', 'warmup', 'abs', 1, 'secs', 40, 0, 40, 0, ['Lie down, rock pelvis gently', 'Press lower back into the mat, release'], 'Pushing with the glutes instead of the abs misses the point — flatten your lower back into the mat by bracing your core, not by heaving your hips.'],
 
             // ---- Core fitness ----
-            ['co-kneeplank', 'Knee Plank', 'core', 'abs', 1, 'secs', 20, 5, 45, 0, ['Straight line shoulders to knees', 'Squeeze belly, don’t sag']],
-            ['co-deadbug', 'Dead Bug', 'core', 'abs', 1, 'reps', 16, 4, 28, 0, ['Lower opposite arm and leg', 'Alternate sides each rep — back stays glued to the mat']],
-            ['co-glutebridge', 'Glute Bridge', 'core', 'glutes', 1, 'reps', 10, 2, 18, 0, ['Drive through heels', 'Squeeze glutes at the top']],
-            ['co-birddog', 'Bird Dog', 'core', 'back', 1, 'reps', 12, 4, 24, 0, ['Reach long, hips level', 'Alternate sides each rep — pause 2s at full extension']],
-            ['co-heeltap', 'Heel Taps', 'core', 'obliques', 1, 'reps', 20, 4, 36, 0, ['Shoulders slightly lifted', 'Reach for your heel side to side']],
-            ['co-plank', 'Forearm Plank', 'core', 'abs', 2, 'secs', 25, 5, 60, 0, ['Elbows under shoulders', 'Tuck tailbone, brace like a punch']],
-            ['co-crunch', 'Crunches', 'core', 'abs', 2, 'reps', 12, 2, 20, 0, ['Chin off chest, exhale up', 'Lower with control']],
-            ['co-mtclimber', 'Mountain Climbers', 'core', 'full', 2, 'secs', 25, 5, 45, 0, ['Hips low, shoulders over wrists', 'Drive knees in steadily']],
-            ['co-ksideplank', 'Side Plank on Knees', 'core', 'obliques', 2, 'secs', 15, 5, 35, 1, ['Elbow under shoulder', 'Lift hips, stack shoulders']],
-            ['co-flutter', 'Flutter Kicks', 'core', 'abs', 2, 'secs', 20, 5, 40, 0, ['Small quick kicks', 'Press lower back down']],
-            ['co-revcrunch', 'Reverse Crunch', 'core', 'abs', 2, 'reps', 10, 2, 16, 0, ['Curl hips off the mat', 'Slow on the way down']],
-            ['co-sideplank', 'Side Plank', 'core', 'obliques', 3, 'secs', 20, 5, 45, 1, ['Body in one straight line', 'Push the floor away']],
-            ['co-bicycle', 'Bicycle Crunches', 'core', 'obliques', 3, 'reps', 20, 4, 36, 0, ['Elbow to opposite knee', 'Alternate sides each rep, slow and controlled']],
-            ['co-legraise', 'Leg Raises', 'core', 'abs', 3, 'reps', 10, 2, 16, 0, ['Legs straight, lower slowly', 'Stop before your back arches']],
-            ['co-shouldertap', 'Plank Shoulder Taps', 'core', 'abs', 3, 'reps', 16, 4, 32, 0, ['Feet wide, hips still', 'Alternate which hand taps each rep']],
-            ['co-russtwist', 'Russian Twists', 'core', 'obliques', 3, 'reps', 20, 4, 40, 0, ['Lean back, chest proud', 'Rotate side to side from the ribs']],
-            ['co-bearhold', 'Bear Crawl Hold', 'core', 'full', 3, 'secs', 20, 5, 40, 0, ['Knees hover 2cm off the mat', 'Flat back, breathe']],
-            ['co-hollow', 'Hollow Body Hold', 'core', 'abs', 4, 'secs', 20, 5, 40, 0, ['Lower back pressed down', 'Arms and legs long and low']],
-            ['co-plankupdown', 'Plank Up-Downs', 'core', 'full', 4, 'reps', 12, 4, 24, 0, ['Forearm to hand, alternate which arm leads', 'Keep hips from rocking']],
-            ['co-vup', 'V-Ups', 'core', 'abs', 4, 'reps', 8, 2, 14, 0, ['Reach hands to toes', 'Fold from the middle']],
-            ['co-hipdip', 'Side Plank Hip Dips', 'core', 'obliques', 4, 'reps', 8, 2, 14, 1, ['Dip hips toward the mat', 'Lift back to a straight line']],
-            ['co-plankjack', 'Plank Jacks', 'core', 'full', 4, 'secs', 25, 5, 45, 0, ['Jump feet wide and in', 'Plank stays solid up top']],
-            ['co-hollowrock', 'Hollow Body Rocks', 'core', 'abs', 5, 'secs', 20, 5, 35, 0, ['Rock like a banana', 'Shape never breaks']],
-            ['co-lsit', 'L-Sit Hold', 'core', 'abs', 5, 'secs', 10, 3, 25, 0, ['Hands by hips, press down hard', 'Bent knees to scale down']],
-            ['co-pike', 'Plank to Pike', 'core', 'abs', 5, 'reps', 8, 2, 14, 0, ['Pike hips high, legs straight', 'Return to plank with control']],
-            ['co-wipers', 'Windshield Wipers', 'core', 'obliques', 5, 'reps', 12, 4, 24, 0, ['Legs up, sweep side to side', 'Shoulders stay pinned']],
-            ['co-longplank', 'Long Lever Plank', 'core', 'abs', 5, 'secs', 20, 5, 40, 0, ['Hands ahead of shoulders', 'Everything braced']],
+            ['co-kneeplank', 'Knee Plank', 'core', 'abs', 1, 'secs', 20, 5, 45, 0, ['Straight line shoulders to knees', 'Squeeze belly, don’t sag'], 'Hips sagging toward the floor (or piking too high) takes the tension off your core — keep a straight line from shoulders to knees.'],
+            ['co-deadbug', 'Dead Bug', 'core', 'abs', 1, 'reps', 16, 4, 28, 0, ['Lower opposite arm and leg', 'Alternate sides each rep — back stays glued to the mat'], 'Letting the lower back arch off the mat as you extend is the #1 mistake — only go as low as you can while keeping it pressed down.'],
+            ['co-glutebridge', 'Glute Bridge', 'core', 'glutes', 1, 'reps', 10, 2, 18, 0, ['Drive through heels', 'Squeeze glutes at the top'], 'Overarching the lower back at the top isn’t a bigger bridge — stop at a straight line and squeeze the glutes, not the spine.'],
+            ['co-birddog', 'Bird Dog', 'core', 'back', 1, 'reps', 12, 4, 24, 0, ['Reach long, hips level', 'Alternate sides each rep — pause 2s at full extension'], 'Twisting the hips to lift the leg higher cancels the benefit — keep both hips square to the floor and reach long instead of high.'],
+            ['co-heeltap', 'Heel Taps', 'core', 'obliques', 1, 'reps', 20, 4, 36, 0, ['Shoulders slightly lifted', 'Reach for your heel side to side'], 'Crunching the neck forward to “reach” further strains it — keep the lift small and let the obliques do the work, not your neck.'],
+            ['co-plank', 'Forearm Plank', 'core', 'abs', 2, 'secs', 25, 5, 60, 0, ['Elbows under shoulders', 'Tuck tailbone, brace like a punch'], 'Sagging hips (or piking them up to rest) is the classic plank cheat — brace your core so hips, shoulders and heels stay one straight line.'],
+            ['co-crunch', 'Crunches', 'core', 'abs', 2, 'reps', 12, 2, 20, 0, ['Chin off chest, exhale up', 'Lower with control'], 'Yanking your head up with your hands strains the neck and skips the abs — keep hands light and lead with your chest, not your chin.'],
+            ['co-mtclimber', 'Mountain Climbers', 'core', 'full', 2, 'secs', 25, 5, 45, 0, ['Hips low, shoulders over wrists', 'Drive knees in steadily'], 'Hips rising into a pike as you speed up is a sign you’re going too fast — slow down enough to keep your hips level with your shoulders.'],
+            ['co-ksideplank', 'Side Plank on Knees', 'core', 'obliques', 2, 'secs', 15, 5, 35, 1, ['Elbow under shoulder', 'Lift hips, stack shoulders'], 'Letting the hips sink toward the mat turns this into a rest, not a hold — keep lifting through the hips so your body stays one straight line.'],
+            ['co-flutter', 'Flutter Kicks', 'core', 'abs', 2, 'secs', 20, 5, 40, 0, ['Small quick kicks', 'Press lower back down'], 'An arching lower back means your legs have dropped too low — keep them a little higher and press your back into the mat the whole time.'],
+            ['co-revcrunch', 'Reverse Crunch', 'core', 'abs', 2, 'reps', 10, 2, 16, 0, ['Curl hips off the mat', 'Slow on the way down'], 'Swinging the legs for momentum turns this into a hip-flexor exercise — curl the hips up slowly using your lower abs, not a kick.'],
+            ['co-sideplank', 'Side Plank', 'core', 'obliques', 3, 'secs', 20, 5, 45, 1, ['Body in one straight line', 'Push the floor away'], 'Sagging hips or rolling your body forward takes the work off your obliques — stack shoulders, hips and feet in one straight line and lift.'],
+            ['co-bicycle', 'Bicycle Crunches', 'core', 'obliques', 3, 'reps', 20, 4, 36, 0, ['Elbow to opposite knee', 'Alternate sides each rep, slow and controlled'], 'Cycling fast without rotating the ribcage just wiggles your elbows — slow down and actually twist your torso toward the opposite knee.'],
+            ['co-legraise', 'Leg Raises', 'core', 'abs', 3, 'reps', 10, 2, 16, 0, ['Legs straight, lower slowly', 'Stop before your back arches'], 'An arching lower back means you’ve lowered past your control — stop the descent right before your back wants to lift off the mat.'],
+            ['co-shouldertap', 'Plank Shoulder Taps', 'core', 'abs', 3, 'reps', 16, 4, 32, 0, ['Feet wide, hips still', 'Alternate which hand taps each rep'], 'Hips swaying with every tap means your core isn’t controlling the rotation — widen your feet and brace to keep hips dead still.'],
+            ['co-russtwist', 'Russian Twists', 'core', 'obliques', 3, 'reps', 20, 4, 40, 0, ['Lean back, chest proud', 'Rotate side to side from the ribs'], 'Swinging just the arms while the torso stays still skips the obliques entirely — rotate from the ribs and keep your chest lifted, not rounded.'],
+            ['co-bearhold', 'Bear Crawl Hold', 'core', 'full', 3, 'secs', 20, 5, 40, 0, ['Knees hover 2cm off the mat', 'Flat back, breathe'], 'Hips piked up high turns this into a stretch, not a hold — keep hips level with your shoulders and knees hovering just off the floor.'],
+            ['co-hollow', 'Hollow Body Hold', 'core', 'abs', 4, 'secs', 20, 5, 40, 0, ['Lower back pressed down', 'Arms and legs long and low'], 'A lower back that arches off the mat means the position has broken — raise your arms and legs slightly until you can press your back flat again.'],
+            ['co-plankupdown', 'Plank Up-Downs', 'core', 'full', 4, 'reps', 12, 4, 24, 0, ['Forearm to hand, alternate which arm leads', 'Keep hips from rocking'], 'Hips swinging side to side or popping up on each transition means you’re rushing — move slower and keep the hips locked level.'],
+            ['co-vup', 'V-Ups', 'core', 'abs', 4, 'reps', 8, 2, 14, 0, ['Reach hands to toes', 'Fold from the middle'], 'Swinging up with momentum instead of folding with control skips the abs — reach hands and toes together slowly, keeping legs as straight as you can.'],
+            ['co-hipdip', 'Side Plank Hip Dips', 'core', 'obliques', 4, 'reps', 8, 2, 14, 1, ['Dip hips toward the mat', 'Lift back to a straight line'], 'Dropping so low that your whole body caves isn’t more range — dip just the hips a few inches and keep the rest of the line steady.'],
+            ['co-plankjack', 'Plank Jacks', 'core', 'full', 4, 'secs', 25, 5, 45, 0, ['Jump feet wide and in', 'Plank stays solid up top'], 'Hips popping up with every jump turns this into a hip hinge — keep the plank line steady and just move the feet.'],
+            ['co-hollowrock', 'Hollow Body Rocks', 'core', 'abs', 5, 'secs', 20, 5, 35, 0, ['Rock like a banana', 'Shape never breaks'], 'If your knees bend or your back arches mid-rock, the shape has broken — keep the hollow position locked and rock as one solid piece.'],
+            ['co-lsit', 'L-Sit Hold', 'core', 'abs', 5, 'secs', 10, 3, 25, 0, ['Hands by hips, press down hard', 'Bent knees to scale down'], 'Shrugging the shoulders up instead of pressing down through straight arms lets the hips sink — push the floor away and lift through the chest.'],
+            ['co-pike', 'Plank to Pike', 'core', 'abs', 5, 'reps', 8, 2, 14, 0, ['Pike hips high, legs straight', 'Return to plank with control'], 'Bending the knees to “reach” the pike defeats the point — keep legs straight and hinge purely from the hips.'],
+            ['co-wipers', 'Windshield Wipers', 'core', 'obliques', 5, 'reps', 12, 4, 24, 0, ['Legs up, sweep side to side', 'Shoulders stay pinned'], 'Shoulders lifting off the mat as the legs swing means you’re using momentum, not control — keep shoulders pinned and move slower.'],
+            ['co-longplank', 'Long Lever Plank', 'core', 'abs', 5, 'secs', 20, 5, 40, 0, ['Hands ahead of shoulders', 'Everything braced'], 'Hips sagging is more likely here since the longer lever multiplies the load — if you can’t hold a straight line, walk the hands back closer to your shoulders.'],
 
             // ---- Mat pilates ----
-            ['pi-pelviccurl', 'Pelvic Curl', 'pilates', 'glutes', 1, 'reps', 8, 2, 14, 0, ['Peel the spine up bone by bone', 'Exhale up, inhale hold, exhale down']],
-            ['pi-toetap', 'Toe Taps', 'pilates', 'abs', 1, 'reps', 16, 4, 32, 0, ['Tabletop legs, alternate tapping one toe down', 'Pelvis stays perfectly still']],
-            ['pi-chestlift', 'Chest Lift', 'pilates', 'abs', 1, 'reps', 8, 2, 14, 0, ['Curl head and shoulders up', 'Eyes on knees, ribs funnel down']],
-            ['pi-spinestretch', 'Spine Stretch Forward', 'pilates', 'back', 1, 'reps', 6, 1, 10, 0, ['Sit tall, legs long', 'Reach forward over an imaginary ball']],
-            ['pi-sideleg', 'Side-Lying Leg Lift', 'pilates', 'glutes', 1, 'reps', 10, 2, 18, 1, ['Body in one line', 'Lift leg with a flexed foot, no swinging']],
-            ['pi-hundredmod', 'The Hundred (modified)', 'pilates', 'abs', 2, 'secs', 40, 5, 60, 0, ['Knees in tabletop, pump arms', 'Inhale 5 counts, exhale 5 counts']],
-            ['pi-singleleg', 'Single Leg Stretch', 'pilates', 'abs', 2, 'reps', 16, 4, 28, 0, ['Hug one knee, other leg long, then switch', 'Upper body stays curled']],
-            ['pi-bridge', 'Shoulder Bridge', 'pilates', 'glutes', 2, 'reps', 8, 2, 14, 0, ['Articulate up, hips high', 'Knees track over ankles']],
-            ['pi-swanprep', 'Swan Prep', 'pilates', 'back', 2, 'reps', 6, 1, 10, 0, ['Lift chest, hands light', 'Long neck, legs stay down']],
-            ['pi-sidekick', 'Side Kick Front & Back', 'pilates', 'glutes', 2, 'reps', 8, 2, 14, 1, ['Kick front, sweep back', 'Torso stays still like a plank']],
-            ['pi-rollup', 'Roll-Up', 'pilates', 'abs', 3, 'reps', 6, 1, 10, 0, ['Peel up one vertebra at a time', 'Reach past your toes, roll back slow']],
-            ['pi-doubleleg', 'Double Leg Stretch', 'pilates', 'abs', 3, 'reps', 8, 2, 14, 0, ['Reach arms and legs away', 'Circle arms, hug knees in']],
-            ['pi-crisscross', 'Criss-Cross', 'pilates', 'obliques', 3, 'reps', 16, 4, 32, 0, ['Rotate ribcage, not just elbows', 'Alternate sides each rep, keep the lift as you twist']],
-            ['pi-swimming', 'Swimming', 'pilates', 'back', 3, 'secs', 30, 5, 50, 0, ['Flutter opposite arm and leg', 'Belly lifted, gaze down']],
-            ['pi-saw', 'Saw', 'pilates', 'obliques', 3, 'reps', 12, 2, 20, 0, ['Alternate sides — twist tall, then reach', 'Pinky toward little toe, hips anchored']],
-            ['pi-scissors', 'Single Straight Leg Stretch', 'pilates', 'abs', 3, 'reps', 16, 4, 28, 0, ['Legs straight like scissors, alternate which leg is up', 'Double-pull the top leg']],
-            ['pi-hundred', 'The Hundred', 'pilates', 'abs', 4, 'secs', 50, 5, 70, 0, ['Legs at 45°, pump the arms', 'Curl high, breathe in rhythm']],
-            ['pi-teaserprep', 'Teaser Prep', 'pilates', 'abs', 4, 'reps', 6, 1, 10, 0, ['One leg extended, roll up to a V', 'Balance behind the sit bones']],
-            ['pi-openleg', 'Open Leg Rocker', 'pilates', 'abs', 4, 'reps', 6, 1, 10, 0, ['Hold ankles, legs open', 'Rock back to shoulders, return balanced']],
-            ['pi-dbllower', 'Double Straight Leg Lower', 'pilates', 'abs', 4, 'reps', 8, 2, 12, 0, ['Legs to the ceiling, lower slowly', 'Head and shoulders stay curled']],
-            ['pi-kneelkick', 'Side Kick Kneeling', 'pilates', 'glutes', 4, 'reps', 8, 2, 12, 1, ['Kneel, hand down, leg to hip height', 'Kick front and back, torso quiet']],
-            ['pi-teaser', 'Teaser', 'pilates', 'abs', 5, 'reps', 5, 1, 8, 0, ['Roll up to a V, legs at 45°', 'Float down with control']],
-            ['pi-rollover', 'Roll Over', 'pilates', 'abs', 5, 'reps', 6, 1, 8, 0, ['Legs over head, toes touch behind', 'Roll down slowly through the spine']],
-            ['pi-corkscrew', 'Corkscrew', 'pilates', 'obliques', 5, 'reps', 5, 1, 8, 1, ['Circle legs together', 'Shoulders anchored the whole time']],
-            ['pi-jackknife', 'Jackknife', 'pilates', 'abs', 5, 'reps', 5, 1, 8, 0, ['Legs over, then shoot toes to the sky', 'Land one vertebra at a time']],
+            ['pi-pelviccurl', 'Pelvic Curl', 'pilates', 'glutes', 1, 'reps', 8, 2, 14, 0, ['Peel the spine up bone by bone', 'Exhale up, inhale hold, exhale down'], 'Popping straight up into a high arch skips the point — peel up slowly, one vertebra at a time, and stop before your back overarches.'],
+            ['pi-toetap', 'Toe Taps', 'pilates', 'abs', 1, 'reps', 16, 4, 32, 0, ['Tabletop legs, alternate tapping one toe down', 'Pelvis stays perfectly still'], 'An arching lower back as the toe drops means you’ve gone too low — keep the pelvis pinned still and only lower as far as you can control.'],
+            ['pi-chestlift', 'Chest Lift', 'pilates', 'abs', 1, 'reps', 8, 2, 14, 0, ['Curl head and shoulders up', 'Eyes on knees, ribs funnel down'], 'Yanking the head forward with your hands strains the neck — support it lightly and lift from your ribs curling toward your hips.'],
+            ['pi-spinestretch', 'Spine Stretch Forward', 'pilates', 'back', 1, 'reps', 6, 1, 10, 0, ['Sit tall, legs long', 'Reach forward over an imaginary ball'], 'Bouncing to reach further just tightens the hamstrings — round forward smoothly through the whole spine instead of jerking toward your toes.'],
+            ['pi-sideleg', 'Side-Lying Leg Lift', 'pilates', 'glutes', 1, 'reps', 10, 2, 18, 1, ['Body in one line', 'Lift leg with a flexed foot, no swinging'], 'Swinging the leg with momentum (or letting the top hip roll backward) trades control for height — lift slower and keep your hips stacked.'],
+            ['pi-hundredmod', 'The Hundred (modified)', 'pilates', 'abs', 2, 'secs', 40, 5, 60, 0, ['Knees in tabletop, pump arms', 'Inhale 5 counts, exhale 5 counts'], 'Holding your breath while pumping the arms defeats the point — match the pump to the 5-count inhale and 5-count exhale rhythm.'],
+            ['pi-singleleg', 'Single Leg Stretch', 'pilates', 'abs', 2, 'reps', 16, 4, 28, 0, ['Hug one knee, other leg long, then switch', 'Upper body stays curled'], 'Letting your head and shoulders drop back to the mat between reps loses the curl — hold the lift the entire set, not just at the top.'],
+            ['pi-bridge', 'Shoulder Bridge', 'pilates', 'glutes', 2, 'reps', 8, 2, 14, 0, ['Articulate up, hips high', 'Knees track over ankles'], 'Knees splaying out or caving in wastes the glute work — keep them tracking straight over your ankles the whole time.'],
+            ['pi-swanprep', 'Swan Prep', 'pilates', 'back', 2, 'reps', 6, 1, 10, 0, ['Lift chest, hands light', 'Long neck, legs stay down'], 'Pushing up hard through the hands turns this into an arm exercise — keep the hands light and lift the chest using your back muscles.'],
+            ['pi-sidekick', 'Side Kick Front & Back', 'pilates', 'glutes', 2, 'reps', 8, 2, 14, 1, ['Kick front, sweep back', 'Torso stays still like a plank'], 'Letting your torso rock back and forth with the kick means the leg is moving your body, not the other way around — brace like a plank and keep the kick isolated.'],
+            ['pi-rollup', 'Roll-Up', 'pilates', 'abs', 3, 'reps', 6, 1, 10, 0, ['Peel up one vertebra at a time', 'Reach past your toes, roll back slow'], 'Jerking the upper body up with momentum skips the spine articulation that’s the whole point — roll up slowly, one vertebra at a time, keeping legs long.'],
+            ['pi-doubleleg', 'Double Leg Stretch', 'pilates', 'abs', 3, 'reps', 8, 2, 14, 0, ['Reach arms and legs away', 'Circle arms, hug knees in'], 'An arching lower back when your arms and legs reach out means you’ve extended too far — pull them back in a little and keep the lower back pressed down.'],
+            ['pi-crisscross', 'Criss-Cross', 'pilates', 'obliques', 3, 'reps', 16, 4, 32, 0, ['Rotate ribcage, not just elbows', 'Alternate sides each rep, keep the lift as you twist'], 'Pulling the elbow across with your hand instead of rotating your ribcage turns this into a neck exercise — twist from your core and let the elbow follow.'],
+            ['pi-swimming', 'Swimming', 'pilates', 'back', 3, 'secs', 30, 5, 50, 0, ['Flutter opposite arm and leg', 'Belly lifted, gaze down'], 'Straining to lift arms and legs as high as possible arches the lower back — reach long and low instead of high.'],
+            ['pi-saw', 'Saw', 'pilates', 'obliques', 3, 'reps', 12, 2, 20, 0, ['Alternate sides — twist tall, then reach', 'Pinky toward little toe, hips anchored'], 'Diving forward with a rounded lower back skips the rotation that makes this work — twist fully from the waist first, then reach.'],
+            ['pi-scissors', 'Single Straight Leg Stretch', 'pilates', 'abs', 3, 'reps', 16, 4, 28, 0, ['Legs straight like scissors, alternate which leg is up', 'Double-pull the top leg'], 'Bent knees or an arching lower back both make it easier by accident — keep legs straight and your back pressed into the mat.'],
+            ['pi-hundred', 'The Hundred', 'pilates', 'abs', 4, 'secs', 50, 5, 70, 0, ['Legs at 45°, pump the arms', 'Curl high, breathe in rhythm'], 'Straining the neck to hold the curl higher and higher tires it out fast — keep the lift moderate and let your abs, not your neck, do the holding.'],
+            ['pi-teaserprep', 'Teaser Prep', 'pilates', 'abs', 4, 'reps', 6, 1, 10, 0, ['One leg extended, roll up to a V', 'Balance behind the sit bones'], 'Slumping into a rounded lower back to “balance” easier defeats the point — sit tall on your sit bones and keep the spine long.'],
+            ['pi-openleg', 'Open Leg Rocker', 'pilates', 'abs', 4, 'reps', 6, 1, 10, 0, ['Hold ankles, legs open', 'Rock back to shoulders, return balanced'], 'Yanking yourself back up with momentum instead of your abs is how people tip over — use a slow, controlled scoop through your core.'],
+            ['pi-dbllower', 'Double Straight Leg Lower', 'pilates', 'abs', 4, 'reps', 8, 2, 12, 0, ['Legs to the ceiling, lower slowly', 'Head and shoulders stay curled'], 'An arching lower back as the legs drop means you’ve gone lower than you can control — stop the descent earlier and build range over time.'],
+            ['pi-kneelkick', 'Side Kick Kneeling', 'pilates', 'glutes', 4, 'reps', 8, 2, 12, 1, ['Kneel, hand down, leg to hip height', 'Kick front and back, torso quiet'], 'Leaning the torso to help the leg kick higher breaks the kneeling plank line — keep the torso still and let the leg move on its own.'],
+            ['pi-teaser', 'Teaser', 'pilates', 'abs', 5, 'reps', 5, 1, 8, 0, ['Roll up to a V, legs at 45°', 'Float down with control'], 'Jerking up using momentum (or bending the knees to cheat the balance) skips the slow control that makes this hard — roll up and float down smoothly.'],
+            ['pi-rollover', 'Roll Over', 'pilates', 'abs', 5, 'reps', 6, 1, 8, 0, ['Legs over head, toes touch behind', 'Roll down slowly through the spine'], 'Swinging the legs over with momentum risks your neck — use your abs to lift with control, not a kick.'],
+            ['pi-corkscrew', 'Corkscrew', 'pilates', 'obliques', 5, 'reps', 5, 1, 8, 1, ['Circle legs together', 'Shoulders anchored the whole time'], 'Shoulders lifting off the mat as the legs circle means the core has let go — anchor through your arms and keep the upper body still.'],
+            ['pi-jackknife', 'Jackknife', 'pilates', 'abs', 5, 'reps', 5, 1, 8, 0, ['Legs over, then shoot toes to the sky', 'Land one vertebra at a time'], 'Swinging the legs up with momentum instead of a controlled roll risks your neck on the way down — control both the lift and the landing.'],
 
             // ---- Cool-down ----
-            ['cd-child', 'Child’s Pose', 'cooldown', 'back', 1, 'secs', 40, 0, 40, 0, ['Hips to heels, arms long', 'Slow deep breaths']],
-            ['cd-cobra', 'Cobra Stretch', 'cooldown', 'abs', 1, 'secs', 30, 0, 30, 0, ['Press chest up gently', 'Hips stay heavy']],
-            ['cd-twist', 'Supine Twist', 'cooldown', 'obliques', 1, 'secs', 30, 0, 30, 1, ['Knees fall to one side', 'Shoulders stay on the mat']],
-            ['cd-knees', 'Knees-to-Chest', 'cooldown', 'back', 1, 'secs', 30, 0, 30, 0, ['Hug knees, rock gently', 'Let the lower back release']],
-            ['cd-hamstring', 'Hamstring Stretch', 'cooldown', 'full', 1, 'secs', 30, 0, 30, 1, ['One leg up, gentle pull', 'Knee soft, breathe into it']],
-            ['cd-mermaid', 'Mermaid Stretch', 'cooldown', 'obliques', 1, 'secs', 30, 0, 30, 1, ['Sit cross-legged, reach up and over', 'Long side body']]
-        ].map(([id, name, disc, focus, tier, type, base, inc, max, perSide, cues]) =>
-            ({ id, name, disc, focus, tier, type, base, inc, max, perSide: !!perSide, cues }));
+            ['cd-child', 'Child’s Pose', 'cooldown', 'back', 1, 'secs', 40, 0, 40, 0, ['Hips to heels, arms long', 'Slow deep breaths'], 'Keeping your hips lifted off your heels (or shoulders scrunched up by your ears) keeps you tense — really sit back and let the shoulders melt down.'],
+            ['cd-cobra', 'Cobra Stretch', 'cooldown', 'abs', 1, 'secs', 30, 0, 30, 0, ['Press chest up gently', 'Hips stay heavy'], 'Pushing up as high as possible strains the lower back — lift only as far as feels open, keep hips heavy, and let the shoulders stay away from your ears.'],
+            ['cd-twist', 'Supine Twist', 'cooldown', 'obliques', 1, 'secs', 30, 0, 30, 1, ['Knees fall to one side', 'Shoulders stay on the mat'], 'Forcing the knees flat to the floor overrides the stretch — let them fall only as far as feels comfortable and keep both shoulders down.'],
+            ['cd-knees', 'Knees-to-Chest', 'cooldown', 'back', 1, 'secs', 30, 0, 30, 0, ['Hug knees, rock gently', 'Let the lower back release'], 'Yanking the knees in hard skips the gentle release this is for — hug them in softly and let the lower back relax, don’t force it.'],
+            ['cd-hamstring', 'Hamstring Stretch', 'cooldown', 'full', 1, 'secs', 30, 0, 30, 1, ['One leg up, gentle pull', 'Knee soft, breathe into it'], 'Locking the knee straight and yanking hard turns a stretch into strain — keep a soft bend in the knee and ease into the pull.'],
+            ['cd-mermaid', 'Mermaid Stretch', 'cooldown', 'obliques', 1, 'secs', 30, 0, 30, 1, ['Sit cross-legged, reach up and over', 'Long side body'], 'Collapsing your ribs toward the floor instead of reaching long wastes the stretch — lengthen up and over rather than just leaning.']
+        ].map(([id, name, disc, focus, tier, type, base, inc, max, perSide, cues, mistake]) =>
+            ({ id, name, disc, focus, tier, type, base, inc, max, perSide: !!perSide, cues, mistake }));
 
         const EX_BY_ID = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
 
@@ -2477,6 +2523,7 @@ permalink: /personal-trainer/
             const sideEl = document.getElementById('player-side');
             const displayEl = document.getElementById('player-display');
             const cuesEl = document.getElementById('player-cues');
+            const mistakeEl = document.getElementById('player-mistake');
             const linksEl = document.getElementById('player-links');
             const actionBtn = document.getElementById('btn-main-action');
 
@@ -2493,6 +2540,7 @@ permalink: /personal-trainer/
                 nameEl.textContent = 'Breathe';
                 sideEl.textContent = '';
                 cuesEl.innerHTML = '';
+                mistakeEl.innerHTML = '';
                 linksEl.innerHTML = '';
                 clearVideo();
                 displayEl.classList.add('resting');
@@ -2509,6 +2557,7 @@ permalink: /personal-trainer/
             nameEl.textContent = ex.name;
             sideEl.textContent = item.side || '';
             cuesEl.innerHTML = ex.cues.map((c) => `<li>· ${c}</li>`).join('');
+            mistakeEl.innerHTML = ex.mistake ? `<span class="mistake-icon">⚠️</span><span><strong>Common mistake:</strong> ${ex.mistake}</span>` : '';
             renderExerciseMedia(ex);
             beep(880);
 
@@ -2644,6 +2693,7 @@ permalink: /personal-trainer/
                             <div class="lib-video" id="lv-${ex.id}"></div>
                             <div class="lib-body">
                                 <div class="lib-cues">${ex.cues.join(' · ')}</div>
+                                ${ex.mistake ? `<div class="lib-mistake"><span class="mistake-icon">⚠️</span><span><strong>Common mistake:</strong> ${ex.mistake}</span></div>` : ''}
                                 <input type="url" placeholder="Paste YouTube link…" value="${escapeHtml(linkFor(ex.id))}" data-link-for="${ex.id}">
                             </div>
                         </div>`).join('')}
