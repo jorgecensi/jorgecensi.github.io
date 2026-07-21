@@ -1015,19 +1015,56 @@ permalink: /personal-trainer/
             transition: filter 0.4s ease;
         }
 
-        /* Streak flame — the glow strengthens roughly a day at a time through day 10,
-           then keeps growing but more gradually the longer the streak runs. The actual
-           filter values are computed per-render in streakGlowFilter() and applied as
-           inline style (continuous, not steppy); .streak-pulse just adds a gentle shine
-           animation once the streak is well established, animating between the two
-           filter strings the JS stores in --glow-a/--glow-b. */
-        .streak-pulse {
-            animation: streak-pulse 2.2s ease-in-out infinite;
+        /* Streak flame — a circular badge around the icon whose ring color, glow and
+           inner tint strengthen roughly a day at a time through day 10, then keep
+           growing but more gradually the longer the streak runs. Ring and flame values
+           are computed per-render in streakRingStyle()/streakGlowFilter() and applied as
+           inline style (continuous, not steppy). .streak-pulse adds a gentle shine
+           animation once the streak is well established (the JS stores the two glow
+           extremes in --ring-glow-a/--ring-glow-b), and .streak-shine adds a small
+           twinkling sparkle once the streak is very long. */
+        .streak-badge {
+            position: relative;
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 6px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--border);
+            background: transparent;
+            transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
         }
 
-        @keyframes streak-pulse {
-            0%, 100% { filter: var(--glow-a); }
-            50% { filter: var(--glow-b); }
+        .streak-badge .stat-ico {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+        }
+
+        .streak-badge.streak-pulse {
+            animation: streak-ring-pulse 2.2s ease-in-out infinite;
+        }
+
+        @keyframes streak-ring-pulse {
+            0%, 100% { box-shadow: var(--ring-glow-a); }
+            50% { box-shadow: var(--ring-glow-b); }
+        }
+
+        .streak-badge.streak-shine::after {
+            content: '✨';
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            font-size: 12px;
+            line-height: 1;
+            animation: streak-sparkle 1.6s ease-in-out infinite;
+        }
+
+        @keyframes streak-sparkle {
+            0%, 100% { opacity: 0.5; transform: scale(0.85); }
+            50% { opacity: 1; transform: scale(1.1); }
         }
 
         .topbar h1 .ico {
@@ -1352,7 +1389,7 @@ permalink: /personal-trainer/
             <div class="stats-row">
                 <div class="stat accent-green"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
                 <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
-                <div class="stat accent-orange"><img class="stat-ico" id="stat-streak-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
+                <div class="stat accent-orange"><div class="streak-badge" id="stat-streak-badge"><img class="stat-ico" id="stat-streak-ico" src="/img/pt/streak.png" alt=""></div><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
             </div>
             <div class="card" id="weekly-card">
                 <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
@@ -2296,36 +2333,74 @@ permalink: /personal-trainer/
             return 0.5 + 0.5 * (1 - Math.exp(-(streak - 10) / 25));
         }
 
-        // Maps a 0..1 progress value to a CSS filter: brighter/more saturated with a
-        // bigger glow as p grows, sweeping hue from the flame's native orange through
-        // red and into a cool purple-blue at the very top of the range. Ranges are wide
-        // on purpose — at a 24px icon size, subtle percentage changes don't read at all,
-        // so even the first few days need a visibly bigger glow halo and color shift.
+        // Shared hue journey for both the flame and its ring: starts at the flame's
+        // native orange, sweeps toward red by mid-progress, then on through magenta and
+        // into a cool blue at the very top of the range. Rotation only ever goes
+        // negative so it takes the short way round the color wheel (orange → red →
+        // magenta → purple → blue) instead of drifting through yellow-green.
+        function streakHueShift(p) {
+            return p < 0.6 ? -20 * (p / 0.6) : -20 - ((p - 0.6) / 0.4) * 165;
+        }
+
+        // Maps a 0..1 progress value to a CSS filter for the flame icon itself: brighter
+        // and more saturated as p grows. Ranges are wide on purpose — at an 18px icon
+        // size, subtle percentage changes don't read at all, so even the first few days
+        // need a visibly bigger color shift.
         function streakGlowFilter(p) {
             const saturate = (1 + p * 2).toFixed(2);
             const brightness = (1 + p * 0.8).toFixed(2);
-            const blur = Math.round(3 + p * 25);
-            const opacity = (0.4 + p * 0.6).toFixed(2);
-            const hue = p < 0.6 ? -20 * (p / 0.6) : -20 + ((p - 0.6) / 0.4) * 170;
-            return `hue-rotate(${hue.toFixed(1)}deg) saturate(${saturate}) brightness(${brightness}) drop-shadow(0 0 ${blur}px rgba(251, 146, 60, ${opacity}))`;
+            const hue = streakHueShift(p);
+            return `hue-rotate(${hue.toFixed(1)}deg) saturate(${saturate}) brightness(${brightness})`;
+        }
+
+        // A color along the same hue journey, base orange at p=0. Saturation/lightness
+        // also climb with p so the ring reads as "more vivid", not just recolored.
+        function streakRingColor(p, alpha) {
+            const hue = ((25 + streakHueShift(p)) % 360 + 360) % 360;
+            const sat = 55 + p * 35;
+            const light = 50 + p * 8;
+            return `hsla(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${light.toFixed(0)}%, ${alpha.toFixed(2)})`;
+        }
+
+        // The ring's border/background/glow at progress p. Border alpha itself scales
+        // with p so days 0-2 read as a barely-tinted, near-neutral ring rather than
+        // jumping straight to a saturated color.
+        function streakRingStyle(p) {
+            const borderAlpha = 0.12 + p * 0.83;
+            const blur = Math.round(2 + p * 22);
+            const glowAlpha = 0.2 + p * 0.55;
+            return {
+                border: streakRingColor(p, borderAlpha),
+                bg: `radial-gradient(circle, ${streakRingColor(p, 0.1 + p * 0.15)}, transparent 70%)`,
+                glowA: `0 0 ${blur}px ${streakRingColor(p, glowAlpha)}`,
+                glowB: `0 0 ${Math.round(blur * 1.5)}px ${streakRingColor(p, Math.min(1, glowAlpha + 0.3))}`,
+            };
         }
 
         function applyStreakGlow(streak) {
+            const badge = document.getElementById('stat-streak-badge');
             const ico = document.getElementById('stat-streak-ico');
+            badge.classList.remove('streak-pulse', 'streak-shine');
             if (streak <= 0) {
-                ico.classList.remove('streak-pulse');
+                badge.style.borderColor = '';
+                badge.style.background = '';
+                badge.style.boxShadow = '';
                 ico.style.filter = 'saturate(0.45) brightness(0.8) grayscale(0.25)';
                 return;
             }
             const p = streakGlowProgress(streak);
+            ico.style.filter = streakGlowFilter(p);
+            const ring = streakRingStyle(p);
+            badge.style.borderColor = ring.border;
+            badge.style.background = ring.bg;
+            if (streak >= 60) badge.classList.add('streak-shine');
             if (streak >= 20) {
-                ico.style.setProperty('--glow-a', streakGlowFilter(p));
-                ico.style.setProperty('--glow-b', streakGlowFilter(Math.min(1, p + 0.12)));
-                ico.style.filter = '';
-                ico.classList.add('streak-pulse');
+                badge.style.setProperty('--ring-glow-a', ring.glowA);
+                badge.style.setProperty('--ring-glow-b', ring.glowB);
+                badge.style.boxShadow = '';
+                badge.classList.add('streak-pulse');
             } else {
-                ico.classList.remove('streak-pulse');
-                ico.style.filter = streakGlowFilter(p);
+                badge.style.boxShadow = ring.glowA;
             }
         }
 
