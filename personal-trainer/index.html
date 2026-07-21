@@ -1424,6 +1424,7 @@ permalink: /personal-trainer/
             <div class="card" id="streak-card">
                 <div class="section-title">Consistency</div>
                 <div id="home-heatmap"></div>
+                <button class="btn secondary" id="btn-share-streak" style="margin-top:4px;">Share my streak ↗</button>
             </div>
             <div class="card clickable-card" id="ach-card" role="button" tabindex="0">
                 <div class="level-row"><strong><img class="ico" src="/img/pt/achievements.png" alt="">Achievements</strong><span class="see-all">All <span id="ach-badge-count" class="ach-count"></span> ›</span></div>
@@ -1960,6 +1961,37 @@ permalink: /personal-trainer/
                 byWeek[w] = (byWeek[w] || 0) + 1;
             });
             return Object.values(byWeek).filter((c) => c >= state.weeklyGoal).length;
+        }
+
+        // Consecutive weeks (not just total) the weekly goal was met — the long-term
+        // counterpart to the daily state.streak. `current` stays alive through an
+        // in-progress week that hasn't hit goal yet (same grace-period idea as the daily
+        // streak): it only breaks once a full week goes by with the goal unmet.
+        function weeklyStreakStats() {
+            const byWeek = {};
+            state.history.forEach((h) => {
+                const w = weekStartTs(h.ts);
+                byWeek[w] = (byWeek[w] || 0) + 1;
+            });
+            const goal = state.weeklyGoal || 3;
+            const metWeeks = Object.keys(byWeek).map(Number).filter((w) => byWeek[w] >= goal).sort((a, b) => a - b);
+            if (!metWeeks.length) return { current: 0, best: 0 };
+
+            const weekMs = 7 * 86400000;
+            let best = 1, run = 1;
+            for (let i = 1; i < metWeeks.length; i++) {
+                run = metWeeks[i] - metWeeks[i - 1] === weekMs ? run + 1 : 1;
+                best = Math.max(best, run);
+            }
+
+            const thisWeek = weekStartTs();
+            const lastMet = metWeeks[metWeeks.length - 1];
+            let current = 0;
+            if (lastMet === thisWeek || lastMet === thisWeek - weekMs) {
+                current = 1;
+                for (let w = lastMet - weekMs; metWeeks.includes(w); w -= weekMs) current++;
+            }
+            return { current, best };
         }
 
         // ---- Streak freezes ----
@@ -3172,6 +3204,106 @@ permalink: /personal-trainer/
             return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
         }
 
+        // A long-term-consistency card: the current and best consecutive-week streaks of
+        // hitting the weekly goal, plus how many weeks it's been met in total. Distinct
+        // from the daily progress/commitment cards — this one is about the sustained
+        // habit, not a single session.
+        async function buildStreakShareCardBlob() {
+            const SIZE = 1080;
+            const PAD = 72;
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE;
+            canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+
+            const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+            bg.addColorStop(0, '#131a27');
+            bg.addColorStop(0.55, '#0e131e');
+            bg.addColorStop(1, '#0b0f18');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const glow = ctx.createRadialGradient(SIZE * 0.82, SIZE * 0.12, 0, SIZE * 0.82, SIZE * 0.12, SIZE * 0.55);
+            glow.addColorStop(0, 'rgba(107, 184, 239, 0.18)');
+            glow.addColorStop(1, 'rgba(107, 184, 239, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const logo = await loadImg('/img/pt/app-logo.png');
+
+            let y = PAD;
+
+            if (logo) ctx.drawImage(logo, PAD, y, 64, 64);
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '600 28px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PERSONAL TRAINER', PAD + (logo ? 80 : 0), y + 32);
+            y += 64 + 56;
+
+            ctx.fillStyle = '#6bb8ef';
+            ctx.font = '700 30px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText('LONG-TERM COMMITMENT', PAD, y);
+            y += 48;
+
+            const { current, best } = weeklyStreakStats();
+            const goal = state.weeklyGoal || 3;
+            const totalWeeks = goalMetWeeks();
+
+            ctx.fillStyle = '#e9eef5';
+            ctx.font = '800 74px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(current > 0 ? `${current} week${current === 1 ? '' : 's'} strong` : 'Building the habit', PAD, y + 74);
+            y += 74 + 20;
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 32px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(
+                current > 0
+                    ? `Hit my ${goal}×/week goal ${current} week${current === 1 ? '' : 's'} in a row`
+                    : `Working toward ${goal}×/week, every week`,
+                PAD, y + 32
+            );
+            y += 32 + 56;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(PAD, y);
+            ctx.lineTo(SIZE - PAD, y);
+            ctx.stroke();
+            y += 56;
+
+            const tileW = (SIZE - PAD * 2 - 32) / 2;
+            const tiles = [
+                { label: 'BEST STREAK', value: `${best} wk${best === 1 ? '' : 's'}` },
+                { label: 'WEEKS ON TARGET', value: `${totalWeeks}` }
+            ];
+            tiles.forEach((t, i) => {
+                const tx = PAD + i * (tileW + 32);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+                roundRect(ctx, tx, y, tileW, 128, 16);
+                ctx.fill();
+                ctx.fillStyle = '#8a97a8';
+                ctx.font = '700 22px -apple-system, "Segoe UI", sans-serif';
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillText(t.label, tx + 24, y + 40);
+                ctx.fillStyle = '#e9eef5';
+                ctx.font = '800 44px -apple-system, "Segoe UI", sans-serif';
+                ctx.fillText(t.value, tx + 24, y + 92);
+            });
+            y += 128 + 72;
+
+            ctx.fillStyle = '#e9eef5';
+            ctx.font = '600 34px -apple-system, "Segoe UI", sans-serif';
+            wrapText(ctx, 'Consistency beats intensity — see you next week. 💪', PAD, y, SIZE - PAD * 2, 44);
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 24px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText('jorgecensi.com/personal-trainer', PAD, SIZE - PAD);
+
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        }
+
         // Try the native share sheet with the image file; fall back to a plain download.
         async function shareImageBlob(blob, filename, title, text) {
             const file = new File([blob], filename, { type: 'image/png' });
@@ -3206,6 +3338,7 @@ permalink: /personal-trainer/
 
         bindShareButton('btn-share', buildShareCardBlob, 'personal-trainer-progress.png', 'Personal Trainer', 'My workout progress');
         bindShareButton('btn-commit', buildCommitmentCardBlob, 'personal-trainer-commitment.png', 'Personal Trainer', 'My weekly workout commitment');
+        bindShareButton('btn-share-streak', buildStreakShareCardBlob, 'personal-trainer-streak.png', 'Personal Trainer', 'My long-term consistency streak');
 
         // =====================================================
         // Library (with editable YouTube links)
