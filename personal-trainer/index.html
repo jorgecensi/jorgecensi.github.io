@@ -1337,6 +1337,7 @@ permalink: /personal-trainer/
             <div class="card" id="weekly-card">
                 <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
                 <div class="week-segs" id="week-segs"></div>
+                <button class="btn secondary" id="btn-commit" style="margin-top:12px;">Commit &amp; share ↗</button>
             </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
@@ -2715,6 +2716,27 @@ permalink: /personal-trainer/
             ctx.closePath();
         }
 
+        // Word-wraps text to maxWidth, drawing each line lineHeight apart. Returns the
+        // y position right after the last line, so callers can keep laying out below it.
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            let curY = y;
+            ctx.textBaseline = 'alphabetic';
+            words.forEach((word, i) => {
+                const test = line ? `${line} ${word}` : word;
+                if (ctx.measureText(test).width > maxWidth && line) {
+                    ctx.fillText(line, x, curY);
+                    line = word;
+                    curY += lineHeight;
+                } else {
+                    line = test;
+                }
+                if (i === words.length - 1) ctx.fillText(line, x, curY);
+            });
+            return curY + lineHeight;
+        }
+
         async function buildShareCardBlob() {
             const SIZE = 1080;
             const PAD = 72;
@@ -2826,31 +2848,128 @@ permalink: /personal-trainer/
             return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
         }
 
-        document.getElementById('btn-share').addEventListener('click', async () => {
-            const btn = document.getElementById('btn-share');
-            const original = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Preparing…';
-            try {
-                const blob = await buildShareCardBlob();
-                const file = new File([blob], 'personal-trainer-progress.png', { type: 'image/png' });
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: 'Personal Trainer', text: 'My workout progress' });
-                } else {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'personal-trainer-progress.png';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                }
-            } catch (e) {
-                if (e.name !== 'AbortError') alert('Could not create the share image — try again.');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = original;
+        // A forward-looking card: "I'm committing to N workouts this week" with a nudge
+        // for whoever it's shared with to line up a reward if the goal is hit. The reward
+        // itself is never tracked in-app — it's just a prompt for a conversation elsewhere.
+        async function buildCommitmentCardBlob() {
+            const SIZE = 1080;
+            const PAD = 72;
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE;
+            canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+
+            const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+            bg.addColorStop(0, '#131a27');
+            bg.addColorStop(0.55, '#0e131e');
+            bg.addColorStop(1, '#0b0f18');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const glow = ctx.createRadialGradient(SIZE * 0.82, SIZE * 0.12, 0, SIZE * 0.82, SIZE * 0.12, SIZE * 0.55);
+            glow.addColorStop(0, 'rgba(16, 185, 129, 0.18)');
+            glow.addColorStop(1, 'rgba(16, 185, 129, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const logo = await loadImg('/img/pt/app-logo.png');
+
+            let y = PAD;
+
+            if (logo) ctx.drawImage(logo, PAD, y, 64, 64);
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '600 28px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PERSONAL TRAINER', PAD + (logo ? 80 : 0), y + 32);
+            y += 64 + 56;
+
+            ctx.fillStyle = '#10b981';
+            ctx.font = '700 30px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText('MY COMMITMENT', PAD, y);
+            y += 48;
+
+            const goal = state.weeklyGoal || 3;
+            const done = Math.min(workoutsThisWeek(), goal);
+            ctx.fillStyle = '#e9eef5';
+            ctx.font = '800 68px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(`${goal} workouts this week`, PAD, y + 68);
+            y += 68 + 20;
+
+            const sunday = new Date(weekStartTs() + 6 * 86400000);
+            const sundayLabel = sunday.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 32px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(`${done} of ${goal} done so far · by ${sundayLabel}`, PAD, y + 32);
+            y += 32 + 56;
+
+            // Progress dots, matching the in-app "This week" widget
+            const dotSize = 40, dotGap = 16;
+            for (let i = 0; i < goal; i++) {
+                const dx = PAD + i * (dotSize + dotGap);
+                ctx.fillStyle = i < done ? '#10b981' : 'rgba(255, 255, 255, 0.08)';
+                roundRect(ctx, dx, y, dotSize, dotSize, 10);
+                ctx.fill();
             }
-        });
+            y += dotSize + 64;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(PAD, y);
+            ctx.lineTo(SIZE - PAD, y);
+            ctx.stroke();
+            y += 64;
+
+            ctx.fillStyle = '#e9eef5';
+            ctx.font = '600 38px -apple-system, "Segoe UI", sans-serif';
+            y = wrapText(ctx, 'If I hit this goal, will you treat me to something? 🎉', PAD, y, SIZE - PAD * 2, 48) + 24;
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 28px -apple-system, "Segoe UI", sans-serif';
+            wrapText(ctx, 'Your call what — coffee, dinner, a movie night. Just cheer me on and let’s agree on it.', PAD, y, SIZE - PAD * 2, 38);
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 24px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText('jorgecensi.com/personal-trainer', PAD, SIZE - PAD);
+
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        // Try the native share sheet with the image file; fall back to a plain download.
+        async function shareImageBlob(blob, filename, title, text) {
+            const file = new File([blob], filename, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title, text });
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        function bindShareButton(btnId, buildBlob, filename, title, text) {
+            document.getElementById(btnId).addEventListener('click', async () => {
+                const btn = document.getElementById(btnId);
+                const original = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = 'Preparing…';
+                try {
+                    await shareImageBlob(await buildBlob(), filename, title, text);
+                } catch (e) {
+                    if (e.name !== 'AbortError') alert('Could not create the share image — try again.');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = original;
+                }
+            });
+        }
+
+        bindShareButton('btn-share', buildShareCardBlob, 'personal-trainer-progress.png', 'Personal Trainer', 'My workout progress');
+        bindShareButton('btn-commit', buildCommitmentCardBlob, 'personal-trainer-commitment.png', 'Personal Trainer', 'My weekly workout commitment');
 
         // =====================================================
         // Library (with editable YouTube links)
