@@ -413,6 +413,11 @@ permalink: /personal-trainer/
             text-align: left;
         }
 
+        .info-link:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
         .info-tier {
             display: flex;
             align-items: center;
@@ -1329,6 +1334,10 @@ permalink: /personal-trainer/
             background: var(--warn);
         }
 
+        .hm .frozen {
+            background: var(--blue);
+        }
+
         .hm .td {
             outline: 1px solid var(--muted);
         }
@@ -1394,6 +1403,7 @@ permalink: /personal-trainer/
             <div class="card" id="weekly-card">
                 <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
                 <div class="week-segs" id="week-segs"></div>
+                <button class="info-link" id="btn-freeze">❄️ Freeze today's streak</button>
                 <button class="btn secondary" id="btn-commit" style="margin-top:12px;">Commit &amp; share ↗</button>
             </div>
             <div class="card disc-card">
@@ -1884,7 +1894,8 @@ permalink: /personal-trainer/
                 weeklyGoal: 3,
                 achievements: {},
                 lastTwist: null,
-                records: {}
+                records: {},
+                frozenDates: []
             };
         }
 
@@ -1937,6 +1948,53 @@ permalink: /personal-trainer/
                 byWeek[w] = (byWeek[w] || 0) + 1;
             });
             return Object.values(byWeek).filter((c) => c >= state.weeklyGoal).length;
+        }
+
+        // ---- Streak freezes ----
+        // A standing safety net, not a purchasable item: one freeze is earned for every
+        // 7 workouts logged. Spend one on a day you know you'll miss and the streak
+        // survives the gap instead of resetting.
+        const FREEZE_EVERY_N_WORKOUTS = 7;
+        function dayStartTs(ts) {
+            const d = new Date(ts === undefined ? Date.now() : ts);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime();
+        }
+        function freezesEarned() {
+            return Math.floor(state.history.length / FREEZE_EVERY_N_WORKOUTS);
+        }
+        function freezesAvailable() {
+            return Math.max(0, freezesEarned() - (state.frozenDates || []).length);
+        }
+        function isFrozenToday() {
+            return (state.frozenDates || []).includes(dayStartTs());
+        }
+        function hasWorkedOutToday() {
+            const today = dayStartTs();
+            return state.history.some((h) => dayStartTs(h.ts) === today);
+        }
+        function freezeToday() {
+            if (freezesAvailable() <= 0 || isFrozenToday()) return false;
+            state.frozenDates = state.frozenDates || [];
+            state.frozenDates.push(dayStartTs());
+            saveState();
+            return true;
+        }
+
+        // Whether every calendar day strictly between two timestamps has a recorded
+        // freeze — lets a streak survive a gap the plain 48h grace period alone
+        // wouldn't forgive.
+        function gapBridgedByFreezes(prevTs, nowTs) {
+            const dayMs = 86400000;
+            const frozen = new Set(state.frozenDates || []);
+            for (let d = dayStartTs(prevTs) + dayMs; d < dayStartTs(nowTs); d += dayMs) {
+                if (!frozen.has(d)) return false;
+            }
+            return true;
+        }
+
+        function streakContinues(prevTs, nowTs) {
+            return (nowTs - prevTs) < 48 * 3600 * 1000 || gapBridgedByFreezes(prevTs, nowTs);
         }
 
         function loadState() {
@@ -2428,9 +2486,31 @@ permalink: /personal-trainer/
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
 
             document.getElementById('home-heatmap').innerHTML = heatmapHtml();
+            renderFreezeButton();
             renderAchProgress();
             renderRecPreview();
         }
+
+        function renderFreezeButton() {
+            const btn = document.getElementById('btn-freeze');
+            if (hasWorkedOutToday()) {
+                btn.textContent = '✅ Streak secured for today';
+                btn.disabled = true;
+            } else if (isFrozenToday()) {
+                btn.textContent = '❄️ Streak frozen for today';
+                btn.disabled = true;
+            } else {
+                const n = freezesAvailable();
+                btn.textContent = n > 0
+                    ? `❄️ Freeze today's streak (${n} left)`
+                    : `❄️ No freezes yet — earn 1 every ${FREEZE_EVERY_N_WORKOUTS} workouts`;
+                btn.disabled = n <= 0;
+            }
+        }
+
+        document.getElementById('btn-freeze').addEventListener('click', () => {
+            if (freezeToday()) renderHome();
+        });
 
         // The n locked badges closest to unlocking, with their current progress
         function closestAchievements(n) {
@@ -2790,7 +2870,7 @@ permalink: /personal-trainer/
 
             // Show the streak/goal this workout is about to secure
             const prev = state.history[state.history.length - 1];
-            const prospectStreak = prev && (Date.now() - prev.ts) < 48 * 3600 * 1000 ? state.streak + 1 : 1;
+            const prospectStreak = prev && streakContinues(prev.ts, Date.now()) ? state.streak + 1 : 1;
             const goal = state.weeklyGoal || 3;
             const doneThisWeek = workoutsThisWeek() + 1;
             document.getElementById('complete-motivate').textContent =
@@ -2817,7 +2897,7 @@ permalink: /personal-trainer/
 
                 const prev = state.history[state.history.length - 1];
                 const now = Date.now();
-                state.streak = prev && (now - prev.ts) < 48 * 3600 * 1000 ? state.streak + 1 : 1;
+                state.streak = prev && streakContinues(prev.ts, now) ? state.streak + 1 : 1;
 
                 state.history.push({
                     ts: now,
@@ -3407,7 +3487,8 @@ permalink: /personal-trainer/
         }
 
         // 12-week "don't break the chain" grid: one cell per day, lit when you trained,
-        // and marked gold on the day the weekly goal was reached.
+        // marked gold on the day the weekly goal was reached, and marked frozen (blue)
+        // on a day spent from a streak freeze instead of an actual workout.
         function heatmapHtml() {
             const counts = {};
             state.history.forEach((h) => {
@@ -3415,6 +3496,7 @@ permalink: /personal-trainer/
                 d.setHours(0, 0, 0, 0);
                 counts[d.getTime()] = (counts[d.getTime()] || 0) + 1;
             });
+            const frozen = new Set(state.frozenDates || []);
             const goal = state.weeklyGoal || 3;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -3432,7 +3514,7 @@ permalink: /personal-trainer/
                     const before = weekTotal;
                     weekTotal += dayCount;
                     const reachedGoal = dayCount > 0 && before < goal && weekTotal >= goal;
-                    const cls = reachedGoal ? 'goal' : (dayCount ? 'on' : '');
+                    const cls = reachedGoal ? 'goal' : dayCount ? 'on' : frozen.has(t) ? 'frozen' : '';
                     cells += `<div class="${cls}${t === today.getTime() ? ' td' : ''}"></div>`;
                 }
             }
