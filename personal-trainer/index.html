@@ -1355,6 +1355,10 @@ permalink: /personal-trainer/
                 </div>
             </div>
             <button class="btn" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
+            <div class="card" id="streak-card">
+                <div class="section-title">Consistency</div>
+                <div id="home-heatmap"></div>
+            </div>
             <div class="card clickable-card" id="ach-card" role="button" tabindex="0">
                 <div class="level-row"><strong><img class="ico" src="/img/pt/achievements.png" alt="">Achievements</strong><span class="see-all">All <span id="ach-badge-count" class="ach-count"></span> ›</span></div>
                 <div id="ach-progress"></div>
@@ -2285,6 +2289,7 @@ permalink: /personal-trainer/
             const unlocked = Object.keys(state.achievements || {}).length;
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
 
+            document.getElementById('home-heatmap').innerHTML = heatmapHtml();
             renderAchProgress();
             renderRecPreview();
         }
@@ -3252,7 +3257,6 @@ permalink: /personal-trainer/
             const totalMins = state.history.reduce((t, h) => t + h.mins, 0);
             list.innerHTML =
                 `<div class="muted-note" style="margin-bottom:8px;">🔥 Best streak ${Math.max(state.bestStreak || 0, state.streak)} · ⏱️ ${totalMins} min total</div>` +
-                heatmapHtml() +
                 state.history.slice().reverse().map((h) => `
                 <div class="hist-item">
                     <span class="fb">${FB_EMOJI[h.fb] || '💪'}</span>
