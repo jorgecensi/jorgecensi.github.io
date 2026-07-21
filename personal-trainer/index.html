@@ -1081,12 +1081,17 @@ permalink: /personal-trainer/
 
         .ach.locked {
             opacity: 0.6;
-            filter: grayscale(1);
         }
 
         .ach .em {
             font-size: 1.6rem;
             flex-shrink: 0;
+        }
+
+        /* Grayscale just the badge icon, not the whole card — the progress bar
+           should still show its real color even before the badge is earned. */
+        .ach.locked .em {
+            filter: grayscale(1);
         }
 
         .ach-main {
