@@ -783,10 +783,18 @@ permalink: /personal-trainer/
             margin-top: 12px;
         }
 
-        .big-emoji {
-            font-size: 3.5rem;
-            text-align: center;
-            margin: 20px 0 8px;
+        .big-emoji-ico {
+            display: block;
+            width: 72px;
+            height: 72px;
+            margin: 20px auto 8px;
+        }
+
+        .fb-ico {
+            width: 32px;
+            height: 32px;
+            display: inline-block;
+            margin-bottom: 4px;
         }
 
         /* Library */
@@ -1031,6 +1039,21 @@ permalink: /personal-trainer/
         .level-row .ico {
             width: 1.4em;
             height: 1.4em;
+        }
+
+        .info-row .ico {
+            width: 1.3em;
+            height: 1.3em;
+            vertical-align: -0.32em;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+
+        .twist-ico {
+            width: 1.2em;
+            height: 1.2em;
+            vertical-align: -0.28em;
+            margin-right: 4px;
         }
 
         /* Weekly goal */
@@ -1327,11 +1350,11 @@ permalink: /personal-trainer/
             </div>
             <button class="btn" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
             <div class="card clickable-card" id="ach-card" role="button" tabindex="0">
-                <div class="level-row"><strong>🏅 Achievements</strong><span class="see-all">All <span id="ach-badge-count" class="ach-count"></span> ›</span></div>
+                <div class="level-row"><strong><img class="ico" src="/img/pt/achievements.png" alt="">Achievements</strong><span class="see-all">All <span id="ach-badge-count" class="ach-count"></span> ›</span></div>
                 <div id="ach-progress"></div>
             </div>
             <div class="card clickable-card" id="rec-card" role="button" tabindex="0">
-                <div class="level-row"><strong>📊 Records</strong><span class="see-all">All ›</span></div>
+                <div class="level-row"><strong><img class="ico" src="/img/pt/records.png" alt="">Records</strong><span class="see-all">All ›</span></div>
                 <div id="rec-preview"></div>
             </div>
             <div class="home-nav">
@@ -1381,15 +1404,15 @@ permalink: /personal-trainer/
         <!-- ============ COMPLETE ============ -->
         <section class="screen" id="complete">
             <header class="topbar"><h1>Workout <span>Complete</span></h1></header>
-            <div class="big-emoji">🎉</div>
+            <img class="big-emoji-ico" src="/img/pt/celebration.png" alt="">
             <div class="card" style="text-align:center;">
                 <div id="complete-summary" style="font-size:1.05rem;font-weight:600;"></div>
                 <div id="complete-motivate" class="muted-note" style="margin-top:8px;"></div>
                 <p class="muted-note" style="margin-top:6px;">How did it feel? Your answer tunes the next workout.</p>
                 <div class="feedback-row">
-                    <button class="btn secondary" data-fb="easy">😴<br>Too easy</button>
-                    <button class="btn secondary" data-fb="right">💪<br>Just right</button>
-                    <button class="btn secondary" data-fb="hard">🥵<br>Too hard</button>
+                    <button class="btn secondary" data-fb="easy"><img class="fb-ico" src="/img/pt/feedback-easy.png" alt=""><br>Too easy</button>
+                    <button class="btn secondary" data-fb="right"><img class="fb-ico" src="/img/pt/feedback-right.png" alt=""><br>Just right</button>
+                    <button class="btn secondary" data-fb="hard"><img class="fb-ico" src="/img/pt/feedback-hard.png" alt=""><br>Too hard</button>
                 </div>
             </div>
         </section>
@@ -1442,9 +1465,9 @@ permalink: /personal-trainer/
             <div class="card">
                 <div class="section-title">Your feedback drives it</div>
                 <p class="muted-note" style="margin-bottom:10px;">After every workout you say how it felt, and both scores adjust:</p>
-                <div class="info-row"><span>😴 Too easy</span><span class="delta up">+8 points</span></div>
-                <div class="info-row"><span>💪 Just right</span><span class="delta up">+4 points</span></div>
-                <div class="info-row"><span>🥵 Too hard</span><span class="delta down">−5 points</span></div>
+                <div class="info-row"><span><img class="ico info-ico" src="/img/pt/feedback-easy.png" alt="">Too easy</span><span class="delta up">+8 points</span></div>
+                <div class="info-row"><span><img class="ico info-ico" src="/img/pt/feedback-right.png" alt="">Just right</span><span class="delta up">+4 points</span></div>
+                <div class="info-row"><span><img class="ico info-ico" src="/img/pt/feedback-hard.png" alt="">Too hard</span><span class="delta down">−5 points</span></div>
                 <p class="muted-note" style="margin-top:10px;">Honest answers keep the plan at the right pace — sandbagging just makes next time too easy.</p>
             </div>
 
@@ -1463,11 +1486,11 @@ permalink: /personal-trainer/
 
             <div class="card">
                 <div class="section-title">Staying motivated</div>
-                <div class="info-row"><span>🎯 Weekly goal</span><span class="muted-note">pick 2–5 sessions, Mon–Sun</span></div>
-                <div class="info-row"><span>✨ Twists</span><span class="muted-note">every workout gets a theme</span></div>
-                <div class="info-row"><span>🏅 Achievements</span><span class="muted-note">badges unlock as you train</span></div>
-                <div class="info-row"><span>📊 Records</span><span class="muted-note">best hold &amp; rep count per exercise</span></div>
-                <div class="info-row"><span>🟩 The chain</span><span class="muted-note">History marks every day you show up</span></div>
+                <div class="info-row"><span><img class="ico info-ico" src="/img/pt/weekly-goal.png" alt="">Weekly goal</span><span class="muted-note">pick 2–5 sessions, Mon–Sun</span></div>
+                <div class="info-row"><span><img class="ico info-ico" src="/img/pt/twists.png" alt="">Twists</span><span class="muted-note">every workout gets a theme</span></div>
+                <div class="info-row"><span><img class="ico info-ico" src="/img/pt/achievements.png" alt="">Achievements</span><span class="muted-note">badges unlock as you train</span></div>
+                <div class="info-row"><span><img class="ico info-ico" src="/img/pt/records.png" alt="">Records</span><span class="muted-note">best hold &amp; rep count per exercise</span></div>
+                <div class="info-row"><span><img class="ico info-ico" src="/img/pt/streak-chain.png" alt="">The chain</span><span class="muted-note">History marks every day you show up</span></div>
                 <p class="muted-note" style="margin-top:10px;">Focus days, endurance rounds, speedy rests and surprise finishers keep sessions fresh, while the weekly bar and the chain make consistency visible. A record is the biggest dose you actually finish — skipped exercises don't count — so your plank holds and rep counts climb as you do. Show up, tap done, keep the chain alive.</p>
             </div>
         </section>
@@ -1505,9 +1528,9 @@ permalink: /personal-trainer/
             <div class="modal-body">
                 <div class="card">
                     <div class="section-title">The shape of a session</div>
-                    <div class="info-row"><span>🔥 Warm-up</span><span class="muted-note">3 easy moves</span></div>
+                    <div class="info-row"><span><img class="ico info-ico" src="/img/pt/warmup.png" alt="">Warm-up</span><span class="muted-note">3 easy moves</span></div>
                     <div class="info-row"><span>💪 Main circuit</span><span class="muted-note">Core + Pilates, alternating</span></div>
-                    <div class="info-row"><span>🧘 Cool-down</span><span class="muted-note">3 stretches</span></div>
+                    <div class="info-row"><span><img class="ico info-ico" src="/img/pt/cooldown.png" alt="">Cool-down</span><span class="muted-note">3 stretches</span></div>
                     <p class="muted-note" style="margin-top:10px;">Your session length sets the time budget, then the main circuit is filled with as many exercises as fit. Pick 40 minutes and the circuit repeats for a second round instead of just adding more moves.</p>
                 </div>
 
@@ -2326,7 +2349,7 @@ permalink: /personal-trainer/
             const mins = Math.round(w.totalSecs / 60);
             list.innerHTML =
                 `<p class="muted-note" style="margin-bottom:6px;">≈ ${mins} min · ${w.main.length} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level · tap ▶ to preview</p>` +
-                (w.twist ? `<p class="muted-note" style="margin-bottom:6px;">✨ Today's twist: <strong style="color:var(--text);">${w.twist.label}</strong> — ${w.twist.desc}</p>` : '') +
+                (w.twist ? `<p class="muted-note" style="margin-bottom:6px;"><img class="ico twist-ico" src="/img/pt/twists.png" alt="">Today's twist: <strong style="color:var(--text);">${w.twist.label}</strong> — ${w.twist.desc}</p>` : '') +
                 section('Warm-up', w.warmups) +
                 section(w.rounds > 1 ? `Main circuit — ${w.rounds} rounds` : 'Main workout', w.main) +
                 section('Cool-down', w.cooldowns);

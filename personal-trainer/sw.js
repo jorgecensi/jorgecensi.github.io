@@ -16,7 +16,18 @@ const PRECACHE_URLS = [
     '/img/pt/history.png',
     '/img/pt/level.png',
     '/img/pt/workout.png',
-    '/img/pt/streak.png'
+    '/img/pt/streak.png',
+    '/img/pt/achievements.png',
+    '/img/pt/records.png',
+    '/img/pt/weekly-goal.png',
+    '/img/pt/twists.png',
+    '/img/pt/streak-chain.png',
+    '/img/pt/warmup.png',
+    '/img/pt/cooldown.png',
+    '/img/pt/feedback-easy.png',
+    '/img/pt/feedback-right.png',
+    '/img/pt/feedback-hard.png',
+    '/img/pt/celebration.png'
 ];
 
 self.addEventListener('install', (event) => {
