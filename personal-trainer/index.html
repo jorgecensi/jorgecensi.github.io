@@ -151,6 +151,11 @@ permalink: /personal-trainer/
             transform: scale(0.98);
         }
 
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
         .btn.secondary {
             background: var(--surface2);
             color: var(--text);
@@ -1332,6 +1337,7 @@ permalink: /personal-trainer/
             <div class="card" id="weekly-card">
                 <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
                 <div class="week-segs" id="week-segs"></div>
+                <button class="btn secondary" id="btn-commit" style="margin-top:12px;">Commit &amp; share ↗</button>
             </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
@@ -1408,7 +1414,8 @@ permalink: /personal-trainer/
             <div class="card" style="text-align:center;">
                 <div id="complete-summary" style="font-size:1.05rem;font-weight:600;"></div>
                 <div id="complete-motivate" class="muted-note" style="margin-top:8px;"></div>
-                <p class="muted-note" style="margin-top:6px;">How did it feel? Your answer tunes the next workout.</p>
+                <button class="btn secondary" id="btn-share" style="margin-top:14px;">Share progress ↗</button>
+                <p class="muted-note" style="margin-top:14px;">How did it feel? Your answer tunes the next workout.</p>
                 <div class="feedback-row">
                     <button class="btn secondary" data-fb="easy"><img class="fb-ico" src="/img/pt/feedback-easy.png" alt=""><br>Too easy</button>
                     <button class="btn secondary" data-fb="right"><img class="fb-ico" src="/img/pt/feedback-right.png" alt=""><br>Just right</button>
@@ -2282,13 +2289,18 @@ permalink: /personal-trainer/
             renderRecPreview();
         }
 
-        // The 3 locked badges closest to unlocking, with progress bars
-        function renderAchProgress() {
-            const rows = ACHIEVEMENTS
+        // The n locked badges closest to unlocking, with their current progress
+        function closestAchievements(n) {
+            return ACHIEVEMENTS
                 .filter((a) => !state.achievements[a.id])
                 .map((a) => ({ a, cur: a.value(), ratio: Math.min(1, a.value() / a.target) }))
                 .sort((x, y) => y.ratio - x.ratio)
-                .slice(0, 3);
+                .slice(0, n);
+        }
+
+        // The 3 locked badges closest to unlocking, with progress bars
+        function renderAchProgress() {
+            const rows = closestAchievements(3);
             document.getElementById('ach-progress').innerHTML = rows.length
                 ? rows.map(({ a, cur, ratio }) => `
                     <div class="ach-prog-row">
@@ -2640,6 +2652,7 @@ permalink: /personal-trainer/
             const doneThisWeek = workoutsThisWeek() + 1;
             document.getElementById('complete-motivate').textContent =
                 `🔥 Streak ${prospectStreak} · ${Math.min(doneThisWeek, goal)} of ${goal} this week${doneThisWeek >= goal ? ' — goal met! 🎉' : ''}`;
+            currentWorkout.prospectStreak = prospectStreak;
 
             document.getElementById('player-bar').style.width = '100%';
             currentWorkout.actualMins = mins;
@@ -2679,6 +2692,284 @@ permalink: /personal-trainer/
                 if (unlocked.length) showAchievementToasts(unlocked);
             });
         });
+
+        // =====================================================
+        // Shareable progress card
+        // =====================================================
+        function loadImg(src) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = src;
+            });
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            r = Math.min(r, w / 2, h / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        // Word-wraps text to maxWidth, drawing each line lineHeight apart. Returns the
+        // y position right after the last line, so callers can keep laying out below it.
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            let curY = y;
+            ctx.textBaseline = 'alphabetic';
+            words.forEach((word, i) => {
+                const test = line ? `${line} ${word}` : word;
+                if (ctx.measureText(test).width > maxWidth && line) {
+                    ctx.fillText(line, x, curY);
+                    line = word;
+                    curY += lineHeight;
+                } else {
+                    line = test;
+                }
+                if (i === words.length - 1) ctx.fillText(line, x, curY);
+            });
+            return curY + lineHeight;
+        }
+
+        async function buildShareCardBlob() {
+            const SIZE = 1080;
+            const PAD = 72;
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE;
+            canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+
+            const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+            bg.addColorStop(0, '#131a27');
+            bg.addColorStop(0.55, '#0e131e');
+            bg.addColorStop(1, '#0b0f18');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const glow = ctx.createRadialGradient(SIZE * 0.82, SIZE * 0.12, 0, SIZE * 0.82, SIZE * 0.12, SIZE * 0.55);
+            glow.addColorStop(0, 'rgba(16, 185, 129, 0.18)');
+            glow.addColorStop(1, 'rgba(16, 185, 129, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const [logo, streakIco] = await Promise.all([
+                loadImg('/img/pt/app-logo.png'),
+                loadImg('/img/pt/streak.png')
+            ]);
+
+            let y = PAD;
+
+            if (logo) ctx.drawImage(logo, PAD, y, 64, 64);
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '600 28px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PERSONAL TRAINER', PAD + (logo ? 80 : 0), y + 32);
+            y += 64 + 56;
+
+            ctx.fillStyle = '#e9eef5';
+            ctx.font = '800 74px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'alphabetic';
+            const mins = currentWorkout.actualMins || Math.round((currentWorkout.totalSecs || 0) / 60);
+            ctx.fillText(`${mins} min workout`, PAD, y + 74);
+            y += 74 + 18;
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 34px -apple-system, "Segoe UI", sans-serif';
+            const roundsSuffix = currentWorkout.rounds > 1 ? ` × ${currentWorkout.rounds} rounds` : '';
+            ctx.fillText(`${currentWorkout.main.length} exercises${roundsSuffix} · ${levelLabel()} level`, PAD, y + 34);
+            y += 34 + 60;
+
+            const streak = currentWorkout.prospectStreak || state.streak || 0;
+            if (streakIco) ctx.drawImage(streakIco, PAD, y, 56, 56);
+            ctx.fillStyle = '#ef8a5f';
+            ctx.font = '700 42px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${streak}-day streak`, PAD + (streakIco ? 72 : 0), y + 28);
+            y += 56 + 64;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(PAD, y);
+            ctx.lineTo(SIZE - PAD, y);
+            ctx.stroke();
+            y += 56;
+
+            const goals = closestAchievements(2);
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '700 28px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText(goals.length ? 'ALMOST THERE' : 'KEEP GOING', PAD, y);
+            y += 50;
+
+            if (goals.length) {
+                goals.forEach(({ a, cur, ratio }) => {
+                    ctx.font = '46px -apple-system, "Segoe UI", sans-serif';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(a.emoji, PAD, y + 30);
+
+                    ctx.fillStyle = '#e9eef5';
+                    ctx.font = '600 32px -apple-system, "Segoe UI", sans-serif';
+                    ctx.fillText(a.name, PAD + 68, y + 18);
+
+                    const barX = PAD + 68, barY = y + 40, barW = SIZE - PAD - barX - 116, barH = 14;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+                    roundRect(ctx, barX, barY, barW, barH, 7);
+                    ctx.fill();
+                    ctx.fillStyle = '#10b981';
+                    roundRect(ctx, barX, barY, Math.max(barH, barW * ratio), barH, 7);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#8a97a8';
+                    ctx.font = '600 26px -apple-system, "Segoe UI", sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`${Math.floor(Math.min(cur, a.target))}/${a.target}`, SIZE - PAD, y + 24);
+                    ctx.textAlign = 'left';
+
+                    y += 108;
+                });
+            } else {
+                ctx.fillStyle = '#e9eef5';
+                ctx.font = '500 30px -apple-system, "Segoe UI", sans-serif';
+                ctx.fillText('Every workout counts. Show up tomorrow.', PAD, y + 6);
+            }
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 24px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText('jorgecensi.com/personal-trainer', PAD, SIZE - PAD);
+
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        // A forward-looking card: "I'm committing to N workouts this week" with a nudge
+        // for whoever it's shared with to line up a reward if the goal is hit. The reward
+        // itself is never tracked in-app — it's just a prompt for a conversation elsewhere.
+        async function buildCommitmentCardBlob() {
+            const SIZE = 1080;
+            const PAD = 72;
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE;
+            canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+
+            const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+            bg.addColorStop(0, '#131a27');
+            bg.addColorStop(0.55, '#0e131e');
+            bg.addColorStop(1, '#0b0f18');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const glow = ctx.createRadialGradient(SIZE * 0.82, SIZE * 0.12, 0, SIZE * 0.82, SIZE * 0.12, SIZE * 0.55);
+            glow.addColorStop(0, 'rgba(16, 185, 129, 0.18)');
+            glow.addColorStop(1, 'rgba(16, 185, 129, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const logo = await loadImg('/img/pt/app-logo.png');
+
+            let y = PAD;
+
+            if (logo) ctx.drawImage(logo, PAD, y, 64, 64);
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '600 28px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PERSONAL TRAINER', PAD + (logo ? 80 : 0), y + 32);
+            y += 64 + 56;
+
+            ctx.fillStyle = '#10b981';
+            ctx.font = '700 30px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText('MY COMMITMENT', PAD, y);
+            y += 48;
+
+            const goal = state.weeklyGoal || 3;
+            const done = Math.min(workoutsThisWeek(), goal);
+            ctx.fillStyle = '#e9eef5';
+            ctx.font = '800 68px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(`${goal} workouts this week`, PAD, y + 68);
+            y += 68 + 20;
+
+            const sunday = new Date(weekStartTs() + 6 * 86400000);
+            const sundayLabel = sunday.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 32px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(`${done} of ${goal} done so far · by ${sundayLabel}`, PAD, y + 32);
+            y += 32 + 56;
+
+            // Progress dots, matching the in-app "This week" widget
+            const dotSize = 40, dotGap = 16;
+            for (let i = 0; i < goal; i++) {
+                const dx = PAD + i * (dotSize + dotGap);
+                ctx.fillStyle = i < done ? '#10b981' : 'rgba(255, 255, 255, 0.08)';
+                roundRect(ctx, dx, y, dotSize, dotSize, 10);
+                ctx.fill();
+            }
+            y += dotSize + 64;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(PAD, y);
+            ctx.lineTo(SIZE - PAD, y);
+            ctx.stroke();
+            y += 64;
+
+            ctx.fillStyle = '#e9eef5';
+            ctx.font = '600 38px -apple-system, "Segoe UI", sans-serif';
+            y = wrapText(ctx, 'If I hit this goal, will you treat me to something? 🎉', PAD, y, SIZE - PAD * 2, 48) + 24;
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 28px -apple-system, "Segoe UI", sans-serif';
+            wrapText(ctx, 'Your call what — coffee, dinner, a movie night. Just cheer me on and let’s agree on it.', PAD, y, SIZE - PAD * 2, 38);
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 24px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText('jorgecensi.com/personal-trainer', PAD, SIZE - PAD);
+
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        // Try the native share sheet with the image file; fall back to a plain download.
+        async function shareImageBlob(blob, filename, title, text) {
+            const file = new File([blob], filename, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title, text });
+            } else {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        function bindShareButton(btnId, buildBlob, filename, title, text) {
+            document.getElementById(btnId).addEventListener('click', async () => {
+                const btn = document.getElementById(btnId);
+                const original = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = 'Preparing…';
+                try {
+                    await shareImageBlob(await buildBlob(), filename, title, text);
+                } catch (e) {
+                    if (e.name !== 'AbortError') alert('Could not create the share image — try again.');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = original;
+                }
+            });
+        }
+
+        bindShareButton('btn-share', buildShareCardBlob, 'personal-trainer-progress.png', 'Personal Trainer', 'My workout progress');
+        bindShareButton('btn-commit', buildCommitmentCardBlob, 'personal-trainer-commitment.png', 'Personal Trainer', 'My weekly workout commitment');
 
         // =====================================================
         // Library (with editable YouTube links)
