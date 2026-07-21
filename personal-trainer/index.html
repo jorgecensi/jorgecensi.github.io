@@ -2298,13 +2298,15 @@ permalink: /personal-trainer/
 
         // Maps a 0..1 progress value to a CSS filter: brighter/more saturated with a
         // bigger glow as p grows, sweeping hue from the flame's native orange through
-        // red and into a cool purple-blue at the very top of the range.
+        // red and into a cool purple-blue at the very top of the range. Ranges are wide
+        // on purpose — at a 24px icon size, subtle percentage changes don't read at all,
+        // so even the first few days need a visibly bigger glow halo and color shift.
         function streakGlowFilter(p) {
-            const saturate = (1 + p * 1.2).toFixed(2);
-            const brightness = (1 + p * 0.5).toFixed(2);
-            const blur = Math.round(3 + p * 13);
-            const opacity = (0.4 + p * 0.55).toFixed(2);
-            const hue = p < 0.6 ? -15 * (p / 0.6) : -15 + ((p - 0.6) / 0.4) * 165;
+            const saturate = (1 + p * 2).toFixed(2);
+            const brightness = (1 + p * 0.8).toFixed(2);
+            const blur = Math.round(3 + p * 25);
+            const opacity = (0.4 + p * 0.6).toFixed(2);
+            const hue = p < 0.6 ? -20 * (p / 0.6) : -20 + ((p - 0.6) / 0.4) * 170;
             return `hue-rotate(${hue.toFixed(1)}deg) saturate(${saturate}) brightness(${brightness}) drop-shadow(0 0 ${blur}px rgba(251, 146, 60, ${opacity}))`;
         }
 
