@@ -1272,6 +1272,10 @@ permalink: /personal-trainer/
             background: var(--accent);
         }
 
+        .hm .goal {
+            background: var(--warn);
+        }
+
         .hm .td {
             outline: 1px solid var(--muted);
         }
@@ -1355,6 +1359,10 @@ permalink: /personal-trainer/
                 </div>
             </div>
             <button class="btn" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
+            <div class="card" id="streak-card">
+                <div class="section-title">Consistency</div>
+                <div id="home-heatmap"></div>
+            </div>
             <div class="card clickable-card" id="ach-card" role="button" tabindex="0">
                 <div class="level-row"><strong><img class="ico" src="/img/pt/achievements.png" alt="">Achievements</strong><span class="see-all">All <span id="ach-badge-count" class="ach-count"></span> ›</span></div>
                 <div id="ach-progress"></div>
@@ -2285,6 +2293,7 @@ permalink: /personal-trainer/
             const unlocked = Object.keys(state.achievements || {}).length;
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
 
+            document.getElementById('home-heatmap').innerHTML = heatmapHtml();
             renderAchProgress();
             renderRecPreview();
         }
@@ -3252,7 +3261,6 @@ permalink: /personal-trainer/
             const totalMins = state.history.reduce((t, h) => t + h.mins, 0);
             list.innerHTML =
                 `<div class="muted-note" style="margin-bottom:8px;">🔥 Best streak ${Math.max(state.bestStreak || 0, state.streak)} · ⏱️ ${totalMins} min total</div>` +
-                heatmapHtml() +
                 state.history.slice().reverse().map((h) => `
                 <div class="hist-item">
                     <span class="fb">${FB_EMOJI[h.fb] || '💪'}</span>
@@ -3264,7 +3272,8 @@ permalink: /personal-trainer/
                 </div>`).join('');
         }
 
-        // 12-week "don't break the chain" grid: one cell per day, lit when you trained
+        // 12-week "don't break the chain" grid: one cell per day, lit when you trained,
+        // and marked gold on the day the weekly goal was reached.
         function heatmapHtml() {
             const counts = {};
             state.history.forEach((h) => {
@@ -3272,18 +3281,25 @@ permalink: /personal-trainer/
                 d.setHours(0, 0, 0, 0);
                 counts[d.getTime()] = (counts[d.getTime()] || 0) + 1;
             });
+            const goal = state.weeklyGoal || 3;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const start = new Date(today);
             start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - 77); // Monday, 11 weeks back
             let cells = '';
             for (let w = 0; w < 12; w++) {
+                let weekTotal = 0;
                 for (let d = 0; d < 7; d++) {
                     const cur = new Date(start);
                     cur.setDate(start.getDate() + w * 7 + d);
                     if (cur > today) { cells += '<div style="visibility:hidden"></div>'; continue; }
                     const t = cur.getTime();
-                    cells += `<div class="${counts[t] ? 'on' : ''}${t === today.getTime() ? ' td' : ''}"></div>`;
+                    const dayCount = counts[t] || 0;
+                    const before = weekTotal;
+                    weekTotal += dayCount;
+                    const reachedGoal = dayCount > 0 && before < goal && weekTotal >= goal;
+                    const cls = reachedGoal ? 'goal' : (dayCount ? 'on' : '');
+                    cells += `<div class="${cls}${t === today.getTime() ? ' td' : ''}"></div>`;
                 }
             }
             return `<div class="hm">${cells}</div><p class="muted-note" style="margin:6px 0 12px;">Last 12 weeks — don’t break the chain.</p>`;
