@@ -125,6 +125,16 @@ permalink: /personal-trainer/
             padding: 6px 0;
         }
 
+        /* Actual "go back" actions get a visible pill so they read as tappable buttons,
+           not plain text — unlike the plain icon-only topbar actions (settings, info,
+           regenerate) which keep the minimal look above. */
+        .topbar .back-btn[data-back] {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 6px 14px;
+        }
+
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -1357,7 +1367,9 @@ permalink: /personal-trainer/
         <!-- ============ SETUP ============ -->
         <section class="screen" id="setup">
             <header class="topbar">
+                <button class="back-btn" id="setup-back" data-back="home" style="display:none;">‹ Back</button>
                 <h1><img class="ico" src="/img/pt/app-logo.png" alt="">Personal <span>Trainer</span></h1>
+                <span></span>
             </header>
             <div class="card">
                 <div class="section-title">Your fitness level</div>
@@ -2335,6 +2347,7 @@ permalink: /personal-trainer/
             markSelected('setup-duration', state.duration);
             markSelected('setup-goal', state.weeklyGoal || 3);
             if (state.level) markSelected('setup-level', state.level);
+            document.getElementById('setup-back').style.display = '';
             navigate('setup');
         });
         document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); navigate('library'); });
