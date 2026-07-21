@@ -1012,6 +1012,53 @@ permalink: /personal-trainer/
             object-fit: contain;
             display: block;
             margin: 0 auto 6px;
+            transition: filter 0.4s ease;
+        }
+
+        /* Streak flame — grows more vibrant and shiny as the streak climbs, mirroring the
+           s3/s7/s14/s30/s60/s100 achievement milestones (🔥🧨🚀🌋☄️🌌). */
+        .streak-t0 {
+            filter: saturate(0.45) brightness(0.8) grayscale(0.25);
+        }
+
+        .streak-t1 {
+            filter: saturate(1) brightness(1) drop-shadow(0 0 3px rgba(239, 138, 95, 0.45));
+        }
+
+        .streak-t2 {
+            filter: saturate(1.3) brightness(1.08) drop-shadow(0 0 5px rgba(239, 138, 95, 0.6));
+        }
+
+        .streak-t3 {
+            filter: hue-rotate(-8deg) saturate(1.5) brightness(1.12) drop-shadow(0 0 7px rgba(248, 113, 90, 0.7));
+        }
+
+        .streak-t4 {
+            animation: streak-pulse-warm 2.2s ease-in-out infinite;
+        }
+
+        .streak-t5 {
+            animation: streak-pulse-cool 1.8s ease-in-out infinite;
+        }
+
+        .streak-t6 {
+            animation: streak-pulse-cosmic 2.4s linear infinite;
+        }
+
+        @keyframes streak-pulse-warm {
+            0%, 100% { filter: hue-rotate(-12deg) saturate(1.6) brightness(1.1) drop-shadow(0 0 6px rgba(251, 146, 60, 0.65)); }
+            50% { filter: hue-rotate(-12deg) saturate(1.8) brightness(1.3) drop-shadow(0 0 11px rgba(251, 146, 60, 0.9)); }
+        }
+
+        @keyframes streak-pulse-cool {
+            0%, 100% { filter: hue-rotate(150deg) saturate(1.8) brightness(1.2) drop-shadow(0 0 8px rgba(167, 139, 250, 0.7)); }
+            50% { filter: hue-rotate(150deg) saturate(2) brightness(1.4) drop-shadow(0 0 14px rgba(167, 139, 250, 0.95)); }
+        }
+
+        @keyframes streak-pulse-cosmic {
+            0% { filter: hue-rotate(0deg) saturate(2) brightness(1.3) drop-shadow(0 0 10px rgba(255, 255, 255, 0.8)); }
+            50% { filter: hue-rotate(180deg) saturate(2.2) brightness(1.5) drop-shadow(0 0 16px rgba(255, 215, 130, 0.95)); }
+            100% { filter: hue-rotate(360deg) saturate(2) brightness(1.3) drop-shadow(0 0 10px rgba(255, 255, 255, 0.8)); }
         }
 
         .topbar h1 .ico {
@@ -1336,7 +1383,7 @@ permalink: /personal-trainer/
             <div class="stats-row">
                 <div class="stat accent-green"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
                 <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
-                <div class="stat accent-orange"><img class="stat-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
+                <div class="stat accent-orange"><img class="stat-ico" id="stat-streak-ico" src="/img/pt/streak.png" alt=""><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
             </div>
             <div class="card" id="weekly-card">
                 <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
@@ -2271,10 +2318,19 @@ permalink: /personal-trainer/
             renderPreview();
         });
 
+        // Mirrors the s3/s7/s14/s30/s60/s100 streak achievement milestones.
+        const STREAK_TIER_MINS = [0, 3, 7, 14, 30, 60, 100];
+        function streakTierClass(streak) {
+            let tier = 0;
+            STREAK_TIER_MINS.forEach((min, i) => { if (streak >= min) tier = i; });
+            return `streak-t${tier}`;
+        }
+
         function renderHome() {
             document.getElementById('stat-level').textContent = levelLabel();
             document.getElementById('stat-workouts').textContent = state.history.length;
             document.getElementById('stat-streak').textContent = state.streak;
+            document.getElementById('stat-streak-ico').className = `stat-ico ${streakTierClass(state.streak)}`;
             ['core', 'pilates'].forEach((disc) => {
                 const score = state.prog[disc];
                 const cap = tierCap(score);
