@@ -26,7 +26,7 @@ self.addEventListener('message', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k !== CACHE && k.startsWith('curator-')).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();

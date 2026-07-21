@@ -883,7 +883,7 @@ function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 // AVATAR HELPERS
 // ============================================================
 function avatarInner(player, fontSize) {
-  if (player.photo) return `<img class="avatar-img" src="${player.photo}" alt="${esc(player.name)}">`;
+  if (player.photo) return `<img class="avatar-img" src="${esc(player.photo)}" alt="${esc(player.name)}">`;
   return `<div class="avatar-letter" style="background:${esc(player.color)};font-size:${fontSize}px">${esc(player.avatar)}</div>`;
 }
 
