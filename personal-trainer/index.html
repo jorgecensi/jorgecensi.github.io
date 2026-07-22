@@ -3210,11 +3210,41 @@ permalink: /personal-trainer/
         // works for an unlocked badge ("look what I earned") just as well as one still in
         // progress ("here's how close I am"). Green for unlocked, blue for in-progress,
         // matching the celebratory/progress-tracking split used elsewhere in the app.
+        // When a still-locked badge might reasonably be "on a schedule", estimate the date
+        // it'll unlock — otherwise null (one-off/binary badges like "First workout" or
+        // "Early bird" aren't on any schedule, and there's nothing to project from before
+        // a single workout is logged). Streak badges project from the CURRENT active
+        // streak continuing uninterrupted; "One-year club" has an exact date already
+        // (a year from the first workout); everything else projects forward at whatever
+        // pace has been maintained since the first workout.
+        function projectedAchievementDate(a, achId) {
+            if (a.target <= 1 || a.value() >= a.target) return null;
+            const first = state.history[0];
+            if (!first) return null;
+
+            if (/^s\d+$/.test(achId)) {
+                const remaining = a.target - (state.streak || 0);
+                return remaining > 0 ? new Date(Date.now() + remaining * 86400000) : null;
+            }
+            if (achId === 'year1') {
+                return new Date(first.ts + 365 * 86400000);
+            }
+
+            const daysActive = Math.max(1, (Date.now() - first.ts) / 86400000);
+            const cur = a.value();
+            const rate = cur / daysActive;
+            const remaining = a.target - cur;
+            if (rate <= 0 || remaining <= 0) return null;
+            const daysNeeded = remaining / rate;
+            return isFinite(daysNeeded) && daysNeeded <= 3650 ? new Date(Date.now() + daysNeeded * 86400000) : null;
+        }
+
         async function buildAchievementCardBlob(achId) {
             const a = ACHIEVEMENTS.find((x) => x.id === achId);
             const isUnlocked = !!state.achievements[achId];
             const cur = Math.floor(Math.min(a.value(), a.target));
             const ratio = isUnlocked ? 1 : Math.min(1, a.value() / a.target);
+            const targetDate = isUnlocked ? null : projectedAchievementDate(a, achId);
 
             const SIZE = 1080;
             const PAD = 72;
@@ -3283,6 +3313,26 @@ permalink: /personal-trainer/
             ctx.fillStyle = '#8a97a8';
             ctx.font = '700 30px -apple-system, "Segoe UI", sans-serif';
             ctx.fillText(`${cur}/${a.target}`, PAD, y);
+            y += 30 + 48;
+
+            if (targetDate) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(PAD, y);
+                ctx.lineTo(SIZE - PAD, y);
+                ctx.stroke();
+                y += 48;
+
+                ctx.fillStyle = '#e9eef5';
+                ctx.font = '600 34px -apple-system, "Segoe UI", sans-serif';
+                y = wrapText(ctx, "I'm committing to reach this goal — cheer me on! 🙌", PAD, y, SIZE - PAD * 2, 44) + 16;
+
+                const dateLabel = targetDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                ctx.fillStyle = accent;
+                ctx.font = '700 30px -apple-system, "Segoe UI", sans-serif';
+                ctx.fillText(`Aiming for ${dateLabel}`, PAD, y);
+            }
 
             ctx.fillStyle = '#8a97a8';
             ctx.font = '500 24px -apple-system, "Segoe UI", sans-serif';
