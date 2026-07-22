@@ -1168,6 +1168,12 @@ permalink: /personal-trainer/
             display: flex;
             gap: 10px;
             align-items: flex-start;
+            cursor: pointer;
+            transition: transform 0.1s, border-color 0.15s;
+        }
+
+        .ach:active {
+            transform: scale(0.96);
         }
 
         .ach.unlocked {
@@ -2382,6 +2388,34 @@ permalink: /personal-trainer/
         }
         bindClickableCard('ach-card', () => { renderAchievements(); navigate('achievements'); });
         bindClickableCard('rec-card', () => { renderRecords(); navigate('records'); });
+
+        // Tapping any badge on the Achievements screen shares that specific badge —
+        // works whether it's unlocked or still in progress. Delegated on the stable
+        // #ach-grid container since its children are re-rendered on every visit.
+        const achGrid = document.getElementById('ach-grid');
+        async function shareAchievementCard(achId) {
+            try {
+                await shareImageBlob(
+                    await buildAchievementCardBlob(achId),
+                    'personal-trainer-badge.png',
+                    'Personal Trainer',
+                    'My Personal Trainer badge'
+                );
+            } catch (e) {
+                if (e.name !== 'AbortError') alert('Could not create the share image — try again.');
+            }
+        }
+        achGrid.addEventListener('click', (e) => {
+            const el = e.target.closest('.ach');
+            if (el) shareAchievementCard(el.dataset.achId);
+        });
+        achGrid.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const el = e.target.closest('.ach');
+            if (!el) return;
+            e.preventDefault();
+            shareAchievementCard(el.dataset.achId);
+        });
         document.querySelectorAll('[data-back]').forEach((b) =>
             b.addEventListener('click', () => { clearPreviewVideos(); clearLibraryVideos(); closeGeneratorInfo(); goBack(); }));
 
@@ -3172,6 +3206,91 @@ permalink: /personal-trainer/
             return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
         }
 
+        // A single-badge card, tapped directly from any card on the Achievements screen —
+        // works for an unlocked badge ("look what I earned") just as well as one still in
+        // progress ("here's how close I am"). Green for unlocked, blue for in-progress,
+        // matching the celebratory/progress-tracking split used elsewhere in the app.
+        async function buildAchievementCardBlob(achId) {
+            const a = ACHIEVEMENTS.find((x) => x.id === achId);
+            const isUnlocked = !!state.achievements[achId];
+            const cur = Math.floor(Math.min(a.value(), a.target));
+            const ratio = isUnlocked ? 1 : Math.min(1, a.value() / a.target);
+
+            const SIZE = 1080;
+            const PAD = 72;
+            const canvas = document.createElement('canvas');
+            canvas.width = SIZE;
+            canvas.height = SIZE;
+            const ctx = canvas.getContext('2d');
+
+            const accent = isUnlocked ? '#10b981' : '#6bb8ef';
+            const accentGlow = isUnlocked ? 'rgba(16, 185, 129, 0.18)' : 'rgba(107, 184, 239, 0.18)';
+
+            const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+            bg.addColorStop(0, '#131a27');
+            bg.addColorStop(0.55, '#0e131e');
+            bg.addColorStop(1, '#0b0f18');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const glow = ctx.createRadialGradient(SIZE * 0.82, SIZE * 0.12, 0, SIZE * 0.82, SIZE * 0.12, SIZE * 0.55);
+            glow.addColorStop(0, accentGlow);
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, SIZE, SIZE);
+
+            const logo = await loadImg('/img/pt/app-logo.png');
+
+            let y = PAD;
+
+            if (logo) ctx.drawImage(logo, PAD, y, 64, 64);
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '600 28px -apple-system, "Segoe UI", sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PERSONAL TRAINER', PAD + (logo ? 80 : 0), y + 32);
+            y += 64 + 64;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+            ctx.font = '160px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(a.emoji, SIZE / 2, y + 140);
+            y += 140 + 48;
+
+            ctx.fillStyle = accent;
+            ctx.font = '700 30px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(isUnlocked ? 'BADGE UNLOCKED' : 'IN PROGRESS', SIZE / 2, y);
+            y += 56;
+
+            ctx.fillStyle = '#e9eef5';
+            ctx.font = '800 64px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(a.name, SIZE / 2, y + 56);
+            y += 56 + 32;
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 32px -apple-system, "Segoe UI", sans-serif';
+            y = wrapText(ctx, a.desc, PAD, y, SIZE - PAD * 2, 42) + 48;
+
+            const barW = SIZE - PAD * 2, barH = 20;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+            roundRect(ctx, PAD, y, barW, barH, 10);
+            ctx.fill();
+            ctx.fillStyle = accent;
+            roundRect(ctx, PAD, y, Math.max(barH, barW * ratio), barH, 10);
+            ctx.fill();
+            y += barH + 32;
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '700 30px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText(`${cur}/${a.target}`, PAD, y);
+
+            ctx.fillStyle = '#8a97a8';
+            ctx.font = '500 24px -apple-system, "Segoe UI", sans-serif';
+            ctx.fillText('jorgecensi.com/personal-trainer', PAD, SIZE - PAD);
+
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        }
+
         // Try the native share sheet with the image file; fall back to a plain download.
         async function shareImageBlob(blob, filename, title, text) {
             const file = new File([blob], filename, { type: 'image/png' });
@@ -3372,7 +3491,7 @@ permalink: /personal-trainer/
                 const cur = Math.floor(Math.min(a.value(), a.target));
                 const ratio = isUnlocked ? 1 : Math.min(1, a.value() / a.target);
                 return `
-                <div class="ach ${isUnlocked ? 'unlocked' : 'locked'}">
+                <div class="ach ${isUnlocked ? 'unlocked' : 'locked'}" data-ach-id="${a.id}" role="button" tabindex="0" title="Share this badge">
                     <span class="em">${a.emoji}</span>
                     <div class="ach-main">
                         <div class="nm">${a.name}</div>
