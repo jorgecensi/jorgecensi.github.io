@@ -319,7 +319,9 @@ permalink: /tennis-planner/
         function addPlayer() {
             const name = newPlayerNameInput.value.trim();
             if (name) {
-                const id = crypto.randomUUID();
+                const id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
                 players[id] = { id, name };
                 savePlayers(players);
                 newPlayerNameInput.value = '';
@@ -422,7 +424,7 @@ permalink: /tennis-planner/
 
     <!-- PWA: Service Worker Registration & Install Prompt -->
     <script>
-        const SW_VERSION = '2607181312';
+        const SW_VERSION = '2607220600';
         // Service worker registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

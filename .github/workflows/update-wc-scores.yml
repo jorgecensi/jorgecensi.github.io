@@ -3,6 +3,14 @@ name: Update WC 2026 Scores
 # Triggers fire ~110 min after each group-stage kickoff (UTC) and at both
 # +110 min and +165 min for knockout matches (to cover extra time + penalties).
 # All times are derived from the AEST schedule in index.html (AEST = UTC+10).
+
+# Some scheduled triggers land minutes apart (e.g. simultaneous group-stage
+# finales); queue overlapping runs instead of letting them race on the
+# scores.json commit/push.
+concurrency:
+  group: update-wc-scores
+  cancel-in-progress: false
+
 on:
   schedule:
     # ── Group stage ────────────────────────────────────────────────────────
