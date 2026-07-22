@@ -1529,7 +1529,7 @@ function renderChaseFrame(seg, u, snap) {
     else c.push(it);
   });
   clusters.forEach(cl => {
-    const m = cl.length, frontD = cl[0].d;
+    const m = cl.length;
     cl.forEach((it, k) => {
       let lane = 0, extra = 0;
       if (m >= 2) {
@@ -1541,15 +1541,24 @@ function renderChaseFrame(seg, u, snap) {
         if (k < m - 1) ng = Math.min(ng, it.d - cl[k + 1].d);
         const strength = Math.max(0, Math.min(1,
           (CHASE.CLUSTER_GAP - ng) / (CHASE.CLUSTER_GAP - CHASE.CAR_LEN)));
-        if (m === 2) {
-          // Side is fixed by car identity, not race order, so two cars fighting
-          // never swap sides mid-pass — they hold their line and merge back.
-          const other = cl[1 - k].car;
-          lane = (it.car.idx < other.idx ? -CHASE.SIDE_LANE : CHASE.SIDE_LANE) * strength;
+        // Formation slot is fixed by car identity (rank among the cluster by
+        // stable idx), never by race order. An overtake changes who leads on
+        // points but not who sits in which lane, so cars just slide past each
+        // other in their own lane and merge back — no lateral flash.
+        let r = 0;
+        cl.forEach(o => { if (o.car.idx < it.car.idx) r++; });
+        if (m <= 3) {
+          // Up to three abreast in a single row, spread left→right by identity
+          // rank. Every adjacent pair is in a different lane, so a swap is a
+          // clean slide-by with no overlap.
+          lane = (r / (m - 1) * 2 - 1) * CHASE.SIDE_LANE * strength;
         } else {
-          const col = k % 2, row = (k - col) / 2;
+          // Four or more can't sit abreast, so they stagger 2×2 by identity rank
+          // (the all-square starting grid). Same-lane pairs may cross during a
+          // swap, but the formation itself never flips.
+          const col = r % 2, laneRank = (r - col) / 2;
           lane = (col === 0 ? -CHASE.SIDE_LANE : CHASE.SIDE_LANE) * strength;
-          extra = ((frontD - row * CHASE.ROW_GAP) - it.d) * strength;
+          extra = -laneRank * CHASE.ROW_GAP * strength;
         }
       }
       // Smooth the lateral offset and any cluster stagger so cars glide as
@@ -2120,7 +2129,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607212247';
+    const SW_VERSION = '2607220315';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
