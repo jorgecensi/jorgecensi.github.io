@@ -1,6 +1,7 @@
 name: Jorge Censi
 title: Jorge Censi - Software Engineer
 description: Software engineer building things that work. I write code, ship products, and use AI as one of many tools to get there faster and smarter.
+url: "https://jorgecensi.com"
 markdown: kramdown
 permalink: /blog/:year/:month/:day/:title
 theme: jekyll-theme-architect

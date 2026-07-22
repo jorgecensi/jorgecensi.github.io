@@ -103,7 +103,13 @@ function fetch_json(urlPath) {
 async function main() {
   const outPath = path.join(__dirname, '..', 'scores.json');
   let existing = { updated: null, group: {}, ko: {} };
-  try { existing = JSON.parse(fs.readFileSync(outPath, 'utf8')); } catch(_) {}
+  if (fs.existsSync(outPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(outPath, 'utf8'));
+    } catch (e) {
+      throw new Error(`Refusing to continue: ${outPath} exists but is not valid JSON (${e.message}). Fix or remove it manually before re-running.`);
+    }
+  }
 
   const data = await fetch_json('/v4/competitions/WC/matches?status=FINISHED');
   const matches = data.matches || [];
