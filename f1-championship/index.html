@@ -1399,7 +1399,7 @@ const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca',
   'bh', 'sa', 'cn', 'es', 'at', 'be', 'nl', 'br']);
 const CHASE = {
   ROUND_MS: 4200, LIGHT_MS: 600, FAST_LIGHT_MS: 340, MAX_PTS_DIST: 7,
-  SIDE_LANE: 16, CLUSTER_GAP: 72, ROW_GAP: 46, LANE_SMOOTH: 0.08,
+  SIDE_LANE: 16, MAX_LANE_HALF: 26, GRID_COLS: 4, COL_STAGGER: 15, CLUSTER_GAP: 72, ROW_GAP: 46, LANE_SMOOTH: 0.08,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
   LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
   CAM_MIN_W: 470, CAM_PAD: 130, CAM_LERP: 0.16, LABEL_DY: 20
@@ -1541,25 +1541,22 @@ function renderChaseFrame(seg, u, snap) {
         if (k < m - 1) ng = Math.min(ng, it.d - cl[k + 1].d);
         const strength = Math.max(0, Math.min(1,
           (CHASE.CLUSTER_GAP - ng) / (CHASE.CLUSTER_GAP - CHASE.CAR_LEN)));
-        // Formation slot is fixed by car identity (rank among the cluster by
-        // stable idx), never by race order. An overtake changes who leads on
-        // points but not who sits in which lane, so cars just slide past each
-        // other in their own lane and merge back — no lateral flash.
+        // Every car holds a formation slot fixed by its identity (rank among
+        // the cluster by stable idx), never by race order. Cars fill up to four
+        // abreast per row across the track width, wrapping to staggered rows
+        // behind for a bigger pack (the all-square starting grid). Because each
+        // car keeps its own lane, an overtake is a clean slide-by in that lane —
+        // two cars never cross through each other, so a pass never flashes.
         let r = 0;
         cl.forEach(o => { if (o.car.idx < it.car.idx) r++; });
-        if (m <= 3) {
-          // Up to three abreast in a single row, spread left→right by identity
-          // rank. Every adjacent pair is in a different lane, so a swap is a
-          // clean slide-by with no overlap.
-          lane = (r / (m - 1) * 2 - 1) * CHASE.SIDE_LANE * strength;
-        } else {
-          // Four or more can't sit abreast, so they stagger 2×2 by identity rank
-          // (the all-square starting grid). Same-lane pairs may cross during a
-          // swap, but the formation itself never flips.
-          const col = r % 2, laneRank = (r - col) / 2;
-          lane = (col === 0 ? -CHASE.SIDE_LANE : CHASE.SIDE_LANE) * strength;
-          extra = -laneRank * CHASE.ROW_GAP * strength;
-        }
+        const cols = Math.min(m, CHASE.GRID_COLS);
+        const col = r % cols, row = (r - col) / cols;
+        const half = Math.min((cols - 1) * CHASE.SIDE_LANE, CHASE.MAX_LANE_HALF);
+        lane = (cols > 1 ? (col / (cols - 1) * 2 - 1) * half : 0) * strength;
+        // Stagger each slot slightly back per column too, so an abreast row
+        // reads as a diagonal grid echelon (labels stay legible) rather than a
+        // flat wall of overlapping cars.
+        extra = -(row * CHASE.ROW_GAP + col * CHASE.COL_STAGGER) * strength;
       }
       // Smooth the lateral offset and any cluster stagger so cars glide as
       // clusters form and break up rather than snapping.
@@ -2129,7 +2126,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607220315';
+    const SW_VERSION = '2607220354';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
