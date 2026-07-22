@@ -1424,7 +1424,6 @@ permalink: /personal-trainer/
             <div class="card" id="streak-card">
                 <div class="section-title">Consistency</div>
                 <div id="home-heatmap"></div>
-                <button class="btn secondary" id="btn-share-streak" style="margin-top:4px;">Share my streak ↗</button>
             </div>
             <div class="card clickable-card" id="ach-card" role="button" tabindex="0">
                 <div class="level-row"><strong><img class="ico" src="/img/pt/achievements.png" alt="">Achievements</strong><span class="see-all">All <span id="ach-badge-count" class="ach-count"></span> ›</span></div>
@@ -1438,7 +1437,7 @@ permalink: /personal-trainer/
                 <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
                 <div class="week-segs" id="week-segs"></div>
                 <button class="info-link" id="btn-freeze">❄️ Freeze today's streak</button>
-                <button class="btn secondary" id="btn-commit" style="margin-top:12px;">Commit &amp; share ↗</button>
+                <button class="btn secondary" id="btn-commit" style="margin-top:12px;">Share a goal ↗</button>
             </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
@@ -1643,6 +1642,26 @@ permalink: /personal-trainer/
                 <div class="card">
                     <div class="section-title">Not feeling this mix?</div>
                     <p class="muted-note">Tap 🔀 on the preview screen to reshuffle before you start — as many times as you like, no penalty. Once you're training, your post-workout feedback (too easy / just right / too hard) is what actually moves the difficulty needle — see <strong style="color:var(--text);">How Progression Works</strong> for that part.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ SHARE A GOAL (modal) ============ -->
+    <div class="modal-overlay" id="share-goal-modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2>Share a <span>Goal</span></h2>
+                <button class="modal-close" id="close-share-goal" aria-label="Close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="card clickable-card" id="share-goal-week" role="button" tabindex="0">
+                    <div class="level-row"><strong>📅 This week's goal</strong></div>
+                    <p class="muted-note" style="margin-top:6px;">Commit to hitting it, and invite whoever you send it to to line up a reward if you do.</p>
+                </div>
+                <div class="card clickable-card" id="share-goal-streak" role="button" tabindex="0">
+                    <div class="level-row"><strong>🔥 My long-term streak</strong></div>
+                    <p class="muted-note" style="margin-top:6px;">Show off your consecutive weeks of hitting the goal — the long game, not just this week.</p>
                 </div>
             </div>
         </div>
@@ -2402,6 +2421,37 @@ permalink: /personal-trainer/
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && generatorInfoModal.classList.contains('open')) closeGeneratorInfo();
         });
+
+        // ---- Share-a-goal modal: pick between this week's goal and the long-term streak ----
+        const shareGoalModal = document.getElementById('share-goal-modal');
+        function openShareGoalModal() {
+            shareGoalModal.classList.add('open');
+        }
+        function closeShareGoalModal() {
+            shareGoalModal.classList.remove('open');
+        }
+        document.getElementById('btn-commit').addEventListener('click', openShareGoalModal);
+        document.getElementById('close-share-goal').addEventListener('click', closeShareGoalModal);
+        shareGoalModal.addEventListener('click', (e) => {
+            if (e.target === shareGoalModal) closeShareGoalModal();
+        });
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && shareGoalModal.classList.contains('open')) closeShareGoalModal();
+        });
+
+        async function shareGoalCard(buildBlob, filename, text) {
+            closeShareGoalModal();
+            try {
+                await shareImageBlob(await buildBlob(), filename, 'Personal Trainer', text);
+            } catch (e) {
+                if (e.name !== 'AbortError') alert('Could not create the share image — try again.');
+            }
+        }
+        bindClickableCard('share-goal-week', () =>
+            shareGoalCard(buildCommitmentCardBlob, 'personal-trainer-commitment.png', 'My weekly workout commitment'));
+        bindClickableCard('share-goal-streak', () =>
+            shareGoalCard(buildStreakShareCardBlob, 'personal-trainer-streak.png', 'My long-term consistency streak'));
+
         function bindClickableCard(id, handler) {
             const el = document.getElementById(id);
             el.addEventListener('click', handler);
@@ -3337,8 +3387,6 @@ permalink: /personal-trainer/
         }
 
         bindShareButton('btn-share', buildShareCardBlob, 'personal-trainer-progress.png', 'Personal Trainer', 'My workout progress');
-        bindShareButton('btn-commit', buildCommitmentCardBlob, 'personal-trainer-commitment.png', 'Personal Trainer', 'My weekly workout commitment');
-        bindShareButton('btn-share-streak', buildStreakShareCardBlob, 'personal-trainer-streak.png', 'Personal Trainer', 'My long-term consistency streak');
 
         // =====================================================
         // Library (with editable YouTube links)
