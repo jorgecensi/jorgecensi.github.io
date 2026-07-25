@@ -27,7 +27,8 @@ const PRECACHE_URLS = [
     '/img/pt/feedback-easy.png',
     '/img/pt/feedback-right.png',
     '/img/pt/feedback-hard.png',
-    '/img/pt/celebration.png'
+    '/img/pt/celebration.png',
+    '/img/pt/barnaby-victory.png'
 ];
 
 self.addEventListener('install', (event) => {
