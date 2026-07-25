@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607221310';
+const CACHE_VERSION = '2607250340';
 const CACHE_NAME = `personal-trainer-${CACHE_VERSION}`;
 const OFFLINE_URL = '/personal-trainer/';
 const PRECACHE_URLS = [
@@ -29,6 +29,9 @@ const PRECACHE_URLS = [
     '/img/pt/feedback-hard.png',
     '/img/pt/celebration.png',
     '/img/pt/barnaby-victory.png'
+    '/img/pt/barnaby-easy.png',
+    '/img/pt/barnaby-right.png',
+    '/img/pt/barnaby-hard.png'
 ];
 
 self.addEventListener('install', (event) => {
