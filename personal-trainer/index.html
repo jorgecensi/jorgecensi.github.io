@@ -1259,6 +1259,12 @@ permalink: /personal-trainer/
             line-height: 1.4;
         }
 
+        .toast-mascot {
+            height: 64px;
+            width: auto;
+            flex-shrink: 0;
+        }
+
         /* Confetti */
         .confetti {
             position: fixed;
@@ -3602,7 +3608,7 @@ permalink: /personal-trainer/
                 const a = list[i++];
                 const el = document.createElement('div');
                 el.className = 'toast';
-                el.innerHTML = `${a.emoji} <div><strong>Achievement unlocked!</strong><br>${a.name}</div>`;
+                el.innerHTML = `<img class="toast-mascot" src="/img/pt/barnaby-victory.png" alt=""><div><strong>${a.emoji} Achievement unlocked!</strong><br>${a.name}</div>`;
                 document.body.appendChild(el);
                 requestAnimationFrame(() => el.classList.add('show'));
                 setTimeout(() => {
