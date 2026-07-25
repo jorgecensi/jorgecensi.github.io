@@ -688,11 +688,69 @@ permalink: /personal-trainer/
             min-height: 1.3em;
         }
 
+        /* "NEXT UP" eyebrow — only shown during rest/prep, where the screen is
+           previewing the exercise you are about to do rather than the current one. */
+        .player-upnext {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--accent);
+            min-height: 1.1em;
+        }
+
+        /* The timer reads as a shape first and digits second: the ring drains over the
+           interval so remaining time is legible peripherally, mid-exercise, without
+           having to focus on and parse the numerals. */
+        .player-timer {
+            position: relative;
+            width: 190px;
+            height: 190px;
+            margin: 10px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-ring {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .timer-ring circle {
+            fill: none;
+            stroke-width: 4;
+        }
+
+        .timer-ring-track {
+            stroke: var(--surface2);
+        }
+
+        .timer-ring-fill {
+            stroke: var(--accent);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s linear;
+        }
+
+        .player-timer.resting .timer-ring-fill {
+            stroke: var(--warn);
+        }
+
+        /* Rep-based exercises have no countdown, so there is nothing for the ring
+           to represent — the user taps "✓ Done" when finished. */
+        .player-timer.no-ring .timer-ring {
+            visibility: hidden;
+        }
+
         #player-display {
-            font-size: 4.2rem;
+            position: relative;
+            font-size: 3.4rem;
             font-weight: 800;
             font-variant-numeric: tabular-nums;
-            margin: 8px 0;
+            line-height: 1;
         }
 
         #player-display.resting {
@@ -705,6 +763,13 @@ permalink: /personal-trainer/
             font-size: 0.95rem;
             line-height: 1.7;
             margin: 6px 0 12px;
+        }
+
+        /* During work this list holds a single rotating cue, so the swap between
+           cues shouldn't jump the layout. */
+        ul.cues.single {
+            min-height: 1.7em;
+            margin: 10px 0 12px;
         }
 
         .mistake-note {
@@ -759,21 +824,27 @@ permalink: /personal-trainer/
             border: 0;
         }
 
-        .player-links {
+        /* The service worker deliberately doesn't intercept cross-origin YouTube, so
+           form videos are the one genuinely offline-incapable feature. Say so instead
+           of leaving an unexplained black rectangle. */
+        .video-offline {
+            position: absolute;
+            inset: 0;
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 4px;
+            align-items: center;
             justify-content: center;
-            margin-bottom: 14px;
+            padding: 12px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--muted);
+            background: var(--surface2);
         }
 
-        .player-links a {
-            color: var(--accent);
+        .video-offline strong {
+            color: var(--text);
             font-size: 0.9rem;
-            font-weight: 600;
-            text-decoration: none;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 8px 14px;
         }
 
         .player-controls {
@@ -796,6 +867,12 @@ permalink: /personal-trainer/
         }
 
         /* Complete */
+        .complete-ask {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-top: 18px;
+        }
+
         .feedback-row {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -1487,13 +1564,19 @@ permalink: /personal-trainer/
                 <div class="player-phase" id="player-phase">Warm-up</div>
             </div>
             <div>
+                <div class="player-upnext" id="player-upnext"></div>
                 <h2 id="player-exname">Exercise</h2>
                 <div id="player-side"></div>
-                <div id="player-display">0:30</div>
+                <div class="player-timer" id="player-timer">
+                    <svg class="timer-ring" viewBox="0 0 100 100" aria-hidden="true">
+                        <circle class="timer-ring-track" cx="50" cy="50" r="46"></circle>
+                        <circle class="timer-ring-fill" id="timer-ring-fill" cx="50" cy="50" r="46"></circle>
+                    </svg>
+                    <div id="player-display">0:30</div>
+                </div>
                 <div class="player-video" id="player-video"></div>
                 <ul class="cues" id="player-cues"></ul>
                 <div class="mistake-note" id="player-mistake"></div>
-                <div class="player-links" id="player-links"></div>
             </div>
             <div>
                 <div class="player-controls">
@@ -1512,13 +1595,17 @@ permalink: /personal-trainer/
             <div class="card" style="text-align:center;">
                 <div id="complete-summary" style="font-size:1.05rem;font-weight:600;"></div>
                 <div id="complete-motivate" class="muted-note" style="margin-top:8px;"></div>
-                <button class="btn secondary" id="btn-share" style="margin-top:14px;">Share progress ↗</button>
-                <p class="muted-note" style="margin-top:14px;">How did it feel? Your answer tunes the next workout.</p>
+                <!-- Feedback is what actually commits the workout and drives the whole
+                     adaptive engine, so it leads. Sharing is a reward for having done
+                     it, not a step on the way. -->
+                <p class="complete-ask">How did it feel?</p>
+                <p class="muted-note" style="margin-top:2px;">Your answer tunes the next workout — and saves this one.</p>
                 <div class="feedback-row">
                     <button class="btn secondary" data-fb="easy"><img class="fb-ico" src="/img/pt/barnaby-easy.png" alt="Barnaby the capybara meditating calmly"><br>Too easy</button>
                     <button class="btn secondary" data-fb="right"><img class="fb-ico" src="/img/pt/barnaby-right.png" alt="Barnaby the capybara doing a push-up, working hard"><br>Just right</button>
                     <button class="btn secondary" data-fb="hard"><img class="fb-ico" src="/img/pt/barnaby-hard.png" alt="Barnaby the capybara collapsed and exhausted"><br>Too hard</button>
                 </div>
+                <button class="btn secondary" id="btn-share" style="margin-top:14px;">Share progress ↗</button>
             </div>
         </section>
 
@@ -1663,7 +1750,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607251253';
+        const SW_VERSION = '2607251319';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -1937,6 +2024,10 @@ permalink: /personal-trainer/
                 rec.best = item.dose;
                 rec.hist.push({ ts: Date.now(), v: item.dose });
                 if (rec.hist.length > 30) rec.hist.shift();
+                // Remember it so the completion screen can call out what improved.
+                if (typeof currentWorkout === 'object' && currentWorkout) {
+                    currentWorkout.newRecords = (currentWorkout.newRecords || 0) + 1;
+                }
                 saveState();
             }
         }
@@ -2165,7 +2256,9 @@ permalink: /personal-trainer/
             // nothing else will.
             const pushOne = (item) => {
                 if (items.length && items[items.length - 1].kind === 'work') {
-                    items.push({ kind: 'rest', secs: PREP_SECS, phase: item.phase });
+                    // Flagged as prep so the player can say "Get into position" rather
+                    // than "Rest" — it's a repositioning beat, not recovery.
+                    items.push({ kind: 'rest', prep: true, secs: PREP_SECS, phase: item.phase });
                 }
                 items.push(item);
             };
@@ -2678,9 +2771,14 @@ permalink: /personal-trainer/
             idx: 0,
             remaining: 0,
             timer: null,
+            cueTimer: null,
             paused: false,
             startedAt: 0,
-            wakeLock: null
+            wakeLock: null,
+            // Which exercise's video is currently embedded. Rest/prep pre-rolls the
+            // NEXT exercise's clip, so when that exercise's work interval starts we
+            // leave the already-playing iframe alone instead of reloading it.
+            videoExId: null
         };
 
         document.getElementById('btn-start').addEventListener('click', startWorkout);
@@ -2706,6 +2804,7 @@ permalink: /personal-trainer/
 
         async function startWorkout() {
             clearPreviewVideos();
+            clearVideo(); // start from a clean slate so no stale clip is carried over
             player.idx = 0;
             player.paused = false;
             player.startedAt = Date.now();
@@ -2728,6 +2827,10 @@ permalink: /personal-trainer/
                 clearInterval(player.timer);
                 player.timer = null;
             }
+            if (player.cueTimer) {
+                clearInterval(player.cueTimer);
+                player.cueTimer = null;
+            }
         }
 
         function fmtTime(secs) {
@@ -2748,13 +2851,6 @@ permalink: /personal-trainer/
                 osc.start();
                 osc.stop(ctx.currentTime + 0.25);
             } catch (e) { /* audio is optional */ }
-        }
-
-        function youtubeLinksFor(ex) {
-            const saved = safeHref(linkFor(ex.id));
-            const search = `https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + (ex.disc === 'pilates' ? ' mat pilates' : ' exercise form'))}`;
-            if (saved) return `<a href="${escapeHtml(saved)}" target="_blank" rel="noopener">▶ Watch guide</a>`;
-            return `<a href="${escapeHtml(search)}" target="_blank" rel="noopener">🔍 Search YouTube</a>`;
         }
 
         // Pull the 11-char video id out of any common YouTube URL shape.
@@ -2811,22 +2907,28 @@ permalink: /personal-trainer/
             const videoEl = document.getElementById('player-video');
             videoEl.innerHTML = '';
             videoEl.classList.remove('active');
+            player.videoExId = null;
         }
 
         // Embed and autoplay the saved form-guide video for an exercise, if there is one.
+        // No-ops when that exercise's clip is already embedded, so the video pre-rolled
+        // during rest keeps playing seamlessly into the work interval.
         function renderExerciseMedia(ex) {
+            if (player.videoExId === ex.id) return;
             const videoEl = document.getElementById('player-video');
-            const linksEl = document.getElementById('player-links');
             const saved = linkFor(ex.id);
             const src = youtubeEmbedSrc(saved, { loop: true });
-            if (src) {
-                videoEl.innerHTML = `<iframe src="${escapeHtml(src)}" title="${escapeHtml(ex.name)} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
-                videoEl.classList.add('active');
-                linksEl.innerHTML = `<a href="${escapeHtml(safeHref(saved))}" target="_blank" rel="noopener">▶ Open on YouTube</a>`;
-            } else {
+            if (!src) {
                 clearVideo();
-                linksEl.innerHTML = youtubeLinksFor(ex);
+                return;
             }
+            if (navigator.onLine === false) {
+                videoEl.innerHTML = '<div class="video-offline"><strong>Form video unavailable offline</strong><span>The cues below still work.</span></div>';
+            } else {
+                videoEl.innerHTML = `<iframe src="${escapeHtml(src)}" title="${escapeHtml(ex.name)} form guide" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+            }
+            videoEl.classList.add('active');
+            player.videoExId = ex.id;
         }
 
         function loadItem() {
@@ -2838,45 +2940,75 @@ permalink: /personal-trainer/
             }
             const item = items[player.idx];
             const phaseEl = document.getElementById('player-phase');
+            const upnextEl = document.getElementById('player-upnext');
             const nameEl = document.getElementById('player-exname');
             const sideEl = document.getElementById('player-side');
+            const timerEl = document.getElementById('player-timer');
             const displayEl = document.getElementById('player-display');
             const cuesEl = document.getElementById('player-cues');
             const mistakeEl = document.getElementById('player-mistake');
-            const linksEl = document.getElementById('player-links');
             const actionBtn = document.getElementById('btn-main-action');
 
             document.getElementById('player-bar').style.width = `${(player.idx / items.length) * 100}%`;
 
             const next = items.slice(player.idx + 1).find((it) => it.kind === 'work');
-            document.getElementById('player-next').textContent = next ? `Next: ${next.ex.name}${next.side ? ` (${next.side.toLowerCase()})` : ''}` : 'Last one — finish strong!';
+            // Only meaningful during work — a rest/prep screen is already entirely
+            // about the next exercise, so repeating it in the footer is noise.
+            document.getElementById('player-next').textContent = item.kind === 'rest'
+                ? ''
+                : (next ? `Next: ${next.ex.name}${next.side ? ` (${next.side.toLowerCase()})` : ''}` : 'Last one — finish strong!');
 
             player.paused = false;
+            timerEl.classList.remove('no-ring');
 
+            // ---- Rest / prep: the coaching beat ----------------------------------
+            // Attention is free here, so this is where the app teaches: the next
+            // exercise's name leads, its clip pre-rolls, and its full cues and common
+            // mistake are readable. The work interval deliberately shows none of that.
             if (item.kind === 'rest') {
-                phaseEl.textContent = 'Rest';
+                phaseEl.textContent = item.prep ? 'Get into position' : 'Rest';
                 phaseEl.classList.add('rest');
-                nameEl.textContent = 'Breathe';
-                sideEl.textContent = '';
-                cuesEl.innerHTML = '';
-                mistakeEl.innerHTML = '';
-                linksEl.innerHTML = '';
-                clearVideo();
+                timerEl.classList.add('resting');
                 displayEl.classList.add('resting');
                 actionBtn.textContent = 'Pause';
+
+                if (next) {
+                    const nx = next.ex;
+                    upnextEl.textContent = 'Next up';
+                    nameEl.textContent = nx.name;
+                    sideEl.textContent = next.side || '';
+                    cuesEl.classList.remove('single');
+                    cuesEl.innerHTML = nx.cues.map((c) => `<li>· ${c}</li>`).join('');
+                    mistakeEl.innerHTML = nx.mistake ? `<span class="mistake-icon">⚠️</span><span><strong>Common mistake:</strong> ${nx.mistake}</span>` : '';
+                    renderExerciseMedia(nx);
+                } else {
+                    upnextEl.textContent = '';
+                    nameEl.textContent = 'Breathe';
+                    sideEl.textContent = '';
+                    cuesEl.innerHTML = '';
+                    mistakeEl.innerHTML = '';
+                    clearVideo();
+                }
+
                 startCountdown(item.secs);
                 beep(440);
                 return;
             }
 
+            // ---- Work: glanceable only -------------------------------------------
+            // Everything here has to survive being read at arm's length, mid-effort:
+            // the ring, the name, the looping clip, and one short cue at a time.
             const ex = item.ex;
             phaseEl.textContent = item.phase;
             phaseEl.classList.remove('rest');
+            timerEl.classList.remove('resting');
             displayEl.classList.remove('resting');
+            upnextEl.textContent = '';
             nameEl.textContent = ex.name;
             sideEl.textContent = item.side || '';
-            cuesEl.innerHTML = ex.cues.map((c) => `<li>· ${c}</li>`).join('');
-            mistakeEl.innerHTML = ex.mistake ? `<span class="mistake-icon">⚠️</span><span><strong>Common mistake:</strong> ${ex.mistake}</span>` : '';
+            mistakeEl.innerHTML = '';
+            cuesEl.classList.add('single');
+            startCueRotation(ex.cues);
             renderExerciseMedia(ex);
             beep(880);
 
@@ -2885,7 +3017,46 @@ permalink: /personal-trainer/
                 startCountdown(item.dose);
             } else {
                 actionBtn.textContent = '✓ Done';
+                timerEl.classList.add('no-ring');
                 displayEl.textContent = `${item.dose} reps`;
+            }
+        }
+
+        // One cue at a time during work, cycling every few seconds — a bulleted list is
+        // more than anyone reads mid-plank, and rotating re-teaches across the interval.
+        function startCueRotation(cues) {
+            const cuesEl = document.getElementById('player-cues');
+            if (!cues || !cues.length) {
+                cuesEl.innerHTML = '';
+                return;
+            }
+            let i = 0;
+            const paint = () => { cuesEl.innerHTML = `<li>· ${cues[i % cues.length]}</li>`; };
+            paint();
+            if (cues.length > 1) {
+                player.cueTimer = setInterval(() => {
+                    if (player.paused) return;
+                    i += 1;
+                    paint();
+                }, 5000);
+            }
+        }
+
+        // Circumference of the r=46 ring in the player's SVG viewBox.
+        const RING_CIRCUMFERENCE = 2 * Math.PI * 46;
+
+        // frac is how much of the interval REMAINS (1 = full, 0 = spent). Resets are
+        // drawn without the transition so a new interval snaps to full instead of
+        // sweeping backwards from wherever the previous one ended.
+        function setTimerRing(frac, animate) {
+            const ring = document.getElementById('timer-ring-fill');
+            if (!ring) return;
+            ring.style.strokeDasharray = String(RING_CIRCUMFERENCE);
+            if (!animate) ring.style.transition = 'none';
+            ring.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, frac))));
+            if (!animate) {
+                void ring.getBoundingClientRect(); // flush the un-transitioned value
+                ring.style.transition = '';
             }
         }
 
@@ -2893,16 +3064,19 @@ permalink: /personal-trainer/
             const displayEl = document.getElementById('player-display');
             player.remaining = secs;
             displayEl.textContent = fmtTime(player.remaining);
+            setTimerRing(1, false);
             player.timer = setInterval(() => {
                 if (player.paused) return;
                 player.remaining -= 1;
                 if (player.remaining <= 0) {
+                    setTimerRing(0, true);
                     const item = currentWorkout.items[player.idx];
                     if (item && item.kind === 'work') recordCompletion(item);
                     advance();
                     return;
                 }
                 displayEl.textContent = fmtTime(player.remaining);
+                setTimerRing(player.remaining / secs, true);
                 if (player.remaining <= 3) beep(660);
             }, 1000);
         }
@@ -2921,8 +3095,10 @@ permalink: /personal-trainer/
             clearVideo();
             releaseWakeLock();
             const mins = Math.max(1, Math.round((Date.now() - player.startedAt) / 60000));
+            const prs = currentWorkout.newRecords || 0;
             document.getElementById('complete-summary').textContent =
-                `${mins} min · ${currentWorkout.main.length} exercises${currentWorkout.rounds > 1 ? ` × ${currentWorkout.rounds} rounds` : ''}`;
+                `${mins} min · ${currentWorkout.main.length} exercises${currentWorkout.rounds > 1 ? ` × ${currentWorkout.rounds} rounds` : ''}`
+                + (prs ? ` · ${prs} new record${prs === 1 ? '' : 's'} 🏅` : '');
 
             // Show the streak/goal this workout is about to secure
             const prev = state.history[state.history.length - 1];
@@ -2936,7 +3112,9 @@ permalink: /personal-trainer/
             document.getElementById('player-bar').style.width = '100%';
             currentWorkout.actualMins = mins;
             navReplace('complete');
-            celebrate();
+            // The chime acknowledges finishing the last exercise; the confetti is held
+            // back until feedback actually commits the workout (see the [data-fb]
+            // handler), so the big payoff marks the thing that counts.
             beep(880);
             setTimeout(() => beep(1100), 200);
         }
@@ -2968,6 +3146,7 @@ permalink: /personal-trainer/
                 const unlocked = checkAchievements();
                 saveState();
                 goHome();
+                celebrate();
                 if (unlocked.length) showAchievementToasts(unlocked);
             });
         });
