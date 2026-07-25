@@ -561,23 +561,31 @@ const KEY_SRCS  = 'curator_sources';
 const KEY_IDX   = 'curator_idx';
 const YT_BASE   = 'https://www.googleapis.com/youtube/v3';
 
+// ── Utilities ────────────────────────────────────────────────────────────────
+function safeJson(str, fallback) {
+  try { return JSON.parse(str) || fallback; } catch { return fallback; }
+}
+
+function safeGet(key, fallback) {
+  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
-let apiKey  = localStorage.getItem(KEY_API) || '';
-let sources = safeJson(localStorage.getItem(KEY_SRCS), []);
+let apiKey  = safeGet(KEY_API, '');
+let sources = safeJson(safeGet(KEY_SRCS, null), []);
 let videos  = [];
 let idx     = 0;
 let status  = 'idle'; // idle | loading | done
 let playerActive = false;
 let deferredInstallPrompt = null;
 
-// ── Utilities ────────────────────────────────────────────────────────────────
-function safeJson(str, fallback) {
-  try { return JSON.parse(str) || fallback; } catch { return fallback; }
-}
-
 function save() {
-  localStorage.setItem(KEY_API, apiKey);
-  localStorage.setItem(KEY_SRCS, JSON.stringify(sources));
+  try {
+    localStorage.setItem(KEY_API, apiKey);
+    localStorage.setItem(KEY_SRCS, JSON.stringify(sources));
+  } catch (e) {
+    console.error('Could not save curator settings', e);
+  }
 }
 
 function parseSource(raw) {

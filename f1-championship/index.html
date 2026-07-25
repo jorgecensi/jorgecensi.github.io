@@ -1204,7 +1204,7 @@ function importData(e) {
   reader.onload = ev => {
     try {
       const d = JSON.parse(ev.target.result);
-      if (!d.players || !d.results) throw new Error('bad');
+      if (!Array.isArray(d.players) || typeof d.results !== 'object' || d.results === null) throw new Error('bad');
       confirm2('Import Data', 'Replace current data with this file?', () => {
         config  = d.config  || {};
         players = d.players;

@@ -251,7 +251,7 @@ permalink: /crossfit-timer/
                         <button class="cf-btn cf-btn-danger" id="stop-btn" style="display: none;">
                             <i class="fas fa-stop me-2"></i> Stop
                         </button>                  
-                         <button class="cf-exit-timer-btn" onclick="timer.exitTimer()" title="Exit workout">
+                         <button class="cf-exit-timer-btn" onclick="timer.exitTimer()" title="Exit workout" aria-label="Exit workout">
                             <i class="fas fa-times"></i>
                         </button>      
                     </div>
@@ -1771,8 +1771,12 @@ class CrossFitTimer {
             volume: parseInt(this.volumeControl.value),
             displayMode: this.displayModeSelect.value
         };
-        
-        localStorage.setItem('crossfitTimerSettings', JSON.stringify(settings));
+
+        try {
+            localStorage.setItem('crossfitTimerSettings', JSON.stringify(settings));
+        } catch (e) {
+            console.error('Could not save crossfitTimerSettings', e);
+        }
         this.displayMode = settings.displayMode;
         
         // Show confirmation
@@ -2325,7 +2329,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Service Worker Registration for PWA
-const SW_VERSION = '2607181312';
+const SW_VERSION = '2607220600';
 document.getElementById('crossfit-version').textContent = 'v' + SW_VERSION;
 if ('serviceWorker' in navigator) {
     let hasRefreshedForUpdate = false;
