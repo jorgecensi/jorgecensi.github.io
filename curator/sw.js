@@ -56,6 +56,16 @@ self.addEventListener('fetch', e => {
     return;
   }
 
+  // Navigations — cache first, fallback to network, fallback to cached shell when offline
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      caches.match(e.request)
+        .then(cached => cached || fetch(e.request))
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
   // App shell — cache first, fallback to network
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))

@@ -1137,6 +1137,9 @@ function buildPiano() {
     key.dataset.note = k.id;
     key.dataset.midi = k.midi;
     key.textContent = k.label;
+    key.setAttribute('role', 'button');
+    key.setAttribute('tabindex', '0');
+    key.setAttribute('aria-label', `Play ${k.label}`);
 
     const playKey = () => {
       let midi = k.midi;
@@ -1169,6 +1172,13 @@ function buildPiano() {
     key.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       playKey();
+    });
+
+    key.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        playKey();
+      }
     });
 
     piano.appendChild(key);

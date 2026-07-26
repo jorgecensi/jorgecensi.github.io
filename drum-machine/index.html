@@ -1922,6 +1922,7 @@ async function startRecording() {
     } catch (e) {
         isRecording = false;
         updateClapRecordUI();
+        showToast('Mic access denied — can\'t record clap');
     }
 }
 

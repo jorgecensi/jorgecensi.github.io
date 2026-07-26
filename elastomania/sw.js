@@ -48,7 +48,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((res) => {
-          if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
+          if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone())).catch(() => {});
           return res;
         })
         .catch(() =>
@@ -63,7 +63,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request).then((cached) => {
         const network = fetch(event.request)
           .then((res) => {
-            if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone()));
+            if (res.ok) caches.open(CACHE_NAME).then((c) => c.put(event.request, res.clone())).catch(() => {});
             return res;
           })
           .catch(() => cached);

@@ -44,8 +44,8 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const isNav = event.request.mode === 'navigate';
   if (isNav) {
-    event.respondWith(fetch(event.request).then((r) => { if (r.ok) { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)); } return r; }).catch(() => caches.match(event.request).then((c) => c || caches.match(OFFLINE_URL))));
+    event.respondWith(fetch(event.request).then((r) => { if (r.ok) { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)).catch(() => {}); } return r; }).catch(() => caches.match(event.request).then((c) => c || caches.match(OFFLINE_URL))));
     return;
   }
-  event.respondWith(caches.match(event.request).then((cached) => { const nf = fetch(event.request).then((r) => { if (r.ok) { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)); } return r; }).catch(() => cached); return cached || nf; }));
+  event.respondWith(caches.match(event.request).then((cached) => { const nf = fetch(event.request).then((r) => { if (r.ok) { const c = r.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(event.request, c)).catch(() => {}); } return r; }).catch(() => cached); return cached || nf; }));
 });
