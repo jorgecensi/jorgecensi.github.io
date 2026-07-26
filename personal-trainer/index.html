@@ -1564,6 +1564,21 @@ permalink: /personal-trainer/
             grid-template-columns: repeat(4, 1fr);
         }
 
+        .choice-row.cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        /* Label for an individual toggle inside a multi-setting card. */
+        .setting-label {
+            font-size: var(--fs-sm);
+            color: var(--muted);
+            margin-top: var(--sp-4);
+        }
+
+        .setting-label:first-of-type {
+            margin-top: var(--sp-2);
+        }
+
         /* The preview list is the only scroll region inside a screen. */
         .scroll-fill {
             flex: 1;
@@ -1618,6 +1633,25 @@ permalink: /personal-trainer/
                     <div class="choice" data-v="4">4×<small>a week</small></div>
                     <div class="choice" data-v="5">5×<small>a week</small></div>
                 </div>
+            </div>
+            <div class="card">
+                <div class="section-title">Coaching</div>
+                <div class="setting-label">Sound</div>
+                <div class="choice-row cols-2" id="setup-sound">
+                    <div class="choice selected" data-v="on">On<small>Interval chimes</small></div>
+                    <div class="choice" data-v="off">Off<small>Silent</small></div>
+                </div>
+                <div class="setting-label">Voice</div>
+                <div class="choice-row cols-2" id="setup-voice">
+                    <div class="choice selected" data-v="on">On<small>Calls each move</small></div>
+                    <div class="choice" data-v="off">Off<small>No speech</small></div>
+                </div>
+                <div class="setting-label">Vibration</div>
+                <div class="choice-row cols-2" id="setup-haptics">
+                    <div class="choice selected" data-v="on">On<small>Buzz on change</small></div>
+                    <div class="choice" data-v="off">Off<small>No buzz</small></div>
+                </div>
+                <p class="muted-note mt-3">Voice calls the next move out loud so you can keep your eyes off the screen — useful face-down on a mat.</p>
             </div>
             <p class="muted-note mb-4">All workouts mix core fitness and mat pilates — just a mat, no equipment. The plan adapts every session based on your feedback.</p>
             <button class="btn" id="setup-go">Let's go</button>
@@ -1881,7 +1915,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607260032';
+        const SW_VERSION = '2607260138';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -2131,7 +2165,10 @@ permalink: /personal-trainer/
                 achievements: {},
                 lastTwist: null,
                 records: {},
-                frozenDates: []
+                frozenDates: [],
+                sound: true,
+                voice: true,
+                haptics: true
             };
         }
 
@@ -2150,6 +2187,7 @@ permalink: /personal-trainer/
                 if (typeof currentWorkout === 'object' && currentWorkout) {
                     currentWorkout.newRecords = (currentWorkout.newRecords || 0) + 1;
                 }
+                haptic('record');
                 saveState();
             }
         }
@@ -2491,6 +2529,7 @@ permalink: /personal-trainer/
                 if (cur === 'player' && window.confirm('Quit this workout? Progress won’t be saved.')) {
                     stopTimer();
                     clearVideo();
+                    stopSpeaking();
                     releaseWakeLock();
                     goHome();
                 }
@@ -2553,6 +2592,15 @@ permalink: /personal-trainer/
         bindChoiceRow('setup-level', () => {});
         bindChoiceRow('setup-duration', () => {});
         bindChoiceRow('setup-goal', () => {});
+        // Applied immediately rather than on "Let's go", so the toggle you just tapped is
+        // already in effect — and so they still stick if you leave via the back button.
+        bindChoiceRow('setup-sound', (v) => { state.sound = v === 'on'; saveState(); });
+        bindChoiceRow('setup-voice', (v) => {
+            state.voice = v === 'on';
+            if (!state.voice) stopSpeaking();
+            saveState();
+        });
+        bindChoiceRow('setup-haptics', (v) => { state.haptics = v === 'on'; saveState(); });
         document.getElementById('setup-go').addEventListener('click', () => {
             const level = selectedValue('setup-level') || 'intermediate';
             state.duration = parseInt(selectedValue('setup-duration') || '25', 10);
@@ -2576,6 +2624,9 @@ permalink: /personal-trainer/
         document.getElementById('nav-settings').addEventListener('click', () => {
             markSelected('setup-duration', state.duration);
             markSelected('setup-goal', state.weeklyGoal || 3);
+            markSelected('setup-sound', state.sound ? 'on' : 'off');
+            markSelected('setup-voice', state.voice ? 'on' : 'off');
+            markSelected('setup-haptics', state.haptics ? 'on' : 'off');
             if (state.level) markSelected('setup-level', state.level);
             document.getElementById('setup-back').style.display = '';
             navigate('setup');
@@ -2908,6 +2959,7 @@ permalink: /personal-trainer/
             if (window.confirm('Quit this workout? Progress won’t be saved.')) {
                 stopTimer();
                 clearVideo();
+                stopSpeaking();
                 releaseWakeLock();
                 goHome();
             }
@@ -2930,12 +2982,30 @@ permalink: /personal-trainer/
             player.idx = 0;
             player.paused = false;
             player.startedAt = Date.now();
-            try {
-                if ('wakeLock' in navigator) player.wakeLock = await navigator.wakeLock.request('screen');
-            } catch (e) { /* wake lock is best-effort */ }
+            await requestWakeLock();
             navigate('player');
             loadItem();
         }
+
+        async function requestWakeLock() {
+            if (!('wakeLock' in navigator) || player.wakeLock) return;
+            try {
+                player.wakeLock = await navigator.wakeLock.request('screen');
+                // The browser drops the sentinel on its own when the tab is hidden; clear
+                // our handle so the visibilitychange listener knows to ask again.
+                player.wakeLock.addEventListener('release', () => { player.wakeLock = null; });
+            } catch (e) { /* wake lock is best-effort */ }
+        }
+
+        // Browsers release the screen lock whenever the page is backgrounded and never
+        // restore it, so before this the screen began sleeping mid-workout after any app
+        // switch. Re-acquire on return, but only while a workout is actually running.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            if (!document.getElementById('player').classList.contains('active')) return;
+            if (player.paused) return;
+            requestWakeLock();
+        });
 
         function releaseWakeLock() {
             if (player.wakeLock) {
@@ -2961,7 +3031,46 @@ permalink: /personal-trainer/
             return `${m}:${String(s).padStart(2, '0')}`;
         }
 
+        // ---- Sensory layer -------------------------------------------------------
+        // A mat workout has you face-down or eyes-closed mid-exertion, so the screen is
+        // the worst channel available. Sound, speech and vibration carry the interval
+        // boundaries instead; each is independently switchable from Settings, and each
+        // helper no-ops when its API is missing so unsupported browsers degrade quietly.
+
+        // Distinct enough to tell apart through a mat without looking.
+        const HAPTICS = {
+            work: [60],             // a new exercise starts — the one you must not miss
+            rest: [25],             // ease off
+            countdown: [15],        // final three seconds, one tick each
+            complete: [80, 60, 80], // workout finished
+            record: [40, 40, 120]   // personal best
+        };
+
+        function haptic(name) {
+            if (!state.haptics || !('vibrate' in navigator)) return;
+            try { navigator.vibrate(HAPTICS[name] || name); } catch (e) { /* haptics are optional */ }
+        }
+
+        // `interrupt` drops anything still queued — at an interval boundary the previous
+        // announcement is stale, and letting utterances pile up puts the voice further
+        // and further behind the timer.
+        function speak(text, interrupt) {
+            if (!state.voice || !('speechSynthesis' in window) || !text) return;
+            try {
+                if (interrupt) window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                u.rate = 1.05;
+                window.speechSynthesis.speak(u);
+            } catch (e) { /* speech is optional */ }
+        }
+
+        function stopSpeaking() {
+            if (!('speechSynthesis' in window)) return;
+            try { window.speechSynthesis.cancel(); } catch (e) { /* no-op */ }
+        }
+
         function beep(freq) {
+            if (!state.sound) return;
             try {
                 const ctx = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)());
                 const osc = ctx.createOscillator();
@@ -3114,6 +3223,10 @@ permalink: /personal-trainer/
 
                 startCountdown(item.secs);
                 beep(440);
+                haptic('rest');
+                // Naming what's coming is the whole point of the rest beat — it lets you
+                // set up for the next move without reading the screen.
+                speak(next ? `${item.prep ? 'Get into position' : 'Rest'}. Next up, ${next.ex.name}${next.side ? ', ' + next.side : ''}` : 'Rest', true);
                 return;
             }
 
@@ -3133,6 +3246,8 @@ permalink: /personal-trainer/
             startCueRotation(ex.cues);
             renderExerciseMedia(ex);
             beep(880);
+            haptic('work');
+            speak(`${ex.name}${item.side ? ', ' + item.side : ''}`, true);
 
             if (ex.type === 'secs') {
                 actionBtn.textContent = 'Pause';
@@ -3199,7 +3314,16 @@ permalink: /personal-trainer/
                 }
                 displayEl.textContent = fmtTime(player.remaining);
                 setTimerRing(player.remaining / secs, true);
-                if (player.remaining <= 3) beep(660);
+                // Only worth calling on intervals long enough for it to mean something —
+                // on a 10s hold "halfway" would land almost on top of the 3-2-1.
+                if (secs >= 20 && player.remaining === Math.round(secs / 2)) speak('Halfway');
+                if (player.remaining <= 3) {
+                    beep(660);
+                    haptic('countdown');
+                    // Not interrupting: these are one word each and must not cut each
+                    // other off, or the count audibly skips numbers.
+                    speak(String(player.remaining));
+                }
             }, 1000);
         }
 
@@ -3239,6 +3363,8 @@ permalink: /personal-trainer/
             // handler), so the big payoff marks the thing that counts.
             beep(880);
             setTimeout(() => beep(1100), 200);
+            haptic('complete');
+            speak('Workout complete. Nice work.', true);
         }
 
         const FEEDBACK_DELTA = { easy: 8, right: 4, hard: -5 };
