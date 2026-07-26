@@ -126,6 +126,8 @@ permalink: /personal-trainer/
 
             .btn:active,
             .ach:active,
+            .choice:active,
+            .plan-play:active,
             .clickable-card:active {
                 transform: none;
             }
@@ -176,8 +178,18 @@ permalink: /personal-trainer/
             flex: 1;
         }
 
+        /* Fade + a short upward settle when a screen takes over, so navigation
+           reads as movement between places rather than a hard cut. The
+           prefers-reduced-motion block above collapses the animation to ~0ms, so
+           reduced-motion users still get an instant, jump-free swap. */
         .screen.active {
             display: flex;
+            animation: screen-in var(--dur-base) var(--ease-standard);
+        }
+
+        @keyframes screen-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         header.topbar {
@@ -227,6 +239,10 @@ permalink: /personal-trainer/
             border-radius: var(--r-lg);
             padding: var(--sp-5);
             margin-bottom: var(--sp-4);
+            /* A soft drop shadow lifts each card off the gradient backdrop, and the
+               inset top hairline catches the light along the upper edge so surfaces
+               read as physical panes rather than flat fills. */
+            box-shadow: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 6px 18px rgb(0 0 0 / 22%);
         }
 
         .btn {
@@ -240,11 +256,22 @@ permalink: /personal-trainer/
             cursor: pointer;
             background: var(--accent);
             color: var(--on-accent);
-            transition: transform var(--dur-fast) var(--ease-standard), opacity var(--dur-base) var(--ease-standard);
+            /* The primary action sits proud of the page with an accent-tinted glow;
+               pressing sinks it (smaller shadow + scale) for tactile feedback. */
+            box-shadow: 0 4px 14px rgb(var(--accent-rgb) / 28%);
+            transition: transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard), opacity var(--dur-base) var(--ease-standard);
         }
 
         .btn:active {
             transform: scale(0.98);
+            box-shadow: 0 2px 8px rgb(var(--accent-rgb) / 22%);
+        }
+
+        /* Secondary/ghost buttons aren't the focal action, so they carry only a
+           faint neutral lift rather than the accent glow. */
+        .btn.secondary,
+        .btn.ghost {
+            box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
         }
 
         .btn:disabled {
@@ -287,6 +314,13 @@ permalink: /personal-trainer/
             font-weight: 600;
             font-size: var(--fs-md);
             color: var(--muted);
+            transition: transform var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+        }
+
+        /* Same press-in nudge as .btn/.ach so every tappable surface answers a
+           touch the same way. */
+        .choice:active {
+            transform: scale(0.96);
         }
 
         .choice small {
@@ -300,6 +334,9 @@ permalink: /personal-trainer/
             border-color: var(--accent);
             color: var(--text);
             background: rgb(var(--accent-rgb) / 12%);
+            /* A faint accent halo makes the active choice pop out of the row rather
+               than relying on the border alone. */
+            box-shadow: 0 0 0 1px rgb(var(--accent-rgb) / 25%), 0 4px 12px rgb(var(--accent-rgb) / 18%);
         }
 
         .section-title {
@@ -325,12 +362,17 @@ permalink: /personal-trainer/
             border-radius: var(--r-md);
             padding: var(--sp-3) var(--sp-2);
             text-align: center;
+            box-shadow: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 4px 12px rgb(0 0 0 / 20%);
         }
 
+        /* The three headline numbers carry the screen's status at a glance, so the
+           value steps up to the display-adjacent 2xl to out-weigh the card text
+           around it. */
         .stat .value {
-            font-size: var(--fs-xl);
+            font-size: var(--fs-2xl);
             font-weight: 800;
             color: var(--accent);
+            line-height: 1.1;
         }
 
         /* Per-accent stat cards */
@@ -617,16 +659,25 @@ permalink: /personal-trainer/
         }
 
         /* Themed action buttons */
+        /* "Generate today's workout" is the one action the home screen exists to
+           drive, so it gets the strongest presence: a brighter gradient and a
+           deeper accent glow than the base .btn, making it the clear focal point. */
         #btn-generate {
             background: linear-gradient(135deg, #12c48a, #0fb7a4);
+            box-shadow: 0 6px 20px rgb(var(--accent-rgb) / 36%);
+        }
+        #btn-generate:active {
+            box-shadow: 0 3px 12px rgb(var(--accent-rgb) / 28%);
         }
         #nav-library {
             border-color: rgb(var(--blue-rgb) / 38%);
             background: rgb(var(--blue-rgb) / 9%);
+            box-shadow: 0 2px 8px rgb(var(--blue-rgb) / 14%);
         }
         #nav-history {
             border-color: rgb(var(--orange-rgb) / 38%);
             background: rgb(var(--orange-rgb) / 9%);
+            box-shadow: 0 2px 8px rgb(var(--orange-rgb) / 14%);
         }
 
         /* Workout preview */
@@ -664,6 +715,11 @@ permalink: /personal-trainer/
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: transform var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+        }
+
+        .plan-play:active {
+            transform: scale(0.92);
         }
 
         .plan-item.playing .plan-play {
@@ -820,11 +876,15 @@ permalink: /personal-trainer/
         .timer-ring-fill {
             stroke: var(--accent);
             stroke-linecap: round;
+            /* A soft glow along the draining arc lets the remaining time register
+               peripherally, mid-exercise, without focusing on the numerals. */
+            filter: drop-shadow(0 0 4px rgb(var(--accent-rgb) / 55%));
             transition: stroke-dashoffset 1s linear;
         }
 
         .player-timer.resting .timer-ring-fill {
             stroke: var(--warn);
+            filter: drop-shadow(0 0 4px rgb(var(--warn-rgb) / 55%));
         }
 
         /* Rep-based exercises have no countdown, so there is nothing for the ring
