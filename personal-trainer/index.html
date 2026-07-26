@@ -26,19 +26,71 @@ permalink: /personal-trainer/
 
     <style>
         :root {
+            /* ---- Color -------------------------------------------------------- */
             --bg: #0f1521;
             --surface: #161d2a;
             --surface2: #1e2735;
             --border: #2a3546;
             --accent: #10b981;
             --accent-bright: #3ecf8e;
-            --accent-dim: #0d9268;
             --orange: #ef8a5f;
             --blue: #6bb8ef;
             --text: #e9eef5;
             --muted: #8a97a8;
             --danger: #f87171;
             --warn: #fbbf24;
+            /* Text/icon colour that sits ON a filled accent surface. */
+            --on-accent: #06281d;
+
+            /* Channel triplets for the same hues, so every translucent tint derives
+               from one source via rgb(var(--x-rgb) / N%) rather than re-typing the
+               literal channels at a dozen different alphas. */
+            --accent-rgb: 16 185 129;
+            --accent-bright-rgb: 62 207 142;
+            --orange-rgb: 239 138 95;
+            --blue-rgb: 107 184 239;
+            --warn-rgb: 251 191 36;
+            --danger-rgb: 248 113 113;
+
+            /* ---- Type --------------------------------------------------------- */
+            /* An 8-step ramp plus one off-ramp display size. Tight steps (~1.09) at
+               the small end where UI labels cluster, widening to ~1.2 at the top. */
+            --fs-2xs: 0.72rem;
+            --fs-xs: 0.78rem;
+            --fs-sm: 0.85rem;
+            --fs-md: 0.95rem;
+            --fs-lg: 1.05rem;
+            --fs-xl: 1.25rem;
+            --fs-2xl: 1.5rem;
+            --fs-3xl: 1.75rem;
+            --fs-display: 3.4rem;
+
+            /* ---- Spacing (4px base) ------------------------------------------- */
+            --sp-05: 2px;
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 20px;
+            --sp-6: 24px;
+            --sp-8: 32px;
+
+            /* ---- Radii -------------------------------------------------------- */
+            /* Inner components sit at --r-md so they nest visibly inside --r-lg cards. */
+            --r-xs: 4px;
+            --r-sm: 8px;
+            --r-md: 12px;
+            --r-lg: 16px;
+            --r-full: 50%;
+
+            /* ---- Motion ------------------------------------------------------- */
+            --dur-fast: 0.12s;
+            --dur-base: 0.25s;
+            --dur-slow: 0.4s;
+            --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+            /* ---- Layout ------------------------------------------------------- */
+            --app-max-width: 520px;
         }
 
         * {
@@ -46,6 +98,37 @@ permalink: /personal-trainer/
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        /* One focus treatment for the whole app. :focus-visible means pointer users
+           never see it, so there is no reason to suppress it anywhere — which is
+           exactly what this stylesheet used to do: its only :focus rule removed the
+           outline and nothing replaced it. */
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: var(--r-xs);
+        }
+
+        /* Honour the OS "reduce motion" setting. Matters more here than the usual
+           token gesture: the streak ring pulse and its sparkle both run infinitely.
+           Durations collapse to near-zero rather than 0 so state changes still fire
+           transitionend and still read as changes. */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+
+            .btn:active,
+            .ach:active,
+            .clickable-card:active {
+                transform: none;
+            }
         }
 
         html,
@@ -56,13 +139,16 @@ permalink: /personal-trainer/
                than the true visible viewport — mobile browsers resize their
                toolbar dynamically, so 100% height can under- or over-shoot it —
                this is what shows through instead of the browser's default white. */
-            background: linear-gradient(180deg, #131a27 0%, #0e131e 55%, #0b0f18 100%);
+            background: linear-gradient(180deg, #131a27 0%, var(--bg) 55%, #0b0f18 100%);
             background-attachment: fixed;
         }
 
         body {
             color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            /* Base step, so anything that doesn't declare a size still lands on the
+               scale instead of falling back to the UA's off-scale 16px. */
+            font-size: var(--fs-md);
             display: flex;
             justify-content: center;
             /* Without this, #app is a stretched flex item clamped to body's height —
@@ -75,7 +161,7 @@ permalink: /personal-trainer/
 
         #app {
             width: 100%;
-            max-width: 520px;
+            max-width: var(--app-max-width);
             min-height: 100%;
             min-height: 100dvh;
             display: flex;
@@ -98,11 +184,11 @@ permalink: /personal-trainer/
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 4px 0 16px;
+            padding: var(--sp-1) 0 var(--sp-4);
         }
 
         header.topbar h1 {
-            font-size: 1.3rem;
+            font-size: var(--fs-xl);
             font-weight: 700;
         }
 
@@ -114,7 +200,7 @@ permalink: /personal-trainer/
             background: none;
             border: none;
             color: var(--accent);
-            font-size: 1rem;
+            font-size: var(--fs-lg);
             font-weight: 600;
             cursor: pointer;
             /* comfortable 44px tap target for iOS */
@@ -122,7 +208,7 @@ permalink: /personal-trainer/
             min-width: 44px;
             display: inline-flex;
             align-items: center;
-            padding: 6px 0;
+            padding: var(--sp-2) 0;
         }
 
         /* Actual "go back" actions get a visible pill so they read as tappable buttons,
@@ -131,30 +217,30 @@ permalink: /personal-trainer/
         .topbar .back-btn[data-back] {
             background: var(--surface2);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 6px 14px;
+            border-radius: var(--r-md);
+            padding: var(--sp-2) var(--sp-4);
         }
 
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 14px;
+            border-radius: var(--r-lg);
+            padding: var(--sp-5);
+            margin-bottom: var(--sp-4);
         }
 
         .btn {
             display: block;
             width: 100%;
             border: none;
-            border-radius: 14px;
-            padding: 16px;
-            font-size: 1.05rem;
+            border-radius: var(--r-md);
+            padding: var(--sp-4);
+            font-size: var(--fs-lg);
             font-weight: 700;
             cursor: pointer;
             background: var(--accent);
-            color: #06281d;
-            transition: transform 0.1s, opacity 0.2s;
+            color: var(--on-accent);
+            transition: transform var(--dur-fast) var(--ease-standard), opacity var(--dur-base) var(--ease-standard);
         }
 
         .btn:active {
@@ -179,130 +265,132 @@ permalink: /personal-trainer/
         }
 
         .btn + .btn {
-            margin-top: 10px;
+            margin-top: var(--sp-3);
         }
 
         .choice-row {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 12px;
+            gap: var(--sp-3);
+            margin-top: var(--sp-3);
         }
 
         .choice {
             background: var(--surface2);
             border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 6px;
+            border-radius: var(--r-md);
+            /* Tighter than the scale would round to: three of these sit across a
+               390px viewport and the sub-labels wrap if the box narrows. */
+            padding: var(--sp-3) var(--sp-1);
             text-align: center;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: var(--fs-md);
             color: var(--muted);
         }
 
         .choice small {
             display: block;
             font-weight: 400;
-            font-size: 0.75rem;
-            margin-top: 4px;
+            font-size: var(--fs-2xs);
+            margin-top: var(--sp-1);
         }
 
         .choice.selected {
             border-color: var(--accent);
             color: var(--text);
-            background: rgba(16, 185, 129, 0.12);
+            background: rgb(var(--accent-rgb) / 12%);
         }
 
         .section-title {
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             color: var(--muted);
-            margin: 10px 0 8px;
+            margin: var(--sp-3) 0 var(--sp-2);
         }
 
         /* Home */
         .stats-row {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 14px;
+            gap: var(--sp-3);
+            margin-bottom: var(--sp-4);
         }
 
         .stat {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 12px 8px;
+            border-radius: var(--r-md);
+            padding: var(--sp-3) var(--sp-2);
             text-align: center;
         }
 
         .stat .value {
-            font-size: 1.3rem;
+            font-size: var(--fs-xl);
             font-weight: 800;
             color: var(--accent);
         }
 
         /* Per-accent stat cards */
         .stat.accent-green {
-            border-color: rgba(16, 185, 129, 0.5);
-            background: rgba(16, 185, 129, 0.08);
+            border-color: rgb(var(--accent-rgb) / 50%);
+            background: rgb(var(--accent-rgb) / 8%);
         }
         .stat.accent-green .value { color: var(--accent-bright); }
 
         .stat.accent-orange {
-            border-color: rgba(239, 138, 95, 0.42);
-            background: rgba(239, 138, 95, 0.08);
+            border-color: rgb(var(--orange-rgb) / 42%);
+            background: rgb(var(--orange-rgb) / 8%);
         }
         .stat.accent-orange .value { color: var(--orange); }
 
         .stat.accent-blue {
-            border-color: rgba(107, 184, 239, 0.42);
-            background: rgba(107, 184, 239, 0.08);
+            border-color: rgb(var(--blue-rgb) / 42%);
+            background: rgb(var(--blue-rgb) / 8%);
         }
         .stat.accent-blue .value { color: var(--blue); }
 
         .stat .label {
-            font-size: 0.7rem;
+            font-size: var(--fs-2xs);
             color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            margin-top: 2px;
+            margin-top: var(--sp-05);
         }
 
         .level-bar {
             height: 8px;
-            border-radius: 4px;
+            border-radius: var(--r-xs);
             background: var(--surface2);
             overflow: hidden;
-            margin-top: 8px;
+            margin-top: var(--sp-2);
         }
 
         .level-bar > div {
             height: 100%;
             background: var(--accent);
-            border-radius: 4px;
-            transition: width 0.4s;
+            border-radius: var(--r-xs);
+            transition: width var(--dur-slow) var(--ease-standard);
         }
 
         .level-row {
             display: flex;
             justify-content: space-between;
             align-items: baseline;
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
         }
 
         .level-row .tier {
             color: var(--muted);
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
         }
 
         /* Discipline card + per-discipline accents */
         .disc-card {
             background:
-                linear-gradient(120deg, rgba(239, 138, 95, 0.10), rgba(107, 184, 239, 0.07));
+                linear-gradient(120deg, rgb(var(--orange-rgb) / 10%), rgb(var(--blue-rgb) / 7%));
         }
         .level-row.row-core .tier { color: var(--orange); }
         .level-row.row-pilates .tier { color: var(--blue); }
@@ -312,27 +400,27 @@ permalink: /personal-trainer/
         .home-nav {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 10px;
-            margin-top: 14px;
+            gap: var(--sp-3);
+            margin-top: var(--sp-4);
         }
 
         /* Compact achievements / records cards on home */
         #ach-card,
         #rec-card {
-            margin-top: 14px;
+            margin-top: var(--sp-4);
             margin-bottom: 0;
         }
 
         .see-all {
             color: var(--accent);
             font-weight: 700;
-            font-size: 0.85rem;
-            padding: 4px 0;
+            font-size: var(--fs-sm);
+            padding: var(--sp-1) 0;
         }
 
         .clickable-card {
             cursor: pointer;
-            transition: transform 0.1s, border-color 0.15s;
+            transition: transform var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
         }
 
         .clickable-card:active {
@@ -340,18 +428,18 @@ permalink: /personal-trainer/
         }
 
         .clickable-card:hover {
-            border-color: rgba(16, 185, 129, 0.35);
+            border-color: rgb(var(--accent-rgb) / 35%);
         }
 
         .ach-prog-row {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 7px 0 0;
+            gap: var(--sp-3);
+            padding: var(--sp-2) 0 0;
         }
 
         .ach-prog-row .em {
-            font-size: 1.25rem;
+            font-size: var(--fs-xl);
             flex-shrink: 0;
         }
 
@@ -361,26 +449,26 @@ permalink: /personal-trainer/
         }
 
         .ach-prog-row .nm {
-            font-size: 0.85rem;
+            font-size: var(--fs-sm);
             font-weight: 600;
         }
 
         .mini-bar {
             height: 6px;
-            border-radius: 3px;
+            border-radius: var(--r-xs);
             background: var(--surface2);
             overflow: hidden;
-            margin-top: 4px;
+            margin-top: var(--sp-1);
         }
 
         .mini-bar > div {
             height: 100%;
             background: var(--accent);
-            border-radius: 3px;
+            border-radius: var(--r-xs);
         }
 
         .ach-prog-row .pct {
-            font-size: 0.75rem;
+            font-size: var(--fs-xs);
             color: var(--muted);
             font-weight: 700;
             white-space: nowrap;
@@ -390,9 +478,9 @@ permalink: /personal-trainer/
             display: flex;
             justify-content: space-between;
             align-items: baseline;
-            gap: 10px;
-            padding: 7px 0 0;
-            font-size: 0.9rem;
+            gap: var(--sp-3);
+            padding: var(--sp-2) 0 0;
+            font-size: var(--fs-md);
         }
 
         .rec-prev-row .nm {
@@ -406,7 +494,7 @@ permalink: /personal-trainer/
         }
 
         .rec-prev-row .gain {
-            font-size: 0.75rem;
+            font-size: var(--fs-xs);
         }
 
         /* How-progression-works page */
@@ -415,11 +503,11 @@ permalink: /personal-trainer/
             background: none;
             border: none;
             color: var(--muted);
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
             font-weight: 600;
             cursor: pointer;
-            padding: 10px 0 0;
-            margin-top: 6px;
+            padding: var(--sp-3) 0 0;
+            margin-top: var(--sp-2);
             text-align: left;
         }
 
@@ -431,9 +519,9 @@ permalink: /personal-trainer/
         .info-tier {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 5px 0;
-            font-size: 0.92rem;
+            gap: var(--sp-3);
+            padding: var(--sp-1) 0;
+            font-size: var(--fs-md);
             font-weight: 600;
         }
 
@@ -441,9 +529,9 @@ permalink: /personal-trainer/
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
-            padding: 7px 0;
-            font-size: 0.92rem;
+            gap: var(--sp-3);
+            padding: var(--sp-2) 0;
+            font-size: var(--fs-md);
             font-weight: 600;
             border-bottom: 1px solid var(--border);
         }
@@ -462,7 +550,7 @@ permalink: /personal-trainer/
 
         .topbar-actions {
             display: flex;
-            gap: 2px;
+            gap: var(--sp-05);
         }
 
         /* How-the-generator-works modal */
@@ -482,14 +570,14 @@ permalink: /personal-trainer/
 
         .modal-card {
             width: 100%;
-            max-width: 520px;
+            max-width: var(--app-max-width);
             max-height: 82vh;
             overflow-y: auto;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 20px 20px 0 0;
+            border-radius: var(--r-lg) var(--r-lg) 0 0;
             padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
-            animation: modal-slide-up 0.2s ease;
+            animation: modal-slide-up var(--dur-base) var(--ease-standard);
         }
 
         @keyframes modal-slide-up {
@@ -501,11 +589,11 @@ permalink: /personal-trainer/
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 14px;
+            margin-bottom: var(--sp-4);
         }
 
         .modal-head h2 {
-            font-size: 1.15rem;
+            font-size: var(--fs-xl);
             font-weight: 700;
         }
 
@@ -517,11 +605,11 @@ permalink: /personal-trainer/
             flex-shrink: 0;
             width: 32px;
             height: 32px;
-            border-radius: 10px;
+            border-radius: var(--r-md);
             background: var(--surface2);
             border: 1px solid var(--border);
             color: var(--text);
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -533,12 +621,12 @@ permalink: /personal-trainer/
             background: linear-gradient(135deg, #12c48a, #0fb7a4);
         }
         #nav-library {
-            border-color: rgba(107, 184, 239, 0.38);
-            background: rgba(107, 184, 239, 0.09);
+            border-color: rgb(var(--blue-rgb) / 38%);
+            background: rgb(var(--blue-rgb) / 9%);
         }
         #nav-history {
-            border-color: rgba(239, 138, 95, 0.38);
-            background: rgba(239, 138, 95, 0.09);
+            border-color: rgb(var(--orange-rgb) / 38%);
+            background: rgb(var(--orange-rgb) / 9%);
         }
 
         /* Workout preview */
@@ -546,8 +634,8 @@ permalink: /personal-trainer/
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 12px;
-            padding: 10px 0;
+            gap: var(--sp-3);
+            padding: var(--sp-3) 0;
             border-bottom: 1px solid var(--border);
         }
 
@@ -559,7 +647,7 @@ permalink: /personal-trainer/
             margin-left: auto;
             color: var(--accent);
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
             white-space: nowrap;
         }
 
@@ -567,11 +655,11 @@ permalink: /personal-trainer/
             flex-shrink: 0;
             width: 34px;
             height: 34px;
-            border-radius: 10px;
+            border-radius: var(--r-md);
             border: 1px solid var(--border);
             background: var(--surface2);
             color: var(--accent);
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -580,7 +668,7 @@ permalink: /personal-trainer/
 
         .plan-item.playing .plan-play {
             background: var(--accent);
-            color: #06281d;
+            color: var(--on-accent);
             border-color: var(--accent);
         }
 
@@ -591,8 +679,8 @@ permalink: /personal-trainer/
             width: 100%;
             position: relative;
             aspect-ratio: 16 / 9;
-            margin-top: 4px;
-            border-radius: 12px;
+            margin-top: var(--sp-1);
+            border-radius: var(--r-md);
             overflow: hidden;
             background: #000;
             border: 1px solid var(--border);
@@ -612,11 +700,11 @@ permalink: /personal-trainer/
 
         .plan-item .name {
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: var(--fs-md);
         }
 
         .plan-item .meta {
-            font-size: 0.75rem;
+            font-size: var(--fs-xs);
             color: var(--muted);
         }
 
@@ -624,11 +712,11 @@ permalink: /personal-trainer/
             flex-shrink: 0;
             width: 26px;
             height: 26px;
-            border-radius: 8px;
+            border-radius: var(--r-sm);
             background: var(--surface2);
             border: 1px solid var(--border);
             color: var(--muted);
-            font-size: 0.7rem;
+            font-size: var(--fs-2xs);
             font-weight: 700;
             display: flex;
             align-items: center;
@@ -636,11 +724,11 @@ permalink: /personal-trainer/
         }
 
         /* Tier difficulty ramp: green → blue → yellow → orange → red */
-        .tier-badge.t1 { color: #3ecf8e; border-color: rgba(62, 207, 142, 0.45); background: rgba(62, 207, 142, 0.10); }
-        .tier-badge.t2 { color: var(--blue); border-color: rgba(107, 184, 239, 0.45); background: rgba(107, 184, 239, 0.10); }
-        .tier-badge.t3 { color: var(--warn); border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.10); }
-        .tier-badge.t4 { color: var(--orange); border-color: rgba(239, 138, 95, 0.5); background: rgba(239, 138, 95, 0.10); }
-        .tier-badge.t5 { color: var(--danger); border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.10); }
+        .tier-badge.t1 { color: #3ecf8e; border-color: rgb(var(--accent-bright-rgb) / 45%); background: rgb(var(--accent-bright-rgb) / 10%); }
+        .tier-badge.t2 { color: var(--blue); border-color: rgb(var(--blue-rgb) / 45%); background: rgb(var(--blue-rgb) / 10%); }
+        .tier-badge.t3 { color: var(--warn); border-color: rgb(var(--warn-rgb) / 45%); background: rgb(var(--warn-rgb) / 10%); }
+        .tier-badge.t4 { color: var(--orange); border-color: rgb(var(--orange-rgb) / 50%); background: rgb(var(--orange-rgb) / 10%); }
+        .tier-badge.t5 { color: var(--danger); border-color: rgb(var(--danger-rgb) / 50%); background: rgb(var(--danger-rgb) / 10%); }
 
         /* Player */
         #player {
@@ -651,19 +739,19 @@ permalink: /personal-trainer/
         .player-progress {
             height: 6px;
             background: var(--surface2);
-            border-radius: 3px;
+            border-radius: var(--r-xs);
             overflow: hidden;
-            margin-bottom: 8px;
+            margin-bottom: var(--sp-2);
         }
 
         .player-progress > div {
             height: 100%;
             background: var(--accent);
-            transition: width 0.3s;
+            transition: width var(--dur-base) var(--ease-standard);
         }
 
         .player-phase {
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
             font-weight: 700;
             letter-spacing: 0.1em;
             text-transform: uppercase;
@@ -675,23 +763,23 @@ permalink: /personal-trainer/
         }
 
         #player-exname {
-            font-size: 1.7rem;
+            font-size: var(--fs-3xl);
             font-weight: 800;
-            margin: 10px 0 4px;
+            margin: var(--sp-3) 0 var(--sp-1);
             line-height: 1.2;
         }
 
         #player-side {
             color: var(--accent);
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: var(--fs-md);
             min-height: 1.3em;
         }
 
         /* "NEXT UP" eyebrow — only shown during rest/prep, where the screen is
            previewing the exercise you are about to do rather than the current one. */
         .player-upnext {
-            font-size: 0.72rem;
+            font-size: var(--fs-2xs);
             font-weight: 700;
             letter-spacing: 0.14em;
             text-transform: uppercase;
@@ -706,7 +794,7 @@ permalink: /personal-trainer/
             position: relative;
             width: 190px;
             height: 190px;
-            margin: 10px auto;
+            margin: var(--sp-3) auto;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -747,7 +835,7 @@ permalink: /personal-trainer/
 
         #player-display {
             position: relative;
-            font-size: 3.4rem;
+            font-size: var(--fs-display);
             font-weight: 800;
             font-variant-numeric: tabular-nums;
             line-height: 1;
@@ -760,29 +848,29 @@ permalink: /personal-trainer/
         ul.cues {
             list-style: none;
             color: var(--muted);
-            font-size: 0.95rem;
+            font-size: var(--fs-md);
             line-height: 1.7;
-            margin: 6px 0 12px;
+            margin: var(--sp-2) 0 var(--sp-3);
         }
 
         /* During work this list holds a single rotating cue, so the swap between
            cues shouldn't jump the layout. */
         ul.cues.single {
             min-height: 1.7em;
-            margin: 10px 0 12px;
+            margin: var(--sp-3) 0 var(--sp-3);
         }
 
         .mistake-note {
             display: none;
-            gap: 8px;
+            gap: var(--sp-2);
             align-items: flex-start;
             text-align: left;
-            background: rgba(251, 191, 36, 0.08);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-            border-radius: 12px;
-            padding: 10px 12px;
-            margin: 0 0 12px;
-            font-size: 0.85rem;
+            background: rgb(var(--warn-rgb) / 8%);
+            border: 1px solid rgb(var(--warn-rgb) / 30%);
+            border-radius: var(--r-md);
+            padding: var(--sp-3) var(--sp-3);
+            margin: 0 0 var(--sp-3);
+            font-size: var(--fs-sm);
             line-height: 1.5;
             color: var(--text);
         }
@@ -805,8 +893,8 @@ permalink: /personal-trainer/
             width: 100%;
             aspect-ratio: 16 / 9;
             max-height: 34vh;
-            margin: 12px auto;
-            border-radius: 14px;
+            margin: var(--sp-3) auto;
+            border-radius: var(--r-md);
             overflow: hidden;
             background: #000;
             border: 1px solid var(--border);
@@ -832,59 +920,59 @@ permalink: /personal-trainer/
             inset: 0;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: var(--sp-1);
             align-items: center;
             justify-content: center;
-            padding: 12px;
+            padding: var(--sp-3);
             text-align: center;
-            font-size: 0.85rem;
+            font-size: var(--fs-sm);
             color: var(--muted);
             background: var(--surface2);
         }
 
         .video-offline strong {
             color: var(--text);
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
         }
 
         .player-controls {
             display: grid;
             grid-template-columns: 1fr 2fr 1fr;
-            gap: 10px;
+            gap: var(--sp-3);
             align-items: stretch;
         }
 
         .player-controls .btn {
             margin: 0;
-            padding: 14px 8px;
+            padding: var(--sp-4) var(--sp-2);
         }
 
         #player-next {
-            font-size: 0.85rem;
+            font-size: var(--fs-sm);
             color: var(--muted);
-            margin-top: 12px;
+            margin-top: var(--sp-3);
             min-height: 1.3em;
         }
 
         /* Complete */
         .complete-ask {
-            font-size: 1.05rem;
+            font-size: var(--fs-lg);
             font-weight: 700;
-            margin-top: 18px;
+            margin-top: var(--sp-5);
         }
 
         .feedback-row {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 12px;
+            gap: var(--sp-3);
+            margin-top: var(--sp-3);
         }
 
         .big-emoji-ico {
             display: block;
             width: 72px;
             height: 72px;
-            margin: 20px auto 8px;
+            margin: var(--sp-5) auto var(--sp-2);
         }
 
         .fb-ico {
@@ -894,13 +982,13 @@ permalink: /personal-trainer/
             height: auto;
             object-fit: contain;
             display: inline-block;
-            margin-bottom: 4px;
+            margin-bottom: var(--sp-1);
         }
 
         /* Library */
         .lib-item {
             border-bottom: 1px solid var(--border);
-            padding: 12px 0;
+            padding: var(--sp-3) 0;
         }
 
         .lib-item:last-child {
@@ -910,13 +998,13 @@ permalink: /personal-trainer/
         .lib-head {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: var(--sp-3);
             cursor: pointer;
         }
 
         .lib-head .name {
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: var(--fs-md);
         }
 
         .lib-head .lib-play {
@@ -932,8 +1020,8 @@ permalink: /personal-trainer/
             width: 100%;
             position: relative;
             aspect-ratio: 16 / 9;
-            margin-top: 10px;
-            border-radius: 12px;
+            margin-top: var(--sp-3);
+            border-radius: var(--r-md);
             overflow: hidden;
             background: #000;
             border: 1px solid var(--border);
@@ -953,7 +1041,10 @@ permalink: /personal-trainer/
 
         .lib-body {
             display: none;
-            padding: 10px 0 2px 36px;
+            /* 36px is off the spacing scale on purpose: it indents the body text to
+               line up with the row title, past the icon, so it tracks the icon's
+               width rather than the rhythm. */
+            padding: var(--sp-3) 0 var(--sp-05) 36px;
         }
 
         .lib-item.open .lib-body {
@@ -964,34 +1055,33 @@ permalink: /personal-trainer/
             width: 100%;
             background: var(--surface2);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px;
+            border-radius: var(--r-md);
+            padding: var(--sp-3);
             color: var(--text);
-            font-size: 0.85rem;
+            font-size: var(--fs-sm);
         }
 
         .lib-body input:focus {
-            outline: none;
             border-color: var(--accent);
         }
 
         .lib-cues {
             color: var(--muted);
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
             line-height: 1.6;
-            margin-bottom: 8px;
+            margin-bottom: var(--sp-2);
         }
 
         .lib-mistake {
             display: flex;
-            gap: 6px;
+            gap: var(--sp-2);
             align-items: flex-start;
-            background: rgba(251, 191, 36, 0.08);
-            border: 1px solid rgba(251, 191, 36, 0.25);
-            border-radius: 10px;
-            padding: 8px 10px;
-            margin-bottom: 10px;
-            font-size: 0.78rem;
+            background: rgb(var(--warn-rgb) / 8%);
+            border: 1px solid rgb(var(--warn-rgb) / 25%);
+            border-radius: var(--r-md);
+            padding: var(--sp-2) var(--sp-3);
+            margin-bottom: var(--sp-3);
+            font-size: var(--fs-xs);
             line-height: 1.5;
             color: var(--text);
         }
@@ -1002,22 +1092,22 @@ permalink: /personal-trainer/
 
         .lib-actions {
             display: flex;
-            gap: 10px;
-            margin-bottom: 14px;
+            gap: var(--sp-3);
+            margin-bottom: var(--sp-4);
         }
 
         .lib-actions .btn {
             margin: 0;
-            padding: 12px;
-            font-size: 0.9rem;
+            padding: var(--sp-3);
+            font-size: var(--fs-md);
         }
 
         /* History */
         .hist-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 0;
+            gap: var(--sp-3);
+            padding: var(--sp-3) 0;
             border-bottom: 1px solid var(--border);
         }
 
@@ -1026,16 +1116,16 @@ permalink: /personal-trainer/
         }
 
         .hist-item .fb {
-            font-size: 1.3rem;
+            font-size: var(--fs-xl);
         }
 
         .hist-item .what {
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
         }
 
         .hist-item .when {
-            font-size: 0.75rem;
+            font-size: var(--fs-xs);
             color: var(--muted);
         }
 
@@ -1043,19 +1133,19 @@ permalink: /personal-trainer/
             margin-left: auto;
             color: var(--accent);
             font-weight: 700;
-            font-size: 0.85rem;
+            font-size: var(--fs-sm);
         }
 
         .empty-note {
             color: var(--muted);
             text-align: center;
-            padding: 24px 0;
-            font-size: 0.9rem;
+            padding: var(--sp-6) 0;
+            font-size: var(--fs-md);
         }
 
         .muted-note {
             color: var(--muted);
-            font-size: 0.85rem;
+            font-size: var(--fs-sm);
             line-height: 1.5;
         }
 
@@ -1067,32 +1157,32 @@ permalink: /personal-trainer/
             right: 0;
             z-index: 50;
             background: var(--accent);
-            color: #06281d;
-            padding: 12px 16px;
+            color: var(--on-accent);
+            padding: var(--sp-3) var(--sp-4);
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
-            font-size: 0.9rem;
+            gap: var(--sp-3);
+            font-size: var(--fs-md);
             font-weight: 600;
         }
 
         #install-banner button {
             border: none;
-            border-radius: 8px;
-            padding: 6px 12px;
+            border-radius: var(--r-sm);
+            padding: var(--sp-2) var(--sp-3);
             font-weight: 700;
             cursor: pointer;
         }
 
         #install-btn {
-            background: #06281d;
+            background: var(--on-accent);
             color: #fff;
         }
 
         #install-dismiss {
             background: none;
-            font-size: 1.2rem;
-            color: #06281d;
+            font-size: var(--fs-xl);
+            color: var(--on-accent);
         }
 
         /* App glyph icons */
@@ -1106,8 +1196,8 @@ permalink: /personal-trainer/
             height: 24px;
             object-fit: contain;
             display: block;
-            margin: 0 auto 6px;
-            transition: filter 0.4s ease;
+            margin: 0 auto var(--sp-2);
+            transition: filter var(--dur-slow) var(--ease-standard);
         }
 
         /* Streak flame — a circular badge around the icon whose ring color, glow and
@@ -1122,14 +1212,14 @@ permalink: /personal-trainer/
             position: relative;
             width: 32px;
             height: 32px;
-            margin: 0 auto 6px;
-            border-radius: 50%;
+            margin: 0 auto var(--sp-2);
+            border-radius: var(--r-full);
             display: flex;
             align-items: center;
             justify-content: center;
             border: 2px solid var(--border);
             background: transparent;
-            transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+            transition: border-color var(--dur-slow) var(--ease-standard), box-shadow var(--dur-slow) var(--ease-standard), background var(--dur-slow) var(--ease-standard);
         }
 
         .streak-badge .stat-ico {
@@ -1152,7 +1242,7 @@ permalink: /personal-trainer/
             position: absolute;
             top: -7px;
             right: -7px;
-            font-size: 12px;
+            font-size: var(--fs-2xs);
             line-height: 1;
             animation: streak-sparkle 1.6s ease-in-out infinite;
         }
@@ -1166,7 +1256,7 @@ permalink: /personal-trainer/
             width: 1.5em;
             height: 1.5em;
             vertical-align: -0.42em;
-            margin-right: 6px;
+            margin-right: var(--sp-2);
             border-radius: 24%;
         }
 
@@ -1180,13 +1270,13 @@ permalink: /personal-trainer/
             width: 1.4em;
             height: 1.4em;
             vertical-align: -0.38em;
-            margin-right: 8px;
+            margin-right: var(--sp-2);
         }
 
         .level-row strong {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: var(--sp-2);
         }
 
         .level-row .ico {
@@ -1198,7 +1288,7 @@ permalink: /personal-trainer/
             width: 1.3em;
             height: 1.3em;
             vertical-align: -0.32em;
-            margin-right: 6px;
+            margin-right: var(--sp-2);
             flex-shrink: 0;
         }
 
@@ -1206,20 +1296,20 @@ permalink: /personal-trainer/
             width: 1.2em;
             height: 1.2em;
             vertical-align: -0.28em;
-            margin-right: 4px;
+            margin-right: var(--sp-1);
         }
 
         /* Weekly goal */
         .week-segs {
             display: flex;
-            gap: 6px;
-            margin-top: 12px;
+            gap: var(--sp-2);
+            margin-top: var(--sp-3);
         }
 
         .week-segs div {
             flex: 1;
             height: 10px;
-            border-radius: 5px;
+            border-radius: var(--r-xs);
             background: var(--surface2);
         }
 
@@ -1230,26 +1320,26 @@ permalink: /personal-trainer/
         /* Achievements */
         .ach-count {
             color: var(--muted);
-            font-size: 0.8rem;
+            font-size: var(--fs-sm);
             font-weight: 600;
         }
 
         #ach-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: var(--sp-3);
         }
 
         .ach {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 12px;
+            border-radius: var(--r-md);
+            padding: var(--sp-3);
             display: flex;
-            gap: 10px;
+            gap: var(--sp-3);
             align-items: flex-start;
             cursor: pointer;
-            transition: transform 0.1s, border-color 0.15s;
+            transition: transform var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
         }
 
         .ach:active {
@@ -1257,8 +1347,8 @@ permalink: /personal-trainer/
         }
 
         .ach.unlocked {
-            border-color: rgba(16, 185, 129, 0.45);
-            background: rgba(16, 185, 129, 0.07);
+            border-color: rgb(var(--accent-rgb) / 45%);
+            background: rgb(var(--accent-rgb) / 7%);
         }
 
         .ach.locked {
@@ -1266,7 +1356,7 @@ permalink: /personal-trainer/
         }
 
         .ach .em {
-            font-size: 1.6rem;
+            font-size: var(--fs-2xl);
             flex-shrink: 0;
         }
 
@@ -1283,24 +1373,24 @@ permalink: /personal-trainer/
 
         .ach .nm {
             font-weight: 700;
-            font-size: 0.88rem;
+            font-size: var(--fs-sm);
         }
 
         .ach .ds {
-            font-size: 0.74rem;
+            font-size: var(--fs-2xs);
             color: var(--muted);
-            margin-top: 2px;
+            margin-top: var(--sp-05);
         }
 
         .ach .mini-bar {
-            margin-top: 8px;
+            margin-top: var(--sp-2);
         }
 
         .ach-frac {
-            font-size: 0.72rem;
+            font-size: var(--fs-2xs);
             color: var(--muted);
             font-weight: 700;
-            margin-top: 3px;
+            margin-top: var(--sp-1);
         }
 
         .ach.unlocked .mini-bar > div {
@@ -1315,14 +1405,14 @@ permalink: /personal-trainer/
             transform: translate(-50%, 120%);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: var(--sp-3);
             background: var(--surface2);
-            border: 1px solid rgba(16, 185, 129, 0.55);
-            border-radius: 14px;
-            padding: 12px 18px;
-            font-size: 1.4rem;
+            border: 1px solid rgb(var(--accent-rgb) / 55%);
+            border-radius: var(--r-md);
+            padding: var(--sp-3) var(--sp-5);
+            font-size: var(--fs-2xl);
             z-index: 80;
-            transition: transform 0.3s ease;
+            transition: transform var(--dur-base) var(--ease-standard);
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
             max-width: 90vw;
         }
@@ -1332,7 +1422,7 @@ permalink: /personal-trainer/
         }
 
         .toast div {
-            font-size: 0.85rem;
+            font-size: var(--fs-sm);
             line-height: 1.4;
         }
 
@@ -1353,9 +1443,9 @@ permalink: /personal-trainer/
         /* Personal records */
         .rec-item {
             display: flex;
-            gap: 12px;
+            gap: var(--sp-3);
             align-items: flex-start;
-            padding: 10px 0;
+            padding: var(--sp-3) 0;
             border-bottom: 1px solid var(--border);
         }
 
@@ -1372,36 +1462,37 @@ permalink: /personal-trainer/
             display: flex;
             justify-content: space-between;
             align-items: baseline;
-            gap: 10px;
+            gap: var(--sp-3);
         }
 
         .rec-head .name {
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: var(--fs-md);
         }
 
         .rec-best {
             color: var(--accent-bright);
+            font-size: var(--fs-lg);
             font-weight: 800;
             white-space: nowrap;
         }
 
         .rec-bar {
             height: 6px;
-            border-radius: 3px;
+            border-radius: var(--r-xs);
             background: var(--surface2);
             overflow: hidden;
-            margin: 6px 0 4px;
+            margin: var(--sp-2) 0 var(--sp-1);
         }
 
         .rec-bar > div {
             height: 100%;
             background: linear-gradient(90deg, #12c48a, #0fb7a4);
-            border-radius: 3px;
+            border-radius: var(--r-xs);
         }
 
         .rec-sub {
-            font-size: 0.72rem;
+            font-size: var(--fs-2xs);
             color: var(--muted);
         }
 
@@ -1416,15 +1507,15 @@ permalink: /personal-trainer/
             grid-template-rows: repeat(7, 12px);
             grid-auto-flow: column;
             grid-auto-columns: 12px;
-            gap: 4px;
+            gap: var(--sp-1);
             justify-content: start;
-            margin: 4px 0;
+            margin: var(--sp-1) 0;
         }
 
         .hm div {
             width: 12px;
             height: 12px;
-            border-radius: 3px;
+            border-radius: var(--r-xs);
             background: var(--surface2);
         }
 
@@ -1443,13 +1534,53 @@ permalink: /personal-trainer/
         .hm .td {
             outline: 1px solid var(--muted);
         }
+
+        /* ---- Utilities -------------------------------------------------------- */
+        /* These exist to retire ~31 one-off inline style="margin-top:10px" patches
+           that were hand-tuning vertical rhythm outside the stylesheet. */
+        .mt-05 { margin-top: var(--sp-05); }
+        .mt-2 { margin-top: var(--sp-2); }
+        .mt-3 { margin-top: var(--sp-3); }
+        .mt-4 { margin-top: var(--sp-4); }
+        .mb-2 { margin-bottom: var(--sp-2); }
+        .mb-3 { margin-bottom: var(--sp-3); }
+        .mb-4 { margin-bottom: var(--sp-4); }
+        .center { text-align: center; }
+        .txt-strong { color: var(--text); }
+
+        /* Named replacements for inline styles that were doing real component work. */
+        .summary-line {
+            font-size: var(--fs-lg);
+            font-weight: 600;
+        }
+
+        .side-note {
+            color: var(--muted);
+            font-weight: 400;
+            font-size: var(--fs-xs);
+        }
+
+        .choice-row.cols-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        /* The preview list is the only scroll region inside a screen. */
+        .scroll-fill {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .banner-actions {
+            display: flex;
+            gap: var(--sp-2);
+        }
     </style>
 </head>
 
 <body>
     <div id="install-banner">
         <span>Install Personal Trainer for quick access</span>
-        <div style="display:flex;gap:6px;">
+        <div class="banner-actions">
             <button id="install-btn">Install</button>
             <button id="install-dismiss">&times;</button>
         </div>
@@ -1481,16 +1612,16 @@ permalink: /personal-trainer/
             </div>
             <div class="card">
                 <div class="section-title">Weekly goal</div>
-                <div class="choice-row" id="setup-goal" style="grid-template-columns:repeat(4,1fr);">
+                <div class="choice-row cols-4" id="setup-goal">
                     <div class="choice" data-v="2">2×<small>a week</small></div>
                     <div class="choice selected" data-v="3">3×<small>a week</small></div>
                     <div class="choice" data-v="4">4×<small>a week</small></div>
                     <div class="choice" data-v="5">5×<small>a week</small></div>
                 </div>
             </div>
-            <p class="muted-note" style="margin-bottom:14px;">All workouts mix core fitness and mat pilates — just a mat, no equipment. The plan adapts every session based on your feedback.</p>
+            <p class="muted-note mb-4">All workouts mix core fitness and mat pilates — just a mat, no equipment. The plan adapts every session based on your feedback.</p>
             <button class="btn" id="setup-go">Let's go</button>
-            <button class="btn secondary" id="nav-library" style="margin-top:10px;"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
+            <button class="btn secondary mt-3" id="nav-library"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
         </section>
 
         <!-- ============ HOME ============ -->
@@ -1529,12 +1660,12 @@ permalink: /personal-trainer/
                 <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
                 <div class="week-segs" id="week-segs"></div>
                 <button class="info-link" id="btn-freeze">❄️ Freeze today's streak</button>
-                <button class="btn secondary" id="btn-commit" style="margin-top:12px;">Commit &amp; share ↗</button>
+                <button class="btn secondary mt-3" id="btn-commit">Commit &amp; share ↗</button>
             </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="core-bar" style="width:0%"></div></div>
-                <div class="level-row row-pilates" style="margin-top:14px;"><strong><img class="ico" src="/img/pt/mat-pilates.png" alt="">Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
+                <div class="level-row row-pilates mt-4"><strong><img class="ico" src="/img/pt/mat-pilates.png" alt="">Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="pilates-bar" style="width:0%"></div></div>
                 <button class="info-link" id="nav-info">ⓘ How progression works</button>
             </div>
@@ -1553,7 +1684,7 @@ permalink: /personal-trainer/
                     <button class="back-btn" id="btn-regenerate" title="Regenerate">🔀</button>
                 </div>
             </header>
-            <div class="card" style="flex:1;overflow-y:auto;" id="preview-list"></div>
+            <div class="card scroll-fill" id="preview-list"></div>
             <button class="btn" id="btn-start">Start workout</button>
         </section>
 
@@ -1592,20 +1723,20 @@ permalink: /personal-trainer/
         <section class="screen" id="complete">
             <header class="topbar"><h1>Workout <span>Complete</span></h1></header>
             <img class="big-emoji-ico" src="/img/pt/celebration.png" alt="">
-            <div class="card" style="text-align:center;">
-                <div id="complete-summary" style="font-size:1.05rem;font-weight:600;"></div>
-                <div id="complete-motivate" class="muted-note" style="margin-top:8px;"></div>
+            <div class="card center">
+                <div class="summary-line" id="complete-summary"></div>
+                <div id="complete-motivate" class="muted-note mt-2"></div>
                 <!-- Feedback is what actually commits the workout and drives the whole
                      adaptive engine, so it leads. Sharing is a reward for having done
                      it, not a step on the way. -->
                 <p class="complete-ask">How did it feel?</p>
-                <p class="muted-note" style="margin-top:2px;">Your answer tunes the next workout — and saves this one.</p>
+                <p class="muted-note mt-05">Your answer tunes the next workout — and saves this one.</p>
                 <div class="feedback-row">
                     <button class="btn secondary" data-fb="easy"><img class="fb-ico" src="/img/pt/barnaby-easy.png" alt="Barnaby the capybara meditating calmly"><br>Too easy</button>
                     <button class="btn secondary" data-fb="right"><img class="fb-ico" src="/img/pt/barnaby-right.png" alt="Barnaby the capybara doing a push-up, working hard"><br>Just right</button>
                     <button class="btn secondary" data-fb="hard"><img class="fb-ico" src="/img/pt/barnaby-hard.png" alt="Barnaby the capybara collapsed and exhausted"><br>Too hard</button>
                 </div>
-                <button class="btn secondary" id="btn-share" style="margin-top:14px;">Share progress ↗</button>
+                <button class="btn secondary mt-4" id="btn-share">Share progress ↗</button>
             </div>
         </section>
 
@@ -1616,7 +1747,7 @@ permalink: /personal-trainer/
                 <h1>Exercise <span>Library</span></h1>
                 <span></span>
             </header>
-            <p class="muted-note" style="margin-bottom:12px;">Tap ▶ to watch the form guide right here, or tap an exercise to read the cues and paste your own YouTube link.</p>
+            <p class="muted-note mb-3">Tap ▶ to watch the form guide right here, or tap an exercise to read the cues and paste your own YouTube link.</p>
             <div class="lib-actions">
                 <button class="btn secondary" id="btn-export">Export links</button>
                 <button class="btn secondary" id="btn-import">Import links</button>
@@ -1645,22 +1776,22 @@ permalink: /personal-trainer/
 
             <div class="card">
                 <div class="section-title">Tiers</div>
-                <p class="muted-note" style="margin-bottom:10px;">Core Fitness and Mat Pilates each have their own score from 0 to 90. Every 18 points unlocks the next tier, and the bars on the home screen show how far along you are.</p>
+                <p class="muted-note mb-3">Core Fitness and Mat Pilates each have their own score from 0 to 90. Every 18 points unlocks the next tier, and the bars on the home screen show how far along you are.</p>
                 <div class="info-tier"><span class="tier-badge t1">T1</span><span>Beginner</span></div>
                 <div class="info-tier"><span class="tier-badge t2">T2</span><span>Novice</span></div>
                 <div class="info-tier"><span class="tier-badge t3">T3</span><span>Intermediate</span></div>
                 <div class="info-tier"><span class="tier-badge t4">T4</span><span>Advanced</span></div>
                 <div class="info-tier"><span class="tier-badge t5">T5</span><span>Elite</span></div>
-                <p class="muted-note" style="margin-top:10px;">Workouts draw exercises from your current tier and up to two tiers below it, so new challenges mix with familiar moves. Your Level stat is the average of both disciplines.</p>
+                <p class="muted-note mt-3">Workouts draw exercises from your current tier and up to two tiers below it, so new challenges mix with familiar moves. Your Level stat is the average of both disciplines.</p>
             </div>
 
             <div class="card">
                 <div class="section-title">Your feedback drives it</div>
-                <p class="muted-note" style="margin-bottom:10px;">After every workout you say how it felt, and both scores adjust:</p>
+                <p class="muted-note mb-3">After every workout you say how it felt, and both scores adjust:</p>
                 <div class="info-row"><span><img class="ico info-ico" src="/img/pt/feedback-easy.png" alt="">Too easy</span><span class="delta up">+8 points</span></div>
                 <div class="info-row"><span><img class="ico info-ico" src="/img/pt/feedback-right.png" alt="">Just right</span><span class="delta up">+4 points</span></div>
                 <div class="info-row"><span><img class="ico info-ico" src="/img/pt/feedback-hard.png" alt="">Too hard</span><span class="delta down">−5 points</span></div>
-                <p class="muted-note" style="margin-top:10px;">Honest answers keep the plan at the right pace — sandbagging just makes next time too easy.</p>
+                <p class="muted-note mt-3">Honest answers keep the plan at the right pace — sandbagging just makes next time too easy.</p>
             </div>
 
             <div class="card">
@@ -1668,7 +1799,7 @@ permalink: /personal-trainer/
                 <div class="info-row"><span>Tougher exercises</span><span class="muted-note">unlock at higher tiers</span></div>
                 <div class="info-row"><span>Reps &amp; hold times</span><span class="muted-note">grow roughly every 15 points</span></div>
                 <div class="info-row"><span>Rest between exercises</span><span class="muted-note">20s → 15s (T2) → 12s (T4)</span></div>
-                <p class="muted-note" style="margin-top:10px;">Each exercise has its own cap, so doses grow to a sensible limit rather than forever.</p>
+                <p class="muted-note mt-3">Each exercise has its own cap, so doses grow to a sensible limit rather than forever.</p>
             </div>
 
             <div class="card">
@@ -1683,7 +1814,7 @@ permalink: /personal-trainer/
                 <div class="info-row"><span><img class="ico info-ico" src="/img/pt/achievements.png" alt="">Achievements</span><span class="muted-note">badges unlock as you train</span></div>
                 <div class="info-row"><span><img class="ico info-ico" src="/img/pt/records.png" alt="">Records</span><span class="muted-note">best hold &amp; rep count per exercise</span></div>
                 <div class="info-row"><span><img class="ico info-ico" src="/img/pt/streak-chain.png" alt="">The chain</span><span class="muted-note">History marks every day you show up</span></div>
-                <p class="muted-note" style="margin-top:10px;">Focus days, endurance rounds, speedy rests and surprise finishers keep sessions fresh, while the weekly bar and the chain make consistency visible. A record is the biggest dose you actually finish — skipped exercises don't count — so your plank holds and rep counts climb as you do. Show up, tap done, keep the chain alive.</p>
+                <p class="muted-note mt-3">Focus days, endurance rounds, speedy rests and surprise finishers keep sessions fresh, while the weekly bar and the chain make consistency visible. A record is the biggest dose you actually finish — skipped exercises don't count — so your plank holds and rep counts climb as you do. Show up, tap done, keep the chain alive.</p>
             </div>
         </section>
 
@@ -1694,7 +1825,7 @@ permalink: /personal-trainer/
                 <h1>Your <span>Achievements</span></h1>
                 <span></span>
             </header>
-            <p class="muted-note" id="ach-count" style="margin-bottom:12px;"></p>
+            <p class="muted-note mb-3" id="ach-count"></p>
             <div id="ach-grid"></div>
         </section>
 
@@ -1705,7 +1836,7 @@ permalink: /personal-trainer/
                 <h1>Your <span>Records</span></h1>
                 <span></span>
             </header>
-            <p class="muted-note" id="rec-note" style="margin-bottom:12px;"></p>
+            <p class="muted-note mb-3" id="rec-note"></p>
             <div id="records-list"></div>
         </section>
     </div>
@@ -1723,7 +1854,7 @@ permalink: /personal-trainer/
                     <div class="info-row"><span><img class="ico info-ico" src="/img/pt/warmup.png" alt="">Warm-up</span><span class="muted-note">3 easy moves</span></div>
                     <div class="info-row"><span>💪 Main circuit</span><span class="muted-note">Core + Pilates, alternating</span></div>
                     <div class="info-row"><span><img class="ico info-ico" src="/img/pt/cooldown.png" alt="">Cool-down</span><span class="muted-note">3 stretches</span></div>
-                    <p class="muted-note" style="margin-top:10px;">Your session length sets the time budget, then the main circuit is filled with as many exercises as fit. Pick 40 minutes and the circuit repeats for a second round instead of just adding more moves.</p>
+                    <p class="muted-note mt-3">Your session length sets the time budget, then the main circuit is filled with as many exercises as fit. Pick 40 minutes and the circuit repeats for a second round instead of just adding more moves.</p>
                 </div>
 
                 <div class="card">
@@ -1743,14 +1874,14 @@ permalink: /personal-trainer/
 
                 <div class="card">
                     <div class="section-title">Not feeling this mix?</div>
-                    <p class="muted-note">Tap 🔀 on the preview screen to reshuffle before you start — as many times as you like, no penalty. Once you're training, your post-workout feedback (too easy / just right / too hard) is what actually moves the difficulty needle — see <strong style="color:var(--text);">How Progression Works</strong> for that part.</p>
+                    <p class="muted-note">Tap 🔀 on the preview screen to reshuffle before you start — as many times as you like, no penalty. Once you're training, your post-workout feedback (too easy / just right / too hard) is what actually moves the difficulty needle — see <strong class="txt-strong">How Progression Works</strong> for that part.</p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const SW_VERSION = '2607252325';
+        const SW_VERSION = '2607260019';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -1973,15 +2104,6 @@ permalink: /personal-trainer/
 
         // Only trust http(s) URLs as clickable links/embeds; user-imported or pasted
         // values could otherwise carry a javascript:/data: URI.
-        function safeHref(url) {
-            if (!url) return '';
-            try {
-                const u = new URL(url, window.location.href);
-                if (u.protocol === 'http:' || u.protocol === 'https:') return url;
-            } catch (e) { /* invalid URL */ }
-            return '';
-        }
-
         // =====================================================
         // State
         // =====================================================
@@ -2680,7 +2802,7 @@ permalink: /personal-trainer/
                         <div class="mid"><div class="nm">${a.name}</div><div class="mini-bar"><div style="width:${Math.round(ratio * 100)}%"></div></div></div>
                         <span class="pct">${Math.floor(Math.min(cur, a.target))}/${a.target}</span>
                     </div>`).join('')
-                : '<p class="muted-note" style="margin-top:8px;">All badges unlocked — legend. 🏆</p>';
+                : '<p class="muted-note mt-2">All badges unlocked — legend. 🏆</p>';
         }
 
         // The 3 most recently improved records
@@ -2688,7 +2810,7 @@ permalink: /personal-trainer/
             const el = document.getElementById('rec-preview');
             const entries = Object.entries(state.records || {});
             if (!entries.length) {
-                el.innerHTML = '<p class="muted-note" style="margin-top:8px;">Finish exercises in a workout to set your first records.</p>';
+                el.innerHTML = '<p class="muted-note mt-2">Finish exercises in a workout to set your first records.</p>';
                 return;
             }
             const rows = entries
@@ -2732,8 +2854,8 @@ permalink: /personal-trainer/
 
             const mins = Math.round(w.totalSecs / 60);
             list.innerHTML =
-                `<p class="muted-note" style="margin-bottom:6px;">≈ ${mins} min · ${w.main.length} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level · tap ▶ to preview</p>` +
-                (w.twist ? `<p class="muted-note" style="margin-bottom:6px;"><img class="ico twist-ico" src="/img/pt/twists.png" alt="">Today's twist: <strong style="color:var(--text);">${w.twist.label}</strong> — ${w.twist.desc}</p>` : '') +
+                `<p class="muted-note mb-2">≈ ${mins} min · ${w.main.length} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level · tap ▶ to preview</p>` +
+                (w.twist ? `<p class="muted-note mb-2"><img class="ico twist-ico" src="/img/pt/twists.png" alt="">Today's twist: <strong class="txt-strong">${w.twist.label}</strong> — ${w.twist.desc}</p>` : '') +
                 section('Warm-up', w.warmups) +
                 section(w.rounds > 1 ? `Main circuit — ${w.rounds} rounds` : 'Main workout', w.main) +
                 section('Cool-down', w.cooldowns);
@@ -3770,7 +3892,7 @@ permalink: /personal-trainer/
                         return `<div class="rec-item">
                             <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
                             <div class="rec-main">
-                                <div class="rec-head"><span class="name">${ex.name}${ex.perSide ? ' <span style="color:var(--muted);font-weight:400;font-size:0.75rem;">/side</span>' : ''}</span><span class="rec-best">${rec.best}${unit}</span></div>
+                                <div class="rec-head"><span class="name">${ex.name}${ex.perSide ? ' <span class="side-note">/side</span>' : ''}</span><span class="rec-best">${rec.best}${unit}</span></div>
                                 <div class="rec-bar"><div style="width:${pct}%"></div></div>
                                 <div class="rec-sub">${gain > 0 ? `<span class="gain">▲ +${gain}${unit}</span> since first (${first}${unit})` : 'first record set'} · cap ${ex.max}${unit}</div>
                             </div>
@@ -3799,7 +3921,14 @@ permalink: /personal-trainer/
         }
 
         // Short confetti burst to make finishing feel like a win
+        // Canvas animation, so the reduced-motion media query can't reach it — the
+        // check has to happen here.
+        function prefersReducedMotion() {
+            return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        }
+
         function celebrate() {
+            if (prefersReducedMotion()) return;
             const canvas = document.createElement('canvas');
             canvas.className = 'confetti';
             document.body.appendChild(canvas);
@@ -3844,7 +3973,7 @@ permalink: /personal-trainer/
             }
             const totalMins = state.history.reduce((t, h) => t + h.mins, 0);
             list.innerHTML =
-                `<div class="muted-note" style="margin-bottom:8px;">🔥 Best streak ${Math.max(state.bestStreak || 0, state.streak)} · ⏱️ ${totalMins} min total</div>` +
+                `<div class="muted-note mb-2">🔥 Best streak ${Math.max(state.bestStreak || 0, state.streak)} · ⏱️ ${totalMins} min total</div>` +
                 state.history.slice().reverse().map((h) => `
                 <div class="hist-item">
                     <span class="fb">${FB_EMOJI[h.fb] || '💪'}</span>
@@ -3888,7 +4017,7 @@ permalink: /personal-trainer/
                     cells += `<div class="${cls}${t === today.getTime() ? ' td' : ''}"></div>`;
                 }
             }
-            return `<div class="hm">${cells}</div><p class="muted-note" style="margin:6px 0 12px;">Last 12 weeks — don’t break the chain.</p>`;
+            return `<div class="hm">${cells}</div><p class="muted-note mt-2 mb-3">Last 12 weeks — don’t break the chain.</p>`;
         }
 
         // =====================================================
