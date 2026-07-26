@@ -341,7 +341,7 @@ permalink: /crossfit-timer/
                  <button class="cf-back-btn" onclick="timer.goToPage('workout-selection')">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
-                <button class="cf-btn cf-btn-primary" onclick="timer.saveSettings()">
+                <button id="cf-save-settings-btn" class="cf-btn cf-btn-primary" onclick="timer.saveSettings()">
                     <i class="fas fa-save me-2"></i> Save Settings
                 </button>
             </div>
@@ -1780,7 +1780,7 @@ class CrossFitTimer {
         this.displayMode = settings.displayMode;
         
         // Show confirmation
-        const saveBtn = document.querySelector('.cf-btn-primary[onclick="timer.saveSettings()"]');
+        const saveBtn = document.getElementById('cf-save-settings-btn');
         const originalText = saveBtn.innerHTML;
         saveBtn.innerHTML = '<i class="fas fa-check me-2"></i> Saved!';
         saveBtn.classList.add('cf-btn-success');
