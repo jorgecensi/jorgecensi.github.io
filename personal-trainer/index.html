@@ -443,14 +443,19 @@ permalink: /personal-trainer/
             display: grid;
             grid-template-columns: 1fr;
             gap: var(--sp-3);
-            margin-top: var(--sp-4);
+            /* The discipline card above already carries a 16px bottom margin, so no
+               top margin here — otherwise the two stack into a 32px gap. */
+            margin-top: 0;
         }
 
-        /* Compact achievements / records cards on home */
+        /* Sit in the standard card rhythm. These used mixed top/bottom margins
+           that don't collapse in the flex column — doubling the gap above the
+           achievements card and leaving none between records and the weekly
+           card. A single bottom margin keeps every card the same 16px apart. */
         #ach-card,
         #rec-card {
-            margin-top: var(--sp-4);
-            margin-bottom: 0;
+            margin-top: 0;
+            margin-bottom: var(--sp-4);
         }
 
         .see-all {
@@ -665,6 +670,9 @@ permalink: /personal-trainer/
         #btn-generate {
             background: linear-gradient(135deg, #12c48a, #0fb7a4);
             box-shadow: 0 6px 20px rgb(var(--accent-rgb) / 36%);
+            /* .btn carries no bottom margin, so without this the hero button sits
+               flush against the consistency card directly below it. */
+            margin-bottom: var(--sp-4);
         }
         #btn-generate:active {
             box-shadow: 0 3px 12px rgb(var(--accent-rgb) / 28%);
