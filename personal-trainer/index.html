@@ -1653,6 +1653,13 @@ permalink: /personal-trainer/
                 </div>
                 <p class="muted-note mt-3">Voice calls the next move out loud so you can keep your eyes off the screen — useful face-down on a mat.</p>
             </div>
+            <div class="card">
+                <div class="section-title">Your data</div>
+                <p class="muted-note" id="backup-status">Everything is stored on this device only.</p>
+                <button class="btn secondary mt-3" id="btn-backup">Back up my data ↗</button>
+                <button class="btn secondary mt-3" id="btn-restore">Restore from a backup</button>
+                <input type="file" id="restore-file" accept=".json,application/json" style="display:none;">
+            </div>
             <p class="muted-note mb-4">All workouts mix core fitness and mat pilates — just a mat, no equipment. The plan adapts every session based on your feedback.</p>
             <button class="btn" id="setup-go">Let's go</button>
             <button class="btn secondary mt-3" id="nav-library"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
@@ -1915,7 +1922,7 @@ permalink: /personal-trainer/
     </div>
 
     <script>
-        const SW_VERSION = '2607260138';
+        const SW_VERSION = '2607260323';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -2142,6 +2149,15 @@ permalink: /personal-trainer/
         // State
         // =====================================================
         const STORAGE_KEY = 'pt-state-v1';
+        // The previous blob that parsed cleanly. Without it a single corrupt write is
+        // terminal: load falls back to defaults, and the next save overwrites the damaged
+        // (but possibly salvageable) original with an empty one.
+        // Declared here, not beside loadState(), because `state = loadState()` runs further
+        // up this file — a const declared below it would still be in the temporal dead zone.
+        const BACKUP_KEY = 'pt-state-v1-prev';
+        // Set during load, surfaced after boot: loadState() runs long before there is a
+        // rendered screen to show a message on.
+        let storageNotice = null;
         const LEVEL_START = { beginner: 0, intermediate: 36, advanced: 54 };
         const SCORE_PER_TIER = 18;
         const MAX_SCORE = SCORE_PER_TIER * 5; // tier 5 fully progressed
@@ -2168,7 +2184,8 @@ permalink: /personal-trainer/
                 frozenDates: [],
                 sound: true,
                 voice: true,
-                haptics: true
+                haptics: true,
+                lastBackup: null
             };
         }
 
@@ -2276,17 +2293,97 @@ permalink: /personal-trainer/
         }
 
         function loadState() {
+            let raw = null;
             try {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (raw) return Object.assign(defaultState(), JSON.parse(raw));
-            } catch (e) { /* corrupted state falls back to defaults */ }
-            return defaultState();
+                raw = localStorage.getItem(STORAGE_KEY);
+            } catch (e) {
+                storageNotice = 'Saved data could not be read — progress won’t persist this session.';
+                return defaultState();
+            }
+            if (!raw) return defaultState();
+
+            try {
+                const parsed = Object.assign(defaultState(), JSON.parse(raw));
+                try { localStorage.setItem(BACKUP_KEY, raw); } catch (e) { /* best-effort */ }
+                return parsed;
+            } catch (e) {
+                try {
+                    const prev = localStorage.getItem(BACKUP_KEY);
+                    if (prev) {
+                        const recovered = Object.assign(defaultState(), JSON.parse(prev));
+                        storageNotice = 'Saved data was damaged — restored your previous session. Back up from Settings.';
+                        return recovered;
+                    }
+                } catch (e2) { /* the backup is gone too — nothing left to recover */ }
+                storageNotice = 'Saved data was damaged and could not be recovered. Starting fresh.';
+                return defaultState();
+            }
         }
+
+        let saveFailed = false;
 
         function saveState() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            } catch (e) { /* storage full or unavailable (e.g. private browsing) */ }
+                saveFailed = false;
+            } catch (e) {
+                // The worst failure mode in the app: without this you keep training for
+                // weeks while nothing is written and nothing says so. Warn once, then stay
+                // quiet so it can't nag mid-workout.
+                if (!saveFailed) {
+                    saveFailed = true;
+                    showToast('<div><strong>⚠️ Progress isn’t being saved</strong><br>Storage is full or unavailable. Back up from Settings.</div>', 5000);
+                }
+            }
+        }
+
+        // ---- Backup / restore ----------------------------------------------------
+        // Everything lives in one localStorage key on one device, so a full export is the
+        // only thing standing between a cleared cache and losing every workout ever done.
+        // It goes through the share sheet because this is used as an installed phone PWA,
+        // where "save to Files/Drive" is a real destination and a download barely is.
+        const BACKUP_FORMAT = 1;
+
+        function buildBackupBlob() {
+            const payload = {
+                app: 'personal-trainer',
+                format: BACKUP_FORMAT,
+                exportedAt: new Date().toISOString(),
+                state
+            };
+            return new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        }
+
+        // Accepts either a wrapped backup or a bare state object, so a hand-edited file
+        // or an older shape still restores.
+        function parseBackup(text) {
+            const data = JSON.parse(text);
+            const incoming = data && data.state ? data.state : data;
+            if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+                throw new Error('not an object');
+            }
+            // Enough of a shape check to reject an unrelated JSON file without being so
+            // strict that a backup from a future version stops restoring.
+            if (!('prog' in incoming) && !('history' in incoming) && !('records' in incoming)) {
+                throw new Error('missing recognisable fields');
+            }
+            return Object.assign(defaultState(), incoming);
+        }
+
+        function backupSummary(s) {
+            const workouts = (s.history || []).length;
+            const records = Object.keys(s.records || {}).length;
+            const badges = Object.keys(s.achievements || {}).length;
+            return `${workouts} workout${workouts === 1 ? '' : 's'}, ${records} record${records === 1 ? '' : 's'}, ${badges} badge${badges === 1 ? '' : 's'}`;
+        }
+
+        // Ask the browser not to evict this origin under storage pressure. Installed PWAs
+        // are usually granted it without prompting; it is a no-op where unsupported.
+        function requestPersistentStorage() {
+            if (!navigator.storage || !navigator.storage.persist) return;
+            navigator.storage.persisted()
+                .then((already) => (already ? null : navigator.storage.persist()))
+                .catch(() => { /* best-effort */ });
         }
 
         function tierCap(score) {
@@ -2601,6 +2698,68 @@ permalink: /personal-trainer/
             saveState();
         });
         bindChoiceRow('setup-haptics', (v) => { state.haptics = v === 'on'; saveState(); });
+
+        document.getElementById('btn-backup').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-backup');
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Preparing…';
+            try {
+                const name = `personal-trainer-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                await shareImageBlob(buildBackupBlob(), name, 'Personal Trainer backup', backupSummary(state));
+                state.lastBackup = Date.now();
+                saveState();
+                renderBackupStatus();
+            } catch (e) {
+                // A cancelled share sheet lands here too, which is not worth reporting.
+                if (e && e.name !== 'AbortError') window.alert('Could not create the backup.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = original;
+            }
+        });
+
+        document.getElementById('btn-restore').addEventListener('click', () => {
+            document.getElementById('restore-file').click();
+        });
+
+        document.getElementById('restore-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            file.text().then((text) => {
+                let incoming;
+                try {
+                    incoming = parseBackup(text);
+                } catch (err) {
+                    window.alert('That doesn’t look like a Personal Trainer backup.');
+                    return;
+                }
+                // Restoring replaces everything, so name what is being traded away.
+                const ok = window.confirm(
+                    `Restore ${backupSummary(incoming)}?\n\nThis replaces what's on this device now (${backupSummary(state)}).`
+                );
+                if (!ok) return;
+                state = incoming;
+                saveState();
+                renderHome();
+                renderBackupStatus();
+                showToast(`<div><strong>✅ Restored</strong><br>${backupSummary(state)}</div>`, 3200);
+            }).catch(() => window.alert('Could not read that file.'));
+            e.target.value = '';
+        });
+
+        function renderBackupStatus() {
+            const el = document.getElementById('backup-status');
+            if (!el) return;
+            const summary = backupSummary(state);
+            if (!state.lastBackup) {
+                el.textContent = `${summary} on this device — never backed up.`;
+                return;
+            }
+            const days = Math.floor((Date.now() - state.lastBackup) / 86400000);
+            const when = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+            el.textContent = `${summary} on this device — last backed up ${when}.`;
+        }
         document.getElementById('setup-go').addEventListener('click', () => {
             const level = selectedValue('setup-level') || 'intermediate';
             state.duration = parseInt(selectedValue('setup-duration') || '25', 10);
@@ -2627,6 +2786,7 @@ permalink: /personal-trainer/
             markSelected('setup-sound', state.sound ? 'on' : 'off');
             markSelected('setup-voice', state.voice ? 'on' : 'off');
             markSelected('setup-haptics', state.haptics ? 'on' : 'off');
+            renderBackupStatus();
             if (state.level) markSelected('setup-level', state.level);
             document.getElementById('setup-back').style.display = '';
             navigate('setup');
@@ -3778,8 +3938,10 @@ permalink: /personal-trainer/
         }
 
         // Try the native share sheet with the image file; fall back to a plain download.
+        // Also used for the JSON backup, hence the blob's own type rather than a hardcoded
+        // image/png — every existing caller passes a PNG blob, so their behaviour is unchanged.
         async function shareImageBlob(blob, filename, title, text) {
-            const file = new File([blob], filename, { type: 'image/png' });
+            const file = new File([blob], filename, { type: blob.type || 'image/png' });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({ files: [file], title, text });
             } else {
@@ -4028,20 +4190,28 @@ permalink: /personal-trainer/
             }).join('');
         }
 
+        function showToast(innerHtml, ms, onDone) {
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.innerHTML = innerHtml;
+            document.body.appendChild(el);
+            requestAnimationFrame(() => el.classList.add('show'));
+            setTimeout(() => {
+                el.classList.remove('show');
+                setTimeout(() => { el.remove(); if (onDone) onDone(); }, 350);
+            }, ms);
+        }
+
         function showAchievementToasts(list) {
             let i = 0;
             const next = () => {
                 if (i >= list.length) return;
                 const a = list[i++];
-                const el = document.createElement('div');
-                el.className = 'toast';
-                el.innerHTML = `<img class="toast-mascot" src="/img/pt/barnaby-victory.png" alt=""><div><strong>${a.emoji} Achievement unlocked!</strong><br>${a.name}</div>`;
-                document.body.appendChild(el);
-                requestAnimationFrame(() => el.classList.add('show'));
-                setTimeout(() => {
-                    el.classList.remove('show');
-                    setTimeout(() => { el.remove(); next(); }, 350);
-                }, 2600);
+                showToast(
+                    `<img class="toast-mascot" src="/img/pt/barnaby-victory.png" alt=""><div><strong>${a.emoji} Achievement unlocked!</strong><br>${a.name}</div>`,
+                    2600,
+                    next
+                );
             };
             next();
         }
@@ -4156,6 +4326,10 @@ permalink: /personal-trainer/
         } else {
             show('setup');
         }
+        requestPersistentStorage();
+        // Reported after boot so the message lands on a rendered screen rather than a
+        // blank one. loadState() runs long before there is anything to show it on.
+        if (storageNotice) showToast(`<div><strong>⚠️ ${storageNotice}</strong></div>`, 6000);
     </script>
 </body>
 
