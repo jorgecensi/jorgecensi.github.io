@@ -3,3 +3,4 @@ _site/
 vendor
 .DS_Store
 .claude/worktrees/node_modules/
+node_modules/
