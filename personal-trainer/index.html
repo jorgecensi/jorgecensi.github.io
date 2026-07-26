@@ -51,6 +51,8 @@ permalink: /personal-trainer/
             --blue-rgb: 107 184 239;
             --warn-rgb: 251 191 36;
             --danger-rgb: 248 113 113;
+            /* Page background, as channels — used for the frosted sticky header. */
+            --bg-rgb: 15 21 33;
 
             /* ---- Type --------------------------------------------------------- */
             /* An 8-step ramp plus one off-ramp display size. Tight steps (~1.09) at
@@ -196,7 +198,22 @@ permalink: /personal-trainer/
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: var(--sp-1) 0 var(--sp-4);
+            /* Pin the header so the back button and title stay reachable while a
+               screen scrolls. Negative margins cancel #app's top-safe-area and
+               16px side padding so the stuck bar reaches every edge and tucks
+               under the notch; the same amounts are re-added as padding so the
+               title and buttons stay exactly where they were. A frosted fill +
+               hairline keeps scrolling content legible behind it. The player has
+               no .topbar, so it stays full-bleed and unaffected. */
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            margin: calc(-1 * (12px + env(safe-area-inset-top, 4px))) calc(-1 * var(--sp-4)) 0;
+            padding: calc(12px + env(safe-area-inset-top, 4px) + var(--sp-1)) var(--sp-4) var(--sp-3);
+            background: rgb(var(--bg-rgb) / 82%);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
         }
 
         header.topbar h1 {
