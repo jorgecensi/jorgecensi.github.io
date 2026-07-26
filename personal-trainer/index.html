@@ -1561,6 +1561,31 @@ permalink: /personal-trainer/
             font-weight: 700;
         }
 
+        /* Records take on each discipline's signature colour — Core orange, Pilates
+           blue — the same coding used on the home discipline card and progression
+           bars. It turns a flat wall of green into two groups that read apart at a
+           glance, and ties the records screen back into the rest of the app. The
+           tier badge keeps its own green→red difficulty ramp. */
+        .rec-group.core .rec-best,
+        .rec-group.core .rec-sub .gain,
+        .rec-prev-row.core .val,
+        .rec-prev-row.core .val .gain {
+            color: var(--orange);
+        }
+        .rec-group.core .rec-bar > div {
+            background: linear-gradient(90deg, #ef8a5f, #f0a874);
+        }
+
+        .rec-group.pilates .rec-best,
+        .rec-group.pilates .rec-sub .gain,
+        .rec-prev-row.pilates .val,
+        .rec-prev-row.pilates .val .gain {
+            color: var(--blue);
+        }
+        .rec-group.pilates .rec-bar > div {
+            background: linear-gradient(90deg, #6bb8ef, #8fcbf3);
+        }
+
         /* History heatmap */
         .hm {
             display: grid;
@@ -3093,7 +3118,7 @@ permalink: /personal-trainer/
                 const unit = r.type === 'secs' ? 's' : ' reps';
                 const first = r.hist.length ? r.hist[0].v : r.best;
                 const gain = r.best - first;
-                return `<div class="rec-prev-row"><span class="nm">${ex.name}</span><span class="val">${r.best}${unit}${gain > 0 ? ` <span class="gain">▲+${gain}</span>` : ''}</span></div>`;
+                return `<div class="rec-prev-row ${ex.disc}"><span class="nm">${ex.name}</span><span class="val">${r.best}${unit}${gain > 0 ? ` <span class="gain">▲+${gain}</span>` : ''}</span></div>`;
             }).join('');
         }
 
@@ -4229,7 +4254,7 @@ permalink: /personal-trainer/
                     .filter((e) => e && e.disc === disc)
                     .sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
                 if (!exs.length) return '';
-                return `<div class="card">
+                return `<div class="card rec-group ${disc}">
                     <div class="section-title">${disc === 'core' ? 'Core Fitness' : 'Mat Pilates'}</div>
                     ${exs.map((ex) => {
                         const rec = state.records[ex.id];
