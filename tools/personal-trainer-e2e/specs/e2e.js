@@ -101,6 +101,11 @@ const SHOTS = process.env.SHOTS_DIR;
     const scoreBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('pt-state-v1')).prog.core);
     await page.click('[data-fb="right"]');
     assert(await active() === 'home', 'home after feedback');
+    // Stats roll up with a count-up animation on Home entry; wait for it to settle.
+    await page.waitForFunction(
+        () => document.getElementById('stat-workouts').textContent.trim() === '1'
+            && document.getElementById('stat-streak').textContent.trim() === '1',
+        null, { timeout: 2000 });
     assert((await page.textContent('#stat-workouts')).trim() === '1', 'workout counted');
     assert((await page.textContent('#stat-streak')).trim() === '1', 'streak started');
     const scoreAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('pt-state-v1')).prog.core);
@@ -110,6 +115,9 @@ const SHOTS = process.env.SHOTS_DIR;
     // 7. Persistence across reload
     await page.reload();
     assert(await active() === 'home', 'home on return visit');
+    await page.waitForFunction(
+        () => document.getElementById('stat-workouts').textContent.trim() === '1',
+        null, { timeout: 2000 });
     assert((await page.textContent('#stat-workouts')).trim() === '1', 'history persisted');
 
     // 8. Library: add a YouTube link, verify indicator + persistence
