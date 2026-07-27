@@ -1772,6 +1772,42 @@ permalink: /personal-trainer/
             margin-top: var(--sp-2);
         }
 
+        /* Voice picker — a native select styled to match the choice tiles. The
+           voice list is device-supplied, so it can be long: a dropdown scales
+           where a choice-row of tiles would not. */
+        .voice-select {
+            width: 100%;
+            margin-top: var(--sp-3);
+            padding: var(--sp-3);
+            padding-right: 40px;
+            background-color: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: var(--r-md);
+            color: var(--text);
+            font-family: inherit;
+            font-size: var(--fs-md);
+            font-weight: 600;
+            -webkit-appearance: none;
+            appearance: none;
+            /* Inline chevron so we don't reach for an external asset. */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a97a8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right var(--sp-3) center;
+            background-size: 16px;
+        }
+
+        .voice-select:disabled {
+            opacity: 0.45;
+        }
+
+        /* A one-line explainer under a setting. */
+        .setting-hint {
+            font-size: var(--fs-2xs);
+            color: var(--muted);
+            line-height: 1.4;
+            margin-top: var(--sp-2);
+        }
+
         /* The preview list is the only scroll region inside a screen. */
         .scroll-fill {
             flex: 1;
@@ -1839,6 +1875,8 @@ permalink: /personal-trainer/
                     <div class="choice selected" data-v="on">On<small>Calls each move</small></div>
                     <div class="choice" data-v="off">Off<small>No speech</small></div>
                 </div>
+                <select id="setup-voice-picker" class="voice-select" aria-label="Voice"></select>
+                <div class="setting-hint">Voices come from your device. For a natural voice on iOS, download an <b>Enhanced</b> voice under Settings → Accessibility → Spoken Content → Voices, then pick it here.</div>
                 <div class="setting-label">Vibration</div>
                 <div class="choice-row cols-2" id="setup-haptics">
                     <div class="choice selected" data-v="on">On<small>Buzz on change</small></div>
@@ -2377,6 +2415,7 @@ permalink: /personal-trainer/
                 frozenDates: [],
                 sound: true,
                 voice: true,
+                voiceURI: null,
                 haptics: true,
                 lastBackup: null
             };
@@ -2918,6 +2957,29 @@ permalink: /personal-trainer/
             });
         }
 
+        // Rebuild the voice dropdown from the current device list. Safe to call
+        // repeatedly — on settings open, and whenever `voiceschanged` fires.
+        function populateVoicePicker() {
+            const sel = document.getElementById('setup-voice-picker');
+            if (!sel) return;
+            refreshVoices();
+            const auto = resolveVoice();
+            sel.innerHTML = '';
+            const optAuto = document.createElement('option');
+            optAuto.value = '';
+            optAuto.textContent = auto ? `Automatic — ${auto.name}` : 'Automatic';
+            sel.appendChild(optAuto);
+            rankedVoices().forEach((v) => {
+                const o = document.createElement('option');
+                o.value = v.voiceURI;
+                o.textContent = `${v.name} (${v.lang})`;
+                sel.appendChild(o);
+            });
+            // A saved voice absent on this device leaves value '' → shows Automatic.
+            sel.value = state.voiceURI || '';
+            sel.disabled = !state.voice;
+        }
+
         // ---- Setup ----
         bindChoiceRow('setup-level', () => {});
         bindChoiceRow('setup-duration', () => {});
@@ -2928,7 +2990,15 @@ permalink: /personal-trainer/
         bindChoiceRow('setup-voice', (v) => {
             state.voice = v === 'on';
             if (!state.voice) stopSpeaking();
+            const picker = document.getElementById('setup-voice-picker');
+            if (picker) picker.disabled = !state.voice;
             saveState();
+        });
+        document.getElementById('setup-voice-picker').addEventListener('change', (e) => {
+            state.voiceURI = e.target.value || null;
+            saveState();
+            // Speak a short confirmation so the new voice is audible right away.
+            if (state.voice) speak('Voice set', true);
         });
         bindChoiceRow('setup-haptics', (v) => { state.haptics = v === 'on'; saveState(); });
 
@@ -3018,6 +3088,7 @@ permalink: /personal-trainer/
             markSelected('setup-goal', state.weeklyGoal || 3);
             markSelected('setup-sound', state.sound ? 'on' : 'off');
             markSelected('setup-voice', state.voice ? 'on' : 'off');
+            populateVoicePicker();
             markSelected('setup-haptics', state.haptics ? 'on' : 'off');
             renderBackupStatus();
             if (state.level) markSelected('setup-level', state.level);
@@ -3452,6 +3523,64 @@ permalink: /personal-trainer/
             try { navigator.vibrate(HAPTICS[name] || name); } catch (e) { /* haptics are optional */ }
         }
 
+        // ---- Voice selection ----
+        // The Web Speech voice list is supplied by the OS/browser and loads
+        // asynchronously: the first getVoices() is often empty until the engine
+        // fires `voiceschanged` (and it fires again when the user downloads a new
+        // voice). We can't ship our own voice — we can only pick from the device.
+        let availableVoices = [];
+
+        function refreshVoices() {
+            if (!('speechSynthesis' in window)) return;
+            try {
+                const v = window.speechSynthesis.getVoices();
+                if (v && v.length) availableVoices = v;
+            } catch (e) { /* speech is optional */ }
+        }
+
+        // Rank voices so "Automatic" lands on the most natural one present.
+        // iOS ships a "compact" (robotic) default; its Enhanced/Premium variants
+        // — and Neural voices elsewhere — sound markedly better when installed.
+        function voiceScore(v) {
+            const name = (v.name || '').toLowerCase();
+            let s = 0;
+            if (/enhanced|premium|neural/.test(name)) s += 10;
+            if (/compact/.test(name)) s -= 5;
+            if (v.localService) s += 1; // on-device → no network lag mid-timer
+            return s;
+        }
+
+        function englishVoices() {
+            return availableVoices.filter((v) => /^en(-|$)/i.test(v.lang || ''));
+        }
+
+        // The list "Automatic" chooses from, best first: English voices if any,
+        // otherwise whatever the device offers.
+        function rankedVoices() {
+            const pool = englishVoices();
+            return (pool.length ? pool : availableVoices)
+                .slice()
+                .sort((a, b) => voiceScore(b) - voiceScore(a));
+        }
+
+        function resolveVoice() {
+            if (!availableVoices.length) return null;
+            if (state.voiceURI) {
+                const chosen = availableVoices.find((v) => v.voiceURI === state.voiceURI);
+                if (chosen) return chosen;
+                // Saved voice isn't on this device — fall through to Automatic.
+            }
+            return rankedVoices()[0] || null;
+        }
+
+        if ('speechSynthesis' in window) {
+            refreshVoices();
+            window.speechSynthesis.addEventListener('voiceschanged', () => {
+                refreshVoices();
+                populateVoicePicker();
+            });
+        }
+
         // `interrupt` drops anything still queued — at an interval boundary the previous
         // announcement is stale, and letting utterances pile up puts the voice further
         // and further behind the timer.
@@ -3461,6 +3590,8 @@ permalink: /personal-trainer/
                 if (interrupt) window.speechSynthesis.cancel();
                 const u = new SpeechSynthesisUtterance(text);
                 u.rate = 1.05;
+                const v = resolveVoice();
+                if (v) { u.voice = v; u.lang = v.lang; }
                 window.speechSynthesis.speak(u);
             } catch (e) { /* speech is optional */ }
         }
