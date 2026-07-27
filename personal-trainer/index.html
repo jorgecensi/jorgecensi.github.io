@@ -1337,6 +1337,89 @@ permalink: /personal-trainer/
             50% { opacity: 1; transform: scale(1.1); }
         }
 
+        /* ---- "Fun" animations ------------------------------------------------- */
+        /* All of these are one-shot delights layered on top of the app's core
+           motion. They live behind class toggles so the JS re-triggers them at the
+           right beat, and the prefers-reduced-motion block above collapses every
+           one of them to ~0ms. */
+
+        /* Player: each new exercise/prep title settles in so a step change reads as
+           a change even when you're mid-effort and not staring at the screen. */
+        @keyframes exercise-in {
+            from { opacity: 0; transform: translateY(10px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .exercise-in {
+            animation: exercise-in var(--dur-base) var(--ease-standard);
+        }
+
+        /* Player: final-3s heartbeat. The digits throb and the ring glow swells so
+           the count-in registers peripherally, matching the 3-2-1 beeps/haptics. */
+        @keyframes count-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.12); }
+        }
+        #player-display.counting-down {
+            animation: count-pulse 1s var(--ease-standard) infinite;
+            color: var(--warn);
+        }
+        .player-timer.counting-down .timer-ring-fill {
+            stroke: var(--warn);
+            filter: drop-shadow(0 0 8px rgb(var(--warn-rgb) / 85%));
+        }
+
+        /* Rep "Done": a quick confirm pop on the button when a rep set is logged. */
+        @keyframes done-pop {
+            0% { transform: scale(1); }
+            35% { transform: scale(0.9); }
+            70% { transform: scale(1.06); }
+            100% { transform: scale(1); }
+        }
+        .done-pop {
+            animation: done-pop var(--dur-base) var(--ease-standard);
+        }
+
+        /* Home: a discipline tier label/bar pops when you cross into a new tier. */
+        @keyframes tier-pop {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.18); }
+            100% { transform: scale(1); }
+        }
+        .tier-pop {
+            animation: tier-pop var(--dur-slow) var(--ease-standard);
+            display: inline-block;
+        }
+
+        /* Home: streak flame throws a celebratory pop when the streak hits a
+           milestone (3/7/14/…). Bigger and springier than the day-to-day pulse. */
+        @keyframes streak-milestone {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.35); }
+            55% { transform: scale(0.92); }
+            100% { transform: scale(1); }
+        }
+        .streak-badge.streak-milestone {
+            animation: streak-milestone 0.7s var(--ease-standard);
+        }
+
+        /* Home: consistency cells light up in sequence so the chain reads as
+           earned rather than just appearing. Delay is set inline per-cell in JS. */
+        @keyframes cell-in {
+            from { opacity: 0; transform: scale(0.4); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .hm.cascade div.on,
+        .hm.cascade div.goal,
+        .hm.cascade div.frozen {
+            animation: cell-in var(--dur-base) var(--ease-standard) both;
+        }
+
+        /* Let the home achievement mini-bars sweep on entry like the discipline
+           bars already do (the discipline bars carry this on .level-bar > div). */
+        #ach-progress .mini-bar > div {
+            transition: width var(--dur-slow) var(--ease-standard);
+        }
+
         .topbar h1 .ico {
             width: 1.5em;
             height: 1.5em;
@@ -2673,6 +2756,46 @@ permalink: /personal-trainer/
         function show(id) {
             document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
             window.scrollTo(0, 0);
+            // renderHome() has already painted the bars/heatmap at their final
+            // values by now, so replay them as an entrance once the screen is up.
+            if (id === 'home') requestAnimationFrame(playHomeEntryAnimations);
+        }
+
+        // The stat values shown just before the last renderHome(), so the entry
+        // count-up can roll from them to the current values.
+        let homeCountFrom = { workouts: 0, streak: 0 };
+
+        // Sweep the progress bars up from zero and light the consistency chain cell
+        // by cell each time Home appears — the numbers just changed, so make the
+        // page feel like it's catching up to them. No-op under reduced motion.
+        function playHomeEntryAnimations() {
+            if (prefersReducedMotion()) return;
+            // Roll the two numeric stats from their previous value up to the current
+            // one (a no-op when nothing changed, e.g. a casual visit to Home).
+            animateCount(document.getElementById('stat-workouts'), homeCountFrom.workouts, state.history.length);
+            animateCount(document.getElementById('stat-streak'), homeCountFrom.streak, state.streak);
+            const bars = [
+                document.getElementById('core-bar'),
+                document.getElementById('pilates-bar'),
+                ...document.querySelectorAll('#ach-progress .mini-bar > div')
+            ];
+            bars.forEach((bar, i) => {
+                if (!bar) return;
+                const target = bar.style.width || '0%';
+                bar.style.transition = 'none';
+                bar.style.width = '0%';
+                void bar.getBoundingClientRect(); // flush the zero before re-enabling transition
+                setTimeout(() => {
+                    bar.style.transition = '';
+                    bar.style.width = target;
+                }, 60 + i * 90);
+            });
+            const hm = document.querySelector('#home-heatmap .hm');
+            if (hm) {
+                hm.classList.add('cascade');
+                hm.querySelectorAll('div.on, div.goal, div.frozen')
+                    .forEach((c, i) => { c.style.animationDelay = `${i * 16}ms`; });
+            }
         }
 
         function activeScreenId() {
@@ -3056,8 +3179,15 @@ permalink: /personal-trainer/
 
         function renderHome() {
             document.getElementById('stat-level').textContent = levelLabel();
-            document.getElementById('stat-workouts').textContent = state.history.length;
-            document.getElementById('stat-streak').textContent = state.streak;
+            // Set the numeric stats to their final value synchronously so the DOM is
+            // always in sync with state; the count-up "roll" is a separate entrance
+            // flourish played only when Home actually appears (playHomeEntryAnimations),
+            // using the value that was on screen just before this render.
+            const wEl = document.getElementById('stat-workouts');
+            const sEl = document.getElementById('stat-streak');
+            homeCountFrom = { workouts: parseInt(wEl.textContent, 10) || 0, streak: parseInt(sEl.textContent, 10) || 0 };
+            wEl.textContent = state.history.length;
+            sEl.textContent = state.streak;
             applyStreakGlow(state.streak);
             ['core', 'pilates'].forEach((disc) => {
                 const score = state.prog[disc];
@@ -3238,6 +3368,7 @@ permalink: /personal-trainer/
         document.getElementById('btn-main-action').addEventListener('click', () => {
             const item = currentWorkout.items[player.idx];
             if (item.kind === 'work' && item.ex.type === 'reps') {
+                retriggerAnim(document.getElementById('btn-main-action'), 'done-pop');
                 recordCompletion(item);
                 advance();
             } else {
@@ -3432,6 +3563,15 @@ permalink: /personal-trainer/
             player.videoExId = ex.id;
         }
 
+        // Restart a one-shot CSS animation: drop the class, force a reflow so the
+        // browser sees the element as un-animated, then re-add it.
+        function retriggerAnim(el, cls) {
+            if (!el) return;
+            el.classList.remove(cls);
+            void el.offsetWidth;
+            el.classList.add(cls);
+        }
+
         function loadItem() {
             stopTimer();
             const items = currentWorkout.items;
@@ -3449,6 +3589,10 @@ permalink: /personal-trainer/
             const cuesEl = document.getElementById('player-cues');
             const mistakeEl = document.getElementById('player-mistake');
             const actionBtn = document.getElementById('btn-main-action');
+
+            // Settle the title in on every step so a move change reads as a change.
+            // Text is set synchronously below, so it's already in place before paint.
+            retriggerAnim(nameEl, 'exercise-in');
 
             document.getElementById('player-bar').style.width = `${(player.idx / items.length) * 100}%`;
 
@@ -3569,14 +3713,20 @@ permalink: /personal-trainer/
 
         function startCountdown(secs) {
             const displayEl = document.getElementById('player-display');
+            const timerEl = document.getElementById('player-timer');
             player.remaining = secs;
             displayEl.textContent = fmtTime(player.remaining);
+            // Fresh interval starts calm — the final-seconds heartbeat is added below.
+            displayEl.classList.remove('counting-down');
+            timerEl.classList.remove('counting-down');
             setTimerRing(1, false);
             player.timer = setInterval(() => {
                 if (player.paused) return;
                 player.remaining -= 1;
                 if (player.remaining <= 0) {
                     setTimerRing(0, true);
+                    displayEl.classList.remove('counting-down');
+                    timerEl.classList.remove('counting-down');
                     const item = currentWorkout.items[player.idx];
                     if (item && item.kind === 'work') recordCompletion(item);
                     advance();
@@ -3588,6 +3738,9 @@ permalink: /personal-trainer/
                 // on a 10s hold "halfway" would land almost on top of the 3-2-1.
                 if (secs >= 20 && player.remaining === Math.round(secs / 2)) speak('Halfway');
                 if (player.remaining <= 3) {
+                    // Digits throb and the ring glow swells for the final 3-2-1.
+                    displayEl.classList.add('counting-down');
+                    timerEl.classList.add('counting-down');
                     beep(660);
                     haptic('countdown');
                     // Not interrupting: these are one word each and must not cut each
@@ -3639,10 +3792,23 @@ permalink: /personal-trainer/
 
         const FEEDBACK_DELTA = { easy: 8, right: 4, hard: -5 };
 
+        const DISC_NAMES = { core: 'Core Fitness', pilates: 'Mat Pilates' };
+        // Discipline-flavoured confetti palettes (Core orange, Pilates blue), each
+        // with a couple of accent flecks so a tier-up burst reads as "that one".
+        const DISC_CONFETTI = {
+            core: ['#ef8a5f', '#f0a874', '#fbbf24'],
+            pilates: ['#6bb8ef', '#8fcbf3', '#3ecf8e']
+        };
+        const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
+
         document.querySelectorAll('#complete [data-fb]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const fb = btn.dataset.fb;
                 const delta = FEEDBACK_DELTA[fb];
+                // Snapshot what a reward would be measured against, before we mutate.
+                const beforeTier = { core: tierCap(state.prog.core), pilates: tierCap(state.prog.pilates) };
+                const beforeStreak = state.streak;
+
                 ['core', 'pilates'].forEach((disc) => {
                     state.prog[disc] = Math.max(0, Math.min(MAX_SCORE, state.prog[disc] + delta));
                 });
@@ -3664,8 +3830,35 @@ permalink: /personal-trainer/
                 const unlocked = checkAchievements();
                 saveState();
                 goHome();
-                celebrate();
-                if (unlocked.length) showAchievementToasts(unlocked);
+
+                // ---- Celebrate the payoff, richest moment first ------------------
+                const tierUps = ['core', 'pilates'].filter((d) => tierCap(state.prog[d]) > beforeTier[d]);
+                const streakMilestone = state.streak > beforeStreak && STREAK_MILESTONES.includes(state.streak);
+
+                // A tier-up upgrades the finish confetti to that discipline's colours
+                // and a fuller burst; otherwise the usual celebratory shower.
+                if (tierUps.length) celebrate({ colors: DISC_CONFETTI[tierUps[0]], count: 130 });
+                else celebrate();
+
+                // Pop the tier label(s) on the now-visible home screen.
+                tierUps.forEach((d) => retriggerAnim(document.getElementById(`${d}-tier`), 'tier-pop'));
+
+                // Streak milestone: the flame badge throws a pop; add an orange
+                // shower too when it isn't already sharing the stage with a tier-up.
+                if (streakMilestone) {
+                    retriggerAnim(document.getElementById('stat-streak-badge'), 'streak-milestone');
+                    if (!tierUps.length) celebrate({ colors: DISC_CONFETTI.core, count: 70 });
+                }
+
+                // Queue every reward toast so they play in turn, not on top of each other.
+                const toasts = [];
+                tierUps.forEach((d) => toasts.push(
+                    `<div><strong>⭐ Tier up!</strong><br>${DISC_NAMES[d]} → Tier ${tierCap(state.prog[d])} of 5</div>`));
+                if (streakMilestone) toasts.push(
+                    `<img class="toast-mascot" src="/img/pt/barnaby-victory.png" alt=""><div><strong>🔥 ${state.streak}-workout streak!</strong><br>Keep the chain alive.</div>`);
+                unlocked.forEach((a) => toasts.push(
+                    `<img class="toast-mascot" src="/img/pt/barnaby-victory.png" alt=""><div><strong>${a.emoji} Achievement unlocked!</strong><br>${a.name}</div>`));
+                playToastQueue(toasts);
             });
         });
 
@@ -4313,15 +4506,17 @@ permalink: /personal-trainer/
         }
 
         function showAchievementToasts(list) {
+            playToastQueue(list.map((a) =>
+                `<img class="toast-mascot" src="/img/pt/barnaby-victory.png" alt=""><div><strong>${a.emoji} Achievement unlocked!</strong><br>${a.name}</div>`));
+        }
+
+        // Play a list of toast bodies one after another so tier-up, streak and
+        // achievement rewards queue instead of stacking on top of each other.
+        function playToastQueue(list) {
             let i = 0;
             const next = () => {
                 if (i >= list.length) return;
-                const a = list[i++];
-                showToast(
-                    `<img class="toast-mascot" src="/img/pt/barnaby-victory.png" alt=""><div><strong>${a.emoji} Achievement unlocked!</strong><br>${a.name}</div>`,
-                    2600,
-                    next
-                );
+                showToast(list[i++], 2600, next);
             };
             next();
         }
@@ -4333,16 +4528,35 @@ permalink: /personal-trainer/
             return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         }
 
-        function celebrate() {
+        // Roll a number from `from` to `to` over `ms`, so a stat that just changed
+        // reads as "going up" rather than snapping. Jumps straight to the final
+        // value under reduced motion (or when there's nothing to animate).
+        function animateCount(el, from, to, ms = 650) {
+            if (!el) return;
+            if (prefersReducedMotion() || from === to) { el.textContent = String(to); return; }
+            const t0 = performance.now();
+            const step = (t) => {
+                const p = Math.min(1, (t - t0) / ms);
+                // easeOutCubic — quick then settling, so the last digits land softly.
+                const eased = 1 - Math.pow(1 - p, 3);
+                el.textContent = String(Math.round(from + (to - from) * eased));
+                if (p < 1) requestAnimationFrame(step);
+                else el.textContent = String(to);
+            };
+            requestAnimationFrame(step);
+        }
+
+        function celebrate(opts = {}) {
             if (prefersReducedMotion()) return;
+            const colors = opts.colors || ['#3ecf8e', '#6bb8ef', '#ef8a5f', '#fbbf24'];
+            const count = opts.count || 90;
             const canvas = document.createElement('canvas');
             canvas.className = 'confetti';
             document.body.appendChild(canvas);
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             const ctx = canvas.getContext('2d');
-            const colors = ['#3ecf8e', '#6bb8ef', '#ef8a5f', '#fbbf24'];
-            const parts = Array.from({ length: 90 }, () => ({
+            const parts = Array.from({ length: count }, () => ({
                 x: Math.random() * canvas.width,
                 y: -20 - Math.random() * canvas.height * 0.4,
                 r: 3 + Math.random() * 5,
