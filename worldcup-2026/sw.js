@@ -14,7 +14,9 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS.map((url) => new Request(url, { cache: 'reload' })))));
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => Promise.all(
+    PRECACHE_URLS.map((url) => cache.add(new Request(url, { cache: 'reload' })).catch((err) => console.warn(`Precache failed for ${url}`, err)))
+  )));
 });
 self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys().then((cacheNames) => Promise.all(cacheNames.map((cacheName) => {

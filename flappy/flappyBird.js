@@ -70,18 +70,18 @@ class FlappyBird {
             { key: 'score', src: '/sounds/score.mp3' }
         ];
         
-        // Load images
-        for (const file of imageFiles) {
+        // Load images in parallel
+        await Promise.all(imageFiles.map(file => {
             this.images[file.key] = new Image();
             this.images[file.key].src = file.src;
-            await new Promise(resolve => {
+            return new Promise(resolve => {
                 this.images[file.key].onload = resolve;
                 this.images[file.key].onerror = () => {
                     console.error(`Failed to load image: ${file.src}`);
                     resolve();
                 };
             });
-        }
+        }));
         
         // Load sounds
         for (const file of soundFiles) {

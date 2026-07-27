@@ -215,7 +215,7 @@ permalink: /crossfit-timer/
                     </div>
 
                     <!-- Circular Timer Display -->
-                    <div class="cf-circular-timer" style="display: none;" id="progress-container">
+                    <div class="cf-circular-timer" style="display: none;" id="progress-container" role="button" tabindex="0" aria-label="Pause or resume timer">
                         <svg class="cf-circular-progress" viewBox="0 0 200 200">
                             <circle cx="100" cy="100" r="90" class="cf-progress-background"></circle>
                             <circle cx="100" cy="100" r="90" class="cf-progress-circle" id="progress-bar"></circle>
@@ -227,7 +227,7 @@ permalink: /crossfit-timer/
                             <i class="fas fa-pause"></i>
                         </div>
                     </div>
-                    <div class="cf-crossfit-clock" id="crossfit-clock-display" style="display: none;" aria-live="polite">
+                    <div class="cf-crossfit-clock" id="crossfit-clock-display" style="display: none;" aria-live="polite" role="button" tabindex="0" aria-label="Pause or resume clock">
                         <div class="cf-class-clock-six" id="class-clock-six">
                             <span class="cf-class-clock-digit">U</span>
                             <span class="cf-class-clock-digit">P</span>
@@ -1714,8 +1714,16 @@ class CrossFitTimer {
                 }
             }
         };
+        const handleTimerSurfaceKeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleTimerSurfaceClick();
+            }
+        };
         this.progressContainer.addEventListener('click', handleTimerSurfaceClick);
+        this.progressContainer.addEventListener('keydown', handleTimerSurfaceKeydown);
         this.crossfitClockDisplay.addEventListener('click', handleTimerSurfaceClick);
+        this.crossfitClockDisplay.addEventListener('keydown', handleTimerSurfaceKeydown);
 
         window.addEventListener('resize', () => this.updateClockLandscapeGate());
         window.addEventListener('orientationchange', () => this.updateClockLandscapeGate());
@@ -1732,6 +1740,7 @@ class CrossFitTimer {
     }
     
     async initializeAudio() {
+        if (this.audioContext) return;
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         } catch (e) {
