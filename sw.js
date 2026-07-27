@@ -8,7 +8,7 @@ self.addEventListener("activate", (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName === "site-pwa-v2") {
+          if (cacheName.startsWith("site-pwa-")) {
             return caches.delete(cacheName);
           }
           return Promise.resolve();

@@ -906,6 +906,12 @@ title: Music Theory
         samplerReady = true;
         document.getElementById('keyboard-loading').classList.add('hidden');
       },
+      onerror: (err) => {
+        console.error('Failed to load piano samples', err);
+        const loading = document.getElementById('keyboard-loading');
+        const label = loading && loading.querySelector('span');
+        if (label) label.textContent = 'Could not load piano sounds. Check your connection and reload.';
+      },
     }).toDestination();
 
     function midiToNoteName(midi) {
