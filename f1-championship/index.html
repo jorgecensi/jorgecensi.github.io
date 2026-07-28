@@ -451,8 +451,6 @@ permalink: /f1-championship/
     .track-under { fill: none; stroke: #2a2740; stroke-width: 64; stroke-linejoin: round; stroke-linecap: round; }
     .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 72; stroke-linejoin: round; stroke-linecap: round; }
     .track-line  { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 2.5; stroke-dasharray: 10 14; }
-    .kerb-r { fill: #d83a3a; }
-    .kerb-w { fill: #e8e8e8; }
     .chase-label {
       font: 700 11px 'Inter', system-ui, sans-serif;
       text-anchor: middle; paint-order: stroke;
@@ -697,6 +695,7 @@ permalink: /f1-championship/
     </div>
     <div class="chase-main">
       <svg id="chase-svg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet">
+        <g id="chase-runoff"></g>
         <path id="chase-track-edge"  class="track-edge"/>
         <path id="chase-track-under" class="track-under"/>
         <path id="chase-track-line"  class="track-line"/>
@@ -1513,17 +1512,53 @@ const { TRACK_D, TRACK_BEZ, TRACK_WPI } = (() => {
 
 const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca',
   'bh', 'sa', 'cn', 'es', 'at', 'be', 'nl', 'br']);
+
+// What each race's stretch runs off into, following what its real circuit uses:
+// gravel where the traps have been reinstated, green-painted asphalt at the
+// classic permanent circuits, bare grey asphalt at the wide desert/modern ones,
+// and nothing but walls on the street stretches. A handful of circuits paint
+// their escape areas in colours you can identify them by — Yas Marina's "Yas
+// blue", Lusail's Sadu blue-into-orange, Spa's Belgian flag up through
+// Raidillon, Interlagos in Brazil's green and yellow, Miami in Art Deco
+// turquoise and pink.
+const RUNOFF = {
+  1: 'green',    2: 'asphalt',  3: 'gravel',  4: 'asphalt', 5: 'wall',  6: 'miami',
+  7: 'gravel',   8: 'wall',     9: 'green',  10: 'wall',   11: 'green', 12: 'green',
+  13: 'belgium', 14: 'gravel', 15: 'gravel', 16: 'green',  17: 'wall',  18: 'wall',
+  19: 'asphalt', 20: 'asphalt', 21: 'interlagos', 22: 'wall', 23: 'sadu', 24: 'yasblue'
+};
+// More than one colour = the escape area is banded, cycling along the stretch.
+const RUNOFF_FILL = {
+  green:      ['#2f6b3d'],
+  gravel:     ['#b09a6b'],
+  asphalt:    ['#5a5a66'],
+  yasblue:    ['#1e5aa8'],
+  sadu:       ['#2f6fb5', '#c8641e'],
+  belgium:    ['#1a1a1a', '#f0c419', '#d1272c'],
+  interlagos: ['#2e8b45', '#e8c516'],
+  miami:      ['#18b3a6', '#e0559b'],
+  wall:       ['#8a8a96']
+};
+// Kerbs carry the same national scheme where a circuit has one.
+const KERB_FILL = {
+  belgium:    ['#1a1a1a', '#f0c419', '#d1272c'],
+  interlagos: ['#2e8b45', '#e8c516'],
+  miami:      ['#18b3a6', '#e0559b']
+};
+const KERB_DEFAULT = ['#d83a3a', '#e8e8e8'];
+
 const CHASE = {
   ROUND_MS: 4200, LIGHT_MS: 600, FAST_LIGHT_MS: 340, MAX_PTS_DIST: 7,
   SIDE_LANE: 16, MAX_LANE_HALF: 26, GRID_COLS: 4, COL_STAGGER: 15, CLUSTER_GAP: 72, ROW_GAP: 46, LANE_SMOOTH: 0.08,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
-  LUT_N: 2600, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
+  LUT_N: 2600, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 112,
+  RUNOFF_MIN: 8, RUNOFF_MAX: 46, RUNOFF_STEP: 9, RUNOFF_BAND: 2, WALL_W: 7,
   CAM_MIN_W: 470, CAM_PAD: 130, CAM_LERP: 0.16, LABEL_DY: 20
 };
 
 const chase = {
   frames: [], seg: 0, u: 0, playing: false, raf: null, lastTs: 0,
-  path: null, L: 0, lut: [], sections: [], lastRound: 1, cars: [], timeouts: [], finished: false,
+  path: null, L: 0, lut: [], sections: [], clearance: [], lastRound: 1, cars: [], timeouts: [], finished: false,
   cam: null
 };
 
@@ -1575,6 +1610,7 @@ function buildChaseLUT() {
 // be planted on the corner it belongs to.
 function measureCircuitSections() {
   chase.sections = CIRCUIT.map((sec, i) => ({
+    i,
     round: sec.round,
     key: sec.key,
     d0: chase.wpCum[TRACK_WPI[i]],
@@ -2022,7 +2058,7 @@ function buildScenery() {
       const [name, w] = SCENERY[ti++ % SCENERY.length];
       const along = (rnd(d + r * 7.7) - 0.5) * 34;
       // Find a spot clear of the racing surface, pushing outward if needed.
-      let offv = 86 + r * 34 + rnd(d + r * 3.1) * 22, cx, cy, ok = false;
+      let offv = 124 + r * 34 + rnd(d + r * 3.1) * 22, cx, cy, ok = false;
       for (let t = 0; t < 4; t++) {
         cx = s.x + nx * offv + tx * along; cy = s.y + ny * offv + ty * along;
         if (!onTrack(cx, cy, w / 2 - 2)) { ok = true; break; }
@@ -2042,7 +2078,111 @@ function curveAt(d) {
   return da;
 }
 
-// Red-and-white kerbs on the inside edge (apex) of the tighter turns.
+// Which race's stretch a point on the lap belongs to.
+function sectionAt(d) {
+  const secs = chase.sections;
+  for (let i = 0; i < secs.length; i++) if (d >= secs[i].d0 && d < secs[i].d1) return secs[i];
+  return secs[secs.length - 1];
+}
+
+// How close the lap comes to another part of itself, sampled round the lap.
+// The escape areas are painted outward from the asphalt, so without this they
+// would meet in the middle wherever the circuit doubles back on itself (the
+// waist, and the Hungaroring infield running past Eau Rouge) and read as one
+// blob of colour instead of two separate stretches of track.
+function buildClearance() {
+  const lut = chase.lut, L = chase.L, N = lut.length, step = 4;
+  const out = [];
+  for (let i = 0; i < N; i += step) {
+    const di = (i / (N - 1)) * L;
+    let best = Infinity;
+    for (let j = 0; j < N; j += step) {
+      const dj = (j / (N - 1)) * L, gap = Math.abs(dj - di);
+      if (Math.min(gap, L - gap) < 400) continue;      // ignore our own stretch
+      const dx = lut[i].x - lut[j].x, dy = lut[i].y - lut[j].y;
+      const dd = dx * dx + dy * dy;
+      if (dd < best) best = dd;
+    }
+    out.push(Math.sqrt(best));
+  }
+  chase.clearance = out;
+}
+function clearanceAt(d) {
+  const c = chase.clearance;
+  if (!c || !c.length) return Infinity;
+  const L = chase.L, n = c.length;
+  const f = (((d % L) + L) % L) / L * n;      // interpolated: a stepped cap
+  const i = Math.floor(f), t = f - i;         // would notch the painted edge
+  return lerp(c[i % n], c[(i + 1) % n], t);
+}
+
+// How far the escape area reaches from the centre line at `d` on a given side.
+// It widens on the outside of a turn — the direction cars actually run wide —
+// and narrows to a verge down the straights. Shared with the tyre barriers so
+// they always sit at its outer edge rather than floating in the middle of it.
+function runoffWidth(d, side) {
+  const c = curveAt(d);
+  const outside = c > 0 ? -1 : 1;
+  const severity = Math.min(1, Math.abs(c) / 0.10);
+  const w = side === outside ? lerp(CHASE.RUNOFF_MIN, CHASE.RUNOFF_MAX, severity) : CHASE.RUNOFF_MIN;
+  // Leave a strip of grass wherever the lap runs back alongside itself, so the
+  // two stretches never paint into each other. Measured on the outer edge.
+  const room = clearanceAt(d) / 2 - 14 - TRACK_HALF;
+  return Math.max(0, Math.min(w, room)) * wallTaper(d);
+}
+
+// Street stretches have no escape area at all, so ease the neighbouring one
+// down to a verge as it reaches them rather than ending in a square step.
+function wallTaper(d) {
+  const secs = chase.sections;
+  if (!secs || !secs.length) return 1;
+  const sec = sectionAt(d), n = secs.length, TAPER = 45;
+  if (RUNOFF[sec.round] === 'wall') return 1;
+  let t = 1;
+  if (RUNOFF[secs[(sec.i - 1 + n) % n].round] === 'wall') t = Math.min(t, (d - sec.d0) / TAPER);
+  if (RUNOFF[secs[(sec.i + 1) % n].round] === 'wall') t = Math.min(t, (sec.d1 - d) / TAPER);
+  return Math.max(0, Math.min(1, t));
+}
+
+// The coloured escape areas, painted under the asphalt.
+function buildRunoff() {
+  const g = document.getElementById('chase-runoff');
+  if (!g) return;
+  const step = CHASE.RUNOFF_STEP;
+  let html = '';
+  (chase.sections || []).forEach(sec => {
+    const kind = RUNOFF[sec.round] || 'green';
+    const fills = RUNOFF_FILL[kind] || RUNOFF_FILL.green;
+    const wall = kind === 'wall';
+    // A single colour runs the length of the stretch in one piece; a banded
+    // scheme is cut into stripes so the colours alternate along it.
+    const bandLen = fills.length > 1 ? step * CHASE.RUNOFF_BAND : sec.d1 - sec.d0;
+    for (let side = -1; side <= 1; side += 2) {
+      let d = sec.d0, band = 0;
+      while (d < sec.d1 - 0.01) {
+        const dEnd = Math.min(d + bandLen, sec.d1);
+        const inner = [], outer = [];
+        for (let t = d; t < dEnd + step; t += step) {
+          const tt = Math.min(t, dEnd);
+          const s = lutAt(tt);
+          const nx = -Math.sin(s.angle) * side, ny = Math.cos(s.angle) * side;
+          const w = wall ? CHASE.WALL_W : runoffWidth(tt, side);
+          inner.push(`${(s.x + nx * 34).toFixed(1)} ${(s.y + ny * 34).toFixed(1)}`);
+          outer.push(`${(s.x + nx * (TRACK_HALF + w)).toFixed(1)} ${(s.y + ny * (TRACK_HALF + w)).toFixed(1)}`);
+          if (tt >= dEnd) break;
+        }
+        outer.reverse();
+        html += `<path fill="${fills[band % fills.length]}" d="M ${inner.join(' L ')} L ${outer.join(' L ')} Z"/>`;
+        band++;
+        d = dEnd;
+      }
+    }
+  });
+  g.innerHTML = html;
+}
+
+// Kerbs on the inside edge (apex) of the tighter turns — red and white, except
+// where the circuit the stretch came from paints its own national colours.
 function buildKerbs() {
   const g = document.getElementById('chase-kerbs');
   if (!g) return;
@@ -2056,8 +2196,9 @@ function buildKerbs() {
     const edge = da > 0 ? 1 : -1;                       // inside of the turn (apex)
     const nx = -Math.sin(s.angle) * edge, ny = Math.cos(s.angle) * edge;
     const cx = s.x + nx * 30, cy = s.y + ny * 30;
-    const cls = (seg++ % 2 === 0) ? 'kerb-r' : 'kerb-w';
-    html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><rect class="${cls}" x="${(-step / 2 - 0.5).toFixed(1)}" y="-4" width="${(step + 1).toFixed(1)}" height="8"/></g>`;
+    const cols = KERB_FILL[RUNOFF[sectionAt(d).round]] || KERB_DEFAULT;
+    const fill = cols[seg++ % cols.length];
+    html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><rect fill="${fill}" x="${(-step / 2 - 0.5).toFixed(1)}" y="-4" width="${(step + 1).toFixed(1)}" height="8"/></g>`;
   }
   g.innerHTML = html;
 }
@@ -2076,37 +2217,52 @@ function onTrack(x, y, clearance) {
   return false;
 }
 
-// A small group of tire barriers at each corner apex (not a continuous wall),
-// every barrier in the group sharing the same orientation. Plus a pit sign.
+// Tyre barriers where they actually belong: lining the far edge of the escape
+// area right through a corner — the whole arc a car could leave the track on,
+// not a token stack at the apex — and packed hard against the track for the
+// length of a street stretch, where there is no escape area at all. Every stack
+// is left upright rather than rotated to the track.
 function buildBarriers() {
   const g = document.getElementById('chase-dressing');
   if (!g) return;
-  const L = chase.L;
+  const L = chase.L, gap = 20;
   let html = '';
-  // Find each corner as a run of high curvature, and keep its apex.
+  const stack = (x, y) => {
+    if (onTrack(x, y, 11)) return;
+    html += `<image href="racing/tire-barrier.png" x="${(x - 10).toFixed(1)}" y="${(y - 12).toFixed(1)}" width="20" height="24" preserveAspectRatio="xMidYMid meet"/>`;
+  };
+  // Street stretches: a continuous wall down both sides of the whole section.
+  (chase.sections || []).forEach(sec => {
+    if (RUNOFF[sec.round] !== 'wall') return;
+    // The grey band already reads as the wall, so pack the tyres along it
+    // rather than shoulder to shoulder.
+    for (let d = sec.d0; d < sec.d1; d += gap * 2.2) {
+      const s = lutAt(d);
+      for (let side = -1; side <= 1; side += 2) {
+        const nx = -Math.sin(s.angle) * side, ny = Math.cos(s.angle) * side;
+        const off = TRACK_HALF + CHASE.WALL_W + 6;
+        stack(s.x + nx * off, s.y + ny * off);
+      }
+    }
+  });
+  // Everywhere else: follow each corner from entry to exit along the outside.
   const corners = [];
-  let inCorner = false, apexD = 0, apexC = 0;
+  let inCorner = false, from = 0;
   for (let d = 0; d < L; d += 8) {
     const c = Math.abs(curveAt(d));
-    if (c > 0.06) {
-      if (!inCorner) { inCorner = true; apexD = d; apexC = c; }
-      else if (c > apexC) { apexC = c; apexD = d; }
-    } else if (inCorner) { corners.push(apexD); inCorner = false; }
+    if (c > 0.06) { if (!inCorner) { inCorner = true; from = d; } }
+    else if (inCorner) { corners.push([from, d]); inCorner = false; }
   }
-  if (inCorner) corners.push(apexD);
-  // Cluster of 3 tire barriers at each apex, all kept upright (unrotated),
-  // pushed just far enough out to clear the track (and any looping section).
-  corners.forEach(d => {
-    const s = lutAt(d);
-    const sign = curveAt(d) > 0 ? -1 : 1;         // outside of the turn
-    const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
-    let off = 50;
-    while (off < 110 && onTrack(s.x + nx * off, s.y + ny * off, 13)) off += 8;
-    const bx = s.x + nx * off, by = s.y + ny * off;
-    for (let k = -1; k <= 1; k++) {
-      const gx = bx + k * 18;
-      if (onTrack(gx, by, 11)) continue;
-      html += `<image href="racing/tire-barrier.png" x="${(gx - 10).toFixed(1)}" y="${(by - 12).toFixed(1)}" width="20" height="24" preserveAspectRatio="xMidYMid meet"/>`;
+  if (inCorner) corners.push([from, L]);
+  corners.forEach(([d0, d1]) => {
+    for (let d = d0; d <= d1; d += gap) {
+      if (RUNOFF[sectionAt(d).round] === 'wall') continue;   // already walled
+      const s = lutAt(d);
+      const side = curveAt(d) > 0 ? -1 : 1;                  // outside of the turn
+      const nx = -Math.sin(s.angle) * side, ny = Math.cos(s.angle) * side;
+      let off = TRACK_HALF + runoffWidth(d, side) + 10;      // just past the paint
+      while (off < 130 && onTrack(s.x + nx * off, s.y + ny * off, 13)) off += 8;
+      stack(s.x + nx * off, s.y + ny * off);
     }
   });
   // Pit sign + a couple of cones just after the start/finish line.
@@ -2142,6 +2298,8 @@ function openChase() {
 
   buildChaseCars();
   buildStartLine();
+  buildClearance();
+  buildRunoff();
   buildKerbs();
   buildScenery();
   buildBarriers();
@@ -2286,7 +2444,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607280637';
+    const SW_VERSION = '2607281335';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
