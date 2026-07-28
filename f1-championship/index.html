@@ -1370,31 +1370,146 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
 const SVGNS = 'http://www.w3.org/2000/svg';
 const XLINKNS = 'http://www.w3.org/1999/xlink';
 
-// Smooth closed circuit through a set of waypoints (Catmull-Rom -> cubic
-// beziers). The camera follows the pack, so the path can be large.
-function catmullRomClosed(pts) {
-  const n = pts.length;
-  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-  for (let i = 0; i < n; i++) {
-    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
-  }
-  return d + ' Z';
-}
+// ── The circuit ────────────────────────────────────────────────────────────
+// One composite lap laid out the way a real circuit is: straights joined by
+// sustained-radius corners, not a continuous ripple. Every race on the calendar
+// contributes one corner (a few contribute a genuine complex), in calendar
+// order — the grid forms on the Albert Park start straight, Monaco's hairpin
+// bites into the infield, Monza and the Las Vegas Strip run flat out down the
+// long straights, and Yas Marina feeds the pack back onto the start line.
+//
+// The lap is a rounded polygon: each entry is one vertex, connected to its
+// neighbours by straight edges and filleted into a corner. Laying it out in
+// polar order around a centre makes the lap closed and non-self-crossing by
+// construction, so corners can be as tight as a hairpin without the track ever
+// running into itself.
+//   w   angular share, which sets the length of the straight AFTER the vertex
+//   rho distance from the centre; a dip inward gives the counter-turn that
+//       makes an esses or a chicane
+//   r   corner radius: small bites (a hairpin), large sweeps (a fast curve)
+const CIRCUIT_V = [
+  { round: 1,  key: 'Albert Park',       w: 1.6, rho: 2918, r: 246 },
+  { round: 2,  key: 'Shanghai Snail',    w: 1.6, rho: 2995, r: 90 },
+  { round: 3,  key: 'Suzuka Esses',      w: 1.2, rho: 2240, r: 123 },
+  { round: 3,                            w: 1.1, rho: 2880, r: 119 },
+  { round: 3,                            w: 1.1, rho: 2240, r: 123 },
+  { round: 4,  key: 'Sakhir T1',         w: 1.7, rho: 3021, r: 97 },
+  { round: 5,  key: 'Jeddah Sweepers',   w: 2.0, rho: 2752, r: 279 },
+  { round: 6,  key: 'Miami Infield',     w: 3.0, rho: 1050,  r: 105 },
+  { round: 7,  key: 'Variante Alta',     w: 1.4, rho: 2560, r: 82 },
+  { round: 7,                            w: 1.1, rho: 2278, r: 82 },
+  { round: 8,  key: 'Monaco Hairpin',    w: 1.6, rho: 3098, r: 62 },
+  { round: 9,  key: 'Catalunya T3',      w: 1.8, rho: 2867, r: 246 },
+  { round: 10, key: 'Wall of Champions', w: 1.6, rho: 2688, r: 127 },
+  { round: 11, key: 'Red Bull Ring',     w: 1.6, rho: 2982, r: 160 },
+  { round: 12, key: 'Maggotts-Becketts', w: 1.3, rho: 2176, r: 172 },
+  { round: 12,                           w: 1.2, rho: 2816, r: 168 },
+  { round: 13, key: 'Eau Rouge',         w: 1.2, rho: 2176, r: 152 },
+  { round: 13,                           w: 1.2, rho: 2752, r: 144 },
+  { round: 14, key: 'Hungaroring Loop',  w: 3.2, rho: 1190, r: 108 },
+  { round: 15, key: 'Hugenholtz Bank',   w: 3.6, rho: 3046, r: 119 },
+  { round: 16, key: 'Monza Rettifilo',   w: 1.2, rho: 2893, r: 78 },
+  { round: 16,                           w: 1.1, rho: 2586, r: 78 },
+  { round: 17, key: 'Baku Castle',       w: 1.8, rho: 3021, r: 86 },
+  { round: 18, key: 'Marina Bay 90s',    w: 2.4, rho: 1472, r: 90 },
+  { round: 19, key: 'COTA Esses',        w: 1.8, rho: 2970, r: 127 },
+  { round: 20, key: 'Foro Sol',          w: 3.0, rho: 1024,  r: 96 },
+  { round: 21, key: 'Senna S',           w: 1.4, rho: 2893, r: 144 },
+  { round: 21,                           w: 3.6, rho: 2624, r: 135 },
+  { round: 22, key: 'The Strip',         w: 1.8, rho: 2995, r: 172 },
+  { round: 23, key: 'Lusail Sweeps',     w: 1.8, rho: 2790, r: 234 },
+  { round: 24, key: 'Yas Chicane',       w: 1.4, rho: 2893, r: 98 },
+  { round: 24,                           w: 3.6, rho: 2637, r: 98 },
+];
 
-// A long circuit (~3x the old track) with a proper start/finish straight along
-// the bottom (points 0-3 are colinear, so the grid forms on a straight) and a
-// flowing set of turns around the rest of the lap.
-const TRACK_D = catmullRomClosed([
-  [560, 1330], [980, 1340], [1380, 1335], [1720, 1290],   // start/finish straight -> T1
-  [1990, 1130], [2130, 880], [2030, 650], [2160, 450],    // right side + kink
-  [2010, 255], [1760, 210], [1520, 305], [1300, 220],     // top-right, esses
-  [1055, 320], [810, 240], [575, 305], [335, 250],        // esses across the top
-  [175, 455], [255, 705], [135, 920], [255, 1110],        // top-left, left side, chicane
-  [185, 1290], [300, 1345]                                 // sweep back onto the straight
-]);
+// The named stretches, in calendar order — one per race, used for the stands.
+const CIRCUIT = CIRCUIT_V.filter(v => v.key).map(v => ({ round: v.round, key: v.key }));
+
+// Build the lap: walk vertex to vertex, emitting the straight run into each
+// corner followed by the corner's arc, all as cubic beziers so the whole lap
+// can be measured and sampled in plain arithmetic.
+const WAIST_FLOOR = 0.16;    // how far in the pinch reaches (0 = the centre)
+const WAIST_PHASE = 0.55;    // where round the lap the two pinches fall
+const WAIST_WIDTH = 2.2;     // higher = the pinch draws in a longer run of corners
+const { TRACK_D, TRACK_BEZ, TRACK_WPI } = (() => {
+  const CX = 2400, CY = 2400;                  // keep the lap in positive coords
+  const n = CIRCUIT_V.length;
+  const wsum = CIRCUIT_V.reduce((a, v) => a + v.w, 0);
+  // Squeeze the ring into a peanut: the lap pinches in twice, so instead of
+  // circling an empty infield it doubles back across the middle of the map and
+  // runs alongside itself down the waist. Each ray from the centre still meets
+  // the lap exactly once, so it remains impossible for the track to cross.
+  const waist = t => WAIST_FLOOR + (1 - WAIST_FLOOR) * Math.pow(Math.abs(Math.sin(t - WAIST_PHASE)), WAIST_WIDTH);
+  const pts = [];
+  let th = -Math.PI / 2;
+  CIRCUIT_V.forEach(v => {
+    const rho = v.rho * waist(th);
+    pts.push([CX + Math.cos(th) * rho, CY + Math.sin(th) * rho]);
+    th += 2 * Math.PI * v.w / wsum;
+  });
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+  const mag = a => Math.hypot(a[0], a[1]);
+  const unit = a => { const l = mag(a); return [a[0] / l, a[1] / l]; };
+  // Fillet every vertex, shrinking the radius if the straights either side are
+  // too short to fit the tangents.
+  const fil = pts.map((c, i) => {
+    const p = pts[(i - 1 + n) % n], q = pts[(i + 1) % n];
+    const din = unit(sub(c, p)), dout = unit(sub(q, c));
+    const phi = Math.atan2(din[0] * dout[1] - din[1] * dout[0], din[0] * dout[0] + din[1] * dout[1]);
+    const tan = Math.abs(Math.tan(phi / 2));
+    let r = CIRCUIT_V[i].r;
+    const cap = 0.44 * Math.min(mag(sub(c, p)), mag(sub(q, c)));
+    if (r * tan > cap) r = cap / tan;
+    return { c, din, dout, phi, r, t: r * tan };
+  });
+  const bez = [];
+  const line = (a, b) => bez.push([a[0], a[1],
+    a[0] + (b[0] - a[0]) / 3, a[1] + (b[1] - a[1]) / 3,
+    a[0] + 2 * (b[0] - a[0]) / 3, a[1] + 2 * (b[1] - a[1]) / 3, b[0], b[1]]);
+  const arc = (cx, cy, r, a0, a1) => {
+    const sweep = a1 - a0, k = Math.max(1, Math.ceil(Math.abs(sweep) / (Math.PI / 2)));
+    for (let i = 0; i < k; i++) {
+      const s0 = a0 + sweep * i / k, s1 = a0 + sweep * (i + 1) / k;
+      const h = 4 / 3 * Math.tan((s1 - s0) / 4);
+      const p0 = [cx + r * Math.cos(s0), cy + r * Math.sin(s0)];
+      const p1 = [cx + r * Math.cos(s1), cy + r * Math.sin(s1)];
+      bez.push([p0[0], p0[1], p0[0] - h * r * Math.sin(s0), p0[1] + h * r * Math.cos(s0),
+                p1[0] + h * r * Math.sin(s1), p1[1] - h * r * Math.cos(s1), p1[0], p1[1]]);
+    }
+  };
+  const wpi = [];
+  fil.forEach((f, i) => {
+    const prev = fil[(i - 1 + n) % n];
+    if (CIRCUIT_V[i].key) wpi.push(bez.length);   // this race's stretch starts here
+    line([prev.c[0] + prev.dout[0] * prev.t, prev.c[1] + prev.dout[1] * prev.t],
+         [f.c[0] - f.din[0] * f.t, f.c[1] - f.din[1] * f.t]);
+    const sgn = Math.sign(f.phi);
+    const ax = f.c[0] - f.din[0] * f.t, ay = f.c[1] - f.din[1] * f.t;
+    const cx = ax - f.din[1] * sgn * f.r, cy = ay + f.din[0] * sgn * f.r;
+    const a0 = Math.atan2(ay - cy, ax - cx);
+    arc(cx, cy, f.r, a0, a0 + f.phi);
+  });
+  // The lap so far begins where the run onto the start straight begins, which
+  // would put the grid right at a corner exit. Cut that opening straight in two
+  // and move the first piece to the end of the lap, so distance 0 — the
+  // start/finish line — sits properly down the straight with clear track either
+  // side of the grid.
+  const seg = bez[0];
+  const runIn = Math.hypot(seg[6] - seg[0], seg[7] - seg[1]);
+  const f = Math.min(0.45, 250 / Math.max(runIn, 1));
+  const lerpP = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const p0 = [seg[0], seg[1]], c1 = [seg[2], seg[3]], c2 = [seg[4], seg[5]], p1 = [seg[6], seg[7]];
+  const a1 = lerpP(p0, c1, f), a2 = lerpP(c1, c2, f), a3 = lerpP(c2, p1, f);
+  const b1 = lerpP(a1, a2, f), b2 = lerpP(a2, a3, f), mid = lerpP(b1, b2, f);
+  const head = [p0[0], p0[1], a1[0], a1[1], b1[0], b1[1], mid[0], mid[1]];   // before the line
+  const tail = [mid[0], mid[1], b2[0], b2[1], a3[0], a3[1], p1[0], p1[1]];   // after the line
+  bez[0] = tail;      // in place, so every later index (and so wpi) still holds
+  bez.push(head);     // the pre-line piece closes the lap
+
+  const d = `M ${bez[0][0].toFixed(1)} ${bez[0][1].toFixed(1)}` +
+    bez.map(c => ` C ${c[2].toFixed(1)} ${c[3].toFixed(1)} ${c[4].toFixed(1)} ${c[5].toFixed(1)} ${c[6].toFixed(1)} ${c[7].toFixed(1)}`).join('') + ' Z';
+  return { TRACK_D: d, TRACK_BEZ: bez, TRACK_WPI: wpi };
+})();
 
 const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca',
   'bh', 'sa', 'cn', 'es', 'at', 'be', 'nl', 'br']);
@@ -1402,29 +1517,69 @@ const CHASE = {
   ROUND_MS: 4200, LIGHT_MS: 600, FAST_LIGHT_MS: 340, MAX_PTS_DIST: 7,
   SIDE_LANE: 16, MAX_LANE_HALF: 26, GRID_COLS: 4, COL_STAGGER: 15, CLUSTER_GAP: 72, ROW_GAP: 46, LANE_SMOOTH: 0.08,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
-  LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
+  LUT_N: 2600, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
   CAM_MIN_W: 470, CAM_PAD: 130, CAM_LERP: 0.16, LABEL_DY: 20
 };
 
 const chase = {
   frames: [], seg: 0, u: 0, playing: false, raf: null, lastTs: 0,
-  path: null, L: 0, lut: [], lastRound: 1, cars: [], timeouts: [], finished: false,
+  path: null, L: 0, lut: [], sections: [], lastRound: 1, cars: [], timeouts: [], finished: false,
   cam: null
 };
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
+// Flatten every bezier of the lap into a fine polyline, measuring as it goes,
+// then resample that at even distances into the lookup table the animation
+// reads. Also records the distance at each waypoint, which is what pins each
+// race's stretch (and so its grandstand) to a spot on the lap.
 function buildChaseLUT() {
+  const STEP = 24;
+  const xs = [TRACK_BEZ[0][0]], ys = [TRACK_BEZ[0][1]], cums = [0];
+  const wpCum = [];
+  let acc = 0;
+  TRACK_BEZ.forEach(c => {
+    wpCum.push(acc);
+    let px = c[0], py = c[1];
+    for (let k = 1; k <= STEP; k++) {
+      const t = k / STEP, u = 1 - t;
+      const uu = u * u, tt = t * t;
+      const x = uu * u * c[0] + 3 * uu * t * c[2] + 3 * u * tt * c[4] + tt * t * c[6];
+      const y = uu * u * c[1] + 3 * uu * t * c[3] + 3 * u * tt * c[5] + tt * t * c[7];
+      acc += Math.hypot(x - px, y - py);
+      xs.push(x); ys.push(y); cums.push(acc);
+      px = x; py = y;
+    }
+  });
+  chase.L = acc;
+  chase.wpCum = wpCum;
+  const N = CHASE.LUT_N;
   chase.lut = [];
-  const N = CHASE.LUT_N, L = chase.L;
+  let j = 0;
   for (let i = 0; i <= N; i++) {
-    const pt = chase.path.getPointAtLength((i / N) * L);
-    chase.lut.push({ x: pt.x, y: pt.y, angle: 0 });
+    const d = (i / N) * acc;
+    while (j < cums.length - 2 && cums[j + 1] < d) j++;
+    const c0 = cums[j], c1 = cums[j + 1];
+    const t = c1 > c0 ? (d - c0) / (c1 - c0) : 0;
+    chase.lut.push({ x: xs[j] + (xs[j + 1] - xs[j]) * t, y: ys[j] + (ys[j + 1] - ys[j]) * t, angle: 0 });
   }
   for (let i = 0; i <= N; i++) {
     const a = chase.lut[Math.max(0, i - 1)], b = chase.lut[Math.min(N, i + 1)];
     chase.lut[i].angle = Math.atan2(b.y - a.y, b.x - a.x);
   }
+}
+
+// Where each race's stretch of the composite lap actually falls, in track
+// distance. A prefix of the path is measured directly (the wigglier stretches
+// stretch further than their share of the base ring), so every grandstand can
+// be planted on the corner it belongs to.
+function measureCircuitSections() {
+  chase.sections = CIRCUIT.map((sec, i) => ({
+    round: sec.round,
+    key: sec.key,
+    d0: chase.wpCum[TRACK_WPI[i]],
+    d1: i + 1 < CIRCUIT.length ? chase.wpCum[TRACK_WPI[i + 1]] : chase.L
+  }));
 }
 
 function lutAt(d) {
@@ -1792,16 +1947,20 @@ function buildStartLine() {
   g.innerHTML = inner;
 }
 
-// Trackside grandstands, one per race, placed at the point of the lap that
-// matches how far through the season that race is — so each stand carries the
-// flag and name of that race day, and the pack passes them in calendar order.
+// Trackside grandstands, one per race, planted on the stretch of the lap taken
+// from that race's circuit — so each stand names the corner the pack is running
+// through (Eau Rouge, the Monaco hairpin, the Strip) and, because the stretches
+// run in calendar order, the pack still meets them race by race.
 function buildStands() {
   const g = document.getElementById('chase-stands');
   if (!g) return;
-  const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
   let html = '';
-  CALENDAR.forEach(race => {
-    const d = CHASE.STARTLINE_PAD + (race.round / chase.lastRound) * usable;
+  (chase.sections || []).forEach(sec => {
+    const race = CALENDAR.find(r => r.round === sec.round);
+    if (!race) return;
+    // Sit the stand at the corner the stretch is named for, not back on the
+    // straight that leads into it.
+    const d = sec.d0 + (sec.d1 - sec.d0) * 0.78;
     const s = lutAt(d);
     // Place the stand on the outside of any turn (away from the curve's centre)
     // where there's room, rather than cramped on the inside of a corner.
@@ -1819,7 +1978,7 @@ function buildStands() {
     while (off < 104 && clashes(off)) off += 8;
     const cx = s.x + nx * off, cy = s.y + ny * off;
     const deg = (s.angle * 180 / Math.PI).toFixed(1);
-    const name = race.name.replace(/ Grand Prix$/, '');
+    const name = sec.key;
     html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})">
         <rect class="stand-body" x="-30" y="-9" width="60" height="18" rx="2"/>
         <rect class="stand-roof" x="-30" y="-9" width="60" height="4" rx="2"/>
@@ -1977,8 +2136,8 @@ function openChase() {
   overlay.classList.remove('hidden');   // unhide before measuring geometry
 
   chase.path = document.getElementById('chase-track-under');
-  chase.L = chase.path.getTotalLength();
-  buildChaseLUT();
+  buildChaseLUT();          // sets chase.L from the measured lap
+  measureCircuitSections();
   chase.lastRound = CALENDAR[CALENDAR.length - 1].round;
 
   buildChaseCars();
@@ -2127,7 +2286,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607270858';
+    const SW_VERSION = '2607280631';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
