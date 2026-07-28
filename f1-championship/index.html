@@ -1371,30 +1371,110 @@ const SVGNS = 'http://www.w3.org/2000/svg';
 const XLINKNS = 'http://www.w3.org/1999/xlink';
 
 // Smooth closed circuit through a set of waypoints (Catmull-Rom -> cubic
-// beziers). The camera follows the pack, so the path can be large.
-function catmullRomClosed(pts) {
-  const n = pts.length;
-  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+// beziers). Returned as numeric control points, one curve per waypoint, so the
+// lap can be measured and sampled in plain arithmetic — walking it with the
+// SVG geometry API instead costs seconds on a path this long.
+function catmullRomBez(pts) {
+  const n = pts.length, bez = [];
   for (let i = 0; i < n; i++) {
     const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+    bez.push([p1[0], p1[1],
+              p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6,
+              p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6,
+              p2[0], p2[1]]);
   }
-  return d + ' Z';
+  return bez;
 }
 
-// A long circuit (~3x the old track) with a proper start/finish straight along
-// the bottom (points 0-3 are colinear, so the grid forms on a straight) and a
-// flowing set of turns around the rest of the lap.
-const TRACK_D = catmullRomClosed([
-  [560, 1330], [980, 1340], [1380, 1335], [1720, 1290],   // start/finish straight -> T1
-  [1990, 1130], [2130, 880], [2030, 650], [2160, 450],    // right side + kink
-  [2010, 255], [1760, 210], [1520, 305], [1300, 220],     // top-right, esses
-  [1055, 320], [810, 240], [575, 305], [335, 250],        // esses across the top
-  [175, 455], [255, 705], [135, 920], [255, 1110],        // top-left, left side, chicane
-  [185, 1290], [300, 1345]                                 // sweep back onto the straight
-]);
+// ── The circuit ────────────────────────────────────────────────────────────
+// One composite lap stitched together from a signature stretch of every race
+// on the calendar, in calendar order: the grid forms on the Albert Park start
+// straight, Shanghai's snail winds inward, Monaco's hairpin bites into the
+// infield, Monza and the Las Vegas Strip run flat out down the long straights,
+// and Yas Marina's chicane spits the pack back onto the start line.
+//
+// Each stretch is a lateral profile in px (negative = toward the infield) laid
+// over a smooth base ring, so stretches always join up cleanly and the lap can
+// never cross itself. `span` weights how much of the lap the stretch gets.
+const CIRCUIT = [
+  { round: 1,  key: 'Albert Park',       span: 1.5, shape: [0, 0, 0, -52, 44, -16, 0] },
+  { round: 2,  key: 'Shanghai Snail',    span: 1.3, shape: [0, -42, -92, -135, -150, -100, -35] },
+  { round: 3,  key: 'Suzuka Esses',      span: 1.5, shape: [0, -48, 46, -48, 42, 0] },
+  { round: 4,  key: 'Sakhir T1',         span: 1.1, shape: [0, 0, -72, -20, -58, 0] },
+  { round: 5,  key: 'Jeddah Sweepers',   span: 1.4, shape: [0, 40, -34, 38, -30, 0] },
+  { round: 6,  key: 'Miami Infield',     span: 1.0, shape: [0, -40, 44, -44, 0] },
+  { round: 7,  key: 'Variante Alta',     span: 0.9, shape: [0, -62, 58, 0] },
+  { round: 8,  key: 'Monaco Hairpin',    span: 0.9, shape: [0, -70, -165, -175, -90, 0] },
+  { round: 9,  key: 'Catalunya T3',      span: 1.2, shape: [0, 45, 72, 72, 40, 0] },
+  { round: 10, key: 'Wall of Champions', span: 1.0, shape: [0, -20, -58, 52, 0] },
+  { round: 11, key: 'Red Bull Ring',     span: 1.2, shape: [0, -58, -6, -62, -6, 0] },
+  { round: 12, key: 'Maggotts-Becketts', span: 1.5, shape: [0, -58, 54, -58, 50, 0] },
+  { round: 13, key: 'Eau Rouge',         span: 1.1, shape: [0, -48, 58, -40, 0] },
+  { round: 14, key: 'Hungaroring Loop',  span: 1.2, shape: [0, -44, 38, -46, 40, 0] },
+  { round: 15, key: 'Hugenholtz Bank',   span: 1.0, shape: [0, -58, -125, -110, -40, 0] },
+  { round: 16, key: 'Monza Rettifilo',   span: 2.0, shape: [0, 0, 0, 0, 0, -62, 50, 0] },
+  { round: 17, key: 'Baku Castle',       span: 1.1, shape: [0, -34, 30, -34, 28, 0] },
+  { round: 18, key: 'Marina Bay 90s',    span: 1.1, shape: [0, -52, -52, 38, 38, 0] },
+  { round: 19, key: 'COTA Esses',        span: 1.3, shape: [0, -78, -10, -46, 42, 0] },
+  { round: 20, key: 'Foro Sol',          span: 1.1, shape: [0, -62, -140, -140, -70, 0] },
+  { round: 21, key: 'Senna S',           span: 1.0, shape: [0, -58, 46, -18, 0] },
+  { round: 22, key: 'The Strip',         span: 2.0, shape: [0, 0, 0, 0, 0, 0] },
+  { round: 23, key: 'Lusail Sweeps',     span: 1.8, shape: [0, 44, -38, 44, -32, 0] },
+  { round: 24, key: 'Yas Chicane',       span: 1.6, shape: [0, -48, 42, 0, 0] },
+];
+
+// Base ring: a rounded rectangle, so the straights are dead straight (the grid
+// forms on one) and the corners are clean arcs. `lead` puts the start/finish
+// line that far into the bottom straight, which leaves the last stretch room
+// to settle back onto the racing line before the lights go out.
+const RING = { cx: 2000, cy: 1500, w: 3300, h: 2500, r: 450, lead: 320 };
+
+// Walk the ring as a list of straights and quarter-circle corners, then hang
+// each race's lateral profile off it to get the circuit waypoints.
+const { TRACK_D, TRACK_BEZ, TRACK_WPI } = (() => {
+  const { cx, cy, w, h, r, lead } = RING;
+  const sw = w - 2 * r, sh = h - 2 * r, arc = Math.PI * r / 2;
+  const l = cx - w / 2, rt = cx + w / 2, t = cy - h / 2, b = cy + h / 2;
+  const prims = [
+    { s: 1, x: l + r + lead, y: b, dx: 1, dy: 0, len: sw - lead },
+    { s: 0, cx: rt - r, cy: b - r, a0: Math.PI / 2, a1: 0, len: arc },
+    { s: 1, x: rt, y: b - r, dx: 0, dy: -1, len: sh },
+    { s: 0, cx: rt - r, cy: t + r, a0: 0, a1: -Math.PI / 2, len: arc },
+    { s: 1, x: rt - r, y: t, dx: -1, dy: 0, len: sw },
+    { s: 0, cx: l + r, cy: t + r, a0: -Math.PI / 2, a1: -Math.PI, len: arc },
+    { s: 1, x: l, y: t + r, dx: 0, dy: 1, len: sh },
+    { s: 0, cx: l + r, cy: b - r, a0: Math.PI, a1: Math.PI / 2, len: arc },
+    { s: 1, x: l + r, y: b, dx: 1, dy: 0, len: lead }
+  ];
+  const cum = []; let acc = 0;
+  prims.forEach(p => { cum.push(acc); acc += p.len; });
+  const P = acc;
+  const ringAt = s => {
+    s = ((s % P) + P) % P;
+    let i = 0; while (i < prims.length - 1 && s >= cum[i + 1]) i++;
+    const p = prims[i], k = s - cum[i];
+    // normal points outward, away from the infield, on both straights and arcs
+    if (p.s) return { x: p.x + p.dx * k, y: p.y + p.dy * k, nx: -p.dy, ny: p.dx };
+    const a = p.a0 + (p.a1 - p.a0) * (k / p.len);
+    return { x: p.cx + Math.cos(a) * r, y: p.cy + Math.sin(a) * r, nx: Math.cos(a), ny: Math.sin(a) };
+  };
+  const total = CIRCUIT.reduce((a, c) => a + c.span, 0);
+  const pts = [], wpi = [];
+  let s0 = 0;
+  CIRCUIT.forEach(sec => {
+    wpi.push(pts.length);                       // first waypoint index of this stretch
+    const len = sec.span * P / total, k = sec.shape.length;
+    for (let j = 0; j < k; j++) {
+      const p = ringAt(s0 + (j + 0.5) * len / k);
+      pts.push([p.x + p.nx * sec.shape[j], p.y + p.ny * sec.shape[j]]);
+    }
+    s0 += len;
+  });
+  const bez = catmullRomBez(pts);
+  const d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}` +
+    bez.map(c => ` C ${c[2].toFixed(1)} ${c[3].toFixed(1)} ${c[4].toFixed(1)} ${c[5].toFixed(1)} ${c[6].toFixed(1)} ${c[7].toFixed(1)}`).join('') + ' Z';
+  return { TRACK_D: d, TRACK_BEZ: bez, TRACK_WPI: wpi };
+})();
 
 const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca',
   'bh', 'sa', 'cn', 'es', 'at', 'be', 'nl', 'br']);
@@ -1402,29 +1482,69 @@ const CHASE = {
   ROUND_MS: 4200, LIGHT_MS: 600, FAST_LIGHT_MS: 340, MAX_PTS_DIST: 7,
   SIDE_LANE: 16, MAX_LANE_HALF: 26, GRID_COLS: 4, COL_STAGGER: 15, CLUSTER_GAP: 72, ROW_GAP: 46, LANE_SMOOTH: 0.08,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
-  LUT_N: 1400, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
+  LUT_N: 2600, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
   CAM_MIN_W: 470, CAM_PAD: 130, CAM_LERP: 0.16, LABEL_DY: 20
 };
 
 const chase = {
   frames: [], seg: 0, u: 0, playing: false, raf: null, lastTs: 0,
-  path: null, L: 0, lut: [], lastRound: 1, cars: [], timeouts: [], finished: false,
+  path: null, L: 0, lut: [], sections: [], lastRound: 1, cars: [], timeouts: [], finished: false,
   cam: null
 };
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
+// Flatten every bezier of the lap into a fine polyline, measuring as it goes,
+// then resample that at even distances into the lookup table the animation
+// reads. Also records the distance at each waypoint, which is what pins each
+// race's stretch (and so its grandstand) to a spot on the lap.
 function buildChaseLUT() {
+  const STEP = 24;
+  const xs = [TRACK_BEZ[0][0]], ys = [TRACK_BEZ[0][1]], cums = [0];
+  const wpCum = [];
+  let acc = 0;
+  TRACK_BEZ.forEach(c => {
+    wpCum.push(acc);
+    let px = c[0], py = c[1];
+    for (let k = 1; k <= STEP; k++) {
+      const t = k / STEP, u = 1 - t;
+      const uu = u * u, tt = t * t;
+      const x = uu * u * c[0] + 3 * uu * t * c[2] + 3 * u * tt * c[4] + tt * t * c[6];
+      const y = uu * u * c[1] + 3 * uu * t * c[3] + 3 * u * tt * c[5] + tt * t * c[7];
+      acc += Math.hypot(x - px, y - py);
+      xs.push(x); ys.push(y); cums.push(acc);
+      px = x; py = y;
+    }
+  });
+  chase.L = acc;
+  chase.wpCum = wpCum;
+  const N = CHASE.LUT_N;
   chase.lut = [];
-  const N = CHASE.LUT_N, L = chase.L;
+  let j = 0;
   for (let i = 0; i <= N; i++) {
-    const pt = chase.path.getPointAtLength((i / N) * L);
-    chase.lut.push({ x: pt.x, y: pt.y, angle: 0 });
+    const d = (i / N) * acc;
+    while (j < cums.length - 2 && cums[j + 1] < d) j++;
+    const c0 = cums[j], c1 = cums[j + 1];
+    const t = c1 > c0 ? (d - c0) / (c1 - c0) : 0;
+    chase.lut.push({ x: xs[j] + (xs[j + 1] - xs[j]) * t, y: ys[j] + (ys[j + 1] - ys[j]) * t, angle: 0 });
   }
   for (let i = 0; i <= N; i++) {
     const a = chase.lut[Math.max(0, i - 1)], b = chase.lut[Math.min(N, i + 1)];
     chase.lut[i].angle = Math.atan2(b.y - a.y, b.x - a.x);
   }
+}
+
+// Where each race's stretch of the composite lap actually falls, in track
+// distance. A prefix of the path is measured directly (the wigglier stretches
+// stretch further than their share of the base ring), so every grandstand can
+// be planted on the corner it belongs to.
+function measureCircuitSections() {
+  chase.sections = CIRCUIT.map((sec, i) => ({
+    round: sec.round,
+    key: sec.key,
+    d0: chase.wpCum[TRACK_WPI[i]],
+    d1: i + 1 < CIRCUIT.length ? chase.wpCum[TRACK_WPI[i + 1]] : chase.L
+  }));
 }
 
 function lutAt(d) {
@@ -1792,16 +1912,18 @@ function buildStartLine() {
   g.innerHTML = inner;
 }
 
-// Trackside grandstands, one per race, placed at the point of the lap that
-// matches how far through the season that race is — so each stand carries the
-// flag and name of that race day, and the pack passes them in calendar order.
+// Trackside grandstands, one per race, planted on the stretch of the lap taken
+// from that race's circuit — so each stand names the corner the pack is running
+// through (Eau Rouge, the Monaco hairpin, the Strip) and, because the stretches
+// run in calendar order, the pack still meets them race by race.
 function buildStands() {
   const g = document.getElementById('chase-stands');
   if (!g) return;
-  const usable = chase.L - CHASE.STARTLINE_PAD - CHASE.FINISH_PAD;
   let html = '';
-  CALENDAR.forEach(race => {
-    const d = CHASE.STARTLINE_PAD + (race.round / chase.lastRound) * usable;
+  (chase.sections || []).forEach(sec => {
+    const race = CALENDAR.find(r => r.round === sec.round);
+    if (!race) return;
+    const d = (sec.d0 + sec.d1) / 2;
     const s = lutAt(d);
     // Place the stand on the outside of any turn (away from the curve's centre)
     // where there's room, rather than cramped on the inside of a corner.
@@ -1819,7 +1941,7 @@ function buildStands() {
     while (off < 104 && clashes(off)) off += 8;
     const cx = s.x + nx * off, cy = s.y + ny * off;
     const deg = (s.angle * 180 / Math.PI).toFixed(1);
-    const name = race.name.replace(/ Grand Prix$/, '');
+    const name = sec.key;
     html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})">
         <rect class="stand-body" x="-30" y="-9" width="60" height="18" rx="2"/>
         <rect class="stand-roof" x="-30" y="-9" width="60" height="4" rx="2"/>
@@ -1977,8 +2099,8 @@ function openChase() {
   overlay.classList.remove('hidden');   // unhide before measuring geometry
 
   chase.path = document.getElementById('chase-track-under');
-  chase.L = chase.path.getTotalLength();
-  buildChaseLUT();
+  buildChaseLUT();          // sets chase.L from the measured lap
+  measureCircuitSections();
   chase.lastRound = CALENDAR[CALENDAR.length - 1].round;
 
   buildChaseCars();
@@ -2127,7 +2249,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607270858';
+    const SW_VERSION = '2607280531';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
