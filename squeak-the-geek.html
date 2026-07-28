@@ -309,10 +309,10 @@ permalink: /squeak-the-geek/
     </div>
 
     <div id="dpad">
-        <div class="dbtn" id="dUp" role="button" aria-label="Move up">▲</div>
-        <div class="dbtn" id="dDown" role="button" aria-label="Move down">▼</div>
-        <div class="dbtn" id="dLeft" role="button" aria-label="Move left">◀</div>
-        <div class="dbtn" id="dRight" role="button" aria-label="Move right">▶</div>
+        <div class="dbtn" id="dUp" role="button" tabindex="0" aria-label="Move up">▲</div>
+        <div class="dbtn" id="dDown" role="button" tabindex="0" aria-label="Move down">▼</div>
+        <div class="dbtn" id="dLeft" role="button" tabindex="0" aria-label="Move left">◀</div>
+        <div class="dbtn" id="dRight" role="button" tabindex="0" aria-label="Move right">▶</div>
     </div>
 
     <div id="toast"></div>
@@ -913,6 +913,15 @@ permalink: /squeak-the-geek/
                 el.addEventListener('pointerup', up);
                 el.addEventListener('pointercancel', up);
                 el.addEventListener('pointerleave', up);
+                el.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                    if (e.repeat) { e.preventDefault(); return; }
+                    down(e);
+                });
+                el.addEventListener('keyup', (e) => {
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                    up(e);
+                });
             }
             bindDpad('dUp', 'up');
             bindDpad('dDown', 'down');

@@ -369,6 +369,7 @@ permalink: /tennis-planner/
                     dailyBreakdown += `Cost per Player: $${costPerPlayer.toFixed(2)}\n`;
 
                     playersOnDay.forEach(playerId => {
+                        if (playerTotals[playerId] === undefined) return;
                         playerTotals[playerId] += costPerPlayer;
                     });
                 }

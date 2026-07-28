@@ -486,7 +486,7 @@ permalink: /tuner/
 
         <div id="status">
             <div class="status-dot"></div>
-            <span id="status-text">Play a string...</span>
+            <span id="status-text" aria-live="polite" aria-atomic="true">Play a string...</span>
         </div>
     </div>
 
@@ -639,6 +639,9 @@ permalink: /tuner/
             noteZone.classList.toggle('in-tune', active);
             document.body.classList.toggle('in-tune', active);
             if (active && navigator.vibrate) navigator.vibrate([15, 30, 15]);
+            if (noteZone.classList.contains('has-signal')) {
+                statusText.textContent = active ? 'In tune!' : 'Listening...';
+            }
         }
 
         // ─── UI update ────────────────────────────────────────────────────────────
@@ -677,7 +680,7 @@ permalink: /tuner/
 
             noteZone.classList.add('has-signal');
             noteZone.classList.remove('silent');
-            statusText.textContent = 'Listening...';
+            if (statusText.textContent !== 'Listening...') statusText.textContent = 'Listening...';
             document.body.classList.add('listening');
         }
 
@@ -697,7 +700,7 @@ permalink: /tuner/
             noteZone.classList.remove('has-signal');
             noteZone.classList.add('silent');
             document.querySelectorAll('.string-btn').forEach(b => b.classList.remove('nearest'));
-            statusText.textContent = 'Play a string...';
+            if (statusText.textContent !== 'Play a string...') statusText.textContent = 'Play a string...';
             document.body.classList.remove('listening');
             smoothFreq = 0;
         }
@@ -779,6 +782,20 @@ permalink: /tuner/
                     ? 'No microphone found. Please connect one and try again.'
                     : 'Could not access microphone. Please try again.';
             }
+        });
+
+        // ─── Release mic when backgrounded ───────────────────────────────────────
+        // Keeping the mic open while the tab is hidden drains battery and leaves
+        // the OS mic-in-use indicator lit; stop everything and require an explicit
+        // re-enable tap when the user comes back.
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) return;
+            if (document.getElementById('tuner-screen').style.display === 'none') return;
+            if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+            if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+            if (audioCtx) { audioCtx.close(); audioCtx = null; }
+            document.getElementById('tuner-screen').style.display = 'none';
+            document.getElementById('permission-screen').style.display = 'flex';
         });
 
         // ─── Instrument toggle ────────────────────────────────────────────────────

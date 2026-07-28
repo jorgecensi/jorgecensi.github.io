@@ -325,7 +325,7 @@
   // ─── Command dispatcher ──────────────────────────────────────────────────────
 
   function runCommand(cmd) {
-    if (COMMANDS[cmd]) {
+    if (Object.prototype.hasOwnProperty.call(COMMANDS, cmd)) {
       COMMANDS[cmd]();
     } else {
       printError(cmd);
