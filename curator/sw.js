@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607270858';
+const CACHE_VERSION = '2607281411';
 const CACHE = `curator-${CACHE_VERSION}`;
 const SHELL = [
   './',
