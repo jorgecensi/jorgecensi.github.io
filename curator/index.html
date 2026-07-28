@@ -534,7 +534,7 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title">Sources</span>
-      <button class="btn-ghost" id="modal-close">✕</button>
+      <button class="btn-ghost" id="modal-close" aria-label="Close">✕</button>
     </div>
     <p class="modal-hint">Add a channel URL, @handle, playlist URL/ID, or search keyword.</p>
     <div class="modal-input-row">
@@ -550,7 +550,7 @@
 <div id="install-banner" class="hidden">
   <span class="install-text">📱 Add Curator to your home screen</span>
   <button class="btn-primary" id="install-btn" style="padding:8px 16px; font-size:11px">Install</button>
-  <button class="install-dismiss" id="install-dismiss">×</button>
+  <button class="install-dismiss" id="install-dismiss" aria-label="Dismiss">×</button>
 </div>
 
 <script>
@@ -844,7 +844,7 @@ function renderSourcesList() {
     <div class="source-row">
       <span class="source-label">${srcIcon(src)} ${escHtml(src.raw)}</span>
       <span class="source-type">${src.type}</span>
-      <button class="btn-ghost" onclick="removeSource(${i})" style="font-size:20px; padding:2px 6px">×</button>
+      <button class="btn-ghost" onclick="removeSource(${i})" style="font-size:20px; padding:2px 6px" aria-label="Remove source ${escHtml(src.raw)}">×</button>
     </div>`).join('');
 }
 

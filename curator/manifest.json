@@ -1,8 +1,10 @@
 {
+  "id": "/curator/",
   "name": "Curator",
   "short_name": "Curator",
   "description": "Your personal YouTube feed, no algorithm.",
   "start_url": "./",
+  "scope": "/curator/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",

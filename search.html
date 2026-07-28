@@ -4,8 +4,9 @@ title: Topics
 lang: en
 ref: search
 ---
-<h1>Browse by Topic</h1>
-<p>All posts grouped by what they're about.</p>
+{% assign t = site.data.translations.en %}
+<h1>{{ t.search_page.heading }}</h1>
+<p>{{ t.search_page.subtitle }}</p>
 
 <div class="tag-section">
 {% for tag in site.tags %}
