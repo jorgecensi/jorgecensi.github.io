@@ -451,22 +451,25 @@ permalink: /f1-championship/
     .track-under { fill: none; stroke: #2a2740; stroke-width: 64; stroke-linejoin: round; stroke-linecap: round; }
     .track-edge  { fill: none; stroke: #3d3a5c; stroke-width: 72; stroke-linejoin: round; stroke-linecap: round; }
     .track-line  { fill: none; stroke: rgba(255,255,255,0.35); stroke-width: 2.5; stroke-dasharray: 10 14; }
-    .kerb-r { fill: #d83a3a; }
-    .kerb-w { fill: #e8e8e8; }
     .chase-label {
       font: 700 11px 'Inter', system-ui, sans-serif;
       text-anchor: middle; paint-order: stroke;
       stroke: #0a0814; stroke-width: 3.5px; stroke-linejoin: round;
     }
-    .stand-body { fill: #17152b; stroke: #322e4e; stroke-width: 1.5; }
+    .stand-body { fill: #1b1933; stroke: #3a3660; stroke-width: 1.8; }
     .stand-roof { fill: #4b4788; }
-    .stand-tier { stroke: #322e4e; stroke-width: 1.1; }
+    .stand-tier { stroke: #3a3660; stroke-width: 1.4; }
     .stand-label {
       font: 600 10px 'Inter', system-ui, sans-serif;
       fill: #c4c0e4; text-anchor: middle; dominant-baseline: middle;
       paint-order: stroke; stroke: #0a0814; stroke-width: 3px; stroke-linejoin: round;
     }
     .stand-flag { font-size: 11px; text-anchor: middle; dominant-baseline: middle; }
+    .gp-paint {
+      font: 800 20px 'Inter', system-ui, sans-serif; letter-spacing: 2.5px;
+      fill: rgba(255,255,255,0.5); text-anchor: middle; dominant-baseline: middle;
+    }
+    .gp-paint.gp-grass { fill: rgba(226,240,226,0.3); }
 
     #chase-tower {
       position: relative; width: 152px; flex-shrink: 0;
@@ -697,6 +700,7 @@ permalink: /f1-championship/
     </div>
     <div class="chase-main">
       <svg id="chase-svg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet">
+        <g id="chase-runoff"></g>
         <path id="chase-track-edge"  class="track-edge"/>
         <path id="chase-track-under" class="track-under"/>
         <path id="chase-track-line"  class="track-line"/>
@@ -1513,17 +1517,54 @@ const { TRACK_D, TRACK_BEZ, TRACK_WPI } = (() => {
 
 const LANDMARK_CC = new Set(['au', 'jp', 'it', 'mc', 'gb', 'us', 'mx', 'ca',
   'bh', 'sa', 'cn', 'es', 'at', 'be', 'nl', 'br']);
+
+// What each race's stretch runs off into, following what its real circuit uses:
+// gravel where the traps have been reinstated, green-painted asphalt at the
+// classic permanent circuits, bare grey asphalt at the wide desert/modern ones,
+// and nothing but walls on the street stretches. A handful of circuits paint
+// their escape areas in colours you can identify them by — Yas Marina's "Yas
+// blue", Lusail's Sadu blue-into-orange, Spa's Belgian flag up through
+// Raidillon, Interlagos in Brazil's green and yellow, Miami in Art Deco
+// turquoise and pink.
+const RUNOFF = {
+  1: 'green',    2: 'asphalt',  3: 'gravel',  4: 'asphalt', 5: 'wall',  6: 'miami',
+  7: 'gravel',   8: 'wall',     9: 'green',  10: 'wall',   11: 'green', 12: 'green',
+  13: 'belgium', 14: 'gravel', 15: 'gravel', 16: 'green',  17: 'wall',  18: 'wall',
+  19: 'asphalt', 20: 'asphalt', 21: 'interlagos', 22: 'wall', 23: 'sadu', 24: 'yasblue'
+};
+// More than one colour = the escape area is banded, cycling along the stretch.
+const RUNOFF_FILL = {
+  green:      ['#2f6b3d'],
+  gravel:     ['#b09a6b'],
+  asphalt:    ['#5a5a66'],
+  yasblue:    ['#1e5aa8'],
+  sadu:       ['#2f6fb5', '#c8641e'],
+  belgium:    ['#1a1a1a', '#f0c419', '#d1272c'],
+  interlagos: ['#2e8b45', '#e8c516'],
+  miami:      ['#18b3a6', '#e0559b'],
+  wall:       ['#8a8a96']
+};
+// Kerbs carry the same national scheme where a circuit has one.
+const KERB_FILL = {
+  belgium:    ['#1a1a1a', '#f0c419', '#d1272c'],
+  interlagos: ['#2e8b45', '#e8c516'],
+  miami:      ['#18b3a6', '#e0559b']
+};
+const KERB_DEFAULT = ['#d83a3a', '#e8e8e8'];
+
 const CHASE = {
   ROUND_MS: 4200, LIGHT_MS: 600, FAST_LIGHT_MS: 340, MAX_PTS_DIST: 7,
   SIDE_LANE: 16, MAX_LANE_HALF: 26, GRID_COLS: 4, COL_STAGGER: 15, CLUSTER_GAP: 72, ROW_GAP: 46, LANE_SMOOTH: 0.08,
   CAR_LEN: 42, CAR_ASPECT: 0.4, SPRITE_HEADING: 0,
-  LUT_N: 2600, STARTLINE_PAD: 30, FINISH_PAD: 8, STAND_OFFSET: 58,
+  LUT_N: 2600, STARTLINE_PAD: 30, FINISH_PAD: 8,
+  STAND_OFFSET: 58, STAND_W: 150, STAND_H: 44, STAND_GAP: 210,
+  RUNOFF_MIN: 8, RUNOFF_MAX: 46, RUNOFF_STEP: 9, RUNOFF_BAND: 2, WALL_W: 7,
   CAM_MIN_W: 470, CAM_PAD: 130, CAM_LERP: 0.16, LABEL_DY: 20
 };
 
 const chase = {
   frames: [], seg: 0, u: 0, playing: false, raf: null, lastTs: 0,
-  path: null, L: 0, lut: [], sections: [], lastRound: 1, cars: [], timeouts: [], finished: false,
+  path: null, L: 0, lut: [], sections: [], clearance: [], lastRound: 1, cars: [], timeouts: [], finished: false,
   cam: null
 };
 
@@ -1575,6 +1616,7 @@ function buildChaseLUT() {
 // be planted on the corner it belongs to.
 function measureCircuitSections() {
   chase.sections = CIRCUIT.map((sec, i) => ({
+    i,
     round: sec.round,
     key: sec.key,
     d0: chase.wpCum[TRACK_WPI[i]],
@@ -1955,12 +1997,9 @@ function buildStands() {
   const g = document.getElementById('chase-stands');
   if (!g) return;
   let html = '';
-  (chase.sections || []).forEach(sec => {
-    const race = CALENDAR.find(r => r.round === sec.round);
-    if (!race) return;
-    // Sit the stand at the corner the stretch is named for, not back on the
-    // straight that leads into it.
-    const d = sec.d0 + (sec.d1 - sec.d0) * 0.78;
+  // One grandstand carries the flag and the name of the corner; the rest just
+  // line the circuit the way real ones do, wherever there is room for them.
+  const stand = (d, race, name) => {
     const s = lutAt(d);
     // Place the stand on the outside of any turn (away from the curve's centre)
     // where there's room, rather than cramped on the inside of a corner.
@@ -1971,32 +2010,62 @@ function buildStands() {
     const nx = -Math.sin(s.angle) * sideSign, ny = Math.cos(s.angle) * sideSign;
     const tx = Math.cos(s.angle), ty = Math.sin(s.angle);
     // Push the stand out until it (and its ends) clear the track everywhere.
-    let off = CHASE.STAND_OFFSET;
-    const clashes = o => onTrack(s.x + nx * o, s.y + ny * o, 12) ||
-      onTrack(s.x + nx * o + tx * 28, s.y + ny * o + ty * 28, 8) ||
-      onTrack(s.x + nx * o - tx * 28, s.y + ny * o - ty * 28, 8);
-    while (off < 104 && clashes(off)) off += 8;
+    const HW = CHASE.STAND_W / 2;
+    // Just beyond the barriers, which themselves ride the edge of the paint —
+    // so the stands follow the circuit in and out rather than sitting on a
+    // fixed ring out in the grass.
+    let off = TRACK_HALF + runoffWidth(d, sideSign) + CHASE.STAND_OFFSET;
+    const clashes = o => onTrack(s.x + nx * o, s.y + ny * o, 14) ||
+      onTrack(s.x + nx * o + tx * HW, s.y + ny * o + ty * HW, 10) ||
+      onTrack(s.x + nx * o - tx * HW, s.y + ny * o - ty * HW, 10);
+    const cap = off + 70;
+    while (off < cap && clashes(off)) off += 8;
+    if (clashes(off)) return false;
     const cx = s.x + nx * off, cy = s.y + ny * off;
     const deg = (s.angle * 180 / Math.PI).toFixed(1);
-    const name = sec.key;
+    const H = CHASE.STAND_H, top = -H / 2;
+    let tiers = '';
+    for (let t = 1; t <= 4; t++) {
+      const y = (top + H * t / 5).toFixed(1);
+      tiers += `<line class="stand-tier" x1="${(-HW + 5).toFixed(1)}" y1="${y}" x2="${(HW - 5).toFixed(1)}" y2="${y}"/>`;
+    }
     html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})">
-        <rect class="stand-body" x="-30" y="-9" width="60" height="18" rx="2"/>
-        <rect class="stand-roof" x="-30" y="-9" width="60" height="4" rx="2"/>
-        <line class="stand-tier" x1="-26" y1="1" x2="26" y2="1"/>
-        <line class="stand-tier" x1="-26" y1="5" x2="26" y2="5"/>
+        <rect class="stand-body" x="${(-HW).toFixed(1)}" y="${top}" width="${CHASE.STAND_W}" height="${H}" rx="3"/>
+        <rect class="stand-roof" x="${(-HW).toFixed(1)}" y="${top}" width="${CHASE.STAND_W}" height="${(H * 0.24).toFixed(1)}" rx="3"/>
+        ${tiers}
       </g>`;
+    if (!name) return true;
     if (LANDMARK_CC.has(race.cc)) {
       // National landmark sitting just beyond the grandstand.
-      const W = 50, H = 42;
-      const ex = s.x + nx * (off + 24), ey = s.y + ny * (off + 24);
-      const lx = (s.x + nx * (off + 52)).toFixed(1), ly = (s.y + ny * (off + 52)).toFixed(1);
-      html += `<image href="landmarks/${race.cc}.png" x="${(ex - W / 2).toFixed(1)}" y="${(ey - H / 2).toFixed(1)}" width="${W}" height="${H}" preserveAspectRatio="xMidYMid meet"/>
+      const W = 62, LH = 52, base = off + H / 2;
+      const ex = s.x + nx * (base + 30), ey = s.y + ny * (base + 30);
+      const lx = (s.x + nx * (base + 64)).toFixed(1), ly = (s.y + ny * (base + 64)).toFixed(1);
+      html += `<image href="landmarks/${race.cc}.png" x="${(ex - W / 2).toFixed(1)}" y="${(ey - LH / 2).toFixed(1)}" width="${W}" height="${LH}" preserveAspectRatio="xMidYMid meet"/>
         <text class="stand-label" x="${lx}" y="${ly}">${esc(name)}</text>`;
     } else {
-      const fx = (s.x + nx * (off - 1)).toFixed(1), fy = (s.y + ny * (off - 1)).toFixed(1);
-      const lx = (s.x + nx * (off + 16)).toFixed(1), ly = (s.y + ny * (off + 16)).toFixed(1);
+      const base = off + H / 2;
+      const fx = (s.x + nx * (base + 8)).toFixed(1), fy = (s.y + ny * (base + 8)).toFixed(1);
+      const lx = (s.x + nx * (base + 26)).toFixed(1), ly = (s.y + ny * (base + 26)).toFixed(1);
       html += `<text class="stand-flag" x="${fx}" y="${fy}">${race.flag}</text>
         <text class="stand-label" x="${lx}" y="${ly}">${esc(name)}</text>`;
+    }
+    return true;
+  };
+  (chase.sections || []).forEach(sec => {
+    const race = CALENDAR.find(r => r.round === sec.round);
+    if (!race) return;
+    // The named one sits at the corner the stretch is named for, not back on
+    // the straight that leads into it.
+    const span = sec.d1 - sec.d0;
+    let named = sec.d0 + span * 0.78;
+    for (let k = 0; k < 8 && !stand(named, race, sec.key); k++) {
+      named = sec.d0 + span * (0.72 - k * 0.07);       // shuffle back for room
+      if (named <= sec.d0 + 40) break;
+    }
+    // Then fill the rest of the stretch out with unlabelled stands.
+    for (let d = sec.d0 + 60; d < sec.d1 - 60; d += CHASE.STAND_GAP) {
+      if (Math.abs(d - named) < CHASE.STAND_GAP * 0.8) continue;
+      stand(d, race, null);
     }
   });
   g.innerHTML = html;
@@ -2022,7 +2091,7 @@ function buildScenery() {
       const [name, w] = SCENERY[ti++ % SCENERY.length];
       const along = (rnd(d + r * 7.7) - 0.5) * 34;
       // Find a spot clear of the racing surface, pushing outward if needed.
-      let offv = 86 + r * 34 + rnd(d + r * 3.1) * 22, cx, cy, ok = false;
+      let offv = 124 + r * 34 + rnd(d + r * 3.1) * 22, cx, cy, ok = false;
       for (let t = 0; t < 4; t++) {
         cx = s.x + nx * offv + tx * along; cy = s.y + ny * offv + ty * along;
         if (!onTrack(cx, cy, w / 2 - 2)) { ok = true; break; }
@@ -2042,7 +2111,151 @@ function curveAt(d) {
   return da;
 }
 
-// Red-and-white kerbs on the inside edge (apex) of the tighter turns.
+// Which race's stretch a point on the lap belongs to.
+function sectionAt(d) {
+  const secs = chase.sections;
+  for (let i = 0; i < secs.length; i++) if (d >= secs[i].d0 && d < secs[i].d1) return secs[i];
+  return secs[secs.length - 1];
+}
+
+// How close the lap comes to another part of itself, sampled round the lap.
+// The escape areas are painted outward from the asphalt, so without this they
+// would meet in the middle wherever the circuit doubles back on itself (the
+// waist, and the Hungaroring infield running past Eau Rouge) and read as one
+// blob of colour instead of two separate stretches of track.
+function buildClearance() {
+  const lut = chase.lut, L = chase.L, N = lut.length, step = 4;
+  const out = [];
+  for (let i = 0; i < N; i += step) {
+    const di = (i / (N - 1)) * L;
+    let best = Infinity;
+    for (let j = 0; j < N; j += step) {
+      const dj = (j / (N - 1)) * L, gap = Math.abs(dj - di);
+      if (Math.min(gap, L - gap) < 400) continue;      // ignore our own stretch
+      const dx = lut[i].x - lut[j].x, dy = lut[i].y - lut[j].y;
+      const dd = dx * dx + dy * dy;
+      if (dd < best) best = dd;
+    }
+    out.push(Math.sqrt(best));
+  }
+  chase.clearance = out;
+}
+function clearanceAt(d) {
+  const c = chase.clearance;
+  if (!c || !c.length) return Infinity;
+  const L = chase.L, n = c.length;
+  const f = (((d % L) + L) % L) / L * n;      // interpolated: a stepped cap
+  const i = Math.floor(f), t = f - i;         // would notch the painted edge
+  return lerp(c[i % n], c[(i + 1) % n], t);
+}
+
+// How far the escape area reaches from the centre line at `d` on a given side.
+// It widens on the outside of a turn — the direction cars actually run wide —
+// and narrows to a verge down the straights. Shared with the tyre barriers so
+// they always sit at its outer edge rather than floating in the middle of it.
+function runoffWidth(d, side) {
+  const c = curveAt(d);
+  const outside = c > 0 ? -1 : 1;
+  const severity = Math.min(1, Math.abs(c) / 0.10);
+  const w = side === outside ? lerp(CHASE.RUNOFF_MIN, CHASE.RUNOFF_MAX, severity) : CHASE.RUNOFF_MIN;
+  // Leave a strip of grass wherever the lap runs back alongside itself, so the
+  // two stretches never paint into each other. Measured on the outer edge.
+  const room = clearanceAt(d) / 2 - 14 - TRACK_HALF;
+  return Math.max(0, Math.min(w, room)) * wallTaper(d);
+}
+
+// Street stretches have no escape area at all, so ease the neighbouring one
+// down to a verge as it reaches them rather than ending in a square step.
+function wallTaper(d) {
+  const secs = chase.sections;
+  if (!secs || !secs.length) return 1;
+  const sec = sectionAt(d), n = secs.length, TAPER = 45;
+  if (RUNOFF[sec.round] === 'wall') return 1;
+  let t = 1;
+  if (RUNOFF[secs[(sec.i - 1 + n) % n].round] === 'wall') t = Math.min(t, (d - sec.d0) / TAPER);
+  if (RUNOFF[secs[(sec.i + 1) % n].round] === 'wall') t = Math.min(t, (sec.d1 - d) / TAPER);
+  return Math.max(0, Math.min(1, t));
+}
+
+// The coloured escape areas, painted under the asphalt.
+function buildRunoff() {
+  const g = document.getElementById('chase-runoff');
+  if (!g) return;
+  const step = CHASE.RUNOFF_STEP;
+  let html = '';
+  (chase.sections || []).forEach(sec => {
+    const kind = RUNOFF[sec.round] || 'green';
+    const fills = RUNOFF_FILL[kind] || RUNOFF_FILL.green;
+    const wall = kind === 'wall';
+    // A single colour runs the length of the stretch in one piece; a banded
+    // scheme is cut into stripes so the colours alternate along it.
+    const bandLen = fills.length > 1 ? step * CHASE.RUNOFF_BAND : sec.d1 - sec.d0;
+    for (let side = -1; side <= 1; side += 2) {
+      let d = sec.d0, band = 0;
+      while (d < sec.d1 - 0.01) {
+        const dEnd = Math.min(d + bandLen, sec.d1);
+        const inner = [], outer = [];
+        for (let t = d; t < dEnd + step; t += step) {
+          const tt = Math.min(t, dEnd);
+          const s = lutAt(tt);
+          const nx = -Math.sin(s.angle) * side, ny = Math.cos(s.angle) * side;
+          const w = wall ? CHASE.WALL_W : runoffWidth(tt, side);
+          inner.push(`${(s.x + nx * 34).toFixed(1)} ${(s.y + ny * 34).toFixed(1)}`);
+          outer.push(`${(s.x + nx * (TRACK_HALF + w)).toFixed(1)} ${(s.y + ny * (TRACK_HALF + w)).toFixed(1)}`);
+          if (tt >= dEnd) break;
+        }
+        outer.reverse();
+        html += `<path fill="${fills[band % fills.length]}" d="M ${inner.join(' L ')} L ${outer.join(' L ')} Z"/>`;
+        band++;
+        d = dEnd;
+      }
+    }
+  });
+  g.innerHTML = html + gpLettering();
+}
+
+// The Grand Prix name painted across the escape area, the way circuits letter
+// their run-off. Sits on the widest, straightest spot of the stretch so it has
+// room, and flips with the direction of travel so it is never upside down.
+function gpLettering() {
+  let html = '';
+  (chase.sections || []).forEach(sec => {
+    const race = CALENDAR.find(r => r.round === sec.round);
+    if (!race) return;
+    const isWall = RUNOFF[sec.round] === 'wall';       // no paint to letter on
+    const text = race.name.replace(/ Grand Prix$/, '').toUpperCase();
+    const need = text.length * 13 + 40;                // room the word needs
+    if (sec.d1 - sec.d0 < need + 40) return;
+    // Pick the widest spot with enough paint to sit on — and a straight enough
+    // one that the word does not run off the edge as the track turns away.
+    let best = null;
+    for (let d = sec.d0 + need / 2 + 20; d < sec.d1 - need / 2 - 20; d += 12) {
+      let bend = 0;
+      for (let o = -need / 2; o <= need / 2; o += need / 6) bend = Math.max(bend, Math.abs(curveAt(d + o)));
+      for (let side = -1; side <= 1; side += 2) {
+        const w = runoffWidth(d, side);
+        const score = w - bend * 300;          // wide paint, and straight enough
+        if (!best || score > best.score) best = { d, side, w, score };
+      }
+    }
+    if (!best) return;
+    const s = lutAt(best.d);
+    const nx = -Math.sin(s.angle) * best.side, ny = Math.cos(s.angle) * best.side;
+    // Wide escape areas take the lettering directly; where the paint is only a
+    // verge it goes on the grass beyond the barriers instead, which is the
+    // other place circuits letter.
+    const onPaint = !isWall && best.w >= 26;
+    const off = onPaint ? TRACK_HALF + best.w / 2 + 2
+                        : TRACK_HALF + (isWall ? CHASE.WALL_W : best.w) + 62;
+    let deg = s.angle * 180 / Math.PI;
+    if (deg > 90 || deg < -90) deg += 180;             // keep it readable
+    html += `<text class="gp-paint${onPaint ? '' : ' gp-grass'}" transform="translate(${(s.x + nx * off).toFixed(1)} ${(s.y + ny * off).toFixed(1)}) rotate(${deg.toFixed(1)})">${esc(text)}</text>`;
+  });
+  return html;
+}
+
+// Kerbs on the inside edge (apex) of the tighter turns — red and white, except
+// where the circuit the stretch came from paints its own national colours.
 function buildKerbs() {
   const g = document.getElementById('chase-kerbs');
   if (!g) return;
@@ -2056,8 +2269,9 @@ function buildKerbs() {
     const edge = da > 0 ? 1 : -1;                       // inside of the turn (apex)
     const nx = -Math.sin(s.angle) * edge, ny = Math.cos(s.angle) * edge;
     const cx = s.x + nx * 30, cy = s.y + ny * 30;
-    const cls = (seg++ % 2 === 0) ? 'kerb-r' : 'kerb-w';
-    html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><rect class="${cls}" x="${(-step / 2 - 0.5).toFixed(1)}" y="-4" width="${(step + 1).toFixed(1)}" height="8"/></g>`;
+    const cols = KERB_FILL[RUNOFF[sectionAt(d).round]] || KERB_DEFAULT;
+    const fill = cols[seg++ % cols.length];
+    html += `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${deg})"><rect fill="${fill}" x="${(-step / 2 - 0.5).toFixed(1)}" y="-4" width="${(step + 1).toFixed(1)}" height="8"/></g>`;
   }
   g.innerHTML = html;
 }
@@ -2076,38 +2290,61 @@ function onTrack(x, y, clearance) {
   return false;
 }
 
-// A small group of tire barriers at each corner apex (not a continuous wall),
-// every barrier in the group sharing the same orientation. Plus a pit sign.
+// Tyre barriers where they actually belong: lining the far edge of the escape
+// area right through a corner — the whole arc a car could leave the track on,
+// not a token stack at the apex — and packed hard against the track for the
+// length of a street stretch, where there is no escape area at all.
+//
+// A real tyre barrier is a packed wall two or three rows deep, not a row of
+// separate stacks, so they are laid shoulder to shoulder with a second row
+// staggered in behind and a steel rail closing off the back. Every stack stays
+// upright rather than rotated to the track.
 function buildBarriers() {
   const g = document.getElementById('chase-dressing');
   if (!g) return;
-  const L = chase.L;
+  const L = chase.L, gap = 13;
   let html = '';
-  // Find each corner as a run of high curvature, and keep its apex.
+  const stack = (x, y, w) => {
+    if (onTrack(x, y, 9)) return;
+    const h = w * 1.2;
+    html += `<image href="racing/tire-barrier.png" x="${(x - w / 2).toFixed(1)}" y="${(y - h / 2).toFixed(1)}" width="${w}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`;
+  };
+  // A run of barrier: tyres shoulder to shoulder along the front, with a second
+  // row packed into the gaps behind them so it reads as a wall with depth.
+  const wall = (d0, d1, sideOf, offOf) => {
+    let k = 0;
+    for (let d = d0; d <= d1; d += gap, k++) {
+      const s = lutAt(d), side = sideOf(d);
+      const nx = -Math.sin(s.angle) * side, ny = Math.cos(s.angle) * side;
+      const off = offOf(d, side);
+      stack(s.x + nx * off, s.y + ny * off, 16);
+      const b = lutAt(d + gap / 2);                        // back row, staggered
+      const bnx = -Math.sin(b.angle) * side, bny = Math.cos(b.angle) * side;
+      stack(b.x + bnx * (off + 11), b.y + bny * (off + 11), 14);
+    }
+  };
+  // Street stretches: a continuous wall down both sides of the whole section.
+  (chase.sections || []).forEach(sec => {
+    if (RUNOFF[sec.round] !== 'wall') return;
+    for (let side = -1; side <= 1; side += 2) {
+      wall(sec.d0, sec.d1, () => side, () => TRACK_HALF + CHASE.WALL_W + 8);
+    }
+  });
+  // Everywhere else: follow each corner from entry to exit along the outside.
   const corners = [];
-  let inCorner = false, apexD = 0, apexC = 0;
+  let inCorner = false, from = 0;
   for (let d = 0; d < L; d += 8) {
     const c = Math.abs(curveAt(d));
-    if (c > 0.06) {
-      if (!inCorner) { inCorner = true; apexD = d; apexC = c; }
-      else if (c > apexC) { apexC = c; apexD = d; }
-    } else if (inCorner) { corners.push(apexD); inCorner = false; }
+    if (c > 0.06) { if (!inCorner) { inCorner = true; from = d; } }
+    else if (inCorner) { corners.push([from, d]); inCorner = false; }
   }
-  if (inCorner) corners.push(apexD);
-  // Cluster of 3 tire barriers at each apex, all kept upright (unrotated),
-  // pushed just far enough out to clear the track (and any looping section).
-  corners.forEach(d => {
-    const s = lutAt(d);
-    const sign = curveAt(d) > 0 ? -1 : 1;         // outside of the turn
-    const nx = -Math.sin(s.angle) * sign, ny = Math.cos(s.angle) * sign;
-    let off = 50;
-    while (off < 110 && onTrack(s.x + nx * off, s.y + ny * off, 13)) off += 8;
-    const bx = s.x + nx * off, by = s.y + ny * off;
-    for (let k = -1; k <= 1; k++) {
-      const gx = bx + k * 18;
-      if (onTrack(gx, by, 11)) continue;
-      html += `<image href="racing/tire-barrier.png" x="${(gx - 10).toFixed(1)}" y="${(by - 12).toFixed(1)}" width="20" height="24" preserveAspectRatio="xMidYMid meet"/>`;
-    }
+  if (inCorner) corners.push([from, L]);
+  corners.forEach(([d0, d1]) => {
+    if (RUNOFF[sectionAt((d0 + d1) / 2).round] === 'wall') return;   // already walled
+    // Ride the outer edge of the paint. Following it directly rather than
+    // pushing each stack out on its own keeps the wall an even line.
+    wall(d0, d1, d => (curveAt(d) > 0 ? -1 : 1),
+         (d, side) => TRACK_HALF + runoffWidth(d, side) + 12);
   });
   // Pit sign + a couple of cones just after the start/finish line.
   const ps = lutAt(CHASE.STARTLINE_PAD + 40);
@@ -2142,6 +2379,8 @@ function openChase() {
 
   buildChaseCars();
   buildStartLine();
+  buildClearance();
+  buildRunoff();
   buildKerbs();
   buildScenery();
   buildBarriers();
@@ -2286,7 +2525,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (migrated) save('players', players);
 
   if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607280637';
+    const SW_VERSION = '2607281401';
     let hasRefreshedForUpdate = false;
 
     function showUpdateBanner(registration) {
