@@ -500,7 +500,7 @@
 <div id="key-screen" style="display:none">
   <span class="logo">Curator</span>
   <p class="key-hint">Your personal YouTube feed, no algorithm.<br>Your API key is stored only in your browser — never sent anywhere.</p>
-  <input id="key-input" class="input-field" type="password" placeholder="YouTube Data API v3 key (AIza…)" autocomplete="off" />
+  <input id="key-input" class="input-field" type="password" placeholder="YouTube Data API v3 key (AIza…)" autocomplete="off" aria-label="YouTube Data API v3 key" />
   <button class="btn-primary" id="key-save-btn">Get started →</button>
   <a class="key-link" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">How to get a free API key ↗</a>
   <p class="key-hint" style="font-size:10px; color:#333;">
@@ -538,7 +538,7 @@
     </div>
     <p class="modal-hint">Add a channel URL, @handle, playlist URL/ID, or search keyword.</p>
     <div class="modal-input-row">
-      <input class="input-field" id="source-input" placeholder="@mkbhd · youtube.com/... · PLxxx · formula 1" />
+      <input class="input-field" id="source-input" placeholder="@mkbhd · youtube.com/... · PLxxx · formula 1" aria-label="Channel URL, handle, playlist, or search keyword" />
       <button class="btn-primary" id="source-add-btn" style="padding:11px 18px">Add</button>
     </div>
     <div class="sources-list" id="sources-list"></div>
@@ -555,7 +555,7 @@
 
 <script>
 // ── Constants ────────────────────────────────────────────────────────────────
-const APP_VERSION = '2607281411';
+const APP_VERSION = '2607290423';
 const KEY_API   = 'curator_api_key';
 const KEY_SRCS  = 'curator_sources';
 const KEY_IDX   = 'curator_idx';
@@ -774,7 +774,7 @@ function renderMain(errors = []) {
     <div class="video-card">
       <div class="video-frame" id="video-frame">
         ${playerActive
-          ? `<iframe class="video-iframe" src="https://www.youtube.com/embed/${cur.id}?autoplay=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
+          ? `<iframe class="video-iframe" src="https://www.youtube.com/embed/${escHtml(cur.id)}?autoplay=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
           : `
             <img class="video-thumb" src="${cur.thumb || ''}" alt="${escHtml(cur.title)}" onerror="this.style.display='none'" />
             <div class="thumb-overlay"></div>
@@ -794,7 +794,7 @@ function renderMain(errors = []) {
       </div>
       <div class="video-nav">
         <button class="nav-btn" onclick="navigate(-1)" ${idx === 0 ? 'disabled' : ''} aria-label="Previous">←</button>
-        <a class="yt-link" href="https://www.youtube.com/watch?v=${cur.id}" target="_blank" rel="noopener">Open on YouTube ↗</a>
+        <a class="yt-link" href="https://www.youtube.com/watch?v=${escHtml(cur.id)}" target="_blank" rel="noopener">Open on YouTube ↗</a>
         <button class="nav-btn" onclick="navigate(1)" ${idx >= videos.length - 1 ? 'disabled' : ''} aria-label="Next">→</button>
       </div>
     </div>`;

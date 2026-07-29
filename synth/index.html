@@ -1291,7 +1291,11 @@ const KeyDetector = (() => {
       rafId = setInterval(collect, 50);
       detectionInterval = setInterval(detectKey, 2500);
       renderBtn();
-    } catch(e) {}
+    } catch(e) {
+      console.error('Key detection mic access failed:', e);
+      const label = document.getElementById('key-label');
+      if (label) label.textContent = 'mic blocked';
+    }
   }
 
   function stop() {
@@ -1417,7 +1421,7 @@ document.getElementById('install-btn').addEventListener('click', async () => {
 });
 
 if ('serviceWorker' in navigator) {
-  const SW_VERSION = '2607281411';
+  const SW_VERSION = '2607290423';
   let hasRefreshedForUpdate = false;
 
   function showUpdateBanner(registration) {
