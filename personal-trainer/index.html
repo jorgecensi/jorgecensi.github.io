@@ -3591,7 +3591,13 @@ permalink: /personal-trainer/
                 const u = new SpeechSynthesisUtterance(text);
                 u.rate = 1.05;
                 const v = resolveVoice();
-                if (v) { u.voice = v; u.lang = v.lang; }
+                // iOS Safari goes completely silent when the *default* voice is
+                // assigned to u.voice explicitly, so only override when we're
+                // actually switching to a different, non-default voice. Leaving
+                // u.voice unset uses the engine default — exactly how speech
+                // behaved (and worked) before the picker existed. Setting u.lang
+                // is another iOS silence trigger, so we no longer touch it.
+                if (v && !v.default) u.voice = v;
                 window.speechSynthesis.speak(u);
             } catch (e) { /* speech is optional */ }
         }
