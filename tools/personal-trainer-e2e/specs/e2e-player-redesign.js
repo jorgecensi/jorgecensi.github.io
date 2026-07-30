@@ -137,6 +137,16 @@ const SHOTS = process.env.SHOTS_DIR;
     }
     await ctx.setOffline(true);
     await off.click('#btn-generate');
+    // Not every exercise ships a preset form-guide video (users paste their own), so
+    // the first move of a random workout may have no video slot at all. This pass is
+    // about the *offline* behaviour of a slot that does exist, so guarantee one by
+    // giving the first exercise a link before it plays.
+    await off.evaluate(() => {
+        const first = currentWorkout.items.find((it) => it.kind === 'work');
+        state.links = state.links || {};
+        state.links[first.ex.id] = 'https://www.youtube.com/watch?v=ASdvN_XEl_c';
+        saveState();
+    });
     await off.click('#btn-start');
     await off.waitForSelector('#player.active', { timeout: 5000 });
     await off.waitForTimeout(600);

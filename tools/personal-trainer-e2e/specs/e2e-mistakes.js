@@ -15,7 +15,7 @@ const SHOTS = process.env.SHOTS_DIR;
         const bad = EXERCISES.filter((e) => !e.mistake || e.mistake.length < 20);
         return { total: EXERCISES.length, bad: bad.map((e) => e.id) };
     });
-    assert(dataCheck.total === 64, 'all 64 exercises present, got ' + dataCheck.total);
+    assert(dataCheck.total === 92, 'all 92 exercises present, got ' + dataCheck.total);
     assert(dataCheck.bad.length === 0, 'exercises missing a mistake note: ' + dataCheck.bad.join(', '));
 
     if (await active() === 'setup') {
