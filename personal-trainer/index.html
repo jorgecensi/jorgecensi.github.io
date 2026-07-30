@@ -464,6 +464,14 @@ permalink: /personal-trainer/
             margin-top: var(--sp-1);
         }
 
+        /* A second topic inside one card, separated by a hairline instead of by the
+           gap-plus-border of a card of its own. */
+        .card-section {
+            margin-top: var(--sp-3);
+            padding-top: var(--sp-3);
+            border-top: 1px solid var(--border);
+        }
+
         /* #setup serves both first-run onboarding and the Settings tab; these two
            classes are what tells them apart. */
         #setup .settings-only { display: none; }
@@ -1803,7 +1811,9 @@ permalink: /personal-trainer/
             grid-auto-flow: column;
             grid-auto-columns: 12px;
             gap: var(--sp-1);
-            justify-content: start;
+            /* 12 columns of 12px only fill about 60% of the card, so centring balances
+               the leftover space instead of pooling it all on the right. */
+            justify-content: center;
             margin: var(--sp-1) 0;
         }
 
@@ -2044,11 +2054,18 @@ permalink: /personal-trainer/
                 <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
                 <div class="stat accent-orange"><div class="streak-badge" id="stat-streak-badge"><img class="stat-ico" id="stat-streak-ico" src="/img/pt/streak.png" alt=""></div><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
             </div>
+            <!-- This week's goal and the 12-week chain are one story, so they share a
+                 card: seeing the streak you'd break is what makes you tap Generate.
+                 Keeping them as two cards cost a duplicate title, padding and margin —
+                 enough to push the whole block past the fold. -->
             <div class="card" id="weekly-card">
                 <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
                 <div class="week-segs" id="week-segs"></div>
                 <button class="info-link" id="btn-freeze">❄️ Freeze today's streak</button>
-                <button class="btn secondary mt-3" id="btn-commit">Commit &amp; share ↗</button>
+                <div id="streak-card" class="card-section">
+                    <div id="home-heatmap"></div>
+                </div>
+                <button class="btn secondary" id="btn-commit">Commit &amp; share ↗</button>
             </div>
         </section>
 
@@ -2058,10 +2075,6 @@ permalink: /personal-trainer/
                 <h1>Your <span>Progress</span></h1>
                 <span></span>
             </header>
-            <div class="card" id="streak-card">
-                <div class="section-title">Consistency</div>
-                <div id="home-heatmap"></div>
-            </div>
             <div class="card clickable-card" id="ach-card" role="button" tabindex="0">
                 <div class="level-row"><strong><img class="ico" src="/img/pt/achievements.png" alt="">Achievements</strong><span class="see-all">All <span id="ach-badge-count" class="ach-count"></span> ›</span></div>
                 <div id="ach-progress"></div>
@@ -2301,7 +2314,7 @@ permalink: /personal-trainer/
     </nav>
 
     <script>
-        const SW_VERSION = '2607301200';
+        const SW_VERSION = '2607301430';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -2974,17 +2987,22 @@ permalink: /personal-trainer/
         // count-up can roll from them to the current values.
         let homeCountFrom = { workouts: 0, streak: 0 };
 
-        // Roll the two numeric stats from their previous value up to the current one
-        // (a no-op when nothing changed, e.g. a casual visit to Today).
+        // Roll the two numeric stats up from their previous value and light the
+        // consistency chain cell by cell — the numbers just changed, so make the page
+        // feel like it's catching up to them. No-op under reduced motion.
         function playTodayEntryAnimations() {
             if (prefersReducedMotion()) return;
             animateCount(document.getElementById('stat-workouts'), homeCountFrom.workouts, state.history.length);
             animateCount(document.getElementById('stat-streak'), homeCountFrom.streak, state.streak);
+            const hm = document.querySelector('#home-heatmap .hm');
+            if (hm) {
+                hm.classList.add('cascade');
+                hm.querySelectorAll('div.on, div.goal, div.frozen')
+                    .forEach((c, i) => { c.style.animationDelay = `${i * 16}ms`; });
+            }
         }
 
-        // Sweep the progress bars up from zero and light the consistency chain cell
-        // by cell each time Progress appears — the numbers just changed, so make the
-        // page feel like it's catching up to them. No-op under reduced motion.
+        // Sweep the tier and achievement bars up from zero each time Progress appears.
         function playProgressEntryAnimations() {
             if (prefersReducedMotion()) return;
             const bars = [
@@ -3003,12 +3021,6 @@ permalink: /personal-trainer/
                     bar.style.width = target;
                 }, 60 + i * 90);
             });
-            const hm = document.querySelector('#home-heatmap .hm');
-            if (hm) {
-                hm.classList.add('cascade');
-                hm.querySelectorAll('div.on, div.goal, div.frozen')
-                    .forEach((c, i) => { c.style.animationDelay = `${i * 16}ms`; });
-            }
         }
 
         function activeScreenId() {
@@ -3510,6 +3522,7 @@ permalink: /personal-trainer/
             document.getElementById('week-label').textContent =
                 done >= goal ? 'Goal met 🎉' : `${done} of ${goal} workouts`;
 
+            document.getElementById('home-heatmap').innerHTML = heatmapHtml();
             renderHeroGreeting(done, goal);
             renderFreezeButton();
         }
@@ -3545,7 +3558,6 @@ permalink: /personal-trainer/
             const unlocked = Object.keys(state.achievements || {}).length;
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
 
-            document.getElementById('home-heatmap').innerHTML = heatmapHtml();
             renderAchProgress();
             renderRecPreview();
         }
@@ -5069,7 +5081,7 @@ permalink: /personal-trainer/
                     cells += `<div class="${cls}${t === today.getTime() ? ' td' : ''}"></div>`;
                 }
             }
-            return `<div class="hm">${cells}</div><p class="muted-note mt-2 mb-3">Last 12 weeks — don’t break the chain.</p>`;
+            return `<div class="hm">${cells}</div><p class="muted-note center mt-2 mb-3">Last 12 weeks — don’t break the chain.</p>`;
         }
 
         // =====================================================

@@ -18,32 +18,32 @@ const SHOTS = process.env.SHOTS_DIR;
     assert(await active() === 'home', 'reached home screen, got ' + await active());
     if (errors.length) assert(false, 'no page errors on load: ' + errors.join(' | '));
 
-    // The heatmap moved to the Progress tab in the nav restructure.
-    const gotoProgress = async () => {
-        await page.click('#tabbar .tab[data-tab="progress"]');
-        await page.waitForTimeout(120);
-    };
-    await gotoProgress();
-    assert(await active() === 'progress', 'reached progress tab, got ' + await active());
-
-    // 1. Heatmap tile grid present, inside #streak-card, before #ach-card in DOM order
+    // 1. The chain lives on Today, sharing the weekly-goal card, and is visible
+    //    without leaving the tab you land on.
     const homeInfo = await page.evaluate(() => {
         const streakCard = document.getElementById('streak-card');
-        const achCard = document.getElementById('ach-card');
         const hm = document.querySelector('#home-heatmap .hm');
-        const cellCount = hm ? hm.children.length : 0;
-        const streakBeforeAch = streakCard && achCard &&
-            (streakCard.compareDocumentPosition(achCard) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-        return { hasStreakCard: !!streakCard, hasHm: !!hm, cellCount, streakBeforeAch };
+        return {
+            hasStreakCard: !!streakCard,
+            hasHm: !!hm,
+            cellCount: hm ? hm.children.length : 0,
+            insideWeeklyCard: !!(streakCard && streakCard.closest('#weekly-card')),
+            onHome: !!(streakCard && streakCard.closest('#home')),
+            visible: !!(hm && hm.getClientRects().length)
+        };
     });
     console.log('home heatmap info:', homeInfo);
-    assert(homeInfo.hasStreakCard, '#streak-card exists on progress');
+    assert(homeInfo.hasStreakCard, '#streak-card exists');
+    assert(homeInfo.onHome, '#streak-card lives on the Today screen');
+    assert(homeInfo.insideWeeklyCard, 'the chain shares the weekly-goal card rather than owning one');
     assert(homeInfo.hasHm, '.hm tile grid rendered inside #home-heatmap');
     assert(homeInfo.cellCount === 84, 'heatmap has 12 weeks x 7 days = 84 cells, got ' + homeInfo.cellCount);
-    assert(homeInfo.streakBeforeAch, 'streak-card appears before ach-card in DOM order');
-    await page.screenshot({ path: `${SHOTS}/1-progress-with-heatmap.png` });
+    assert(homeInfo.visible, 'heatmap is visible on the tab the app opens on');
+    await page.screenshot({ path: `${SHOTS}/1-today-with-heatmap.png` });
 
-    // 2. History screen no longer contains the heatmap
+    // 2. History screen no longer contains the heatmap (#nav-history is on Progress)
+    await page.click('#tabbar .tab[data-tab="progress"]');
+    await page.waitForTimeout(120);
     await page.click('#nav-history');
     await page.waitForTimeout(200);
     assert(await active() === 'history', 'navigated to history, got ' + await active());
