@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607301430';
+const CACHE_VERSION = '2607301545';
 const CACHE_NAME = `personal-trainer-${CACHE_VERSION}`;
 const OFFLINE_URL = '/personal-trainer/';
 const PRECACHE_URLS = [
