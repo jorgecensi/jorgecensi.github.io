@@ -63,7 +63,9 @@ const SHOTS = process.env.SHOTS_DIR;
     assert(goalIdx === maxIdx, 'the goal tile is the chronologically last (3rd) lit day, goalIdx=' + goalIdx + ' maxIdx=' + maxIdx);
 
     // Sanity: history screen no longer shows any heatmap at all (already verified in prior suite,
-    // re-check quickly here since we just seeded fresh data)
+    // re-check quickly here since we just seeded fresh data). #nav-history lives on Progress.
+    await page.click('#tabbar .tab[data-tab="progress"]');
+    await page.waitForTimeout(120);
     await page.click('#nav-history');
     await page.waitForTimeout(200);
     const historyHasHm = await page.evaluate(() => !!document.querySelector('#history-list .hm'));

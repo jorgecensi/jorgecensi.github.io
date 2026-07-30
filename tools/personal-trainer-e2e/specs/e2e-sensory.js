@@ -154,7 +154,7 @@ const INSTALL_STUBS = () => {
     await page.waitForTimeout(300);
     assert(await active() === 'home', 'back home after quitting, got ' + await active());
 
-    await page.click('#nav-settings');
+    await page.click('#tabbar .tab[data-tab="setup"]');
     await page.click('#setup-voice .choice[data-v="off"]');
     await page.click('#setup-haptics .choice[data-v="off"]');
     const off = await page.evaluate(() => ({ voice: state.voice, haptics: state.haptics, sound: state.sound }));

@@ -94,7 +94,7 @@ const PREV = 'pt-state-v1-prev';
         await page.evaluate(() => {
             localStorage.setItem = () => { const e = new Error('quota'); e.name = 'QuotaExceededError'; throw e; };
         });
-        await page.click('#nav-settings');
+        await page.click('#tabbar .tab[data-tab="setup"]');
         await page.click('#setup-haptics .choice[data-v="off"]');
         await page.waitForTimeout(300);
         const toast = await page.textContent('.toast').catch(() => '');

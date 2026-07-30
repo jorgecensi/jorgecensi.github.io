@@ -18,6 +18,14 @@ const SHOTS = process.env.SHOTS_DIR;
     assert(await active() === 'home', 'home reached');
     await page.screenshot({ path: `${SHOTS}/1-home.png` });
 
+    // The achievements and records cards live on the Progress tab.
+    const gotoProgress = async () => {
+        await page.click('#tabbar .tab[data-tab="progress"]');
+        await page.waitForTimeout(120);
+        assert(await active() === 'progress', 'progress tab shown, got ' + await active());
+    };
+    await gotoProgress();
+
     // 1. Clicking the achievements CARD body (not the "All" span) navigates
     await page.click('#ach-card');
     await page.waitForTimeout(150);
@@ -34,17 +42,17 @@ const SHOTS = process.env.SHOTS_DIR;
     console.log('first achievement fraction text:', firstFrac);
     assert(/^\d+\/\d+$/.test(firstFrac.trim()), 'fraction format looks like N/M, got ' + firstFrac);
 
-    // 3. Back to home, click the records card
-    await page.click('#achievements [data-back="home"]');
-    assert(await active() === 'home', 'back to home');
+    // 3. Back to progress, click the records card
+    await page.click('#achievements [data-back]');
+    assert(await active() === 'progress', 'back to progress');
     await page.click('#rec-card');
     await page.waitForTimeout(150);
     assert(await active() === 'records', 'clicking anywhere on rec-card navigates to records, got ' + await active());
     await page.screenshot({ path: `${SHOTS}/3-records.png` });
 
     // 4. Keyboard accessibility: focus + Enter on ach-card
-    await page.click('#records [data-back="home"]');
-    assert(await active() === 'home', 'back home again');
+    await page.click('#records [data-back]');
+    assert(await active() === 'progress', 'back on progress again');
     await page.evaluate(() => document.getElementById('ach-card').focus());
     await page.keyboard.press('Enter');
     await page.waitForTimeout(150);

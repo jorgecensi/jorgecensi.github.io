@@ -33,9 +33,7 @@ const SHOTS = process.env.SHOTS_DIR;
     }
     assert(await active() === 'home', 'home reached');
 
-    await page.click('#nav-settings');
-    assert(await active() === 'setup', 'setup shown via settings gear');
-    await page.click('#nav-library');
+    await page.click('#tabbar .tab[data-tab="library"]');
     assert(await active() === 'library', 'library shown');
     await shot('lib-1-closed');
 
@@ -94,19 +92,17 @@ const SHOTS = process.env.SHOTS_DIR;
     const stillHasPlayBtn = await secondItem.locator('.lib-play').evaluate((el) => !el.classList.contains('hidden'));
     assert(stillHasPlayBtn, 'play button still visible since a link still exists');
 
-    // 6. Navigating back (out of the library) stops any playing video
+    // 6. Leaving the library (via another tab) stops any playing video
     await secondBtn.click();
     await page.waitForSelector(`#lv-${secondId} iframe`, { timeout: 5000 });
-    await page.click('#library [data-back="home"]');
-    assert(await active() === 'setup', 'library back returns to setup, the screen it was opened from');
-    await page.click('#nav-library');
+    await page.click('#tabbar .tab[data-tab="home"]');
+    assert(await active() === 'home', 'tapping the Today tab leaves the library');
+    await page.click('#tabbar .tab[data-tab="library"]');
     assert((await page.locator(`#lv-${secondId} iframe`).count()) === 0, 'video did not persist/autoplay across a return visit to the library');
 
     // 7. Sanity: the workout-preview screen's existing video toggle still behaves as before (no regression)
-    await page.click('#library [data-back="home"]');
-    assert(await active() === 'setup', 'library back returns to setup screen it was opened from');
-    await page.click('#setup-go'); // no changes made, just navigates back home
-    assert(await active() === 'home', 'setup-go returns home');
+    await page.click('#tabbar .tab[data-tab="home"]');
+    assert(await active() === 'home', 'back on the Today tab');
     await page.click('#btn-generate');
     assert(await active() === 'preview', 'preview shown');
     const planPlayBtn = page.locator('.plan-play').first();

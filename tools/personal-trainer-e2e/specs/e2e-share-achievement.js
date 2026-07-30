@@ -26,6 +26,9 @@ const SHOTS = process.env.SHOTS_DIR;
         saveState();
     });
 
+    // The achievements card lives on the Progress tab.
+    await page.click('#tabbar .tab[data-tab="progress"]');
+    await page.waitForTimeout(120);
     await page.click('#ach-card');
     await page.waitForTimeout(200);
     assert(await active() === 'achievements', 'navigated to achievements screen, got ' + await active());
