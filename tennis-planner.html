@@ -124,7 +124,7 @@ permalink: /tennis-planner/
                         <p class="text-gray-500">Loading players...</p>
                     </div>
                     <div class="flex space-x-2">
-                        <input type="text" id="new-player-name" placeholder="Enter player name" class="flex-grow p-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none transition">
+                        <input type="text" id="new-player-name" placeholder="Enter player name" aria-label="New player name" class="flex-grow p-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none transition">
                         <button id="add-player-btn" class="bg-teal-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-600 transition-transform transform hover:scale-105">Add</button>
                     </div>
                 </div>
@@ -425,7 +425,7 @@ permalink: /tennis-planner/
 
     <!-- PWA: Service Worker Registration & Install Prompt -->
     <script>
-        const SW_VERSION = '2607281411';
+        const SW_VERSION = '2607290423';
         // Service worker registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

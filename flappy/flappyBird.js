@@ -135,9 +135,9 @@ class FlappyBird {
     playSound(key) {
         try {
             this.sounds[key].currentTime = 0;
-            this.sounds[key].play().catch(e => console.log('Audio play failed:', e));
+            this.sounds[key].play().catch(e => console.error('Audio play failed:', e));
         } catch (e) {
-            console.log('Audio error:', e);
+            console.error('Audio error:', e);
         }
     }
     

@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607281411';
+const CACHE_VERSION = '2607290423';
 const CACHE = `curator-${CACHE_VERSION}`;
 const SHELL = [
   './',
@@ -12,7 +12,13 @@ const SHELL = [
 // Install: cache app shell
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(SHELL))
+    caches.open(CACHE).then(cache =>
+      Promise.all(
+        SHELL.map(url =>
+          cache.add(url).catch(err => console.warn(`Precache failed for ${url}`, err))
+        )
+      )
+    )
   );
 });
 
