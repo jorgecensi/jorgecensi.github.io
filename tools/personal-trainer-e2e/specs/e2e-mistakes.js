@@ -67,8 +67,7 @@ const SHOTS = process.env.SHOTS_DIR;
     await page.waitForTimeout(200);
 
     // 3. Library: expanding an exercise shows its mistake note
-    await page.click('#nav-settings').catch(() => {});
-    await page.click('#nav-library');
+    await page.click('#tabbar .tab[data-tab="library"]');
     assert(await active() === 'library', 'library shown');
     const firstItem = page.locator('.lib-item').first();
     await firstItem.locator('.lib-head').click();

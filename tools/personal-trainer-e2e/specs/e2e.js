@@ -15,33 +15,37 @@ const SHOTS = process.env.SHOTS_DIR;
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+    // sw.js calls clients.claim() and the app reloads itself on `controllerchange`, so a
+    // cold profile navigates several times on its own. Those reloads wipe the DOM out from
+    // under whatever is mid-assertion, so track them and let them quiesce before reading.
+    let lastNav = Date.now();
+    page.on('framenavigated', (f) => { if (f === page.mainFrame()) lastNav = Date.now(); });
+    const settle = async (quietMs = 1200, timeout = 20000) => {
+        const t0 = Date.now();
+        while (Date.now() - t0 < timeout) {
+            if (Date.now() - lastNav > quietMs) return;
+            await page.waitForTimeout(150);
+        }
+    };
 
     const assert = (cond, msg) => { if (!cond) throw new Error('ASSERT FAILED: ' + msg); };
     const active = () => page.evaluate(() => document.querySelector('.screen.active').id);
     const shot = (name) => SHOTS && page.screenshot({ path: `${SHOTS}/${name}.png` });
 
-    // The exercise library is only reachable from the setup/settings screen — the
-    // "Declutter home" change (e281d87) moved #nav-library off the home screen, so
-    // clicking it directly from home finds the button in the DOM but never visible.
-    const gotoLibrary = async () => {
-        if (await active() === 'home') await page.click('#nav-settings');
-        await page.waitForSelector('#nav-library', { state: 'visible' });
-        await page.click('#nav-library');
+    // Every root destination is a tab now, so navigation from a spec is one click.
+    const gotoTab = async (tab) => {
+        await page.click(`#tabbar .tab[data-tab="${tab}"]`);
+        await page.waitForTimeout(120);
     };
-
-    // A [data-back] button calls goBack(), which pops browser history — it does NOT honour
-    // its own data-back="home" value. Since the library now sits behind settings, one back
-    // from there lands on setup, not home. Unwind until we're actually home.
+    const gotoLibrary = () => gotoTab('library');
     const backToHome = async () => {
-        for (let i = 0; i < 5 && (await active()) !== 'home'; i++) {
-            await page.click(`#${await active()} [data-back]`);
-            await page.waitForTimeout(120);
-        }
-        assert(await active() === 'home', 'unwound back to home, got ' + await active());
+        await gotoTab('home');
+        assert(await active() === 'home', 'back on home, got ' + await active());
     };
 
     // 1. Fresh load → setup screen
     await page.goto(BASE);
+    await settle();
     assert(await active() === 'setup', 'setup shown on first launch, got ' + await active());
     await shot('1-setup');
 
@@ -100,6 +104,7 @@ const SHOTS = process.env.SHOTS_DIR;
     // 6. Feedback "just right" → back home with updated stats
     const scoreBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('pt-state-v1')).prog.core);
     await page.click('[data-fb="right"]');
+    await settle();
     assert(await active() === 'home', 'home after feedback');
     // Stats roll up with a count-up animation on Home entry; wait for it to settle.
     await page.waitForFunction(
@@ -114,6 +119,7 @@ const SHOTS = process.env.SHOTS_DIR;
 
     // 7. Persistence across reload
     await page.reload();
+    await settle();
     assert(await active() === 'home', 'home on return visit');
     await page.waitForFunction(
         () => document.getElementById('stat-workouts').textContent.trim() === '1',
@@ -121,7 +127,6 @@ const SHOTS = process.env.SHOTS_DIR;
     assert((await page.textContent('#stat-workouts')).trim() === '1', 'history persisted');
 
     // 8. Library: add a YouTube link, verify indicator + persistence
-    // #nav-library lives on the setup/settings screen, not home (see gotoLibrary).
     await gotoLibrary();
     assert(await active() === 'library', 'library shown');
     const firstItem = page.locator('.lib-item').first();
@@ -144,23 +149,32 @@ const SHOTS = process.env.SHOTS_DIR;
     const linkedId = await page.locator('.lib-item').first().getAttribute('data-id');
     console.log('linked exercise:', linkedId);
 
-    // 9. History screen
-    await backToHome();
+    // 9. History screen — reached from the Progress tab
+    await gotoTab('progress');
     await page.click('#nav-history');
     assert(await active() === 'history', 'history shown');
     assert((await page.textContent('#history-list')).includes('min'), 'history entry rendered');
     await shot('8-history');
 
-    // 10. Settings round-trip must NOT reset progression when level unchanged
-    await page.click('#history [data-back="home"]');
+    // 10. Settings must NOT reset progression when level unchanged. Settings has no
+    // "save" CTA any more — the picker rows commit on tap.
+    await page.click('#history [data-back]');
     const progBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('pt-state-v1')).prog);
-    await page.click('#nav-settings');
+    await gotoTab('setup');
     const preselected = await page.locator('#setup-level .choice.selected').getAttribute('data-v');
     assert(preselected === 'intermediate', 'level preselected in settings');
     await page.click('#setup-duration .choice[data-v="25"]');
-    await page.click('#setup-go');
+    await page.waitForTimeout(120);
     const progAfter = await page.evaluate(() => JSON.parse(localStorage.getItem('pt-state-v1')).prog);
     assert(progAfter.core === progBefore.core, 'progression kept when only duration changed');
+    assert(await page.evaluate(() => JSON.parse(localStorage.getItem('pt-state-v1')).duration) === 25,
+        'duration committed on tap, without a save button');
+
+    // 10b. Changing level in settings must not wipe earned progression either
+    await page.click('#setup-level .choice[data-v="advanced"]');
+    await page.waitForTimeout(120);
+    const progAfterLevel = await page.evaluate(() => JSON.parse(localStorage.getItem('pt-state-v1')).prog);
+    assert(progAfterLevel.core === progBefore.core, 'earned progression survives a level change in settings');
 
     // 11. Manifest + SW registration present
     const manifest = await page.getAttribute('link[rel="manifest"]', 'href');

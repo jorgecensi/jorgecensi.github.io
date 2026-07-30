@@ -38,17 +38,31 @@ manifest.json}` contain no Liquid — Jekyll only strips the frontmatter — so 
 
 ## Navigating the app from a spec
 
-Two things reliably catch out new specs:
+The bottom tab bar is the app's root navigation, so every top-level destination is one
+click: `#tabbar .tab[data-tab="home"|"progress"|"library"|"setup"]`. `e2e.js` wraps that
+in a `gotoTab()` helper. This replaced two long-standing traps — the library being
+reachable only via the settings screen, and `[data-back="home"]` not honouring its own
+value — both of which are gone.
 
-- **The exercise library is not on the home screen.** `#nav-library` lives on the
-  setup/settings screen (moved there by `e281d87`). From home you must click
-  `#nav-settings` first. Clicking `#nav-library` straight from home finds the button
-  in the DOM but never visible, so it fails as a 30s click timeout rather than a
-  missing-element error.
-- **`[data-back]` ignores its own value.** Those buttons call `goBack()`, which pops
-  browser history; `data-back="home"` is vestigial. Backing out of the library lands
-  on `setup`, not `home`. `e2e.js` has a `backToHome()` helper that unwinds until the
-  home screen is actually active — copy that pattern rather than assuming one back.
+What still catches out new specs:
+
+- **Only four screens are tabs.** `preview`, `player`, `complete`, `history`, `info`,
+  `achievements` and `records` are sub-screens reached with `navigate()`, and their
+  `[data-back]` buttons pop browser history. `#nav-history` and `#nav-info` live on the
+  **Progress** tab, not Today — click that tab first or the click times out.
+- **Tab switches replace the root history entry, they don't push.** Hopping between
+  tabs never grows `history.length`, so `page.goBack()` after a few tab taps leaves the
+  app rather than replaying them. `e2e-setup-back.js` asserts this.
+- **Home is split.** Today holds the stats, session-length picker, Generate CTA and the
+  weekly-goal card; Progress holds the heatmap, achievements, records and tier bars.
+  Both are painted by the same `renderHome()`, and elements stay in the DOM whichever
+  screen is active — so `page.textContent()` reads work from either tab, but
+  `page.click()` needs the owning tab to be showing.
+- **The app reloads itself on a cold profile.** `sw.js` calls `clients.claim()` and the
+  page reloads on `controllerchange`, several times before it settles. Those reloads
+  wipe the DOM out from under a mid-flight assertion. `e2e.js` has a `settle()` helper
+  that waits for main-frame navigations to go quiet — use it after the first `goto()`
+  and after any step that then reads freshly-rendered state.
 
 ## A note on deleted coverage
 

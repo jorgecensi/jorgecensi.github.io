@@ -18,7 +18,15 @@ const SHOTS = process.env.SHOTS_DIR;
     assert(await active() === 'home', 'reached home screen, got ' + await active());
     if (errors.length) assert(false, 'no page errors on load: ' + errors.join(' | '));
 
-    // 1. Heatmap tile grid present on home, inside #streak-card, before #ach-card in DOM order
+    // The heatmap moved to the Progress tab in the nav restructure.
+    const gotoProgress = async () => {
+        await page.click('#tabbar .tab[data-tab="progress"]');
+        await page.waitForTimeout(120);
+    };
+    await gotoProgress();
+    assert(await active() === 'progress', 'reached progress tab, got ' + await active());
+
+    // 1. Heatmap tile grid present, inside #streak-card, before #ach-card in DOM order
     const homeInfo = await page.evaluate(() => {
         const streakCard = document.getElementById('streak-card');
         const achCard = document.getElementById('ach-card');
@@ -29,11 +37,11 @@ const SHOTS = process.env.SHOTS_DIR;
         return { hasStreakCard: !!streakCard, hasHm: !!hm, cellCount, streakBeforeAch };
     });
     console.log('home heatmap info:', homeInfo);
-    assert(homeInfo.hasStreakCard, '#streak-card exists on home');
+    assert(homeInfo.hasStreakCard, '#streak-card exists on progress');
     assert(homeInfo.hasHm, '.hm tile grid rendered inside #home-heatmap');
     assert(homeInfo.cellCount === 84, 'heatmap has 12 weeks x 7 days = 84 cells, got ' + homeInfo.cellCount);
     assert(homeInfo.streakBeforeAch, 'streak-card appears before ach-card in DOM order');
-    await page.screenshot({ path: `${SHOTS}/1-home-with-heatmap.png` });
+    await page.screenshot({ path: `${SHOTS}/1-progress-with-heatmap.png` });
 
     // 2. History screen no longer contains the heatmap
     await page.click('#nav-history');
@@ -42,11 +50,13 @@ const SHOTS = process.env.SHOTS_DIR;
     const historyHasHm = await page.evaluate(() => !!document.querySelector('#history-list .hm'));
     assert(!historyHasHm, 'history screen no longer contains the .hm tile grid');
     await page.screenshot({ path: `${SHOTS}/2-history-no-heatmap.png` });
-    await page.click('#history [data-back="home"]');
+    await page.click('#history [data-back]');
     await page.waitForTimeout(200);
-    assert(await active() === 'home', 'back to home, got ' + await active());
+    assert(await active() === 'progress', 'back to progress, got ' + await active());
 
-    // 3. Do one workout and confirm the heatmap's "today" cell lights up on home
+    // 3. Do one workout and confirm the heatmap's "today" cell lights up
+    await page.click('#tabbar .tab[data-tab="home"]');
+    await page.waitForTimeout(120);
     await page.click('#btn-generate');
     await page.click('#btn-start');
     await page.waitForSelector('#player.active', { timeout: 5000 });
@@ -64,7 +74,7 @@ const SHOTS = process.env.SHOTS_DIR;
         return td ? td.classList.contains('on') : null;
     });
     console.log('today cell lit after workout:', todayLit);
-    assert(todayLit === true, 'today cell in home heatmap lights up after logging a workout');
+    assert(todayLit === true, 'today cell in the heatmap lights up after logging a workout');
 
     if (errors.length) {
         console.log('PAGE ERRORS:', errors);

@@ -53,6 +53,8 @@ permalink: /personal-trainer/
             --danger-rgb: 248 113 113;
             /* Page background, as channels — used for the frosted sticky header. */
             --bg-rgb: 15 21 33;
+            /* Body text, as channels — for copy that sits between --text and --muted. */
+            --text-rgb: 233 238 245;
 
             /* ---- Type --------------------------------------------------------- */
             /* An 8-step ramp plus one off-ramp display size. Tight steps (~1.09) at
@@ -93,6 +95,7 @@ permalink: /personal-trainer/
 
             /* ---- Layout ------------------------------------------------------- */
             --app-max-width: 520px;
+            --tabbar-h: 56px;
         }
 
         * {
@@ -174,6 +177,12 @@ permalink: /personal-trainer/
             padding: calc(12px + env(safe-area-inset-top, 4px)) 16px calc(28px + env(safe-area-inset-bottom, 0px));
         }
 
+        /* The tab bar is fixed, so it doesn't take part in layout — the shell has to
+           reserve its height itself or the last card scrolls under the bar. */
+        body.has-tabbar #app {
+            padding-bottom: calc(var(--tabbar-h) + var(--sp-6) + env(safe-area-inset-bottom, 0px));
+        }
+
         .screen {
             display: none;
             flex-direction: column;
@@ -248,6 +257,70 @@ permalink: /personal-trainer/
             border: 1px solid var(--border);
             border-radius: var(--r-md);
             padding: var(--sp-2) var(--sp-4);
+        }
+
+        /* Tab bar — the app's root navigation. Fixed to the bottom because that is
+           where the thumb already is, centred to the same column as #app so it lines
+           up with the content on wide screens, and frosted like the topbar so the two
+           chrome surfaces read as the same material. */
+        .tabbar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 30;
+            display: none;
+            margin: 0 auto;
+            max-width: var(--app-max-width);
+            grid-template-columns: repeat(4, 1fr);
+            background: rgb(var(--bg-rgb) / 88%);
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+            border-top: 1px solid var(--border);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        .tabbar.visible {
+            display: grid;
+        }
+
+        .tab {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: var(--sp-05);
+            min-height: var(--tabbar-h);
+            padding: var(--sp-2) var(--sp-1);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: var(--fs-2xs);
+            font-weight: 600;
+            color: var(--muted);
+            transition: color var(--dur-fast) var(--ease-standard);
+        }
+
+        /* The tab icons are full-colour PNGs rather than tintable glyphs, so the
+           active state is carried by opacity and the label colour instead of a fill. */
+        .tab-ico {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            opacity: 0.55;
+            transition: opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+        }
+
+        .tab[aria-current="page"] {
+            color: var(--accent);
+        }
+
+        .tab[aria-current="page"] .tab-ico {
+            opacity: 1;
+        }
+
+        .tab:active .tab-ico {
+            transform: scale(0.88);
         }
 
         .card {
@@ -364,6 +437,38 @@ permalink: /personal-trainer/
             color: var(--muted);
             margin: var(--sp-3) 0 var(--sp-2);
         }
+
+        /* Today's hero — the session picker and the Generate button in one accent-lit
+           block, so the app's primary action is the first thing on the screen instead
+           of the fourth card down. */
+        .hero {
+            background:
+                linear-gradient(160deg, rgb(var(--accent-rgb) / 14%), transparent 62%),
+                var(--surface);
+            border: 1px solid rgb(var(--accent-rgb) / 22%);
+            border-radius: var(--r-lg);
+            padding: var(--sp-5);
+            margin-bottom: var(--sp-4);
+            box-shadow: 0 1px 0 rgb(255 255 255 / 5%) inset, 0 8px 22px rgb(0 0 0 / 26%);
+        }
+
+        .hero-greet {
+            font-size: var(--fs-2xl);
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .hero-sub {
+            font-size: var(--fs-sm);
+            color: var(--muted);
+            margin-top: var(--sp-1);
+        }
+
+        /* #setup serves both first-run onboarding and the Settings tab; these two
+           classes are what tells them apart. */
+        #setup .settings-only { display: none; }
+        #setup.settings-mode .onboarding-only { display: none; }
+        #setup.settings-mode .settings-only { display: revert; }
 
         /* Home */
         .stats-row {
@@ -687,17 +792,9 @@ permalink: /personal-trainer/
         #btn-generate {
             background: linear-gradient(135deg, #12c48a, #0fb7a4);
             box-shadow: 0 6px 20px rgb(var(--accent-rgb) / 36%);
-            /* .btn carries no bottom margin, so without this the hero button sits
-               flush against the consistency card directly below it. */
-            margin-bottom: var(--sp-4);
         }
         #btn-generate:active {
             box-shadow: 0 3px 12px rgb(var(--accent-rgb) / 28%);
-        }
-        #nav-library {
-            border-color: rgb(var(--blue-rgb) / 38%);
-            background: rgb(var(--blue-rgb) / 9%);
-            box-shadow: 0 2px 8px rgb(var(--blue-rgb) / 14%);
         }
         #nav-history {
             border-color: rgb(var(--orange-rgb) / 38%);
@@ -873,8 +970,12 @@ permalink: /personal-trainer/
            having to focus on and parse the numerals. */
         .player-timer {
             position: relative;
-            width: 190px;
-            height: 190px;
+            /* Sized off the viewport so the countdown stays readable at arm's length on
+               a mat. Capped three ways: an absolute ceiling on a big phone, a width cap
+               so it never crowds the edges, and a height cap so a short screen (iPhone
+               SE) doesn't push the controls below the fold. */
+            width: min(240px, 62vw, 30vh);
+            height: min(240px, 62vw, 30vh);
             margin: var(--sp-3) auto;
             display: flex;
             align-items: center;
@@ -891,7 +992,9 @@ permalink: /personal-trainer/
 
         .timer-ring circle {
             fill: none;
-            stroke-width: 4;
+            /* The ring is meant to be read peripherally, mid-exercise — at this
+               diameter a 4px arc is too thin to register without looking straight at it. */
+            stroke-width: 6;
         }
 
         .timer-ring-track {
@@ -930,9 +1033,11 @@ permalink: /personal-trainer/
             color: var(--warn);
         }
 
+        /* Brighter than the usual --muted secondary text: a form cue gets read
+           mid-effort, often face-down on a mat, where low contrast doesn't survive. */
         ul.cues {
             list-style: none;
-            color: var(--muted);
+            color: rgb(var(--text-rgb) / 82%);
             font-size: var(--fs-md);
             line-height: 1.7;
             margin: var(--sp-2) 0 var(--sp-3);
@@ -1030,6 +1135,9 @@ permalink: /personal-trainer/
         .player-controls .btn {
             margin: 0;
             padding: var(--sp-4) var(--sp-2);
+            /* Comfortably bigger than the 44px floor — these get hit mid-effort,
+               often without looking. */
+            min-height: 56px;
         }
 
         #player-next {
@@ -1428,12 +1536,6 @@ permalink: /personal-trainer/
             border-radius: 24%;
         }
 
-        #nav-settings .ico {
-            width: 26px;
-            height: 26px;
-            display: block;
-        }
-
         .btn .ico {
             width: 1.4em;
             height: 1.4em;
@@ -1800,6 +1902,26 @@ permalink: /personal-trainer/
             opacity: 0.45;
         }
 
+        /* Same field treatment as .voice-select, minus the dropdown chevron. */
+        .lib-search {
+            width: 100%;
+            margin-bottom: var(--sp-3);
+            padding: var(--sp-3);
+            background-color: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: var(--r-md);
+            color: var(--text);
+            font-family: inherit;
+            font-size: var(--fs-md);
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .lib-search:focus {
+            outline: none;
+            border-color: rgb(var(--accent-rgb) / 55%);
+        }
+
         /* A one-line explainer under a setting. */
         .setting-hint {
             font-size: var(--fs-2xs);
@@ -1834,8 +1956,9 @@ permalink: /personal-trainer/
         <!-- ============ SETUP ============ -->
         <section class="screen" id="setup">
             <header class="topbar">
-                <button class="back-btn" id="setup-back" data-back="home" style="display:none;">‹ Back</button>
-                <h1><img class="ico" src="/img/pt/app-logo.png" alt="">Personal <span>Trainer</span></h1>
+                <span></span>
+                <h1 class="onboarding-only"><img class="ico" src="/img/pt/app-logo.png" alt="">Personal <span>Trainer</span></h1>
+                <h1 class="settings-only">Your <span>Settings</span></h1>
                 <span></span>
             </header>
             <div class="card">
@@ -1845,6 +1968,7 @@ permalink: /personal-trainer/
                     <div class="choice selected" data-v="intermediate">Intermediate<small>Train sometimes</small></div>
                     <div class="choice" data-v="advanced">Advanced<small>Train regularly</small></div>
                 </div>
+                <div class="setting-hint settings-only">This sets your <em>starting</em> score when you first set up. Changing it now won't reset the tiers you've already earned.</div>
             </div>
             <div class="card">
                 <div class="section-title">Session length</div>
@@ -1891,31 +2015,49 @@ permalink: /personal-trainer/
                 <button class="btn secondary mt-3" id="btn-restore">Restore from a backup</button>
                 <input type="file" id="restore-file" accept=".json,application/json" style="display:none;">
             </div>
-            <p class="muted-note mb-4">All workouts mix core fitness and mat pilates — just a mat, no equipment. The plan adapts every session based on your feedback.</p>
-            <button class="btn" id="setup-go">Let's go</button>
-            <button class="btn secondary mt-3" id="nav-library"><img class="ico" src="/img/pt/exercise-library.png" alt="">Exercise library</button>
+            <p class="muted-note mb-4 onboarding-only">All workouts mix core fitness and mat pilates — just a mat, no equipment. The plan adapts every session based on your feedback.</p>
+            <button class="btn onboarding-only" id="setup-go">Let's go</button>
+            <p class="muted-note center settings-only">Changes save as you make them.</p>
         </section>
 
-        <!-- ============ HOME ============ -->
+        <!-- ============ TODAY (home tab) ============ -->
+        <!-- Deliberately short: a greeting, the one action the app exists to drive, and
+             the two things you need to decide whether to take it. Everything you'd only
+             look at *after* training lives on the Progress tab. -->
         <section class="screen" id="home">
             <header class="topbar">
                 <h1><img class="ico" src="/img/pt/app-logo.png" alt="">Personal <span>Trainer</span></h1>
-                <button class="back-btn" id="nav-settings" title="Change level / duration" aria-label="Settings"><img class="ico" src="/img/pt/settings.png" alt=""></button>
+                <span></span>
             </header>
-            <div class="stats-row">
-                <div class="stat accent-green"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
-                <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
-                <div class="stat accent-orange"><div class="streak-badge" id="stat-streak-badge"><img class="stat-ico" id="stat-streak-ico" src="/img/pt/streak.png" alt=""></div><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
-            </div>
-            <div class="card">
-                <div class="section-title">Session length</div>
+            <div class="hero">
+                <div class="hero-greet" id="hero-greet">Ready when you are</div>
+                <div class="hero-sub" id="hero-sub">Pick a length and go.</div>
                 <div class="choice-row" id="home-duration">
                     <div class="choice" data-v="15">15 min</div>
                     <div class="choice" data-v="25">25 min</div>
                     <div class="choice" data-v="40">40 min</div>
                 </div>
+                <button class="btn mt-4" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
             </div>
-            <button class="btn" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
+            <div class="stats-row">
+                <div class="stat accent-green"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
+                <div class="stat accent-blue"><img class="stat-ico" src="/img/pt/workout.png" alt=""><div class="value" id="stat-workouts">0</div><div class="label">Workouts</div></div>
+                <div class="stat accent-orange"><div class="streak-badge" id="stat-streak-badge"><img class="stat-ico" id="stat-streak-ico" src="/img/pt/streak.png" alt=""></div><div class="value" id="stat-streak">0</div><div class="label">Streak</div></div>
+            </div>
+            <div class="card" id="weekly-card">
+                <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
+                <div class="week-segs" id="week-segs"></div>
+                <button class="info-link" id="btn-freeze">❄️ Freeze today's streak</button>
+                <button class="btn secondary mt-3" id="btn-commit">Commit &amp; share ↗</button>
+            </div>
+        </section>
+
+        <!-- ============ PROGRESS ============ -->
+        <section class="screen" id="progress">
+            <header class="topbar">
+                <h1>Your <span>Progress</span></h1>
+                <span></span>
+            </header>
             <div class="card" id="streak-card">
                 <div class="section-title">Consistency</div>
                 <div id="home-heatmap"></div>
@@ -1927,12 +2069,6 @@ permalink: /personal-trainer/
             <div class="card clickable-card" id="rec-card" role="button" tabindex="0">
                 <div class="level-row"><strong><img class="ico" src="/img/pt/records.png" alt="">Records</strong><span class="see-all">All ›</span></div>
                 <div id="rec-preview"></div>
-            </div>
-            <div class="card" id="weekly-card">
-                <div class="level-row"><strong>This week</strong><span class="tier" id="week-label"></span></div>
-                <div class="week-segs" id="week-segs"></div>
-                <button class="info-link" id="btn-freeze">❄️ Freeze today's streak</button>
-                <button class="btn secondary mt-3" id="btn-commit">Commit &amp; share ↗</button>
             </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
@@ -1949,7 +2085,7 @@ permalink: /personal-trainer/
         <!-- ============ PREVIEW ============ -->
         <section class="screen" id="preview">
             <header class="topbar">
-                <button class="back-btn" data-back="home">‹ Back</button>
+                <button class="back-btn" data-back>‹ Back</button>
                 <h1>Today's <span>Workout</span></h1>
                 <div class="topbar-actions">
                     <button class="back-btn" id="btn-generator-info" title="How this workout is built" aria-label="How this workout is built">ⓘ</button>
@@ -2015,11 +2151,12 @@ permalink: /personal-trainer/
         <!-- ============ LIBRARY ============ -->
         <section class="screen" id="library">
             <header class="topbar">
-                <button class="back-btn" data-back="home">‹ Back</button>
+                <span></span>
                 <h1>Exercise <span>Library</span></h1>
                 <span></span>
             </header>
             <p class="muted-note mb-3">Tap ▶ to watch the form guide right here, or tap an exercise to read the cues and paste your own YouTube link.</p>
+            <input type="search" id="lib-search" class="lib-search" placeholder="Search exercises…" aria-label="Search exercises">
             <div class="lib-actions">
                 <button class="btn secondary" id="btn-export">Export links</button>
                 <button class="btn secondary" id="btn-import">Import links</button>
@@ -2031,7 +2168,7 @@ permalink: /personal-trainer/
         <!-- ============ HISTORY ============ -->
         <section class="screen" id="history">
             <header class="topbar">
-                <button class="back-btn" data-back="home">‹ Back</button>
+                <button class="back-btn" data-back>‹ Back</button>
                 <h1>Your <span>History</span></h1>
                 <span></span>
             </header>
@@ -2041,20 +2178,21 @@ permalink: /personal-trainer/
         <!-- ============ HOW PROGRESSION WORKS ============ -->
         <section class="screen" id="info">
             <header class="topbar">
-                <button class="back-btn" data-back="home">‹ Back</button>
+                <button class="back-btn" data-back>‹ Back</button>
                 <h1>How it <span>Works</span></h1>
                 <span></span>
             </header>
 
             <div class="card">
                 <div class="section-title">Tiers</div>
-                <p class="muted-note mb-3">Core Fitness and Mat Pilates each have their own score from 0 to 90. Every 18 points unlocks the next tier, and the bars on the home screen show how far along you are.</p>
+                <p class="muted-note mb-3">Core Fitness and Mat Pilates each have their own score from 0 to 90. Every 18 points unlocks the next tier, and the bars on the Progress tab show how far along you are.</p>
                 <div class="info-tier"><span class="tier-badge t1">T1</span><span>Beginner</span></div>
                 <div class="info-tier"><span class="tier-badge t2">T2</span><span>Novice</span></div>
                 <div class="info-tier"><span class="tier-badge t3">T3</span><span>Intermediate</span></div>
                 <div class="info-tier"><span class="tier-badge t4">T4</span><span>Advanced</span></div>
                 <div class="info-tier"><span class="tier-badge t5">T5</span><span>Elite</span></div>
                 <p class="muted-note mt-3">Workouts draw exercises from your current tier and up to two tiers below it, so new challenges mix with familiar moves. Your Level stat is the average of both disciplines.</p>
+                <p class="muted-note mt-3">The fitness level you pick during first-time setup only sets where those two scores <strong class="txt-strong">start</strong> — beginner at 0, intermediate at 36, advanced at 54. Changing it later in Settings won't reset the tiers you've already earned; only your feedback moves the scores after that.</p>
             </div>
 
             <div class="card">
@@ -2093,7 +2231,7 @@ permalink: /personal-trainer/
         <!-- ============ ACHIEVEMENTS ============ -->
         <section class="screen" id="achievements">
             <header class="topbar">
-                <button class="back-btn" data-back="home">‹ Back</button>
+                <button class="back-btn" data-back>‹ Back</button>
                 <h1>Your <span>Achievements</span></h1>
                 <span></span>
             </header>
@@ -2104,7 +2242,7 @@ permalink: /personal-trainer/
         <!-- ============ RECORDS ============ -->
         <section class="screen" id="records">
             <header class="topbar">
-                <button class="back-btn" data-back="home">‹ Back</button>
+                <button class="back-btn" data-back>‹ Back</button>
                 <h1>Your <span>Records</span></h1>
                 <span></span>
             </header>
@@ -2152,8 +2290,18 @@ permalink: /personal-trainer/
         </div>
     </div>
 
+    <!-- ============ TAB BAR ============ -->
+    <!-- Outside #app so screen swapping never touches it. Hidden until setup is done,
+         and hidden again during a workout, where the screen *is* the task. -->
+    <nav class="tabbar" id="tabbar" aria-label="Main">
+        <button class="tab" data-tab="home" aria-current="page"><img class="tab-ico" src="/img/pt/workout.png" alt=""><span>Today</span></button>
+        <button class="tab" data-tab="progress"><img class="tab-ico" src="/img/pt/records.png" alt=""><span>Progress</span></button>
+        <button class="tab" data-tab="library"><img class="tab-ico" src="/img/pt/exercise-library.png" alt=""><span>Library</span></button>
+        <button class="tab" data-tab="setup"><img class="tab-ico" src="/img/pt/settings.png" alt=""><span>Settings</span></button>
+    </nav>
+
     <script>
-        const SW_VERSION = '2607290843';
+        const SW_VERSION = '2607301200';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -2792,27 +2940,53 @@ permalink: /personal-trainer/
             history.scrollRestoration = 'manual';
         }
 
+        // Which tab owns each screen, so a sub-screen keeps its parent tab lit rather
+        // than clearing the bar's selection.
+        const TAB_OF = {
+            home: 'home', preview: 'home', player: 'home', complete: 'home',
+            progress: 'progress', history: 'progress', achievements: 'progress',
+            records: 'progress', info: 'progress',
+            library: 'library', setup: 'setup'
+        };
+
         function show(id) {
             document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
             window.scrollTo(0, 0);
-            // renderHome() has already painted the bars/heatmap at their final
+            // The bar is chrome for browsing, not for training: during a workout and
+            // its feedback step the screen is the task, and during first-run setup
+            // there is nowhere else to go yet.
+            const showTabs = state.setupDone && id !== 'player' && id !== 'complete';
+            const tabbar = document.getElementById('tabbar');
+            tabbar.classList.toggle('visible', showTabs);
+            document.body.classList.toggle('has-tabbar', showTabs);
+            const owner = TAB_OF[id];
+            tabbar.querySelectorAll('.tab').forEach((t) => {
+                if (t.dataset.tab === owner) t.setAttribute('aria-current', 'page');
+                else t.removeAttribute('aria-current');
+            });
+            // renderHome() has already painted the stats/bars/heatmap at their final
             // values by now, so replay them as an entrance once the screen is up.
-            if (id === 'home') requestAnimationFrame(playHomeEntryAnimations);
+            if (id === 'home') requestAnimationFrame(playTodayEntryAnimations);
+            if (id === 'progress') requestAnimationFrame(playProgressEntryAnimations);
         }
 
         // The stat values shown just before the last renderHome(), so the entry
         // count-up can roll from them to the current values.
         let homeCountFrom = { workouts: 0, streak: 0 };
 
-        // Sweep the progress bars up from zero and light the consistency chain cell
-        // by cell each time Home appears — the numbers just changed, so make the
-        // page feel like it's catching up to them. No-op under reduced motion.
-        function playHomeEntryAnimations() {
+        // Roll the two numeric stats from their previous value up to the current one
+        // (a no-op when nothing changed, e.g. a casual visit to Today).
+        function playTodayEntryAnimations() {
             if (prefersReducedMotion()) return;
-            // Roll the two numeric stats from their previous value up to the current
-            // one (a no-op when nothing changed, e.g. a casual visit to Home).
             animateCount(document.getElementById('stat-workouts'), homeCountFrom.workouts, state.history.length);
             animateCount(document.getElementById('stat-streak'), homeCountFrom.streak, state.streak);
+        }
+
+        // Sweep the progress bars up from zero and light the consistency chain cell
+        // by cell each time Progress appears — the numbers just changed, so make the
+        // page feel like it's catching up to them. No-op under reduced motion.
+        function playProgressEntryAnimations() {
+            if (prefersReducedMotion()) return;
             const bars = [
                 document.getElementById('core-bar'),
                 document.getElementById('pilates-bar'),
@@ -2848,9 +3022,10 @@ permalink: /personal-trainer/
         // an in-app edge swipe below triggers the same back navigation.
         let navDepth = 0;      // pushed entries above the root screen
         let suppressPop = 0;   // popstates we triggered ourselves and must ignore
+        let currentTab = 'home'; // which tab is the current root
 
         function rootScreenId() {
-            return state.setupDone ? 'home' : 'setup';
+            return state.setupDone ? currentTab : 'setup';
         }
 
         function navigate(id) {
@@ -2885,6 +3060,34 @@ permalink: /personal-trainer/
             else goHome();
         }
 
+        // Painting a tab's content before it is shown. Cheap enough to run eagerly.
+        const TAB_RENDER = {
+            home: renderHome,
+            progress: renderHome,
+            library: renderLibrary,
+            setup: renderSettings
+        };
+
+        // A tab switch moves sideways at the root, it does not go deeper: it unwinds
+        // anything pushed and *replaces* the root entry rather than pushing a new one.
+        // Without that, six tab taps would take six back presses to leave the app.
+        function switchTab(id) {
+            if (id === currentTab && navDepth === 0) return;
+            clearPreviewVideos();
+            clearLibraryVideos();
+            closeGeneratorInfo();
+            currentTab = id;
+            TAB_RENDER[id]();
+            show(id);
+            if (navDepth > 0) {
+                suppressPop += 1;
+                history.go(-navDepth);
+                navDepth = 0;
+            } else {
+                history.replaceState({ screen: id }, '');
+            }
+        }
+
         window.addEventListener('popstate', (e) => {
             if (suppressPop > 0) {
                 suppressPop -= 1;
@@ -2909,7 +3112,9 @@ permalink: /personal-trainer/
             clearPreviewVideos();
             clearLibraryVideos();
             closeGeneratorInfo();
-            if (target === 'home' || target === 'setup') renderHome();
+            if (target === 'home' || target === 'progress') renderHome();
+            if (target === 'setup') renderSettings();
+            if (TAB_OF[target]) currentTab = TAB_OF[target];
             show(target);
         });
 
@@ -2929,9 +3134,9 @@ permalink: /personal-trainer/
             const dx = t.clientX - start.x;
             const dy = Math.abs(t.clientY - start.y);
             if (dx < 70 || dy > 60) return;
-            const cur = activeScreenId();
-            const canSwipeBack = ['preview', 'library', 'history', 'info', 'achievements', 'records'].includes(cur)
-                || (cur === 'setup' && state.setupDone);
+            // Sub-screens only — 'library' and 'setup' are root tabs now, and swiping
+            // back from a root should do nothing rather than jump to another tab.
+            const canSwipeBack = ['preview', 'history', 'info', 'achievements', 'records'].includes(activeScreenId());
             if (canSwipeBack) goBack();
         }, { passive: true });
 
@@ -2980,10 +3185,30 @@ permalink: /personal-trainer/
             sel.disabled = !state.voice;
         }
 
-        // ---- Setup ----
-        bindChoiceRow('setup-level', () => {});
-        bindChoiceRow('setup-duration', () => {});
-        bindChoiceRow('setup-goal', () => {});
+        // ---- Setup / Settings ----
+        // During onboarding these three are read off the DOM by "Let's go". Once setup
+        // is done the screen is the Settings tab, which has no CTA — you leave it by
+        // tapping another tab — so every row has to commit the moment it's tapped.
+        // Level is the exception that matters: at onboarding it *seeds* your starting
+        // score, but changing it later must never wipe tiers you've earned since.
+        bindChoiceRow('setup-level', (v) => {
+            if (!state.setupDone) return;
+            state.level = v;
+            saveState();
+            renderHome();
+        });
+        bindChoiceRow('setup-duration', (v) => {
+            if (!state.setupDone) return;
+            state.duration = parseInt(v, 10);
+            saveState();
+            renderHome();
+        });
+        bindChoiceRow('setup-goal', (v) => {
+            if (!state.setupDone) return;
+            state.weeklyGoal = parseInt(v, 10);
+            saveState();
+            renderHome();
+        });
         // Applied immediately rather than on "Let's go", so the toggle you just tapped is
         // already in effect — and so they still stick if you leave via the back button.
         bindChoiceRow('setup-sound', (v) => { state.sound = v === 'on'; saveState(); });
@@ -3083,7 +3308,10 @@ permalink: /personal-trainer/
             saveState();
         });
 
-        document.getElementById('nav-settings').addEventListener('click', () => {
+        // ---- Settings ----
+        // Prime every control from state before the screen is shown. Once setup is
+        // done the same section is the Settings tab, so it also flips into that mode.
+        function renderSettings() {
             markSelected('setup-duration', state.duration);
             markSelected('setup-goal', state.weeklyGoal || 3);
             markSelected('setup-sound', state.sound ? 'on' : 'off');
@@ -3092,12 +3320,17 @@ permalink: /personal-trainer/
             markSelected('setup-haptics', state.haptics ? 'on' : 'off');
             renderBackupStatus();
             if (state.level) markSelected('setup-level', state.level);
-            document.getElementById('setup-back').style.display = '';
-            navigate('setup');
-        });
-        document.getElementById('nav-library').addEventListener('click', () => { renderLibrary(); navigate('library'); });
+            document.getElementById('setup').classList.toggle('settings-mode', !!state.setupDone);
+        }
+
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
+
+        // ---- Tab bar ----
+        document.getElementById('tabbar').addEventListener('click', (e) => {
+            const tab = e.target.closest('.tab');
+            if (tab) switchTab(tab.dataset.tab);
+        });
 
         // ---- How-the-generator-works modal ----
         const generatorInfoModal = document.getElementById('generator-info-modal');
@@ -3248,11 +3481,19 @@ permalink: /personal-trainer/
             }
         }
 
+        // Today and Progress are separate screens but their elements all live in the
+        // DOM regardless of which is showing, so both halves are painted together and
+        // every existing call site keeps its single renderHome() call.
         function renderHome() {
+            renderToday();
+            renderProgress();
+        }
+
+        function renderToday() {
             document.getElementById('stat-level').textContent = levelLabel();
             // Set the numeric stats to their final value synchronously so the DOM is
             // always in sync with state; the count-up "roll" is a separate entrance
-            // flourish played only when Home actually appears (playHomeEntryAnimations),
+            // flourish played only when Today actually appears (playTodayEntryAnimations),
             // using the value that was on screen just before this render.
             const wEl = document.getElementById('stat-workouts');
             const sEl = document.getElementById('stat-streak');
@@ -3260,12 +3501,6 @@ permalink: /personal-trainer/
             wEl.textContent = state.history.length;
             sEl.textContent = state.streak;
             applyStreakGlow(state.streak);
-            ['core', 'pilates'].forEach((disc) => {
-                const score = state.prog[disc];
-                const cap = tierCap(score);
-                document.getElementById(`${disc}-tier`).textContent = `Tier ${cap} of 5`;
-                document.getElementById(`${disc}-bar`).style.width = `${Math.min(100, (score / MAX_SCORE) * 100)}%`;
-            });
             markSelected('home-duration', state.duration);
 
             const goal = state.weeklyGoal || 3;
@@ -3275,11 +3510,42 @@ permalink: /personal-trainer/
             document.getElementById('week-label').textContent =
                 done >= goal ? 'Goal met 🎉' : `${done} of ${goal} workouts`;
 
+            renderHeroGreeting(done, goal);
+            renderFreezeButton();
+        }
+
+        // The hero speaks to where you actually are: mid-streak, already done for the
+        // day, goal met, or just starting out.
+        function renderHeroGreeting(done, goal) {
+            const greet = document.getElementById('hero-greet');
+            const sub = document.getElementById('hero-sub');
+            if (hasWorkedOutToday()) {
+                greet.textContent = 'Done for today';
+                sub.textContent = 'Feeling good? There’s nothing stopping a second round.';
+            } else if (state.streak > 1) {
+                greet.textContent = `Day ${state.streak + 1} of your streak`;
+                sub.textContent = 'Keep it going — pick a length and go.';
+            } else if (done >= goal) {
+                greet.textContent = 'Weekly goal met 🎉';
+                sub.textContent = 'Anything from here is a bonus.';
+            } else {
+                greet.textContent = 'Ready when you are';
+                sub.textContent = 'Pick a length and go.';
+            }
+        }
+
+        function renderProgress() {
+            ['core', 'pilates'].forEach((disc) => {
+                const score = state.prog[disc];
+                const cap = tierCap(score);
+                document.getElementById(`${disc}-tier`).textContent = `Tier ${cap} of 5`;
+                document.getElementById(`${disc}-bar`).style.width = `${Math.min(100, (score / MAX_SCORE) * 100)}%`;
+            });
+
             const unlocked = Object.keys(state.achievements || {}).length;
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
 
             document.getElementById('home-heatmap').innerHTML = heatmapHtml();
-            renderFreezeButton();
             renderAchProgress();
             renderRecPreview();
         }
@@ -3573,7 +3839,11 @@ permalink: /personal-trainer/
             return rankedVoices()[0] || null;
         }
 
-        if ('speechSynthesis' in window) {
+        // Same "speech is optional" posture as refreshVoices(): the voice list is a
+        // progressive enhancement, so a partial speechSynthesis implementation must not
+        // take the whole script down with it — everything below this point, including
+        // boot, would never run.
+        if ('speechSynthesis' in window && typeof window.speechSynthesis.addEventListener === 'function') {
             refreshVoices();
             window.speechSynthesis.addEventListener('voiceschanged', () => {
                 refreshVoices();
@@ -4442,10 +4712,21 @@ permalink: /personal-trainer/
 
         function renderLibrary() {
             const list = document.getElementById('library-list');
-            list.innerHTML = ['core', 'pilates', 'warmup', 'cooldown'].map((disc) => `
+            // 60-odd exercises in one scroll is the screen's real problem, so the list
+            // is filterable by name. An empty query keeps every group, including the
+            // ones that would otherwise render as an empty titled card.
+            const q = (document.getElementById('lib-search').value || '').trim().toLowerCase();
+            const matches = (e) => !q || e.name.toLowerCase().includes(q);
+            const groups = ['core', 'pilates', 'warmup', 'cooldown']
+                .filter((disc) => EXERCISES.some((e) => e.disc === disc && matches(e)));
+            if (!groups.length) {
+                list.innerHTML = '<div class="card"><p class="muted-note center">No exercises match that search.</p></div>';
+                return;
+            }
+            list.innerHTML = groups.map((disc) => `
                 <div class="card">
                     <div class="section-title">${DISC_TITLES[disc]}</div>
-                    ${EXERCISES.filter((e) => e.disc === disc).map((ex) => `
+                    ${EXERCISES.filter((e) => e.disc === disc && matches(e)).map((ex) => `
                         <div class="lib-item" data-id="${ex.id}">
                             <div class="lib-head">
                                 <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
@@ -4483,6 +4764,11 @@ permalink: /personal-trainer/
                 });
             });
         }
+
+        document.getElementById('lib-search').addEventListener('input', () => {
+            clearLibraryVideos();
+            renderLibrary();
+        });
 
         document.getElementById('btn-export').addEventListener('click', () => {
             const blob = new Blob([JSON.stringify(state.links, null, 2)], { type: 'application/json' });
@@ -4729,17 +5015,26 @@ permalink: /personal-trainer/
                 return;
             }
             const totalMins = state.history.reduce((t, h) => t + h.mins, 0);
-            list.innerHTML =
-                `<div class="muted-note mb-2">🔥 Best streak ${Math.max(state.bestStreak || 0, state.streak)} · ⏱️ ${totalMins} min total</div>` +
-                state.history.slice().reverse().map((h) => `
+            // Grouped by month so a long log reads as a timeline rather than one
+            // undifferentiated run of rows.
+            let lastMonth = null;
+            const rows = state.history.slice().reverse().map((h) => {
+                const d = new Date(h.ts);
+                const month = d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                const header = month === lastMonth ? '' : `<div class="section-title">${month}</div>`;
+                lastMonth = month;
+                return header + `
                 <div class="hist-item">
                     <span class="fb">${FB_EMOJI[h.fb] || '💪'}</span>
                     <div>
                         <div class="what">${h.count} exercises${h.rounds > 1 ? ` × ${h.rounds} rounds` : ''} · ${h.level}</div>
-                        <div class="when">${new Date(h.ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                        <div class="when">${d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div>
                     </div>
                     <span class="mins">${h.mins} min</span>
-                </div>`).join('');
+                </div>`;
+            }).join('');
+            list.innerHTML =
+                `<div class="muted-note mb-2">🔥 Best streak ${Math.max(state.bestStreak || 0, state.streak)} · ⏱️ ${totalMins} min total</div>` + rows;
         }
 
         // 12-week "don't break the chain" grid: one cell per day, lit when you trained,
@@ -4785,6 +5080,9 @@ permalink: /personal-trainer/
             renderHome();
             show('home');
         } else {
+            // Deliberately no renderSettings() here: the onboarding defaults are already
+            // in the markup, and priming the voice picker would reach for the speech APIs
+            // before anything has asked for them.
             show('setup');
         }
         requestPersistentStorage();
