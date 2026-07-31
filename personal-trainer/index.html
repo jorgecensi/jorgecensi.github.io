@@ -571,6 +571,65 @@ permalink: /personal-trainer/
         #core-bar { background: var(--orange); }
         #pilates-bar { background: var(--blue); }
 
+        /* Muscle-balance readout: one row per trunk region, a bar showing how its
+           recent share compares to an even split (the tick), and the % of recent
+           work it holds. Lagging regions turn orange to flag what needs bringing up. */
+        .bal-row {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            margin-top: var(--sp-3);
+        }
+
+        .bal-label {
+            width: 5.5em;
+            flex-shrink: 0;
+            font-size: var(--fs-sm);
+            color: var(--muted);
+        }
+
+        .bal-track {
+            position: relative;
+            flex: 1;
+            height: 10px;
+            background: var(--surface2);
+            border-radius: var(--r-xs);
+        }
+
+        .bal-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            border-radius: var(--r-xs);
+            background: var(--accent);
+            transition: width var(--dur-slow) var(--ease-standard), background var(--dur-base) var(--ease-standard);
+        }
+
+        /* A region trained less than its fair share — the thing to bring up. */
+        .bal-fill.low { background: var(--orange); }
+
+        /* The even-share target: a region sitting right on it fills to this line. */
+        .bal-target {
+            position: absolute;
+            top: -2px;
+            bottom: -2px;
+            left: 50%;
+            width: 2px;
+            background: rgb(var(--text-rgb) / 45%);
+        }
+
+        .bal-pct {
+            width: 2.8em;
+            flex-shrink: 0;
+            text-align: right;
+            font-size: var(--fs-sm);
+            font-variant-numeric: tabular-nums;
+            color: var(--muted);
+        }
+
+        .bal-pct.low { color: var(--orange); }
+
         .home-nav {
             display: grid;
             grid-template-columns: 1fr;
@@ -2085,6 +2144,12 @@ permalink: /personal-trainer/
                 <div class="level-row"><strong><img class="ico" src="/img/pt/records.png" alt="">Records</strong><span class="see-all">All ›</span></div>
                 <div id="rec-preview"></div>
             </div>
+            <div class="card" id="balance-card">
+                <div class="level-row"><strong><img class="ico" src="/img/pt/level.png" alt="">Muscle balance</strong><span class="tier" id="balance-score"></span></div>
+                <div id="balance-bars"></div>
+                <p class="muted-note mt-3" id="balance-note"></p>
+                <button class="info-link" id="nav-info-balance">ⓘ Why balance matters</button>
+            </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="core-bar" style="width:0%"></div></div>
@@ -2211,6 +2276,13 @@ permalink: /personal-trainer/
             </div>
 
             <div class="card">
+                <div class="section-title">Training in balance</div>
+                <p class="muted-note mb-3">A strong trunk is a <em>balanced</em> one. Hammering the front — the abs — while the posterior chain (glutes and lower back) lags is the classic home-workout trap: it tips the pelvis into an anterior tilt and loads the lower back, the opposite of the posture you're training for.</p>
+                <p class="muted-note mb-3">So the app keeps a running tally of how much work each region — abs, obliques, lower back and glutes — has had <strong class="txt-strong">recently</strong> (older sessions fade over about a fortnight), and every new workout leans toward whatever you've done least. Train nothing but abs for a week and the plan starts feeding you glute and back work to even you back out.</p>
+                <p class="muted-note">The Muscle balance card on the Progress tab shows each region's share of your recent work against an even split, and calls out whatever's lagging. There's nothing to set — just train, and it self-corrects.</p>
+            </div>
+
+            <div class="card">
                 <div class="section-title">Your feedback drives it</div>
                 <p class="muted-note mb-3">After every workout you say how it felt, and both scores adjust:</p>
                 <div class="info-row"><span><img class="ico info-ico" src="/img/pt/feedback-easy.png" alt="">Too easy</span><span class="delta up">+8 points</span></div>
@@ -2284,7 +2356,7 @@ permalink: /personal-trainer/
 
                 <div class="card">
                     <div class="section-title">Picking the exercises</div>
-                    <p class="muted-note">Each pick comes from your current tier in that discipline (Core or Pilates), down to two tiers below it — so it's mostly familiar with a few fresh challenges mixed in. The list stays balanced across ab, oblique, back and glute focus, and skips whatever you did in your very last session so two sessions in a row don't feel identical.</p>
+                    <p class="muted-note">Each pick comes from your current tier in that discipline (Core or Pilates), down to two tiers below it — so it's mostly familiar with a few fresh challenges mixed in. Within the session the list stays balanced across ab, oblique, back and glute focus, and it also leans toward whichever of those regions your <strong class="txt-strong">recent</strong> training has neglected (see “Training in balance” under How Progression Works). It skips whatever you did in your very last session so two in a row never feel identical.</p>
                 </div>
 
                 <div class="card">
@@ -2316,7 +2388,7 @@ permalink: /personal-trainer/
     </nav>
 
     <script>
-        const SW_VERSION = '2607301700';
+        const SW_VERSION = '2607301930';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -2594,6 +2666,11 @@ permalink: /personal-trainer/
                 level: null,
                 duration: 25,
                 prog: { core: 0, pilates: 0 },
+                // Recency-weighted training volume per trunk region, used to steer each
+                // new workout toward whatever's been neglected. Backfills to zero for
+                // anyone upgrading, then builds up as they train.
+                muscleLoad: { abs: 0, obliques: 0, back: 0, glutes: 0 },
+                muscleLoadTs: 0,
                 history: [],
                 lastExerciseIds: [],
                 links: {},
@@ -2846,6 +2923,87 @@ permalink: /personal-trainer/
             return EXERCISES.filter((e) => e.disc === disc && e.tier >= minTier && e.tier <= cap);
         }
 
+        // =====================================================
+        // Muscle balance
+        // =====================================================
+        // Balance beats raw volume. Over-training one region while neglecting its
+        // antagonist is what drives poor posture and injury, and a mat/core routine's
+        // classic failure mode is an abs-heavy front with a neglected posterior chain —
+        // weak glutes and spinal erectors let the pelvis tip into an anterior tilt and
+        // load the lower back. So the app tracks how much each trunk region has been
+        // worked *recently* and steers new workouts toward whatever is lagging, so the
+        // whole trunk comes up together.
+        const MUSCLE_GROUPS = ['abs', 'obliques', 'back', 'glutes'];
+        const MUSCLE_LABELS = { abs: 'Abs', obliques: 'Obliques', back: 'Lower back', glutes: 'Glutes' };
+
+        // How a work set's seconds credit the trunk regions. The primary region takes
+        // the full share; the secondary shares encode real synergist activation — the
+        // posterior-chain extensors (back + glutes) fire together, rotation co-activates
+        // the anterior core, and bracing an anterior-core hold lights up the spinal
+        // erectors. Whole-body 'full' moves spread their load across everything.
+        const FOCUS_MUSCLES = {
+            abs:      { abs: 1.0, back: 0.15 },
+            obliques: { obliques: 1.0, abs: 0.25 },
+            back:     { back: 1.0, glutes: 0.30 },
+            glutes:   { glutes: 1.0, back: 0.25 },
+            full:     { abs: 0.40, obliques: 0.20, back: 0.20, glutes: 0.20 }
+        };
+
+        // Recent work defines your current balance, so old sessions fade: the stored
+        // load halves every ~12 days. A region you stop training therefore drifts back
+        // toward "lagging" on its own and gets re-prioritised without any manual reset.
+        const MUSCLE_HALFLIFE_DAYS = 12;
+        // How hard the balance pulls exercise selection. Seeds the in-workout focus
+        // counter by up to this many "phantom picks" for/against a region (see below).
+        const BALANCE_BIAS = 4;
+
+        const emptyMuscleLoad = () => ({ abs: 0, obliques: 0, back: 0, glutes: 0 });
+
+        // The stored load, faded forward to `now` by the half-life. Pure — it doesn't
+        // write state, so it's safe to call from render and generation alike.
+        function decayedMuscleLoad(now) {
+            now = now === undefined ? Date.now() : now;
+            const load = Object.assign(emptyMuscleLoad(), state.muscleLoad || {});
+            const last = state.muscleLoadTs || 0;
+            if (last && now > last) {
+                const factor = Math.pow(0.5, (now - last) / (MUSCLE_HALFLIFE_DAYS * 86400000));
+                MUSCLE_GROUPS.forEach((g) => { load[g] = (load[g] || 0) * factor; });
+            }
+            return load;
+        }
+
+        // Fold a finished session's main-circuit work into the running balance, after
+        // decaying what's already there to "now". Warm-ups and stretches aren't training
+        // volume, so they don't count.
+        function creditMuscleLoad(items) {
+            const now = Date.now();
+            const load = decayedMuscleLoad(now);
+            items.forEach((it) => {
+                if (it.kind !== 'work') return;
+                if (it.ex.disc !== 'core' && it.ex.disc !== 'pilates') return;
+                const mix = FOCUS_MUSCLES[it.ex.focus] || {};
+                Object.keys(mix).forEach((g) => { load[g] = (load[g] || 0) + it.secs * mix[g]; });
+            });
+            state.muscleLoad = load;
+            state.muscleLoadTs = now;
+        }
+
+        // Each region's share of recent load, which sit below an even split (the
+        // laggards the next workout should favour), and an overall evenness score.
+        // total === 0 means no training logged yet.
+        function muscleBalance(now) {
+            const load = decayedMuscleLoad(now);
+            const total = MUSCLE_GROUPS.reduce((t, g) => t + (load[g] || 0), 0);
+            const target = 1 / MUSCLE_GROUPS.length; // an even trunk is the goal
+            const shares = {};
+            MUSCLE_GROUPS.forEach((g) => { shares[g] = total ? load[g] / total : target; });
+            // 100 = perfectly even; 0 = all load in one region. The summed deviation
+            // from an even split maxes out at 2*(1-target) in that all-in-one case.
+            const spread = MUSCLE_GROUPS.reduce((t, g) => t + Math.abs(shares[g] - target), 0);
+            const score = Math.round(100 * (1 - spread / (2 * (1 - target))));
+            return { load, total, shares, target, score };
+        }
+
         function pickBalanced(pool, count, avoidIds, focusCount) {
             const picks = [];
             let candidates = shuffle(pool.filter((e) => !avoidIds.includes(e.id)));
@@ -2896,8 +3054,22 @@ permalink: /personal-trainer/
             // How many main exercises fit, alternating core and pilates
             const corePool = pickPool('core');
             const pilatesPool = pickPool('pilates');
+
+            // Seed the in-workout focus counter from your recent training balance so the
+            // picker leans toward whatever region you've done least. pickBalanced always
+            // takes the lowest-count focus next, so a region that's ahead of an even
+            // share starts with a positive count (chosen later) and a lagging one starts
+            // negative (chosen first). Bounded by BALANCE_BIAS so one neglected region
+            // never hijacks the entire session. A twist focus stacks an extra pull on top.
             const focusCount = {};
-            if (twist.focus) twist.focus.forEach((f) => { focusCount[f] = -3; });
+            const bal = muscleBalance();
+            if (bal.total > 0) {
+                MUSCLE_GROUPS.forEach((g) => {
+                    const rel = (bal.shares[g] - bal.target) / bal.target; // −1 (starved) .. +3 (all of it)
+                    focusCount[g] = Math.max(-BALANCE_BIAS, Math.min(BALANCE_BIAS, Math.round(rel * BALANCE_BIAS)));
+                });
+            }
+            if (twist.focus) twist.focus.forEach((f) => { focusCount[f] = (focusCount[f] || 0) - 3; });
             const avoid = state.lastExerciseIds;
 
             // Rough average time per main slot to size the list, then trim to budget
@@ -3367,6 +3539,7 @@ permalink: /personal-trainer/
 
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
+        document.getElementById('nav-info-balance').addEventListener('click', () => navigate('info'));
 
         // ---- Tab bar ----
         document.getElementById('tabbar').addEventListener('click', (e) => {
@@ -3588,8 +3761,48 @@ permalink: /personal-trainer/
             const unlocked = Object.keys(state.achievements || {}).length;
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
 
+            renderBalance();
             renderAchProgress();
             renderRecPreview();
+        }
+
+        // The four trunk regions as bars against an even-share target, plus a coaching
+        // line naming whatever is lagging. Empty until there's training to show.
+        function renderBalance() {
+            const bars = document.getElementById('balance-bars');
+            const scoreEl = document.getElementById('balance-score');
+            const note = document.getElementById('balance-note');
+            const bal = muscleBalance();
+            if (!bal.total) {
+                scoreEl.textContent = '';
+                bars.innerHTML = '';
+                note.textContent = 'Finish a few workouts and your muscle balance shows up here — the plan steers each session toward whatever you’ve trained least.';
+                return;
+            }
+            scoreEl.textContent = `${bal.score}% even`;
+            // A region is "lagging" once it drops meaningfully below an even share.
+            const isLow = (g) => bal.shares[g] / bal.target < 0.85;
+            bars.innerHTML = MUSCLE_GROUPS.map((g) => {
+                // The even-share target sits at the half-way tick, so a region on target
+                // fills to 50%, double its share fills the bar, none leaves it empty.
+                const fill = Math.max(3, Math.min(100, (bal.shares[g] / bal.target) / 2 * 100));
+                const low = isLow(g) ? ' low' : '';
+                return `<div class="bal-row">
+                    <span class="bal-label">${MUSCLE_LABELS[g]}</span>
+                    <div class="bal-track"><div class="bal-fill${low}" style="width:${fill}%"></div><span class="bal-target"></span></div>
+                    <span class="bal-pct${low}">${Math.round(bal.shares[g] * 100)}%</span>
+                </div>`;
+            }).join('');
+            const lagging = MUSCLE_GROUPS.filter(isLow)
+                .sort((a, b) => bal.shares[a] - bal.shares[b])
+                .map((g) => MUSCLE_LABELS[g].toLowerCase());
+            if (!lagging.length) {
+                note.textContent = 'Nicely balanced — every region is getting its share. Keep it up.';
+            } else {
+                const list = lagging.length === 1 ? lagging[0]
+                    : lagging.slice(0, -1).join(', ') + ' and ' + lagging[lagging.length - 1];
+                note.textContent = `Your ${list} ${lagging.length === 1 ? 'is' : 'are'} lagging — the next few workouts will lean that way to even you out.`;
+            }
         }
 
         function renderFreezeButton() {
@@ -4275,6 +4488,9 @@ permalink: /personal-trainer/
                     level: levelLabel()
                 });
                 state.lastExerciseIds = currentWorkout.main.map((e) => e.id);
+                // Fold this session's work into the running muscle balance so the next
+                // workouts can steer toward whatever regions it left behind.
+                creditMuscleLoad(currentWorkout.items);
                 state.bestStreak = Math.max(state.bestStreak || 0, state.streak);
                 const unlocked = checkAchievements();
                 saveState();
