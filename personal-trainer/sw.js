@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2607311109';
+const CACHE_VERSION = '2607311730';
 const CACHE_NAME = `personal-trainer-${CACHE_VERSION}`;
 const OFFLINE_URL = '/personal-trainer/';
 const PRECACHE_URLS = [
@@ -31,7 +31,8 @@ const PRECACHE_URLS = [
     '/img/pt/barnaby-victory.png',
     '/img/pt/barnaby-easy.png',
     '/img/pt/barnaby-right.png',
-    '/img/pt/barnaby-hard.png'
+    '/img/pt/barnaby-hard.png',
+    '/personal-trainer/body-muscles.umd.min.js'
 ];
 
 self.addEventListener('install', (event) => {

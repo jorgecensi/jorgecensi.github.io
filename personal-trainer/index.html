@@ -630,6 +630,49 @@ permalink: /personal-trainer/
 
         .bal-pct.low { color: var(--orange); }
 
+        #body-map-container {
+            background: var(--surface);
+            border-radius: var(--r-md);
+            padding: var(--sp-3);
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #body-map-container svg {
+            max-width: 280px;
+            width: 100%;
+            height: auto;
+        }
+        .body-map-legend {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            margin-top: var(--sp-4);
+            font-size: var(--fs-sm);
+            color: var(--muted);
+        }
+        .body-map-gradient {
+            height: 10px;
+            flex: 1;
+            border-radius: var(--r-xs);
+            background: linear-gradient(to right, #64748b, #eab308, #f97316, #ef4444);
+        }
+        .body-map-caption {
+            font-size: var(--fs-sm);
+            color: var(--muted);
+            margin-top: var(--sp-3);
+            line-height: 1.5;
+        }
+        #body-map-region {
+            font-size: var(--fs-sm);
+            color: var(--text);
+            font-weight: 600;
+            min-height: 1.4em;
+            margin-top: var(--sp-3);
+            text-align: center;
+        }
+
         .home-nav {
             display: grid;
             grid-template-columns: 1fr;
@@ -2149,6 +2192,7 @@ permalink: /personal-trainer/
                 <div id="balance-bars"></div>
                 <p class="muted-note mt-3" id="balance-note"></p>
                 <button class="info-link" id="nav-info-balance">ⓘ Why balance matters</button>
+                <button class="info-link" id="nav-bodymap">🗺 View body map ›</button>
             </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
@@ -2279,7 +2323,7 @@ permalink: /personal-trainer/
                 <div class="section-title">Training in balance</div>
                 <p class="muted-note mb-3">A strong trunk is a <em>balanced</em> one. Hammering the front — the abs — while the posterior chain (glutes and lower back) lags is the classic home-workout trap: it tips the pelvis into an anterior tilt and loads the lower back, the opposite of the posture you're training for.</p>
                 <p class="muted-note mb-3">So the app keeps a running tally of how much work each region — abs, obliques, lower back and glutes — has had <strong class="txt-strong">recently</strong> (older sessions fade over about a fortnight), and every new workout leans toward whatever you've done least. Train nothing but abs for a week and the plan starts feeding you glute and back work to even you back out.</p>
-                <p class="muted-note">The Muscle balance card on the Progress tab shows each region's share of your recent work against an even split, and calls out whatever's lagging. There's nothing to set — just train, and it self-corrects.</p>
+                <p class="muted-note">The Muscle balance card on the Progress tab shows each region's share of your recent work against an even split, and calls out whatever's lagging. Tap "View body map" on the card to see how your trunk lights up on an anatomical diagram — the warmer the colour, the more recent work that muscle has had. There's nothing to set — just train, and it self-corrects.</p>
             </div>
 
             <div class="card">
@@ -2336,6 +2380,23 @@ permalink: /personal-trainer/
             <p class="muted-note mb-3" id="rec-note"></p>
             <div id="records-list"></div>
         </section>
+
+        <!-- ============ BODY MAP ============ -->
+        <section class="screen" id="bodymap">
+            <header class="topbar">
+                <button class="back-btn" data-back>‹ Back</button>
+                <h1>Body <span>Map</span></h1>
+                <span></span>
+            </header>
+            <div class="choice-row cols-2" id="bodymap-view">
+                <button class="choice selected" data-v="front">Front</button>
+                <button class="choice" data-v="back">Back</button>
+            </div>
+            <div id="body-map-container"></div>
+            <div id="body-map-region"></div>
+            <div class="body-map-legend"><span>None</span><div class="body-map-gradient"></div><span>Heavy</span></div>
+            <p class="body-map-caption">Colour reflects recent training volume. Older sessions fade over about two weeks. Only the trunk lights up — this is a core &amp; mat programme.</p>
+        </section>
     </div>
 
     <!-- ============ HOW THE GENERATOR WORKS (modal) ============ -->
@@ -2387,8 +2448,9 @@ permalink: /personal-trainer/
         <button class="tab" data-tab="setup"><img class="tab-ico" src="/img/pt/settings.png" alt=""><span>Settings</span></button>
     </nav>
 
+    <script src="/personal-trainer/body-muscles.umd.min.js"></script>
     <script>
-        const SW_VERSION = '2607311109';
+        const SW_VERSION = '2607311730';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -3004,6 +3066,25 @@ permalink: /personal-trainer/
             return { load, total, shares, target, score };
         }
 
+        const REGION_MUSCLE_IDS = {
+            abs: ['abs-upper-left', 'abs-upper-right', 'abs-lower-left', 'abs-lower-right'],
+            obliques: ['obliques-left', 'obliques-right'],
+            back: ['lower-back-erectors-left', 'lower-back-erectors-right', 'spine', 'quadratus-lumborum-left', 'quadratus-lumborum-right'],
+            glutes: ['gluteus-maximus-left', 'gluteus-maximus-right', 'gluteus-medius-left', 'gluteus-medius-right'],
+        };
+
+        function muscleBodyState(now) {
+            const load = decayedMuscleLoad(now);
+            const max = Math.max(...MUSCLE_GROUPS.map((g) => load[g] || 0));
+            const body = {};
+            MUSCLE_GROUPS.forEach((g) => {
+                const val = load[g] || 0;
+                const intensity = max > 0 && val > 0 ? Math.max(1, Math.round(10 * val / max)) : 0;
+                (REGION_MUSCLE_IDS[g] || []).forEach((id) => { body[id] = { intensity }; });
+            });
+            return body;
+        }
+
         function pickBalanced(pool, count, avoidIds, focusCount) {
             const picks = [];
             let candidates = shuffle(pool.filter((e) => !avoidIds.includes(e.id)));
@@ -3160,7 +3241,7 @@ permalink: /personal-trainer/
         const TAB_OF = {
             home: 'home', preview: 'home', player: 'home', complete: 'home',
             progress: 'progress', history: 'progress', achievements: 'progress',
-            records: 'progress', info: 'progress',
+            records: 'progress', info: 'progress', bodymap: 'progress',
             library: 'library', setup: 'setup'
         };
 
@@ -3350,7 +3431,7 @@ permalink: /personal-trainer/
             if (dx < 70 || dy > 60) return;
             // Sub-screens only — 'library' and 'setup' are root tabs now, and swiping
             // back from a root should do nothing rather than jump to another tab.
-            const canSwipeBack = ['preview', 'history', 'info', 'achievements', 'records'].includes(activeScreenId());
+            const canSwipeBack = ['preview', 'history', 'info', 'achievements', 'records', 'bodymap'].includes(activeScreenId());
             if (canSwipeBack) goBack();
         }, { passive: true });
 
@@ -3540,6 +3621,12 @@ permalink: /personal-trainer/
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
         document.getElementById('nav-info-balance').addEventListener('click', () => navigate('info'));
+        document.getElementById('nav-bodymap').addEventListener('click', () => { renderBodyMap(); navigate('bodymap'); });
+        bindChoiceRow('bodymap-view', (v) => {
+            if (!window.BodyMuscles) return;
+            bodyMapView = v === 'back' ? BodyMuscles.ViewSide.BACK : BodyMuscles.ViewSide.FRONT;
+            if (bodyChart) bodyChart.update({ view: bodyMapView });
+        });
 
         // ---- Tab bar ----
         document.getElementById('tabbar').addEventListener('click', (e) => {
@@ -3802,6 +3889,46 @@ permalink: /personal-trainer/
                 const list = lagging.length === 1 ? lagging[0]
                     : lagging.slice(0, -1).join(', ') + ' and ' + lagging[lagging.length - 1];
                 note.textContent = `Your ${list} ${lagging.length === 1 ? 'is' : 'are'} lagging — the next few workouts will lean that way to even you out.`;
+            }
+        }
+
+        let bodyChart = null;
+        let bodyMapView = null;
+
+        const MUSCLE_ID_TO_REGION = {};
+        MUSCLE_GROUPS.forEach((g) => {
+            (REGION_MUSCLE_IDS[g] || []).forEach((id) => { MUSCLE_ID_TO_REGION[id] = g; });
+        });
+
+        function renderBodyMap() {
+            const container = document.getElementById('body-map-container');
+            const regionEl = document.getElementById('body-map-region');
+            if (!window.BodyMuscles) {
+                container.innerHTML = '<p class="muted-note">Body map unavailable — library not loaded.</p>';
+                return;
+            }
+            const BM = window.BodyMuscles;
+            const view = bodyMapView || BM.ViewSide.FRONT;
+            bodyMapView = view;
+            const bs = muscleBodyState();
+            if (bodyChart) {
+                bodyChart.update({ bodyState: bs, view });
+            } else {
+                container.innerHTML = '';
+                bodyChart = new BM.BodyChart(container, {
+                    view,
+                    bodyState: bs,
+                    onMuscleClick: (id) => {
+                        const region = MUSCLE_ID_TO_REGION[id];
+                        if (region) {
+                            const bal = muscleBalance();
+                            const pct = Math.round((bal.shares[region] || 0) * 100);
+                            regionEl.textContent = `${MUSCLE_LABELS[region]}: ${pct}% of recent work`;
+                        } else {
+                            regionEl.textContent = '';
+                        }
+                    },
+                });
             }
         }
 
