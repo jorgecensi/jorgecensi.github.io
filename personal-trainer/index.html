@@ -571,6 +571,65 @@ permalink: /personal-trainer/
         #core-bar { background: var(--orange); }
         #pilates-bar { background: var(--blue); }
 
+        /* Muscle-balance readout: one row per trunk region, a bar showing how its
+           recent share compares to an even split (the tick), and the % of recent
+           work it holds. Lagging regions turn orange to flag what needs bringing up. */
+        .bal-row {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            margin-top: var(--sp-3);
+        }
+
+        .bal-label {
+            width: 5.5em;
+            flex-shrink: 0;
+            font-size: var(--fs-sm);
+            color: var(--muted);
+        }
+
+        .bal-track {
+            position: relative;
+            flex: 1;
+            height: 10px;
+            background: var(--surface2);
+            border-radius: var(--r-xs);
+        }
+
+        .bal-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            border-radius: var(--r-xs);
+            background: var(--accent);
+            transition: width var(--dur-slow) var(--ease-standard), background var(--dur-base) var(--ease-standard);
+        }
+
+        /* A region trained less than its fair share — the thing to bring up. */
+        .bal-fill.low { background: var(--orange); }
+
+        /* The even-share target: a region sitting right on it fills to this line. */
+        .bal-target {
+            position: absolute;
+            top: -2px;
+            bottom: -2px;
+            left: 50%;
+            width: 2px;
+            background: rgb(var(--text-rgb) / 45%);
+        }
+
+        .bal-pct {
+            width: 2.8em;
+            flex-shrink: 0;
+            text-align: right;
+            font-size: var(--fs-sm);
+            font-variant-numeric: tabular-nums;
+            color: var(--muted);
+        }
+
+        .bal-pct.low { color: var(--orange); }
+
         .home-nav {
             display: grid;
             grid-template-columns: 1fr;
@@ -2085,6 +2144,12 @@ permalink: /personal-trainer/
                 <div class="level-row"><strong><img class="ico" src="/img/pt/records.png" alt="">Records</strong><span class="see-all">All ›</span></div>
                 <div id="rec-preview"></div>
             </div>
+            <div class="card" id="balance-card">
+                <div class="level-row"><strong><img class="ico" src="/img/pt/level.png" alt="">Muscle balance</strong><span class="tier" id="balance-score"></span></div>
+                <div id="balance-bars"></div>
+                <p class="muted-note mt-3" id="balance-note"></p>
+                <button class="info-link" id="nav-info-balance">ⓘ Why balance matters</button>
+            </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="core-bar" style="width:0%"></div></div>
@@ -2211,6 +2276,13 @@ permalink: /personal-trainer/
             </div>
 
             <div class="card">
+                <div class="section-title">Training in balance</div>
+                <p class="muted-note mb-3">A strong trunk is a <em>balanced</em> one. Hammering the front — the abs — while the posterior chain (glutes and lower back) lags is the classic home-workout trap: it tips the pelvis into an anterior tilt and loads the lower back, the opposite of the posture you're training for.</p>
+                <p class="muted-note mb-3">So the app keeps a running tally of how much work each region — abs, obliques, lower back and glutes — has had <strong class="txt-strong">recently</strong> (older sessions fade over about a fortnight), and every new workout leans toward whatever you've done least. Train nothing but abs for a week and the plan starts feeding you glute and back work to even you back out.</p>
+                <p class="muted-note">The Muscle balance card on the Progress tab shows each region's share of your recent work against an even split, and calls out whatever's lagging. There's nothing to set — just train, and it self-corrects.</p>
+            </div>
+
+            <div class="card">
                 <div class="section-title">Your feedback drives it</div>
                 <p class="muted-note mb-3">After every workout you say how it felt, and both scores adjust:</p>
                 <div class="info-row"><span><img class="ico info-ico" src="/img/pt/feedback-easy.png" alt="">Too easy</span><span class="delta up">+8 points</span></div>
@@ -2284,7 +2356,7 @@ permalink: /personal-trainer/
 
                 <div class="card">
                     <div class="section-title">Picking the exercises</div>
-                    <p class="muted-note">Each pick comes from your current tier in that discipline (Core or Pilates), down to two tiers below it — so it's mostly familiar with a few fresh challenges mixed in. The list stays balanced across ab, oblique, back and glute focus, and skips whatever you did in your very last session so two sessions in a row don't feel identical.</p>
+                    <p class="muted-note">Each pick comes from your current tier in that discipline (Core or Pilates), down to two tiers below it — so it's mostly familiar with a few fresh challenges mixed in. Within the session the list stays balanced across ab, oblique, back and glute focus, and it also leans toward whichever of those regions your <strong class="txt-strong">recent</strong> training has neglected (see “Training in balance” under How Progression Works). It skips whatever you did in your very last session so two in a row never feel identical.</p>
                 </div>
 
                 <div class="card">
@@ -2316,7 +2388,7 @@ permalink: /personal-trainer/
     </nav>
 
     <script>
-        const SW_VERSION = '2607300840';
+        const SW_VERSION = '2607301930';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -2384,6 +2456,10 @@ permalink: /personal-trainer/
             ['wu-sidebend', 'Standing Side Bend', 'warmup', 'obliques', 1, 'secs', 30, 0, 30, 0, ['Reach up and over, ribs long', 'Keep hips square'], 'Leaning forward instead of sideways turns this into a slouch — reach straight overhead and to the side, hips staying square.'],
             ['wu-hipcircles', 'Hip Circles', 'warmup', 'glutes', 1, 'secs', 30, 0, 30, 0, ['Hands on hips, slow circles', 'Both directions'], 'Small, stiff circles from the knees miss the joint you’re trying to open — make the circles bigger and let them come from the hips.'],
             ['wu-pelvictilt', 'Pelvic Tilts', 'warmup', 'abs', 1, 'secs', 40, 0, 40, 0, ['Lie down, rock pelvis gently', 'Press lower back into the mat, release'], 'Pushing with the glutes instead of the abs misses the point — flatten your lower back into the mat by bracing your core, not by heaving your hips.'],
+            ['wu-torsotwist', 'Standing Torso Twists', 'warmup', 'obliques', 1, 'secs', 30, 0, 30, 0, ['Rotate side to side, arms loose', 'Let the heels pivot, gaze follows your hands'], 'Forcing a big twist while your hips stay locked strains the lower back — let your hips and heels turn with the swing instead of fighting them.'],
+            ['wu-shoulderroll', 'Shoulder Rolls', 'warmup', 'full', 1, 'secs', 30, 0, 30, 0, ['Roll the shoulders back and down', 'Big slow circles, then reverse'], 'Tense little shrugs barely move the joint — make the rolls big and slow, squeezing the shoulder blades together at the back.'],
+            ['wu-legswing', 'Leg Swings', 'warmup', 'glutes', 1, 'secs', 30, 0, 30, 1, ['Swing one leg front to back', 'Stand tall, hold a wall for balance'], 'Swinging so hard your whole torso lurches turns mobility into a yank — keep the swing smooth and let the hip joint do the moving.'],
+            ['wu-inchworm', 'Inchworm', 'warmup', 'full', 1, 'secs', 30, 0, 30, 0, ['Walk the hands out to a plank, then walk them back', 'Bend the knees as much as you need'], 'Reaching for the floor with locked knees strains the hamstrings — soften the knees and travel hand over hand slowly instead of bouncing down.'],
 
             // ---- Core fitness ----
             ['co-kneeplank', 'Knee Plank', 'core', 'abs', 1, 'secs', 20, 5, 45, 0, ['Straight line shoulders to knees', 'Squeeze belly, don’t sag'], 'Hips sagging toward the floor (or piking too high) takes the tension off your core — keep a straight line from shoulders to knees.'],
@@ -2391,28 +2467,38 @@ permalink: /personal-trainer/
             ['co-glutebridge', 'Glute Bridge', 'core', 'glutes', 1, 'reps', 10, 2, 18, 0, ['Drive through heels', 'Squeeze glutes at the top'], 'Overarching the lower back at the top isn’t a bigger bridge — stop at a straight line and squeeze the glutes, not the spine.'],
             ['co-birddog', 'Bird Dog', 'core', 'back', 1, 'reps', 12, 4, 24, 0, ['Reach long, hips level', 'Alternate sides each rep — pause 2s at full extension'], 'Twisting the hips to lift the leg higher cancels the benefit — keep both hips square to the floor and reach long instead of high.'],
             ['co-heeltap', 'Heel Taps', 'core', 'obliques', 1, 'reps', 20, 4, 36, 0, ['Shoulders slightly lifted', 'Reach for your heel side to side'], 'Crunching the neck forward to “reach” further strains it — keep the lift small and let the obliques do the work, not your neck.'],
+            ['co-superman', 'Superman', 'core', 'back', 1, 'secs', 15, 5, 35, 0, ['Lift chest, arms and legs together', 'Reach long, gaze down at the mat'], 'Cranking the arms and legs as high as possible pinches the lower back — lift just a few inches and reach long rather than high.'],
+            ['co-clamshell', 'Clamshells', 'core', 'glutes', 1, 'reps', 12, 2, 20, 1, ['Side-lying, heels together, open the top knee', 'Keep the hips stacked, don’t roll back'], 'Rolling the top hip backward to open the knee wider hands the work to your back — keep your hips stacked and only open as far as they stay still.'],
             ['co-plank', 'Forearm Plank', 'core', 'abs', 2, 'secs', 25, 5, 60, 0, ['Elbows under shoulders', 'Tuck tailbone, brace like a punch'], 'Sagging hips (or piking them up to rest) is the classic plank cheat — brace your core so hips, shoulders and heels stay one straight line.'],
             ['co-crunch', 'Crunches', 'core', 'abs', 2, 'reps', 12, 2, 20, 0, ['Chin off chest, exhale up', 'Lower with control'], 'Yanking your head up with your hands strains the neck and skips the abs — keep hands light and lead with your chest, not your chin.'],
             ['co-mtclimber', 'Mountain Climbers', 'core', 'full', 2, 'secs', 25, 5, 45, 0, ['Hips low, shoulders over wrists', 'Drive knees in steadily'], 'Hips rising into a pike as you speed up is a sign you’re going too fast — slow down enough to keep your hips level with your shoulders.'],
             ['co-ksideplank', 'Side Plank on Knees', 'core', 'obliques', 2, 'secs', 15, 5, 35, 1, ['Elbow under shoulder', 'Lift hips, stack shoulders'], 'Letting the hips sink toward the mat turns this into a rest, not a hold — keep lifting through the hips so your body stays one straight line.'],
             ['co-flutter', 'Flutter Kicks', 'core', 'abs', 2, 'secs', 20, 5, 40, 0, ['Small quick kicks', 'Press lower back down'], 'An arching lower back means your legs have dropped too low — keep them a little higher and press your back into the mat the whole time.'],
             ['co-revcrunch', 'Reverse Crunch', 'core', 'abs', 2, 'reps', 10, 2, 16, 0, ['Curl hips off the mat', 'Slow on the way down'], 'Swinging the legs for momentum turns this into a hip-flexor exercise — curl the hips up slowly using your lower abs, not a kick.'],
+            ['co-crossclimber', 'Cross-Body Mountain Climbers', 'core', 'obliques', 2, 'secs', 20, 5, 40, 0, ['Drive one knee toward the opposite elbow', 'Hips low, steady controlled pace'], 'Bouncing the hips up to swing the knee across skips the oblique — keep the hips low and rotate the knee in under control.'],
+            ['co-slbridge', 'Single-Leg Glute Bridge', 'core', 'glutes', 2, 'reps', 8, 2, 14, 1, ['One leg extended, drive through the planted heel', 'Keep both hip bones level as you lift'], 'Letting the raised-leg hip drop means the working glute isn’t holding you up — keep the pelvis level the whole lift.'],
             ['co-sideplank', 'Side Plank', 'core', 'obliques', 3, 'secs', 20, 5, 45, 1, ['Body in one straight line', 'Push the floor away'], 'Sagging hips or rolling your body forward takes the work off your obliques — stack shoulders, hips and feet in one straight line and lift.'],
             ['co-bicycle', 'Bicycle Crunches', 'core', 'obliques', 3, 'reps', 20, 4, 36, 0, ['Elbow to opposite knee', 'Alternate sides each rep, slow and controlled'], 'Cycling fast without rotating the ribcage just wiggles your elbows — slow down and actually twist your torso toward the opposite knee.'],
             ['co-legraise', 'Leg Raises', 'core', 'abs', 3, 'reps', 10, 2, 16, 0, ['Legs straight, lower slowly', 'Stop before your back arches'], 'An arching lower back means you’ve lowered past your control — stop the descent right before your back wants to lift off the mat.'],
             ['co-shouldertap', 'Plank Shoulder Taps', 'core', 'abs', 3, 'reps', 16, 4, 32, 0, ['Feet wide, hips still', 'Alternate which hand taps each rep'], 'Hips swaying with every tap means your core isn’t controlling the rotation — widen your feet and brace to keep hips dead still.'],
             ['co-russtwist', 'Russian Twists', 'core', 'obliques', 3, 'reps', 20, 4, 40, 0, ['Lean back, chest proud', 'Rotate side to side from the ribs'], 'Swinging just the arms while the torso stays still skips the obliques entirely — rotate from the ribs and keep your chest lifted, not rounded.'],
             ['co-bearhold', 'Bear Crawl Hold', 'core', 'full', 3, 'secs', 20, 5, 40, 0, ['Knees hover 2cm off the mat', 'Flat back, breathe'], 'Hips piked up high turns this into a stretch, not a hold — keep hips level with your shoulders and knees hovering just off the floor.'],
+            ['co-donkeykick', 'Donkey Kicks', 'core', 'glutes', 3, 'reps', 12, 2, 20, 1, ['From all fours, press one heel to the ceiling', 'Knee stays bent, hips square'], 'Arching the lower back to kick higher takes the work off the glute — stop when the thigh lines up with your back and keep your hips square.'],
+            ['co-plankknee', 'Plank Knee-to-Elbow', 'core', 'obliques', 3, 'reps', 12, 4, 24, 0, ['From a plank, draw one knee to the same-side elbow', 'Alternate sides each rep, hips stay low'], 'Piking the hips up to bring the knee in defeats the point — hold the plank line and let the knee travel underneath you.'],
             ['co-hollow', 'Hollow Body Hold', 'core', 'abs', 4, 'secs', 20, 5, 40, 0, ['Lower back pressed down', 'Arms and legs long and low'], 'A lower back that arches off the mat means the position has broken — raise your arms and legs slightly until you can press your back flat again.'],
             ['co-plankupdown', 'Plank Up-Downs', 'core', 'full', 4, 'reps', 12, 4, 24, 0, ['Forearm to hand, alternate which arm leads', 'Keep hips from rocking'], 'Hips swinging side to side or popping up on each transition means you’re rushing — move slower and keep the hips locked level.'],
             ['co-vup', 'V-Ups', 'core', 'abs', 4, 'reps', 8, 2, 14, 0, ['Reach hands to toes', 'Fold from the middle'], 'Swinging up with momentum instead of folding with control skips the abs — reach hands and toes together slowly, keeping legs as straight as you can.'],
             ['co-hipdip', 'Side Plank Hip Dips', 'core', 'obliques', 4, 'reps', 8, 2, 14, 1, ['Dip hips toward the mat', 'Lift back to a straight line'], 'Dropping so low that your whole body caves isn’t more range — dip just the hips a few inches and keep the rest of the line steady.'],
             ['co-plankjack', 'Plank Jacks', 'core', 'full', 4, 'secs', 25, 5, 45, 0, ['Jump feet wide and in', 'Plank stays solid up top'], 'Hips popping up with every jump turns this into a hip hinge — keep the plank line steady and just move the feet.'],
+            ['co-sideplankrotate', 'Side Plank Rotation', 'core', 'obliques', 4, 'reps', 8, 2, 14, 1, ['In a side plank, thread the top arm under and back out', 'Rotate from the ribs, hips high'], 'Dropping the hips as you reach through collapses the plank — keep the hips lifted and turn only through your ribcage.'],
+            ['co-plankreach', 'Plank Arm Reach', 'core', 'full', 4, 'reps', 10, 2, 16, 0, ['From a plank, reach one arm straight ahead', 'Hips dead level, alternate arms'], 'Twisting the hips toward the planted arm means you’re using momentum — widen the feet and keep both hips square as you reach.'],
             ['co-hollowrock', 'Hollow Body Rocks', 'core', 'abs', 5, 'secs', 20, 5, 35, 0, ['Rock like a banana', 'Shape never breaks'], 'If your knees bend or your back arches mid-rock, the shape has broken — keep the hollow position locked and rock as one solid piece.'],
             ['co-lsit', 'L-Sit Hold', 'core', 'abs', 5, 'secs', 10, 3, 25, 0, ['Hands by hips, press down hard', 'Bent knees to scale down'], 'Shrugging the shoulders up instead of pressing down through straight arms lets the hips sink — push the floor away and lift through the chest.'],
             ['co-pike', 'Plank to Pike', 'core', 'abs', 5, 'reps', 8, 2, 14, 0, ['Pike hips high, legs straight', 'Return to plank with control'], 'Bending the knees to “reach” the pike defeats the point — keep legs straight and hinge purely from the hips.'],
             ['co-wipers', 'Windshield Wipers', 'core', 'obliques', 5, 'reps', 12, 4, 24, 0, ['Legs up, sweep side to side', 'Shoulders stay pinned'], 'Shoulders lifting off the mat as the legs swing means you’re using momentum, not control — keep shoulders pinned and move slower.'],
             ['co-longplank', 'Long Lever Plank', 'core', 'abs', 5, 'secs', 20, 5, 40, 0, ['Hands ahead of shoulders', 'Everything braced'], 'Hips sagging is more likely here since the longer lever multiplies the load — if you can’t hold a straight line, walk the hands back closer to your shoulders.'],
+            ['co-archerplank', 'Archer Plank', 'core', 'obliques', 5, 'secs', 15, 5, 30, 1, ['In a high plank, shift your weight and extend one arm out to the side', 'Hold, then switch — hips stay square'], 'Letting the hips rotate open as the arm extends cheats the load — keep the hips facing the floor and only reach as far as you can hold.'],
+            ['co-hollowflutter', 'Hollow Flutter Kicks', 'core', 'abs', 5, 'secs', 20, 5, 40, 0, ['Hold a hollow shape, small fast kicks', 'Lower back stays pressed into the mat'], 'The back peeling off the mat as you tire means the shape has broken — raise the feet a little and re-flatten the back before carrying on.'],
 
             // ---- Mat pilates ----
             ['pi-pelviccurl', 'Pelvic Curl', 'pilates', 'glutes', 1, 'reps', 8, 2, 14, 0, ['Peel the spine up bone by bone', 'Exhale up, inhale hold, exhale down'], 'Popping straight up into a high arch skips the point — peel up slowly, one vertebra at a time, and stop before your back overarches.'],
@@ -2420,26 +2506,36 @@ permalink: /personal-trainer/
             ['pi-chestlift', 'Chest Lift', 'pilates', 'abs', 1, 'reps', 8, 2, 14, 0, ['Curl head and shoulders up', 'Eyes on knees, ribs funnel down'], 'Yanking the head forward with your hands strains the neck — support it lightly and lift from your ribs curling toward your hips.'],
             ['pi-spinestretch', 'Spine Stretch Forward', 'pilates', 'back', 1, 'reps', 6, 1, 10, 0, ['Sit tall, legs long', 'Reach forward over an imaginary ball'], 'Bouncing to reach further just tightens the hamstrings — round forward smoothly through the whole spine instead of jerking toward your toes.'],
             ['pi-sideleg', 'Side-Lying Leg Lift', 'pilates', 'glutes', 1, 'reps', 10, 2, 18, 1, ['Body in one line', 'Lift leg with a flexed foot, no swinging'], 'Swinging the leg with momentum (or letting the top hip roll backward) trades control for height — lift slower and keep your hips stacked.'],
+            ['pi-legcircle', 'Single Leg Circles', 'pilates', 'glutes', 1, 'reps', 10, 2, 18, 1, ['One leg to the ceiling, draw small circles', 'Pelvis anchored, circle both directions'], 'Letting the hips rock as the leg circles means the leg is too heavy — make the circles smaller and keep the pelvis pinned still.'],
+            ['pi-bookopening', 'Book Openings', 'pilates', 'obliques', 1, 'reps', 8, 2, 14, 1, ['Side-lying, arms together, sweep the top arm across and open', 'Follow the hand with your eyes, knees stay stacked'], 'Forcing the shoulder to the floor past its range strains it — rotate only as far as your ribs turn and keep both knees together.'],
             ['pi-hundredmod', 'The Hundred (modified)', 'pilates', 'abs', 2, 'secs', 40, 5, 60, 0, ['Knees in tabletop, pump arms', 'Inhale 5 counts, exhale 5 counts'], 'Holding your breath while pumping the arms defeats the point — match the pump to the 5-count inhale and 5-count exhale rhythm.'],
             ['pi-singleleg', 'Single Leg Stretch', 'pilates', 'abs', 2, 'reps', 16, 4, 28, 0, ['Hug one knee, other leg long, then switch', 'Upper body stays curled'], 'Letting your head and shoulders drop back to the mat between reps loses the curl — hold the lift the entire set, not just at the top.'],
             ['pi-bridge', 'Shoulder Bridge', 'pilates', 'glutes', 2, 'reps', 8, 2, 14, 0, ['Articulate up, hips high', 'Knees track over ankles'], 'Knees splaying out or caving in wastes the glute work — keep them tracking straight over your ankles the whole time.'],
             ['pi-swanprep', 'Swan Prep', 'pilates', 'back', 2, 'reps', 6, 1, 10, 0, ['Lift chest, hands light', 'Long neck, legs stay down'], 'Pushing up hard through the hands turns this into an arm exercise — keep the hands light and lift the chest using your back muscles.'],
             ['pi-sidekick', 'Side Kick Front & Back', 'pilates', 'glutes', 2, 'reps', 8, 2, 14, 1, ['Kick front, sweep back', 'Torso stays still like a plank'], 'Letting your torso rock back and forth with the kick means the leg is moving your body, not the other way around — brace like a plank and keep the kick isolated.'],
+            ['pi-heelbeats', 'Heel Beats', 'pilates', 'glutes', 2, 'secs', 20, 5, 40, 0, ['On your belly, lift the legs and tap the heels together', 'Long legs, pubic bone pressing down'], 'Arching the lower back to lift the legs higher pinches it — keep the lift low and anchor your hips into the mat.'],
+            ['pi-sidebendprep', 'Side Bend Prep', 'pilates', 'obliques', 2, 'reps', 6, 2, 12, 1, ['Sit on one hip, press up into a side bend', 'Reach the top arm overhead, lower with control'], 'Sagging into the shoulder instead of pushing the floor away collapses the lift — press down through the bottom arm and lift the hips high.'],
             ['pi-rollup', 'Roll-Up', 'pilates', 'abs', 3, 'reps', 6, 1, 10, 0, ['Peel up one vertebra at a time', 'Reach past your toes, roll back slow'], 'Jerking the upper body up with momentum skips the spine articulation that’s the whole point — roll up slowly, one vertebra at a time, keeping legs long.'],
             ['pi-doubleleg', 'Double Leg Stretch', 'pilates', 'abs', 3, 'reps', 8, 2, 14, 0, ['Reach arms and legs away', 'Circle arms, hug knees in'], 'An arching lower back when your arms and legs reach out means you’ve extended too far — pull them back in a little and keep the lower back pressed down.'],
             ['pi-crisscross', 'Criss-Cross', 'pilates', 'obliques', 3, 'reps', 16, 4, 32, 0, ['Rotate ribcage, not just elbows', 'Alternate sides each rep, keep the lift as you twist'], 'Pulling the elbow across with your hand instead of rotating your ribcage turns this into a neck exercise — twist from your core and let the elbow follow.'],
             ['pi-swimming', 'Swimming', 'pilates', 'back', 3, 'secs', 30, 5, 50, 0, ['Flutter opposite arm and leg', 'Belly lifted, gaze down'], 'Straining to lift arms and legs as high as possible arches the lower back — reach long and low instead of high.'],
             ['pi-saw', 'Saw', 'pilates', 'obliques', 3, 'reps', 12, 2, 20, 0, ['Alternate sides — twist tall, then reach', 'Pinky toward little toe, hips anchored'], 'Diving forward with a rounded lower back skips the rotation that makes this work — twist fully from the waist first, then reach.'],
             ['pi-scissors', 'Single Straight Leg Stretch', 'pilates', 'abs', 3, 'reps', 16, 4, 28, 0, ['Legs straight like scissors, alternate which leg is up', 'Double-pull the top leg'], 'Bent knees or an arching lower back both make it easier by accident — keep legs straight and your back pressed into the mat.'],
+            ['pi-breaststroke', 'Breaststroke', 'pilates', 'back', 3, 'reps', 8, 2, 14, 0, ['Lift the chest, sweep the arms from front to hips', 'Long neck, legs anchored'], 'Throwing the chest up into a big arch overworks the spine — lift smoothly from the upper back and keep the movement low and long.'],
+            ['pi-cancan', 'Can-Can', 'pilates', 'obliques', 3, 'reps', 8, 2, 16, 0, ['Tabletop legs, twist the knees to one side and extend', 'Return through center, keep the curl'], 'Letting the shoulders drop back as the legs extend loses the curl — keep the upper body lifted and twist from the waist.'],
             ['pi-hundred', 'The Hundred', 'pilates', 'abs', 4, 'secs', 50, 5, 70, 0, ['Legs at 45°, pump the arms', 'Curl high, breathe in rhythm'], 'Straining the neck to hold the curl higher and higher tires it out fast — keep the lift moderate and let your abs, not your neck, do the holding.'],
             ['pi-teaserprep', 'Teaser Prep', 'pilates', 'abs', 4, 'reps', 6, 1, 10, 0, ['One leg extended, roll up to a V', 'Balance behind the sit bones'], 'Slumping into a rounded lower back to “balance” easier defeats the point — sit tall on your sit bones and keep the spine long.'],
             ['pi-openleg', 'Open Leg Rocker', 'pilates', 'abs', 4, 'reps', 6, 1, 10, 0, ['Hold ankles, legs open', 'Rock back to shoulders, return balanced'], 'Yanking yourself back up with momentum instead of your abs is how people tip over — use a slow, controlled scoop through your core.'],
             ['pi-dbllower', 'Double Straight Leg Lower', 'pilates', 'abs', 4, 'reps', 8, 2, 12, 0, ['Legs to the ceiling, lower slowly', 'Head and shoulders stay curled'], 'An arching lower back as the legs drop means you’ve gone lower than you can control — stop the descent earlier and build range over time.'],
             ['pi-kneelkick', 'Side Kick Kneeling', 'pilates', 'glutes', 4, 'reps', 8, 2, 12, 1, ['Kneel, hand down, leg to hip height', 'Kick front and back, torso quiet'], 'Leaning the torso to help the leg kick higher breaks the kneeling plank line — keep the torso still and let the leg move on its own.'],
+            ['pi-swandive', 'Swan Dive Prep', 'pilates', 'back', 4, 'reps', 6, 1, 10, 0, ['Lift into a swan, then rock forward and back', 'Legs squeeze together, chest stays open'], 'Collapsing the chest at the bottom of the rock kills the control — keep the back long and lifted through the whole rock.'],
+            ['pi-bridgekick', 'Shoulder Bridge Kicks', 'pilates', 'glutes', 4, 'reps', 6, 2, 12, 1, ['Hold a high bridge, extend one leg and lower it', 'Keep the hips lifted and level'], 'The hips dropping when the leg extends means the standing glute has quit — keep the pelvis high and even the whole time.'],
             ['pi-teaser', 'Teaser', 'pilates', 'abs', 5, 'reps', 5, 1, 8, 0, ['Roll up to a V, legs at 45°', 'Float down with control'], 'Jerking up using momentum (or bending the knees to cheat the balance) skips the slow control that makes this hard — roll up and float down smoothly.'],
             ['pi-rollover', 'Roll Over', 'pilates', 'abs', 5, 'reps', 6, 1, 8, 0, ['Legs over head, toes touch behind', 'Roll down slowly through the spine'], 'Swinging the legs over with momentum risks your neck — use your abs to lift with control, not a kick.'],
             ['pi-corkscrew', 'Corkscrew', 'pilates', 'obliques', 5, 'reps', 5, 1, 8, 1, ['Circle legs together', 'Shoulders anchored the whole time'], 'Shoulders lifting off the mat as the legs circle means the core has let go — anchor through your arms and keep the upper body still.'],
             ['pi-jackknife', 'Jackknife', 'pilates', 'abs', 5, 'reps', 5, 1, 8, 0, ['Legs over, then shoot toes to the sky', 'Land one vertebra at a time'], 'Swinging the legs up with momentum instead of a controlled roll risks your neck on the way down — control both the lift and the landing.'],
+            ['pi-controlbalance', 'Control Balance', 'pilates', 'abs', 5, 'reps', 5, 1, 8, 1, ['Legs overhead, reach for one ankle as the other reaches away', 'Switch slowly, shoulders anchored'], 'Swinging the legs to switch throws weight onto your neck — move slowly through center and keep the weight on your shoulders.'],
+            ['pi-hiptwist', 'Hip Twist', 'pilates', 'obliques', 5, 'reps', 5, 1, 8, 0, ['Leaning back on your hands, circle both legs together', 'Reverse each rep, chest stays lifted'], 'Rounding the back to counter the leg weight collapses the lift — stay tall on the sit bones and circle the legs from a stable core.'],
 
             // ---- Cool-down ----
             ['cd-child', 'Child’s Pose', 'cooldown', 'back', 1, 'secs', 40, 0, 40, 0, ['Hips to heels, arms long', 'Slow deep breaths'], 'Keeping your hips lifted off your heels (or shoulders scrunched up by your ears) keeps you tense — really sit back and let the shoulders melt down.'],
@@ -2447,7 +2543,11 @@ permalink: /personal-trainer/
             ['cd-twist', 'Supine Twist', 'cooldown', 'obliques', 1, 'secs', 30, 0, 30, 1, ['Knees fall to one side', 'Shoulders stay on the mat'], 'Forcing the knees flat to the floor overrides the stretch — let them fall only as far as feels comfortable and keep both shoulders down.'],
             ['cd-knees', 'Knees-to-Chest', 'cooldown', 'back', 1, 'secs', 30, 0, 30, 0, ['Hug knees, rock gently', 'Let the lower back release'], 'Yanking the knees in hard skips the gentle release this is for — hug them in softly and let the lower back relax, don’t force it.'],
             ['cd-hamstring', 'Hamstring Stretch', 'cooldown', 'full', 1, 'secs', 30, 0, 30, 1, ['One leg up, gentle pull', 'Knee soft, breathe into it'], 'Locking the knee straight and yanking hard turns a stretch into strain — keep a soft bend in the knee and ease into the pull.'],
-            ['cd-mermaid', 'Mermaid Stretch', 'cooldown', 'obliques', 1, 'secs', 30, 0, 30, 1, ['Sit cross-legged, reach up and over', 'Long side body'], 'Collapsing your ribs toward the floor instead of reaching long wastes the stretch — lengthen up and over rather than just leaning.']
+            ['cd-mermaid', 'Mermaid Stretch', 'cooldown', 'obliques', 1, 'secs', 30, 0, 30, 1, ['Sit cross-legged, reach up and over', 'Long side body'], 'Collapsing your ribs toward the floor instead of reaching long wastes the stretch — lengthen up and over rather than just leaning.'],
+            ['cd-figurefour', 'Figure-Four Stretch', 'cooldown', 'glutes', 1, 'secs', 30, 0, 30, 1, ['Ankle over the opposite knee', 'Draw the thigh in, breathe into the hip'], 'Cranking the leg toward you fast makes the muscle fight back — draw it in slowly and let the hip open a little more on each exhale.'],
+            ['cd-butterfly', 'Butterfly Stretch', 'cooldown', 'glutes', 1, 'secs', 30, 0, 30, 0, ['Soles of the feet together, knees fall open', 'Sit tall, hinge forward gently'], 'Bouncing the knees toward the floor can tweak the groin — let them settle under their own weight and hinge from the hips instead.'],
+            ['cd-seatedfold', 'Seated Forward Fold', 'cooldown', 'back', 1, 'secs', 30, 0, 30, 0, ['Legs long, hinge from the hips', 'Let the head and neck hang heavy'], 'Rounding hard to grab your toes strains the lower back — hinge from the hips first and only round as far as feels easy.'],
+            ['cd-thread', 'Thread the Needle', 'cooldown', 'back', 1, 'secs', 30, 0, 30, 1, ['From all fours, thread one arm under the other', 'Rest the shoulder and temple down'], 'Dumping your weight onto your neck instead of your shoulder pinches it — sink into the shoulder and upper back, keeping the neck long.']
         ].map(([id, name, disc, focus, tier, type, base, inc, max, perSide, cues, mistake]) =>
             ({ id, name, disc, focus, tier, type, base, inc, max, perSide: !!perSide, cues, mistake }));
 
@@ -2566,6 +2666,11 @@ permalink: /personal-trainer/
                 level: null,
                 duration: 25,
                 prog: { core: 0, pilates: 0 },
+                // Recency-weighted training volume per trunk region, used to steer each
+                // new workout toward whatever's been neglected. Backfills to zero for
+                // anyone upgrading, then builds up as they train.
+                muscleLoad: { abs: 0, obliques: 0, back: 0, glutes: 0 },
+                muscleLoadTs: 0,
                 history: [],
                 lastExerciseIds: [],
                 links: {},
@@ -2818,6 +2923,87 @@ permalink: /personal-trainer/
             return EXERCISES.filter((e) => e.disc === disc && e.tier >= minTier && e.tier <= cap);
         }
 
+        // =====================================================
+        // Muscle balance
+        // =====================================================
+        // Balance beats raw volume. Over-training one region while neglecting its
+        // antagonist is what drives poor posture and injury, and a mat/core routine's
+        // classic failure mode is an abs-heavy front with a neglected posterior chain —
+        // weak glutes and spinal erectors let the pelvis tip into an anterior tilt and
+        // load the lower back. So the app tracks how much each trunk region has been
+        // worked *recently* and steers new workouts toward whatever is lagging, so the
+        // whole trunk comes up together.
+        const MUSCLE_GROUPS = ['abs', 'obliques', 'back', 'glutes'];
+        const MUSCLE_LABELS = { abs: 'Abs', obliques: 'Obliques', back: 'Lower back', glutes: 'Glutes' };
+
+        // How a work set's seconds credit the trunk regions. The primary region takes
+        // the full share; the secondary shares encode real synergist activation — the
+        // posterior-chain extensors (back + glutes) fire together, rotation co-activates
+        // the anterior core, and bracing an anterior-core hold lights up the spinal
+        // erectors. Whole-body 'full' moves spread their load across everything.
+        const FOCUS_MUSCLES = {
+            abs:      { abs: 1.0, back: 0.15 },
+            obliques: { obliques: 1.0, abs: 0.25 },
+            back:     { back: 1.0, glutes: 0.30 },
+            glutes:   { glutes: 1.0, back: 0.25 },
+            full:     { abs: 0.40, obliques: 0.20, back: 0.20, glutes: 0.20 }
+        };
+
+        // Recent work defines your current balance, so old sessions fade: the stored
+        // load halves every ~12 days. A region you stop training therefore drifts back
+        // toward "lagging" on its own and gets re-prioritised without any manual reset.
+        const MUSCLE_HALFLIFE_DAYS = 12;
+        // How hard the balance pulls exercise selection. Seeds the in-workout focus
+        // counter by up to this many "phantom picks" for/against a region (see below).
+        const BALANCE_BIAS = 4;
+
+        const emptyMuscleLoad = () => ({ abs: 0, obliques: 0, back: 0, glutes: 0 });
+
+        // The stored load, faded forward to `now` by the half-life. Pure — it doesn't
+        // write state, so it's safe to call from render and generation alike.
+        function decayedMuscleLoad(now) {
+            now = now === undefined ? Date.now() : now;
+            const load = Object.assign(emptyMuscleLoad(), state.muscleLoad || {});
+            const last = state.muscleLoadTs || 0;
+            if (last && now > last) {
+                const factor = Math.pow(0.5, (now - last) / (MUSCLE_HALFLIFE_DAYS * 86400000));
+                MUSCLE_GROUPS.forEach((g) => { load[g] = (load[g] || 0) * factor; });
+            }
+            return load;
+        }
+
+        // Fold a finished session's main-circuit work into the running balance, after
+        // decaying what's already there to "now". Warm-ups and stretches aren't training
+        // volume, so they don't count.
+        function creditMuscleLoad(items) {
+            const now = Date.now();
+            const load = decayedMuscleLoad(now);
+            items.forEach((it) => {
+                if (it.kind !== 'work') return;
+                if (it.ex.disc !== 'core' && it.ex.disc !== 'pilates') return;
+                const mix = FOCUS_MUSCLES[it.ex.focus] || {};
+                Object.keys(mix).forEach((g) => { load[g] = (load[g] || 0) + it.secs * mix[g]; });
+            });
+            state.muscleLoad = load;
+            state.muscleLoadTs = now;
+        }
+
+        // Each region's share of recent load, which sit below an even split (the
+        // laggards the next workout should favour), and an overall evenness score.
+        // total === 0 means no training logged yet.
+        function muscleBalance(now) {
+            const load = decayedMuscleLoad(now);
+            const total = MUSCLE_GROUPS.reduce((t, g) => t + (load[g] || 0), 0);
+            const target = 1 / MUSCLE_GROUPS.length; // an even trunk is the goal
+            const shares = {};
+            MUSCLE_GROUPS.forEach((g) => { shares[g] = total ? load[g] / total : target; });
+            // 100 = perfectly even; 0 = all load in one region. The summed deviation
+            // from an even split maxes out at 2*(1-target) in that all-in-one case.
+            const spread = MUSCLE_GROUPS.reduce((t, g) => t + Math.abs(shares[g] - target), 0);
+            const score = Math.round(100 * (1 - spread / (2 * (1 - target))));
+            return { load, total, shares, target, score };
+        }
+
         function pickBalanced(pool, count, avoidIds, focusCount) {
             const picks = [];
             let candidates = shuffle(pool.filter((e) => !avoidIds.includes(e.id)));
@@ -2868,8 +3054,22 @@ permalink: /personal-trainer/
             // How many main exercises fit, alternating core and pilates
             const corePool = pickPool('core');
             const pilatesPool = pickPool('pilates');
+
+            // Seed the in-workout focus counter from your recent training balance so the
+            // picker leans toward whatever region you've done least. pickBalanced always
+            // takes the lowest-count focus next, so a region that's ahead of an even
+            // share starts with a positive count (chosen later) and a lagging one starts
+            // negative (chosen first). Bounded by BALANCE_BIAS so one neglected region
+            // never hijacks the entire session. A twist focus stacks an extra pull on top.
             const focusCount = {};
-            if (twist.focus) twist.focus.forEach((f) => { focusCount[f] = -3; });
+            const bal = muscleBalance();
+            if (bal.total > 0) {
+                MUSCLE_GROUPS.forEach((g) => {
+                    const rel = (bal.shares[g] - bal.target) / bal.target; // −1 (starved) .. +3 (all of it)
+                    focusCount[g] = Math.max(-BALANCE_BIAS, Math.min(BALANCE_BIAS, Math.round(rel * BALANCE_BIAS)));
+                });
+            }
+            if (twist.focus) twist.focus.forEach((f) => { focusCount[f] = (focusCount[f] || 0) - 3; });
             const avoid = state.lastExerciseIds;
 
             // Rough average time per main slot to size the list, then trim to budget
@@ -3339,6 +3539,7 @@ permalink: /personal-trainer/
 
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
+        document.getElementById('nav-info-balance').addEventListener('click', () => navigate('info'));
 
         // ---- Tab bar ----
         document.getElementById('tabbar').addEventListener('click', (e) => {
@@ -3560,8 +3761,48 @@ permalink: /personal-trainer/
             const unlocked = Object.keys(state.achievements || {}).length;
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
 
+            renderBalance();
             renderAchProgress();
             renderRecPreview();
+        }
+
+        // The four trunk regions as bars against an even-share target, plus a coaching
+        // line naming whatever is lagging. Empty until there's training to show.
+        function renderBalance() {
+            const bars = document.getElementById('balance-bars');
+            const scoreEl = document.getElementById('balance-score');
+            const note = document.getElementById('balance-note');
+            const bal = muscleBalance();
+            if (!bal.total) {
+                scoreEl.textContent = '';
+                bars.innerHTML = '';
+                note.textContent = 'Finish a few workouts and your muscle balance shows up here — the plan steers each session toward whatever you’ve trained least.';
+                return;
+            }
+            scoreEl.textContent = `${bal.score}% even`;
+            // A region is "lagging" once it drops meaningfully below an even share.
+            const isLow = (g) => bal.shares[g] / bal.target < 0.85;
+            bars.innerHTML = MUSCLE_GROUPS.map((g) => {
+                // The even-share target sits at the half-way tick, so a region on target
+                // fills to 50%, double its share fills the bar, none leaves it empty.
+                const fill = Math.max(3, Math.min(100, (bal.shares[g] / bal.target) / 2 * 100));
+                const low = isLow(g) ? ' low' : '';
+                return `<div class="bal-row">
+                    <span class="bal-label">${MUSCLE_LABELS[g]}</span>
+                    <div class="bal-track"><div class="bal-fill${low}" style="width:${fill}%"></div><span class="bal-target"></span></div>
+                    <span class="bal-pct${low}">${Math.round(bal.shares[g] * 100)}%</span>
+                </div>`;
+            }).join('');
+            const lagging = MUSCLE_GROUPS.filter(isLow)
+                .sort((a, b) => bal.shares[a] - bal.shares[b])
+                .map((g) => MUSCLE_LABELS[g].toLowerCase());
+            if (!lagging.length) {
+                note.textContent = 'Nicely balanced — every region is getting its share. Keep it up.';
+            } else {
+                const list = lagging.length === 1 ? lagging[0]
+                    : lagging.slice(0, -1).join(', ') + ' and ' + lagging[lagging.length - 1];
+                note.textContent = `Your ${list} ${lagging.length === 1 ? 'is' : 'are'} lagging — the next few workouts will lean that way to even you out.`;
+            }
         }
 
         function renderFreezeButton() {
@@ -4247,6 +4488,9 @@ permalink: /personal-trainer/
                     level: levelLabel()
                 });
                 state.lastExerciseIds = currentWorkout.main.map((e) => e.id);
+                // Fold this session's work into the running muscle balance so the next
+                // workouts can steer toward whatever regions it left behind.
+                creditMuscleLoad(currentWorkout.items);
                 state.bestStreak = Math.max(state.bestStreak || 0, state.streak);
                 const unlocked = checkAchievements();
                 saveState();
