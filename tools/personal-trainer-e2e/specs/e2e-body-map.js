@@ -66,7 +66,33 @@ const SHOTS = process.env.SHOTS_DIR;
 
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/body-map-front.png` });
 
-    // 6. Front/back toggle changes the view.
+    // 6. Tapping a muscle shows the exercise list for that region.
+    const absPath = page.locator('.body-chart-muscle').filter({ has: page.locator('title', { hasText: 'Abs' }) }).first();
+    const box = await absPath.boundingBox();
+    assert(box, 'abs muscle path has a bounding box');
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForTimeout(300);
+    const regionPanel = await page.evaluate(() => {
+        const el = document.getElementById('body-map-region');
+        return {
+            hasHead: !!el.querySelector('.bm-region-head'),
+            headText: el.querySelector('.bm-region-head') ? el.querySelector('.bm-region-head').textContent : '',
+            hasPct: !!el.querySelector('.bm-region-pct'),
+            listItems: el.querySelectorAll('.bm-ex-list li').length,
+            hasTag: !!el.querySelector('.bm-ex-tag'),
+            firstExName: el.querySelector('.bm-ex-name') ? el.querySelector('.bm-ex-name').textContent : '',
+        };
+    });
+    assert(regionPanel.hasHead, 'region panel shows a heading after tapping a muscle');
+    assert(regionPanel.headText === 'Abs', 'heading is Abs, got ' + regionPanel.headText);
+    assert(regionPanel.hasPct, 'region panel shows percentage');
+    assert(regionPanel.listItems > 0, 'region panel lists exercises, got ' + regionPanel.listItems);
+    assert(regionPanel.hasTag, 'exercises show discipline tag');
+    assert(regionPanel.firstExName.length > 0, 'exercise names are populated');
+
+    // 7. Front/back toggle changes the view.
+    // Clear the region panel first so the toggle test starts clean.
+    await page.evaluate(() => { document.getElementById('body-map-region').innerHTML = ''; });
     await page.click('#bodymap-view .choice[data-v="back"]');
     await page.waitForTimeout(300);
     const backView = await page.evaluate(() => ({
@@ -77,7 +103,7 @@ const SHOTS = process.env.SHOTS_DIR;
     assert(backView.selectedBtn === 'back', 'back toggle is selected, got ' + backView.selectedBtn);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/body-map-back.png` });
 
-    // 7. Switching back to front works too.
+    // 8. Switching back to front works too.
     await page.click('#bodymap-view .choice[data-v="front"]');
     await page.waitForTimeout(300);
     const frontAgain = await page.evaluate(() =>
@@ -85,12 +111,12 @@ const SHOTS = process.env.SHOTS_DIR;
     );
     assert(frontAgain === 'front', 'front toggle reselected');
 
-    // 8. Back button returns to Progress.
+    // 9. Back button returns to Progress.
     await page.click('#bodymap [data-back]');
     await page.waitForTimeout(200);
     assert(await active() === 'progress', 'back returns to progress, got ' + await active());
 
-    // 9. Zero muscle load: all intensities are 0.
+    // 10. Zero muscle load: all intensities are 0.
     const zeroState = await page.evaluate(() => {
         state.muscleLoad = { abs: 0, obliques: 0, back: 0, glutes: 0 };
         state.muscleLoadTs = 0;

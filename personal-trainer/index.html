@@ -665,12 +665,44 @@ permalink: /personal-trainer/
             line-height: 1.5;
         }
         #body-map-region {
-            font-size: var(--fs-sm);
-            color: var(--text);
+            margin-top: var(--sp-4);
+        }
+        .bm-region-head {
+            font-size: var(--fs-md);
             font-weight: 600;
-            min-height: 1.4em;
-            margin-top: var(--sp-3);
-            text-align: center;
+            color: var(--text);
+            margin-bottom: var(--sp-2);
+        }
+        .bm-region-pct {
+            font-size: var(--fs-sm);
+            color: var(--muted);
+            margin-bottom: var(--sp-3);
+        }
+        .bm-ex-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .bm-ex-list li {
+            font-size: var(--fs-sm);
+            padding: var(--sp-2) 0;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .bm-ex-name {
+            color: var(--text);
+        }
+        .bm-ex-tag {
+            font-size: var(--fs-xs);
+            color: var(--muted);
+            text-transform: capitalize;
+        }
+        .bm-syn-note {
+            font-size: var(--fs-xs);
+            color: var(--muted);
+            margin-top: var(--sp-2);
         }
 
         .home-nav {
@@ -3903,6 +3935,7 @@ permalink: /personal-trainer/
         function renderBodyMap() {
             const container = document.getElementById('body-map-container');
             const regionEl = document.getElementById('body-map-region');
+            regionEl.innerHTML = '';
             if (!window.BodyMuscles) {
                 container.innerHTML = '<p class="muted-note">Body map unavailable — library not loaded.</p>';
                 return;
@@ -3920,13 +3953,24 @@ permalink: /personal-trainer/
                     bodyState: bs,
                     onMuscleClick: (id) => {
                         const region = MUSCLE_ID_TO_REGION[id];
-                        if (region) {
-                            const bal = muscleBalance();
-                            const pct = Math.round((bal.shares[region] || 0) * 100);
-                            regionEl.textContent = `${MUSCLE_LABELS[region]}: ${pct}% of recent work`;
-                        } else {
-                            regionEl.textContent = '';
-                        }
+                        if (!region) { regionEl.innerHTML = ''; return; }
+                        const bal = muscleBalance();
+                        const pct = Math.round((bal.shares[region] || 0) * 100);
+                        const primary = EXERCISES.filter((ex) =>
+                            ex.focus === region && ex.disc !== 'warmup' && ex.disc !== 'cooldown');
+                        const synCount = EXERCISES.filter((ex) => {
+                            if (ex.disc === 'warmup' || ex.disc === 'cooldown' || ex.focus === region) return false;
+                            const mix = FOCUS_MUSCLES[ex.focus];
+                            return mix && mix[region];
+                        }).length;
+                        const list = primary.map((ex) =>
+                            `<li><span class="bm-ex-name">${ex.name}</span><span class="bm-ex-tag">${ex.disc === 'core' ? 'Core' : 'Pilates'}</span></li>`
+                        ).join('');
+                        const syn = synCount ? `<p class="bm-syn-note">+ ${synCount} exercises that also work this region as a synergist</p>` : '';
+                        regionEl.innerHTML =
+                            `<div class="bm-region-head">${MUSCLE_LABELS[region]}</div>` +
+                            `<div class="bm-region-pct">${pct}% of recent work</div>` +
+                            `<ul class="bm-ex-list">${list}</ul>${syn}`;
                     },
                 });
             }
