@@ -2575,7 +2575,7 @@ permalink: /personal-trainer/
 
     <script src="/personal-trainer/body-muscles.umd.min.js"></script>
     <script>
-        const SW_VERSION = '2608010040';
+        const SW_VERSION = '2608010110';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -4225,9 +4225,12 @@ permalink: /personal-trainer/
             const ref = facePath || headPath;
             const refRect = ref.getBoundingClientRect();
             const headRect = headPath ? headPath.getBoundingClientRect() : refRect;
+            // The "Head" path is just the cranium; the face/jaw sits below it in the
+            // "Face" path. A circle the width of the head, dropped from the crown,
+            // fills the head from hairline to chin — matching the silhouette.
+            const size = headRect.width;
             const cx = (headRect.left + headRect.right) / 2 - containerRect.left;
-            const cy = (headRect.top + headRect.bottom) / 2 - containerRect.top;
-            const size = Math.min(headRect.width, headRect.height);
+            const top = headRect.top - containerRect.top;
 
             if (!overlay) {
                 overlay = document.createElement('div');
@@ -4237,7 +4240,7 @@ permalink: /personal-trainer/
             overlay.style.width = size + 'px';
             overlay.style.height = size + 'px';
             overlay.style.left = (cx - size / 2) + 'px';
-            overlay.style.top = (cy - size / 2) + 'px';
+            overlay.style.top = top + 'px';
             overlay.innerHTML = `<img src="${faceData}" alt="Your face">`;
         }
 

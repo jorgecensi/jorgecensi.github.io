@@ -146,17 +146,25 @@ const SHOTS = process.env.SHOTS_DIR;
     assert(faceState.removeShown, 'Remove button shown when a photo exists');
     assert(/Change/.test(faceState.uploadText), 'upload button reads Change photo');
 
-    // The overlay must sit within the head's bounding box.
+    // The overlay is a circle the width of the head, dropped from the crown:
+    // horizontally within the head, top at the hairline, extending down to the chin.
     const headFit = await page.evaluate(() => {
         const svg = document.querySelector('#body-map-container svg');
         const head = Array.from(svg.querySelectorAll('.body-chart-muscle'))
             .find((p) => { const t = p.querySelector('title'); return t && t.textContent === 'Head'; });
         const hr = head.getBoundingClientRect();
         const or = document.querySelector('.bm-face-overlay').getBoundingClientRect();
-        return or.left >= hr.left - 1 && or.right <= hr.right + 1
-            && or.top >= hr.top - 1 && or.bottom <= hr.bottom + 1;
+        return {
+            widthMatch: Math.abs(or.width - hr.width) <= 1,
+            topMatch: Math.abs(or.top - hr.top) <= 1,
+            withinX: or.left >= hr.left - 1 && or.right <= hr.right + 1,
+            reachesChin: or.bottom > hr.bottom,
+        };
     });
-    assert(headFit, 'face overlay stays within the head bounding box');
+    assert(headFit.widthMatch, 'overlay diameter matches the head width');
+    assert(headFit.topMatch, 'overlay top sits at the crown');
+    assert(headFit.withinX, 'overlay stays within the head width');
+    assert(headFit.reachesChin, 'overlay extends below the cranium toward the chin');
 
     // Back view hides the face; front restores it.
     await page.click('#bodymap-view .choice[data-v="back"]');
