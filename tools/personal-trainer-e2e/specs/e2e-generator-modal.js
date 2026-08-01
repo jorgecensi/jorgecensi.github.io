@@ -22,9 +22,9 @@ const SHOTS = process.env.SHOTS_DIR;
     await page.click('#btn-generator-info');
     assert(await isOpen(), 'modal opens on ⓘ tap');
     await page.screenshot({ path: `${SHOTS}/modal-open.png` });
-    const heading = await page.textContent('.modal-head h2');
+    const heading = await page.textContent('#generator-info-modal .modal-head h2');
     assert(heading.includes('Generator'), 'modal heading present, got ' + heading);
-    const bodyText = await page.textContent('.modal-body');
+    const bodyText = await page.textContent('#generator-info-modal .modal-body');
     assert(bodyText.includes('Warm-up') && bodyText.includes('twist') && bodyText.includes('tier'),
         'modal body mentions key generator concepts');
 
@@ -46,7 +46,7 @@ const SHOTS = process.env.SHOTS_DIR;
 
     // 5. Clicking inside the card does NOT close it
     await page.click('#btn-generator-info');
-    await page.click('.modal-head h2');
+    await page.click('#generator-info-modal .modal-head h2');
     assert(await isOpen(), 'clicking inside the card keeps modal open');
     await page.click('#close-generator-info');
 

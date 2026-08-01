@@ -725,6 +725,48 @@ permalink: /personal-trainer/
             height: 100%;
             object-fit: cover;
         }
+        .face-editor-hint {
+            text-align: center;
+            margin-bottom: var(--sp-4);
+        }
+        .face-editor-stage {
+            position: relative;
+            width: 240px;
+            height: 240px;
+            margin: 0 auto var(--sp-4);
+            touch-action: none;
+        }
+        #face-editor-canvas {
+            display: block;
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            background: var(--surface2);
+            cursor: grab;
+            touch-action: none;
+        }
+        #face-editor-canvas:active {
+            cursor: grabbing;
+        }
+        .face-editor-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            box-shadow: inset 0 0 0 2px rgb(var(--accent-rgb) / 60%);
+            pointer-events: none;
+        }
+        .face-editor-zoom {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            margin-bottom: var(--sp-4);
+            color: var(--muted);
+            font-size: var(--fs-lg);
+        }
+        .face-editor-zoom input {
+            flex: 1;
+            accent-color: var(--accent);
+        }
 
         .home-nav {
             display: grid;
@@ -2448,6 +2490,7 @@ permalink: /personal-trainer/
             <div id="body-map-container"></div>
             <div class="bm-face-row">
                 <button class="info-link" id="btn-face-upload">📷 Add your face</button>
+                <button class="info-link" id="btn-face-adjust" style="display:none">✎ Adjust</button>
                 <button class="info-link bm-face-remove" id="btn-face-remove" style="display:none">✕ Remove</button>
             </div>
             <input type="file" id="face-file" accept="image/*" hidden>
@@ -2455,6 +2498,30 @@ permalink: /personal-trainer/
             <div class="body-map-legend"><span>None</span><div class="body-map-gradient"></div><span>Heavy</span></div>
             <p class="body-map-caption">Colour reflects recent training volume. Older sessions fade over about two weeks. Only the trunk lights up — this is a core &amp; mat programme.</p>
         </section>
+    </div>
+
+    <!-- ============ FACE PHOTO EDITOR (modal) ============ -->
+    <div class="modal-overlay" id="face-editor-modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2>Fit your <span>photo</span></h2>
+                <button class="modal-close" id="face-editor-close" aria-label="Close">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="muted-note face-editor-hint">Drag to reposition and use the slider to zoom. Whatever sits inside the circle fills the head.</p>
+                <div class="face-editor-stage">
+                    <canvas id="face-editor-canvas"></canvas>
+                    <div class="face-editor-ring"></div>
+                </div>
+                <div class="face-editor-zoom">
+                    <span aria-hidden="true">−</span>
+                    <input type="range" id="face-editor-zoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom">
+                    <span aria-hidden="true">+</span>
+                </div>
+                <button class="btn" id="face-editor-save">Save</button>
+                <button class="btn secondary" id="face-editor-cancel">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <!-- ============ HOW THE GENERATOR WORKS (modal) ============ -->
@@ -2508,7 +2575,7 @@ permalink: /personal-trainer/
 
     <script src="/personal-trainer/body-muscles.umd.min.js"></script>
     <script>
-        const SW_VERSION = '2608010010';
+        const SW_VERSION = '2608010040';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -3695,26 +3762,120 @@ permalink: /personal-trainer/
             const reader = new FileReader();
             reader.onload = () => {
                 const img = new Image();
-                img.onload = () => {
-                    const s = Math.min(img.width, img.height, 256);
-                    const canvas = document.createElement('canvas');
-                    canvas.width = s; canvas.height = s;
-                    const ctx = canvas.getContext('2d');
-                    const ox = (img.width - s) / 2, oy = (img.height - s) / 2;
-                    ctx.drawImage(img, ox, oy, s, s, 0, 0, s, s);
-                    state.facePhoto = canvas.toDataURL('image/jpeg', 0.8);
-                    saveState();
-                    renderFaceOverlay();
-                };
+                img.onload = () => openFaceEditor(img);
                 img.src = reader.result;
             };
             reader.readAsDataURL(file);
             e.target.value = '';
         });
+        document.getElementById('btn-face-adjust').addEventListener('click', () => {
+            if (!state.facePhoto) return;
+            const img = new Image();
+            img.onload = () => openFaceEditor(img);
+            img.src = state.facePhoto;
+        });
         document.getElementById('btn-face-remove').addEventListener('click', () => {
             delete state.facePhoto;
             saveState();
             renderFaceOverlay();
+        });
+
+        // ---- Face photo editor: pan & zoom the photo into the head circle ----
+        // The stored photo is a square JPEG; the body-map overlay masks it to a
+        // circle with CSS. This editor lets the user choose exactly which part of
+        // their photo lands inside that circle so it fits the head shape.
+        const faceEditor = {
+            modal: document.getElementById('face-editor-modal'),
+            canvas: document.getElementById('face-editor-canvas'),
+            zoom: document.getElementById('face-editor-zoom'),
+            ctx: null, img: null, base: 1, scale: 1, tx: 0, ty: 0, drag: null,
+            VIEW: 240, OUT: 256, dpr: Math.min(window.devicePixelRatio || 1, 3),
+        };
+        faceEditor.ctx = faceEditor.canvas.getContext('2d');
+
+        function faceEditorClamp() {
+            // Keep the image covering the whole circle — never let a gap show.
+            const disp = faceEditor.base * faceEditor.scale;
+            const maxX = Math.max(0, (faceEditor.img.width * disp - faceEditor.VIEW) / 2);
+            const maxY = Math.max(0, (faceEditor.img.height * disp - faceEditor.VIEW) / 2);
+            faceEditor.tx = Math.max(-maxX, Math.min(maxX, faceEditor.tx));
+            faceEditor.ty = Math.max(-maxY, Math.min(maxY, faceEditor.ty));
+        }
+
+        function faceEditorPaint(ctx, size) {
+            const k = size / faceEditor.VIEW;
+            const disp = faceEditor.base * faceEditor.scale * k;
+            const iw = faceEditor.img.width * disp;
+            const ih = faceEditor.img.height * disp;
+            const cx = size / 2 + faceEditor.tx * k;
+            const cy = size / 2 + faceEditor.ty * k;
+            ctx.clearRect(0, 0, size, size);
+            ctx.drawImage(faceEditor.img, cx - iw / 2, cy - ih / 2, iw, ih);
+        }
+
+        function faceEditorRender() {
+            faceEditorPaint(faceEditor.ctx, faceEditor.VIEW * faceEditor.dpr);
+        }
+
+        function openFaceEditor(img) {
+            faceEditor.img = img;
+            // Base scale = smallest that still covers the circle (a "cover" fit).
+            faceEditor.base = Math.max(faceEditor.VIEW / img.width, faceEditor.VIEW / img.height);
+            faceEditor.scale = 1;
+            faceEditor.tx = 0;
+            faceEditor.ty = 0;
+            faceEditor.zoom.value = 1;
+            const px = Math.round(faceEditor.VIEW * faceEditor.dpr);
+            faceEditor.canvas.width = px;
+            faceEditor.canvas.height = px;
+            faceEditorClamp();
+            faceEditorRender();
+            faceEditor.modal.classList.add('open');
+        }
+
+        function closeFaceEditor() {
+            faceEditor.modal.classList.remove('open');
+            faceEditor.img = null;
+            faceEditor.drag = null;
+        }
+
+        function saveFaceEditor() {
+            const out = document.createElement('canvas');
+            out.width = faceEditor.OUT;
+            out.height = faceEditor.OUT;
+            faceEditorPaint(out.getContext('2d'), faceEditor.OUT);
+            state.facePhoto = out.toDataURL('image/jpeg', 0.85);
+            saveState();
+            closeFaceEditor();
+            renderFaceOverlay();
+        }
+
+        faceEditor.canvas.addEventListener('pointerdown', (e) => {
+            faceEditor.drag = { x: e.clientX, y: e.clientY };
+            faceEditor.canvas.setPointerCapture(e.pointerId);
+        });
+        faceEditor.canvas.addEventListener('pointermove', (e) => {
+            if (!faceEditor.drag || !faceEditor.img) return;
+            faceEditor.tx += e.clientX - faceEditor.drag.x;
+            faceEditor.ty += e.clientY - faceEditor.drag.y;
+            faceEditor.drag = { x: e.clientX, y: e.clientY };
+            faceEditorClamp();
+            faceEditorRender();
+        });
+        const faceEditorEndDrag = () => { faceEditor.drag = null; };
+        faceEditor.canvas.addEventListener('pointerup', faceEditorEndDrag);
+        faceEditor.canvas.addEventListener('pointercancel', faceEditorEndDrag);
+        faceEditor.zoom.addEventListener('input', () => {
+            if (!faceEditor.img) return;
+            faceEditor.scale = parseFloat(faceEditor.zoom.value);
+            faceEditorClamp();
+            faceEditorRender();
+        });
+        document.getElementById('face-editor-save').addEventListener('click', saveFaceEditor);
+        document.getElementById('face-editor-cancel').addEventListener('click', closeFaceEditor);
+        document.getElementById('face-editor-close').addEventListener('click', closeFaceEditor);
+        faceEditor.modal.addEventListener('click', (e) => {
+            if (e.target === faceEditor.modal) closeFaceEditor();
         });
 
         // ---- Tab bar ----
@@ -4038,18 +4199,19 @@ permalink: /personal-trainer/
             const container = document.querySelector('.body-chart-container');
             if (!container) return;
             let overlay = container.querySelector('.bm-face-overlay');
-            if (bodyMapView === BodyMuscles.ViewSide.BACK) { if (overlay) overlay.remove(); return; }
             const faceData = state.facePhoto;
             const removeBtn = document.getElementById('btn-face-remove');
+            const adjustBtn = document.getElementById('btn-face-adjust');
             const uploadBtn = document.getElementById('btn-face-upload');
-            if (!faceData) {
+            // Button state tracks whether a photo exists — independent of the view.
+            if (removeBtn) removeBtn.style.display = faceData ? '' : 'none';
+            if (adjustBtn) adjustBtn.style.display = faceData ? '' : 'none';
+            if (uploadBtn) uploadBtn.textContent = faceData ? '📷 Change photo' : '📷 Add your face';
+            // The face only belongs on the front; the back view never shows it.
+            if (!faceData || bodyMapView === BodyMuscles.ViewSide.BACK) {
                 if (overlay) overlay.remove();
-                if (removeBtn) removeBtn.style.display = 'none';
-                if (uploadBtn) uploadBtn.textContent = '📷 Add your face';
                 return;
             }
-            if (removeBtn) removeBtn.style.display = '';
-            if (uploadBtn) uploadBtn.textContent = '📷 Change photo';
 
             const svg = container.querySelector('svg');
             if (!svg) return;

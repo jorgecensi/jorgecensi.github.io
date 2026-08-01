@@ -111,6 +111,74 @@ const SHOTS = process.env.SHOTS_DIR;
     );
     assert(frontAgain === 'front', 'front toggle reselected');
 
+    // 8b. Face photo editor: choosing a photo opens the fit editor; saving places
+    // an overlay that stays inside the head and never shows on the back view.
+    await page.evaluate(() => new Promise((res) => {
+        const c = document.createElement('canvas');
+        c.width = 120; c.height = 160;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#cc9977'; ctx.fillRect(0, 0, 120, 160);
+        const img = new Image();
+        img.onload = () => { openFaceEditor(img); res(); };
+        img.src = c.toDataURL('image/jpeg', 0.9);
+    }));
+    assert(await page.evaluate(() =>
+        document.getElementById('face-editor-modal').classList.contains('open')),
+        'face editor opens after choosing a photo');
+    // Zoom in, then save the crop.
+    await page.evaluate(() => {
+        faceEditor.scale = 2; faceEditor.zoom.value = 2;
+        faceEditorClamp(); faceEditorRender();
+        saveFaceEditor();
+    });
+    const faceState = await page.evaluate(() => ({
+        editorClosed: !document.getElementById('face-editor-modal').classList.contains('open'),
+        hasPhoto: !!state.facePhoto,
+        overlay: !!document.querySelector('.bm-face-overlay'),
+        adjustShown: document.getElementById('btn-face-adjust').style.display !== 'none',
+        removeShown: document.getElementById('btn-face-remove').style.display !== 'none',
+        uploadText: document.getElementById('btn-face-upload').textContent,
+    }));
+    assert(faceState.editorClosed, 'editor closes after save');
+    assert(faceState.hasPhoto, 'photo saved to state');
+    assert(faceState.overlay, 'face overlay appears on the front view');
+    assert(faceState.adjustShown, 'Adjust button shown when a photo exists');
+    assert(faceState.removeShown, 'Remove button shown when a photo exists');
+    assert(/Change/.test(faceState.uploadText), 'upload button reads Change photo');
+
+    // The overlay must sit within the head's bounding box.
+    const headFit = await page.evaluate(() => {
+        const svg = document.querySelector('#body-map-container svg');
+        const head = Array.from(svg.querySelectorAll('.body-chart-muscle'))
+            .find((p) => { const t = p.querySelector('title'); return t && t.textContent === 'Head'; });
+        const hr = head.getBoundingClientRect();
+        const or = document.querySelector('.bm-face-overlay').getBoundingClientRect();
+        return or.left >= hr.left - 1 && or.right <= hr.right + 1
+            && or.top >= hr.top - 1 && or.bottom <= hr.bottom + 1;
+    });
+    assert(headFit, 'face overlay stays within the head bounding box');
+
+    // Back view hides the face; front restores it.
+    await page.click('#bodymap-view .choice[data-v="back"]');
+    await page.waitForTimeout(300);
+    assert(await page.evaluate(() => !document.querySelector('.bm-face-overlay')),
+        'face overlay is hidden on the back view');
+    await page.click('#bodymap-view .choice[data-v="front"]');
+    await page.waitForTimeout(300);
+    assert(await page.evaluate(() => !!document.querySelector('.bm-face-overlay')),
+        'face overlay returns on the front view');
+
+    // Removing clears the photo, overlay, and the Adjust button.
+    await page.click('#btn-face-remove');
+    await page.waitForTimeout(100);
+    const removed = await page.evaluate(() => ({
+        noPhoto: !state.facePhoto,
+        noOverlay: !document.querySelector('.bm-face-overlay'),
+        adjustHidden: document.getElementById('btn-face-adjust').style.display === 'none',
+    }));
+    assert(removed.noPhoto && removed.noOverlay, 'removing clears the photo and overlay');
+    assert(removed.adjustHidden, 'Adjust hidden when no photo');
+
     // 9. Back button returns to Progress.
     await page.click('#bodymap [data-back]');
     await page.waitForTimeout(200);
