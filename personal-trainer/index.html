@@ -2508,7 +2508,7 @@ permalink: /personal-trainer/
 
     <script src="/personal-trainer/body-muscles.umd.min.js"></script>
     <script>
-        const SW_VERSION = '2607311730';
+        const SW_VERSION = '2607311800';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -4038,6 +4038,7 @@ permalink: /personal-trainer/
             const container = document.querySelector('.body-chart-container');
             if (!container) return;
             let overlay = container.querySelector('.bm-face-overlay');
+            if (bodyMapView === BodyMuscles.ViewSide.BACK) { if (overlay) overlay.remove(); return; }
             const faceData = state.facePhoto;
             const removeBtn = document.getElementById('btn-face-remove');
             const uploadBtn = document.getElementById('btn-face-upload');
