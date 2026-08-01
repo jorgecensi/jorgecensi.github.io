@@ -713,47 +713,23 @@ permalink: /personal-trainer/
         .bm-face-remove {
             color: var(--muted);
         }
-        .bm-face-overlay {
-            position: absolute;
-            border-radius: 50%;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 2;
-        }
-        .bm-face-overlay img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
         .face-editor-hint {
             text-align: center;
             margin-bottom: var(--sp-4);
         }
         .face-editor-stage {
-            position: relative;
-            width: 240px;
-            height: 240px;
+            display: flex;
+            justify-content: center;
             margin: 0 auto var(--sp-4);
             touch-action: none;
         }
         #face-editor-canvas {
             display: block;
-            width: 240px;
-            height: 240px;
-            border-radius: 50%;
-            background: var(--surface2);
             cursor: grab;
             touch-action: none;
         }
         #face-editor-canvas:active {
             cursor: grabbing;
-        }
-        .face-editor-ring {
-            position: absolute;
-            inset: 0;
-            border-radius: 50%;
-            box-shadow: inset 0 0 0 2px rgb(var(--accent-rgb) / 60%);
-            pointer-events: none;
         }
         .face-editor-zoom {
             display: flex;
@@ -2508,10 +2484,9 @@ permalink: /personal-trainer/
                 <button class="modal-close" id="face-editor-close" aria-label="Close">✕</button>
             </div>
             <div class="modal-body">
-                <p class="muted-note face-editor-hint">Drag to reposition and use the slider to zoom. Whatever sits inside the circle fills the head.</p>
+                <p class="muted-note face-editor-hint">Drag to reposition and use the slider to zoom. Whatever fills the head shape is what shows.</p>
                 <div class="face-editor-stage">
                     <canvas id="face-editor-canvas"></canvas>
-                    <div class="face-editor-ring"></div>
                 </div>
                 <div class="face-editor-zoom">
                     <span aria-hidden="true">−</span>
@@ -2575,7 +2550,7 @@ permalink: /personal-trainer/
 
     <script src="/personal-trainer/body-muscles.umd.min.js"></script>
     <script>
-        const SW_VERSION = '2608010110';
+        const SW_VERSION = '2608010145';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -3780,54 +3755,94 @@ permalink: /personal-trainer/
             renderFaceOverlay();
         });
 
-        // ---- Face photo editor: pan & zoom the photo into the head circle ----
-        // The stored photo is a square JPEG; the body-map overlay masks it to a
-        // circle with CSS. This editor lets the user choose exactly which part of
-        // their photo lands inside that circle so it fits the head shape.
+        // ---- Face photo editor: pan & zoom the photo into the head silhouette ----
+        // The body map masks the photo to the real head outline (the union of the
+        // "Head" and "Face" SVG paths, in head-user units). This editor previews that
+        // exact shape so the user can pick which part of the photo lands inside it.
+        // On save we bake a plain rectangle covering the head's bounding box; the SVG
+        // clip does the silhouette masking on the map, so the stored image stays clean.
+        const FACE_ASPECT_FALLBACK = 9.017 / 13.03; // head width / height, if unread
         const faceEditor = {
             modal: document.getElementById('face-editor-modal'),
             canvas: document.getElementById('face-editor-canvas'),
             zoom: document.getElementById('face-editor-zoom'),
-            ctx: null, img: null, base: 1, scale: 1, tx: 0, ty: 0, drag: null,
-            VIEW: 240, OUT: 256, dpr: Math.min(window.devicePixelRatio || 1, 3),
+            ctx: null, img: null, scale: 1, tx: 0, ty: 0, drag: null,
+            DW: 210, DH: 300, clip: null,
+            dpr: Math.min(window.devicePixelRatio || 1, 3),
         };
         faceEditor.ctx = faceEditor.canvas.getContext('2d');
 
+        // A Path2D of the head silhouette mapped into a W×H pixel box (or an ellipse
+        // fallback when geometry is unavailable), used both to clip and to outline.
+        function faceEditorMask(geom, W, H) {
+            const p = new Path2D();
+            if (geom && geom.paths && geom.paths.length) {
+                const k = W / geom.w; // == H / geom.h; aspect is preserved
+                const m = new DOMMatrix([k, 0, 0, k, -geom.x * k, -geom.y * k]);
+                geom.paths.forEach((d) => p.addPath(new Path2D(d), m));
+            } else {
+                p.ellipse(W / 2, H / 2, W / 2, H / 2, 0, 0, Math.PI * 2);
+            }
+            return p;
+        }
+
         function faceEditorClamp() {
-            // Keep the image covering the whole circle — never let a gap show.
-            const disp = faceEditor.base * faceEditor.scale;
-            const maxX = Math.max(0, (faceEditor.img.width * disp - faceEditor.VIEW) / 2);
-            const maxY = Math.max(0, (faceEditor.img.height * disp - faceEditor.VIEW) / 2);
+            // Keep the image covering the whole crop box — never let a gap show.
+            const base = Math.max(faceEditor.DW / faceEditor.img.width, faceEditor.DH / faceEditor.img.height);
+            const disp = base * faceEditor.scale;
+            const maxX = Math.max(0, (faceEditor.img.width * disp - faceEditor.DW) / 2);
+            const maxY = Math.max(0, (faceEditor.img.height * disp - faceEditor.DH) / 2);
             faceEditor.tx = Math.max(-maxX, Math.min(maxX, faceEditor.tx));
             faceEditor.ty = Math.max(-maxY, Math.min(maxY, faceEditor.ty));
         }
 
-        function faceEditorPaint(ctx, size) {
-            const k = size / faceEditor.VIEW;
-            const disp = faceEditor.base * faceEditor.scale * k;
+        // Cover-fit the image into a W×H context. `mask` clips it to the silhouette;
+        // `outline` strokes the shape as a guide. Pan (tx/ty) is tracked in display
+        // px and scaled by s so any target resolution matches the preview exactly.
+        function faceEditorPaint(ctx, W, H, opts) {
+            const s = W / faceEditor.DW;
+            const base = Math.max(W / faceEditor.img.width, H / faceEditor.img.height);
+            const disp = base * faceEditor.scale;
             const iw = faceEditor.img.width * disp;
             const ih = faceEditor.img.height * disp;
-            const cx = size / 2 + faceEditor.tx * k;
-            const cy = size / 2 + faceEditor.ty * k;
-            ctx.clearRect(0, 0, size, size);
+            const cx = W / 2 + faceEditor.tx * s;
+            const cy = H / 2 + faceEditor.ty * s;
+            ctx.clearRect(0, 0, W, H);
+            ctx.save();
+            if (opts && opts.mask) ctx.clip(opts.mask);
             ctx.drawImage(faceEditor.img, cx - iw / 2, cy - ih / 2, iw, ih);
+            ctx.restore();
+            if (opts && opts.outline) {
+                ctx.lineWidth = Math.max(1, 1.5 * s);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+                ctx.stroke(opts.outline);
+            }
         }
 
         function faceEditorRender() {
-            faceEditorPaint(faceEditor.ctx, faceEditor.VIEW * faceEditor.dpr);
+            const W = Math.round(faceEditor.DW * faceEditor.dpr);
+            const H = Math.round(faceEditor.DH * faceEditor.dpr);
+            faceEditorPaint(faceEditor.ctx, W, H, { mask: faceEditor.clip, outline: faceEditor.clip });
         }
 
         function openFaceEditor(img) {
+            const svg = document.querySelector('.body-chart-container svg');
+            const geom = headGeom || (svg ? readHeadGeom(svg) : null);
+            const aspect = geom ? geom.w / geom.h : FACE_ASPECT_FALLBACK;
+            faceEditor.DH = 300;
+            faceEditor.DW = Math.round(300 * aspect);
             faceEditor.img = img;
-            // Base scale = smallest that still covers the circle (a "cover" fit).
-            faceEditor.base = Math.max(faceEditor.VIEW / img.width, faceEditor.VIEW / img.height);
             faceEditor.scale = 1;
             faceEditor.tx = 0;
             faceEditor.ty = 0;
             faceEditor.zoom.value = 1;
-            const px = Math.round(faceEditor.VIEW * faceEditor.dpr);
-            faceEditor.canvas.width = px;
-            faceEditor.canvas.height = px;
+            const W = Math.round(faceEditor.DW * faceEditor.dpr);
+            const H = Math.round(faceEditor.DH * faceEditor.dpr);
+            faceEditor.canvas.width = W;
+            faceEditor.canvas.height = H;
+            faceEditor.canvas.style.width = faceEditor.DW + 'px';
+            faceEditor.canvas.style.height = faceEditor.DH + 'px';
+            faceEditor.clip = faceEditorMask(geom, W, H);
             faceEditorClamp();
             faceEditorRender();
             faceEditor.modal.classList.add('open');
@@ -3840,10 +3855,12 @@ permalink: /personal-trainer/
         }
 
         function saveFaceEditor() {
+            // Bake an unclipped rectangle covering the head's bounding box. The SVG
+            // clipPath on the body map turns it into the head silhouette.
             const out = document.createElement('canvas');
-            out.width = faceEditor.OUT;
-            out.height = faceEditor.OUT;
-            faceEditorPaint(out.getContext('2d'), faceEditor.OUT);
+            out.height = 512;
+            out.width = Math.round(512 * (faceEditor.DW / faceEditor.DH));
+            faceEditorPaint(out.getContext('2d'), out.width, out.height, null);
             state.facePhoto = out.toDataURL('image/jpeg', 0.85);
             saveState();
             closeFaceEditor();
@@ -4195,10 +4212,32 @@ permalink: /personal-trainer/
             requestAnimationFrame(renderFaceOverlay);
         }
 
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const XLINK_NS = 'http://www.w3.org/1999/xlink';
+        // Cached front-view head silhouette (paths + bbox in SVG user units). The
+        // viewBox is fixed, so this is stable once read and the editor can reuse it.
+        let headGeom = null;
+
+        // The head outline is drawn by two paths — "Head" (cranium) and "Face"
+        // (face + jaw). Return their path data and combined bounding box, or null.
+        function readHeadGeom(svg) {
+            const find = (name) => Array.from(svg.querySelectorAll('.body-chart-muscle'))
+                .find((p) => { const t = p.querySelector('title'); return t && t.textContent === name; });
+            const parts = [find('Head'), find('Face')].filter(Boolean);
+            if (!parts.length) return null;
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            parts.forEach((p) => {
+                const b = p.getBBox();
+                x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
+                x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
+            });
+            return { paths: parts.map((p) => p.getAttribute('d')), x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+        }
+
         function renderFaceOverlay() {
             const container = document.querySelector('.body-chart-container');
             if (!container) return;
-            let overlay = container.querySelector('.bm-face-overlay');
+            const svg = container.querySelector('svg');
             const faceData = state.facePhoto;
             const removeBtn = document.getElementById('btn-face-remove');
             const adjustBtn = document.getElementById('btn-face-adjust');
@@ -4207,41 +4246,47 @@ permalink: /personal-trainer/
             if (removeBtn) removeBtn.style.display = faceData ? '' : 'none';
             if (adjustBtn) adjustBtn.style.display = faceData ? '' : 'none';
             if (uploadBtn) uploadBtn.textContent = faceData ? '📷 Change photo' : '📷 Add your face';
-            // The face only belongs on the front; the back view never shows it.
-            if (!faceData || bodyMapView === BodyMuscles.ViewSide.BACK) {
-                if (overlay) overlay.remove();
-                return;
-            }
 
-            const svg = container.querySelector('svg');
+            // Always clear any previous injection (the library may rebuild the SVG on
+            // view/state updates, so we re-add from scratch each render).
+            if (svg) {
+                const oldClip = svg.querySelector('#bm-head-clip');
+                if (oldClip) oldClip.remove();
+                const oldImg = svg.querySelector('.bm-face-img');
+                if (oldImg) oldImg.remove();
+            }
             if (!svg) return;
-            const findMuscle = (name) => Array.from(svg.querySelectorAll('.body-chart-muscle'))
-                .find((p) => { const t = p.querySelector('title'); return t && t.textContent === name; });
-            const facePath = findMuscle('Face');
-            const headPath = findMuscle('Head') || findMuscle('Head (Posterior)');
-            if (!facePath && !headPath) return;
 
-            const containerRect = container.getBoundingClientRect();
-            const ref = facePath || headPath;
-            const refRect = ref.getBoundingClientRect();
-            const headRect = headPath ? headPath.getBoundingClientRect() : refRect;
-            // The "Head" path is just the cranium; the face/jaw sits below it in the
-            // "Face" path. A circle the width of the head, dropped from the crown,
-            // fills the head from hairline to chin — matching the silhouette.
-            const size = headRect.width;
-            const cx = (headRect.left + headRect.right) / 2 - containerRect.left;
-            const top = headRect.top - containerRect.top;
+            const geom = readHeadGeom(svg);
+            // Cache the front-view geometry for the editor (back view lacks "Face").
+            if (geom && bodyMapView !== BodyMuscles.ViewSide.BACK) headGeom = geom;
 
-            if (!overlay) {
-                overlay = document.createElement('div');
-                overlay.className = 'bm-face-overlay';
-                container.appendChild(overlay);
-            }
-            overlay.style.width = size + 'px';
-            overlay.style.height = size + 'px';
-            overlay.style.left = (cx - size / 2) + 'px';
-            overlay.style.top = top + 'px';
-            overlay.innerHTML = `<img src="${faceData}" alt="Your face">`;
+            // The face only belongs on the front; the back view never shows it.
+            if (!faceData || bodyMapView === BodyMuscles.ViewSide.BACK || !geom) return;
+
+            // Clip an <image> of the photo to the head silhouette, in user units.
+            const clip = document.createElementNS(SVG_NS, 'clipPath');
+            clip.setAttribute('id', 'bm-head-clip');
+            clip.setAttribute('clipPathUnits', 'userSpaceOnUse');
+            geom.paths.forEach((d) => {
+                const p = document.createElementNS(SVG_NS, 'path');
+                p.setAttribute('d', d);
+                clip.appendChild(p);
+            });
+            svg.appendChild(clip);
+
+            const img = document.createElementNS(SVG_NS, 'image');
+            img.setAttribute('class', 'bm-face-img');
+            img.setAttribute('x', geom.x);
+            img.setAttribute('y', geom.y);
+            img.setAttribute('width', geom.w);
+            img.setAttribute('height', geom.h);
+            img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            img.setAttribute('clip-path', 'url(#bm-head-clip)');
+            img.setAttribute('pointer-events', 'none');
+            img.setAttributeNS(XLINK_NS, 'xlink:href', faceData);
+            img.setAttribute('href', faceData);
+            svg.appendChild(img); // last child → renders above the muscle fills
         }
 
         function renderFreezeButton() {

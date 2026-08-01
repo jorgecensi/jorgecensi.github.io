@@ -134,7 +134,7 @@ const SHOTS = process.env.SHOTS_DIR;
     const faceState = await page.evaluate(() => ({
         editorClosed: !document.getElementById('face-editor-modal').classList.contains('open'),
         hasPhoto: !!state.facePhoto,
-        overlay: !!document.querySelector('.bm-face-overlay'),
+        overlay: !!document.querySelector('.bm-face-img'),
         adjustShown: document.getElementById('btn-face-adjust').style.display !== 'none',
         removeShown: document.getElementById('btn-face-remove').style.display !== 'none',
         uploadText: document.getElementById('btn-face-upload').textContent,
@@ -146,34 +146,41 @@ const SHOTS = process.env.SHOTS_DIR;
     assert(faceState.removeShown, 'Remove button shown when a photo exists');
     assert(/Change/.test(faceState.uploadText), 'upload button reads Change photo');
 
-    // The overlay is a circle the width of the head, dropped from the crown:
-    // horizontally within the head, top at the hairline, extending down to the chin.
+    // The photo is an <image> spanning the head bounding box, clipped to the real
+    // head silhouette: its box matches the head width, sits at the crown, and
+    // reaches down past the cranium to the chin (the "Face" path's lower edge).
     const headFit = await page.evaluate(() => {
         const svg = document.querySelector('#body-map-container svg');
         const head = Array.from(svg.querySelectorAll('.body-chart-muscle'))
             .find((p) => { const t = p.querySelector('title'); return t && t.textContent === 'Head'; });
         const hr = head.getBoundingClientRect();
-        const or = document.querySelector('.bm-face-overlay').getBoundingClientRect();
+        const imgEl = document.querySelector('.bm-face-img');
+        const or = imgEl.getBoundingClientRect();
+        const clip = svg.querySelector('#bm-head-clip');
         return {
             widthMatch: Math.abs(or.width - hr.width) <= 1,
             topMatch: Math.abs(or.top - hr.top) <= 1,
             withinX: or.left >= hr.left - 1 && or.right <= hr.right + 1,
             reachesChin: or.bottom > hr.bottom,
+            clipped: imgEl.getAttribute('clip-path') === 'url(#bm-head-clip)',
+            clipPaths: clip ? clip.querySelectorAll('path').length : 0,
         };
     });
-    assert(headFit.widthMatch, 'overlay diameter matches the head width');
+    assert(headFit.widthMatch, 'overlay box matches the head width');
     assert(headFit.topMatch, 'overlay top sits at the crown');
     assert(headFit.withinX, 'overlay stays within the head width');
     assert(headFit.reachesChin, 'overlay extends below the cranium toward the chin');
+    assert(headFit.clipped, 'photo is clipped to the head silhouette');
+    assert(headFit.clipPaths === 2, 'silhouette clip is built from the Head + Face paths, got ' + headFit.clipPaths);
 
     // Back view hides the face; front restores it.
     await page.click('#bodymap-view .choice[data-v="back"]');
     await page.waitForTimeout(300);
-    assert(await page.evaluate(() => !document.querySelector('.bm-face-overlay')),
+    assert(await page.evaluate(() => !document.querySelector('.bm-face-img')),
         'face overlay is hidden on the back view');
     await page.click('#bodymap-view .choice[data-v="front"]');
     await page.waitForTimeout(300);
-    assert(await page.evaluate(() => !!document.querySelector('.bm-face-overlay')),
+    assert(await page.evaluate(() => !!document.querySelector('.bm-face-img')),
         'face overlay returns on the front view');
 
     // Removing clears the photo, overlay, and the Adjust button.
@@ -181,7 +188,7 @@ const SHOTS = process.env.SHOTS_DIR;
     await page.waitForTimeout(100);
     const removed = await page.evaluate(() => ({
         noPhoto: !state.facePhoto,
-        noOverlay: !document.querySelector('.bm-face-overlay'),
+        noOverlay: !document.querySelector('.bm-face-img'),
         adjustHidden: document.getElementById('btn-face-adjust').style.display === 'none',
     }));
     assert(removed.noPhoto && removed.noOverlay, 'removing clears the photo and overlay');
