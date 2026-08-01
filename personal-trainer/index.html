@@ -630,6 +630,120 @@ permalink: /personal-trainer/
 
         .bal-pct.low { color: var(--orange); }
 
+        #body-map-container {
+            background: var(--surface);
+            border-radius: var(--r-md);
+            padding: var(--sp-3);
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #body-map-container svg {
+            max-width: 280px;
+            width: 100%;
+            height: auto;
+        }
+        .body-map-legend {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            margin-top: var(--sp-4);
+            font-size: var(--fs-sm);
+            color: var(--muted);
+        }
+        .body-map-gradient {
+            height: 10px;
+            flex: 1;
+            border-radius: var(--r-xs);
+            background: linear-gradient(to right, #64748b, #eab308, #f97316, #ef4444);
+        }
+        .body-map-caption {
+            font-size: var(--fs-sm);
+            color: var(--muted);
+            margin-top: var(--sp-3);
+            line-height: 1.5;
+        }
+        #body-map-region {
+            margin-top: var(--sp-4);
+        }
+        .bm-region-head {
+            font-size: var(--fs-md);
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: var(--sp-2);
+        }
+        .bm-region-pct {
+            font-size: var(--fs-sm);
+            color: var(--muted);
+            margin-bottom: var(--sp-3);
+        }
+        .bm-ex-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .bm-ex-list li {
+            font-size: var(--fs-sm);
+            padding: var(--sp-2) 0;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .bm-ex-name {
+            color: var(--text);
+        }
+        .bm-ex-tag {
+            font-size: var(--fs-xs);
+            color: var(--muted);
+            text-transform: capitalize;
+        }
+        .bm-syn-note {
+            font-size: var(--fs-xs);
+            color: var(--muted);
+            margin-top: var(--sp-2);
+        }
+        .bm-face-row {
+            display: flex;
+            justify-content: center;
+            gap: var(--sp-4);
+            margin-top: var(--sp-2);
+        }
+        .bm-face-remove {
+            color: var(--muted);
+        }
+        .face-editor-hint {
+            text-align: center;
+            margin-bottom: var(--sp-4);
+        }
+        .face-editor-stage {
+            display: flex;
+            justify-content: center;
+            margin: 0 auto var(--sp-4);
+            touch-action: none;
+        }
+        #face-editor-canvas {
+            display: block;
+            cursor: grab;
+            touch-action: none;
+        }
+        #face-editor-canvas:active {
+            cursor: grabbing;
+        }
+        .face-editor-zoom {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            margin-bottom: var(--sp-4);
+            color: var(--muted);
+            font-size: var(--fs-lg);
+        }
+        .face-editor-zoom input {
+            flex: 1;
+            accent-color: var(--accent);
+        }
+
         .home-nav {
             display: grid;
             grid-template-columns: 1fr;
@@ -2149,6 +2263,7 @@ permalink: /personal-trainer/
                 <div id="balance-bars"></div>
                 <p class="muted-note mt-3" id="balance-note"></p>
                 <button class="info-link" id="nav-info-balance">ⓘ Why balance matters</button>
+                <button class="info-link" id="nav-bodymap">🗺 View body map ›</button>
             </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
@@ -2279,7 +2394,7 @@ permalink: /personal-trainer/
                 <div class="section-title">Training in balance</div>
                 <p class="muted-note mb-3">A strong trunk is a <em>balanced</em> one. Hammering the front — the abs — while the posterior chain (glutes and lower back) lags is the classic home-workout trap: it tips the pelvis into an anterior tilt and loads the lower back, the opposite of the posture you're training for.</p>
                 <p class="muted-note mb-3">So the app keeps a running tally of how much work each region — abs, obliques, lower back and glutes — has had <strong class="txt-strong">recently</strong> (older sessions fade over about a fortnight), and every new workout leans toward whatever you've done least. Train nothing but abs for a week and the plan starts feeding you glute and back work to even you back out.</p>
-                <p class="muted-note">The Muscle balance card on the Progress tab shows each region's share of your recent work against an even split, and calls out whatever's lagging. There's nothing to set — just train, and it self-corrects.</p>
+                <p class="muted-note">The Muscle balance card on the Progress tab shows each region's share of your recent work against an even split, and calls out whatever's lagging. Tap "View body map" on the card to see how your trunk lights up on an anatomical diagram — the warmer the colour, the more recent work that muscle has had. There's nothing to set — just train, and it self-corrects.</p>
             </div>
 
             <div class="card">
@@ -2336,6 +2451,52 @@ permalink: /personal-trainer/
             <p class="muted-note mb-3" id="rec-note"></p>
             <div id="records-list"></div>
         </section>
+
+        <!-- ============ BODY MAP ============ -->
+        <section class="screen" id="bodymap">
+            <header class="topbar">
+                <button class="back-btn" data-back>‹ Back</button>
+                <h1>Body <span>Map</span></h1>
+                <span></span>
+            </header>
+            <div class="choice-row cols-2" id="bodymap-view">
+                <button class="choice selected" data-v="front">Front</button>
+                <button class="choice" data-v="back">Back</button>
+            </div>
+            <div id="body-map-container"></div>
+            <div class="bm-face-row">
+                <button class="info-link" id="btn-face-upload">📷 Add your face</button>
+                <button class="info-link" id="btn-face-adjust" style="display:none">✎ Adjust</button>
+                <button class="info-link bm-face-remove" id="btn-face-remove" style="display:none">✕ Remove</button>
+            </div>
+            <input type="file" id="face-file" accept="image/*" hidden>
+            <div id="body-map-region"></div>
+            <div class="body-map-legend"><span>None</span><div class="body-map-gradient"></div><span>Heavy</span></div>
+            <p class="body-map-caption">Colour reflects recent training volume. Older sessions fade over about two weeks. Only the trunk lights up — this is a core &amp; mat programme.</p>
+        </section>
+    </div>
+
+    <!-- ============ FACE PHOTO EDITOR (modal) ============ -->
+    <div class="modal-overlay" id="face-editor-modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2>Fit your <span>photo</span></h2>
+                <button class="modal-close" id="face-editor-close" aria-label="Close">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="muted-note face-editor-hint">Drag to reposition and use the slider to zoom. Whatever fills the head shape is what shows.</p>
+                <div class="face-editor-stage">
+                    <canvas id="face-editor-canvas"></canvas>
+                </div>
+                <div class="face-editor-zoom">
+                    <span aria-hidden="true">−</span>
+                    <input type="range" id="face-editor-zoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom">
+                    <span aria-hidden="true">+</span>
+                </div>
+                <button class="btn" id="face-editor-save">Save</button>
+                <button class="btn secondary" id="face-editor-cancel">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <!-- ============ HOW THE GENERATOR WORKS (modal) ============ -->
@@ -2387,8 +2548,9 @@ permalink: /personal-trainer/
         <button class="tab" data-tab="setup"><img class="tab-ico" src="/img/pt/settings.png" alt=""><span>Settings</span></button>
     </nav>
 
+    <script src="/personal-trainer/body-muscles.umd.min.js"></script>
     <script>
-        const SW_VERSION = '2607311109';
+        const SW_VERSION = '2608010145';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -3004,6 +3166,25 @@ permalink: /personal-trainer/
             return { load, total, shares, target, score };
         }
 
+        const REGION_MUSCLE_IDS = {
+            abs: ['abs-upper-left', 'abs-upper-right', 'abs-lower-left', 'abs-lower-right'],
+            obliques: ['obliques-left', 'obliques-right'],
+            back: ['lower-back-erectors-left', 'lower-back-erectors-right', 'spine', 'quadratus-lumborum-left', 'quadratus-lumborum-right'],
+            glutes: ['gluteus-maximus-left', 'gluteus-maximus-right', 'gluteus-medius-left', 'gluteus-medius-right'],
+        };
+
+        function muscleBodyState(now) {
+            const load = decayedMuscleLoad(now);
+            const max = Math.max(...MUSCLE_GROUPS.map((g) => load[g] || 0));
+            const body = {};
+            MUSCLE_GROUPS.forEach((g) => {
+                const val = load[g] || 0;
+                const intensity = max > 0 && val > 0 ? Math.max(1, Math.round(10 * val / max)) : 0;
+                (REGION_MUSCLE_IDS[g] || []).forEach((id) => { body[id] = { intensity }; });
+            });
+            return body;
+        }
+
         function pickBalanced(pool, count, avoidIds, focusCount) {
             const picks = [];
             let candidates = shuffle(pool.filter((e) => !avoidIds.includes(e.id)));
@@ -3160,7 +3341,7 @@ permalink: /personal-trainer/
         const TAB_OF = {
             home: 'home', preview: 'home', player: 'home', complete: 'home',
             progress: 'progress', history: 'progress', achievements: 'progress',
-            records: 'progress', info: 'progress',
+            records: 'progress', info: 'progress', bodymap: 'progress',
             library: 'library', setup: 'setup'
         };
 
@@ -3350,7 +3531,7 @@ permalink: /personal-trainer/
             if (dx < 70 || dy > 60) return;
             // Sub-screens only — 'library' and 'setup' are root tabs now, and swiping
             // back from a root should do nothing rather than jump to another tab.
-            const canSwipeBack = ['preview', 'history', 'info', 'achievements', 'records'].includes(activeScreenId());
+            const canSwipeBack = ['preview', 'history', 'info', 'achievements', 'records', 'bodymap'].includes(activeScreenId());
             if (canSwipeBack) goBack();
         }, { passive: true });
 
@@ -3540,6 +3721,179 @@ permalink: /personal-trainer/
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
         document.getElementById('nav-info-balance').addEventListener('click', () => navigate('info'));
+        document.getElementById('nav-bodymap').addEventListener('click', () => { renderBodyMap(); navigate('bodymap'); });
+        bindChoiceRow('bodymap-view', (v) => {
+            if (!window.BodyMuscles) return;
+            bodyMapView = v === 'back' ? BodyMuscles.ViewSide.BACK : BodyMuscles.ViewSide.FRONT;
+            if (bodyChart) bodyChart.update({ view: bodyMapView });
+            requestAnimationFrame(renderFaceOverlay);
+        });
+        document.getElementById('btn-face-upload').addEventListener('click', () => {
+            document.getElementById('face-file').click();
+        });
+        document.getElementById('face-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const img = new Image();
+                img.onload = () => openFaceEditor(img);
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        });
+        document.getElementById('btn-face-adjust').addEventListener('click', () => {
+            if (!state.facePhoto) return;
+            const img = new Image();
+            img.onload = () => openFaceEditor(img);
+            img.src = state.facePhoto;
+        });
+        document.getElementById('btn-face-remove').addEventListener('click', () => {
+            delete state.facePhoto;
+            saveState();
+            renderFaceOverlay();
+        });
+
+        // ---- Face photo editor: pan & zoom the photo into the head silhouette ----
+        // The body map masks the photo to the real head outline (the union of the
+        // "Head" and "Face" SVG paths, in head-user units). This editor previews that
+        // exact shape so the user can pick which part of the photo lands inside it.
+        // On save we bake a plain rectangle covering the head's bounding box; the SVG
+        // clip does the silhouette masking on the map, so the stored image stays clean.
+        const FACE_ASPECT_FALLBACK = 9.017 / 13.03; // head width / height, if unread
+        const faceEditor = {
+            modal: document.getElementById('face-editor-modal'),
+            canvas: document.getElementById('face-editor-canvas'),
+            zoom: document.getElementById('face-editor-zoom'),
+            ctx: null, img: null, scale: 1, tx: 0, ty: 0, drag: null,
+            DW: 210, DH: 300, clip: null,
+            dpr: Math.min(window.devicePixelRatio || 1, 3),
+        };
+        faceEditor.ctx = faceEditor.canvas.getContext('2d');
+
+        // A Path2D of the head silhouette mapped into a W×H pixel box (or an ellipse
+        // fallback when geometry is unavailable), used both to clip and to outline.
+        function faceEditorMask(geom, W, H) {
+            const p = new Path2D();
+            if (geom && geom.paths && geom.paths.length) {
+                const k = W / geom.w; // == H / geom.h; aspect is preserved
+                const m = new DOMMatrix([k, 0, 0, k, -geom.x * k, -geom.y * k]);
+                geom.paths.forEach((d) => p.addPath(new Path2D(d), m));
+            } else {
+                p.ellipse(W / 2, H / 2, W / 2, H / 2, 0, 0, Math.PI * 2);
+            }
+            return p;
+        }
+
+        function faceEditorClamp() {
+            // Keep the image covering the whole crop box — never let a gap show.
+            const base = Math.max(faceEditor.DW / faceEditor.img.width, faceEditor.DH / faceEditor.img.height);
+            const disp = base * faceEditor.scale;
+            const maxX = Math.max(0, (faceEditor.img.width * disp - faceEditor.DW) / 2);
+            const maxY = Math.max(0, (faceEditor.img.height * disp - faceEditor.DH) / 2);
+            faceEditor.tx = Math.max(-maxX, Math.min(maxX, faceEditor.tx));
+            faceEditor.ty = Math.max(-maxY, Math.min(maxY, faceEditor.ty));
+        }
+
+        // Cover-fit the image into a W×H context. `mask` clips it to the silhouette;
+        // `outline` strokes the shape as a guide. Pan (tx/ty) is tracked in display
+        // px and scaled by s so any target resolution matches the preview exactly.
+        function faceEditorPaint(ctx, W, H, opts) {
+            const s = W / faceEditor.DW;
+            const base = Math.max(W / faceEditor.img.width, H / faceEditor.img.height);
+            const disp = base * faceEditor.scale;
+            const iw = faceEditor.img.width * disp;
+            const ih = faceEditor.img.height * disp;
+            const cx = W / 2 + faceEditor.tx * s;
+            const cy = H / 2 + faceEditor.ty * s;
+            ctx.clearRect(0, 0, W, H);
+            ctx.save();
+            if (opts && opts.mask) ctx.clip(opts.mask);
+            ctx.drawImage(faceEditor.img, cx - iw / 2, cy - ih / 2, iw, ih);
+            ctx.restore();
+            if (opts && opts.outline) {
+                ctx.lineWidth = Math.max(1, 1.5 * s);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+                ctx.stroke(opts.outline);
+            }
+        }
+
+        function faceEditorRender() {
+            const W = Math.round(faceEditor.DW * faceEditor.dpr);
+            const H = Math.round(faceEditor.DH * faceEditor.dpr);
+            faceEditorPaint(faceEditor.ctx, W, H, { mask: faceEditor.clip, outline: faceEditor.clip });
+        }
+
+        function openFaceEditor(img) {
+            const svg = document.querySelector('.body-chart-container svg');
+            const geom = headGeom || (svg ? readHeadGeom(svg) : null);
+            const aspect = geom ? geom.w / geom.h : FACE_ASPECT_FALLBACK;
+            faceEditor.DH = 300;
+            faceEditor.DW = Math.round(300 * aspect);
+            faceEditor.img = img;
+            faceEditor.scale = 1;
+            faceEditor.tx = 0;
+            faceEditor.ty = 0;
+            faceEditor.zoom.value = 1;
+            const W = Math.round(faceEditor.DW * faceEditor.dpr);
+            const H = Math.round(faceEditor.DH * faceEditor.dpr);
+            faceEditor.canvas.width = W;
+            faceEditor.canvas.height = H;
+            faceEditor.canvas.style.width = faceEditor.DW + 'px';
+            faceEditor.canvas.style.height = faceEditor.DH + 'px';
+            faceEditor.clip = faceEditorMask(geom, W, H);
+            faceEditorClamp();
+            faceEditorRender();
+            faceEditor.modal.classList.add('open');
+        }
+
+        function closeFaceEditor() {
+            faceEditor.modal.classList.remove('open');
+            faceEditor.img = null;
+            faceEditor.drag = null;
+        }
+
+        function saveFaceEditor() {
+            // Bake an unclipped rectangle covering the head's bounding box. The SVG
+            // clipPath on the body map turns it into the head silhouette.
+            const out = document.createElement('canvas');
+            out.height = 512;
+            out.width = Math.round(512 * (faceEditor.DW / faceEditor.DH));
+            faceEditorPaint(out.getContext('2d'), out.width, out.height, null);
+            state.facePhoto = out.toDataURL('image/jpeg', 0.85);
+            saveState();
+            closeFaceEditor();
+            renderFaceOverlay();
+        }
+
+        faceEditor.canvas.addEventListener('pointerdown', (e) => {
+            faceEditor.drag = { x: e.clientX, y: e.clientY };
+            faceEditor.canvas.setPointerCapture(e.pointerId);
+        });
+        faceEditor.canvas.addEventListener('pointermove', (e) => {
+            if (!faceEditor.drag || !faceEditor.img) return;
+            faceEditor.tx += e.clientX - faceEditor.drag.x;
+            faceEditor.ty += e.clientY - faceEditor.drag.y;
+            faceEditor.drag = { x: e.clientX, y: e.clientY };
+            faceEditorClamp();
+            faceEditorRender();
+        });
+        const faceEditorEndDrag = () => { faceEditor.drag = null; };
+        faceEditor.canvas.addEventListener('pointerup', faceEditorEndDrag);
+        faceEditor.canvas.addEventListener('pointercancel', faceEditorEndDrag);
+        faceEditor.zoom.addEventListener('input', () => {
+            if (!faceEditor.img) return;
+            faceEditor.scale = parseFloat(faceEditor.zoom.value);
+            faceEditorClamp();
+            faceEditorRender();
+        });
+        document.getElementById('face-editor-save').addEventListener('click', saveFaceEditor);
+        document.getElementById('face-editor-cancel').addEventListener('click', closeFaceEditor);
+        document.getElementById('face-editor-close').addEventListener('click', closeFaceEditor);
+        faceEditor.modal.addEventListener('click', (e) => {
+            if (e.target === faceEditor.modal) closeFaceEditor();
+        });
 
         // ---- Tab bar ----
         document.getElementById('tabbar').addEventListener('click', (e) => {
@@ -3803,6 +4157,136 @@ permalink: /personal-trainer/
                     : lagging.slice(0, -1).join(', ') + ' and ' + lagging[lagging.length - 1];
                 note.textContent = `Your ${list} ${lagging.length === 1 ? 'is' : 'are'} lagging — the next few workouts will lean that way to even you out.`;
             }
+        }
+
+        let bodyChart = null;
+        let bodyMapView = null;
+
+        const MUSCLE_ID_TO_REGION = {};
+        MUSCLE_GROUPS.forEach((g) => {
+            (REGION_MUSCLE_IDS[g] || []).forEach((id) => { MUSCLE_ID_TO_REGION[id] = g; });
+        });
+
+        function renderBodyMap() {
+            const container = document.getElementById('body-map-container');
+            const regionEl = document.getElementById('body-map-region');
+            regionEl.innerHTML = '';
+            if (!window.BodyMuscles) {
+                container.innerHTML = '<p class="muted-note">Body map unavailable — library not loaded.</p>';
+                return;
+            }
+            const BM = window.BodyMuscles;
+            const view = bodyMapView || BM.ViewSide.FRONT;
+            bodyMapView = view;
+            const bs = muscleBodyState();
+            if (bodyChart) {
+                bodyChart.update({ bodyState: bs, view });
+            } else {
+                container.innerHTML = '';
+                bodyChart = new BM.BodyChart(container, {
+                    view,
+                    bodyState: bs,
+                    onMuscleClick: (id) => {
+                        const region = MUSCLE_ID_TO_REGION[id];
+                        if (!region) { regionEl.innerHTML = ''; return; }
+                        const bal = muscleBalance();
+                        const pct = Math.round((bal.shares[region] || 0) * 100);
+                        const primary = EXERCISES.filter((ex) =>
+                            ex.focus === region && ex.disc !== 'warmup' && ex.disc !== 'cooldown');
+                        const synCount = EXERCISES.filter((ex) => {
+                            if (ex.disc === 'warmup' || ex.disc === 'cooldown' || ex.focus === region) return false;
+                            const mix = FOCUS_MUSCLES[ex.focus];
+                            return mix && mix[region];
+                        }).length;
+                        const list = primary.map((ex) =>
+                            `<li><span class="bm-ex-name">${ex.name}</span><span class="bm-ex-tag">${ex.disc === 'core' ? 'Core' : 'Pilates'}</span></li>`
+                        ).join('');
+                        const syn = synCount ? `<p class="bm-syn-note">+ ${synCount} exercises that also work this region as a synergist</p>` : '';
+                        regionEl.innerHTML =
+                            `<div class="bm-region-head">${MUSCLE_LABELS[region]}</div>` +
+                            `<div class="bm-region-pct">${pct}% of recent work</div>` +
+                            `<ul class="bm-ex-list">${list}</ul>${syn}`;
+                    },
+                });
+            }
+            requestAnimationFrame(renderFaceOverlay);
+        }
+
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const XLINK_NS = 'http://www.w3.org/1999/xlink';
+        // Cached front-view head silhouette (paths + bbox in SVG user units). The
+        // viewBox is fixed, so this is stable once read and the editor can reuse it.
+        let headGeom = null;
+
+        // The head outline is drawn by two paths — "Head" (cranium) and "Face"
+        // (face + jaw). Return their path data and combined bounding box, or null.
+        function readHeadGeom(svg) {
+            const find = (name) => Array.from(svg.querySelectorAll('.body-chart-muscle'))
+                .find((p) => { const t = p.querySelector('title'); return t && t.textContent === name; });
+            const parts = [find('Head'), find('Face')].filter(Boolean);
+            if (!parts.length) return null;
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            parts.forEach((p) => {
+                const b = p.getBBox();
+                x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
+                x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
+            });
+            return { paths: parts.map((p) => p.getAttribute('d')), x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+        }
+
+        function renderFaceOverlay() {
+            const container = document.querySelector('.body-chart-container');
+            if (!container) return;
+            const svg = container.querySelector('svg');
+            const faceData = state.facePhoto;
+            const removeBtn = document.getElementById('btn-face-remove');
+            const adjustBtn = document.getElementById('btn-face-adjust');
+            const uploadBtn = document.getElementById('btn-face-upload');
+            // Button state tracks whether a photo exists — independent of the view.
+            if (removeBtn) removeBtn.style.display = faceData ? '' : 'none';
+            if (adjustBtn) adjustBtn.style.display = faceData ? '' : 'none';
+            if (uploadBtn) uploadBtn.textContent = faceData ? '📷 Change photo' : '📷 Add your face';
+
+            // Always clear any previous injection (the library may rebuild the SVG on
+            // view/state updates, so we re-add from scratch each render).
+            if (svg) {
+                const oldClip = svg.querySelector('#bm-head-clip');
+                if (oldClip) oldClip.remove();
+                const oldImg = svg.querySelector('.bm-face-img');
+                if (oldImg) oldImg.remove();
+            }
+            if (!svg) return;
+
+            const geom = readHeadGeom(svg);
+            // Cache the front-view geometry for the editor (back view lacks "Face").
+            if (geom && bodyMapView !== BodyMuscles.ViewSide.BACK) headGeom = geom;
+
+            // The face only belongs on the front; the back view never shows it.
+            if (!faceData || bodyMapView === BodyMuscles.ViewSide.BACK || !geom) return;
+
+            // Clip an <image> of the photo to the head silhouette, in user units.
+            const clip = document.createElementNS(SVG_NS, 'clipPath');
+            clip.setAttribute('id', 'bm-head-clip');
+            clip.setAttribute('clipPathUnits', 'userSpaceOnUse');
+            geom.paths.forEach((d) => {
+                const p = document.createElementNS(SVG_NS, 'path');
+                p.setAttribute('d', d);
+                clip.appendChild(p);
+            });
+            svg.appendChild(clip);
+
+            const img = document.createElementNS(SVG_NS, 'image');
+            img.setAttribute('class', 'bm-face-img');
+            img.setAttribute('x', geom.x);
+            img.setAttribute('y', geom.y);
+            img.setAttribute('width', geom.w);
+            img.setAttribute('height', geom.h);
+            img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            img.setAttribute('clip-path', 'url(#bm-head-clip)');
+            img.setAttribute('pointer-events', 'none');
+            img.setAttributeNS(XLINK_NS, 'xlink:href', faceData);
+            img.setAttribute('href', faceData);
+            svg.appendChild(img); // last child → renders above the muscle fills
         }
 
         function renderFreezeButton() {
