@@ -2508,7 +2508,7 @@ permalink: /personal-trainer/
 
     <script src="/personal-trainer/body-muscles.umd.min.js"></script>
     <script>
-        const SW_VERSION = '2607311800';
+        const SW_VERSION = '2608010010';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -4063,9 +4063,9 @@ permalink: /personal-trainer/
             const ref = facePath || headPath;
             const refRect = ref.getBoundingClientRect();
             const headRect = headPath ? headPath.getBoundingClientRect() : refRect;
-            const top = headRect.top - containerRect.top;
-            const cx = (refRect.left + refRect.right) / 2 - containerRect.left;
-            const size = Math.max(refRect.width, refRect.height) * 1.05;
+            const cx = (headRect.left + headRect.right) / 2 - containerRect.left;
+            const cy = (headRect.top + headRect.bottom) / 2 - containerRect.top;
+            const size = Math.min(headRect.width, headRect.height);
 
             if (!overlay) {
                 overlay = document.createElement('div');
@@ -4075,7 +4075,7 @@ permalink: /personal-trainer/
             overlay.style.width = size + 'px';
             overlay.style.height = size + 'px';
             overlay.style.left = (cx - size / 2) + 'px';
-            overlay.style.top = (top + headRect.height * 0.15) + 'px';
+            overlay.style.top = (cy - size / 2) + 'px';
             overlay.innerHTML = `<img src="${faceData}" alt="Your face">`;
         }
 
