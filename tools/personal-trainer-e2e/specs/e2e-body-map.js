@@ -35,13 +35,12 @@ const SHOTS = process.env.SHOTS_DIR;
         saveState();
     });
 
-    // 3. Navigate to Progress, then open the body map.
+    // 3. Navigate to Progress — the body map is embedded there, no separate screen.
     await page.click('#tabbar .tab[data-tab="progress"]');
     await page.waitForTimeout(150);
     assert(await active() === 'progress', 'on Progress tab');
-    await page.click('#nav-bodymap');
-    await page.waitForTimeout(400);
-    assert(await active() === 'bodymap', 'on body map screen, got ' + await active());
+    await page.locator('#body-map-container').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
 
     // 4. The container has an SVG with muscle paths.
     const svgCheck = await page.evaluate(() => ({
@@ -68,6 +67,7 @@ const SHOTS = process.env.SHOTS_DIR;
 
     // 6. Tapping a muscle shows the exercise list for that region.
     const absPath = page.locator('.body-chart-muscle').filter({ has: page.locator('title', { hasText: 'Abs' }) }).first();
+    await absPath.scrollIntoViewIfNeeded();
     const box = await absPath.boundingBox();
     assert(box, 'abs muscle path has a bounding box');
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -194,10 +194,8 @@ const SHOTS = process.env.SHOTS_DIR;
     assert(removed.noPhoto && removed.noOverlay, 'removing clears the photo and overlay');
     assert(removed.adjustHidden, 'Adjust hidden when no photo');
 
-    // 9. Back button returns to Progress.
-    await page.click('#bodymap [data-back]');
-    await page.waitForTimeout(200);
-    assert(await active() === 'progress', 'back returns to progress, got ' + await active());
+    // 9. The body map lives on the Progress screen — no separate screen to leave.
+    assert(await active() === 'progress', 'still on progress, got ' + await active());
 
     // 10. Zero muscle load: all intensities are 0.
     const zeroState = await page.evaluate(() => {

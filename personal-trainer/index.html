@@ -631,9 +631,10 @@ permalink: /personal-trainer/
         .bal-pct.low { color: var(--orange); }
 
         #body-map-container {
-            background: var(--surface);
+            background: var(--surface2);
             border-radius: var(--r-md);
             padding: var(--sp-3);
+            margin-top: var(--sp-3);
             min-height: 300px;
             display: flex;
             align-items: center;
@@ -2263,7 +2264,23 @@ permalink: /personal-trainer/
                 <div id="balance-bars"></div>
                 <p class="muted-note mt-3" id="balance-note"></p>
                 <button class="info-link" id="nav-info-balance">ⓘ Why balance matters</button>
-                <button class="info-link" id="nav-bodymap">🗺 View body map ›</button>
+            </div>
+            <div class="card" id="bodymap-card">
+                <div class="level-row"><strong><img class="ico" src="/img/pt/level.png" alt="">Body map</strong></div>
+                <div class="choice-row cols-2" id="bodymap-view">
+                    <button class="choice selected" data-v="front">Front</button>
+                    <button class="choice" data-v="back">Back</button>
+                </div>
+                <div id="body-map-container"></div>
+                <div class="bm-face-row">
+                    <button class="info-link" id="btn-face-upload">📷 Add your face</button>
+                    <button class="info-link" id="btn-face-adjust" style="display:none">✎ Adjust</button>
+                    <button class="info-link bm-face-remove" id="btn-face-remove" style="display:none">✕ Remove</button>
+                </div>
+                <input type="file" id="face-file" accept="image/*" hidden>
+                <div id="body-map-region"></div>
+                <div class="body-map-legend"><span>None</span><div class="body-map-gradient"></div><span>Heavy</span></div>
+                <p class="body-map-caption">Colour reflects recent training volume. Older sessions fade over about two weeks. Only the trunk lights up — this is a core &amp; mat programme.</p>
             </div>
             <div class="card disc-card">
                 <div class="level-row row-core"><strong><img class="ico" src="/img/pt/core-fitness.png" alt="">Core Fitness</strong><span class="tier" id="core-tier">Tier 1 of 5</span></div>
@@ -2451,29 +2468,6 @@ permalink: /personal-trainer/
             <p class="muted-note mb-3" id="rec-note"></p>
             <div id="records-list"></div>
         </section>
-
-        <!-- ============ BODY MAP ============ -->
-        <section class="screen" id="bodymap">
-            <header class="topbar">
-                <button class="back-btn" data-back>‹ Back</button>
-                <h1>Body <span>Map</span></h1>
-                <span></span>
-            </header>
-            <div class="choice-row cols-2" id="bodymap-view">
-                <button class="choice selected" data-v="front">Front</button>
-                <button class="choice" data-v="back">Back</button>
-            </div>
-            <div id="body-map-container"></div>
-            <div class="bm-face-row">
-                <button class="info-link" id="btn-face-upload">📷 Add your face</button>
-                <button class="info-link" id="btn-face-adjust" style="display:none">✎ Adjust</button>
-                <button class="info-link bm-face-remove" id="btn-face-remove" style="display:none">✕ Remove</button>
-            </div>
-            <input type="file" id="face-file" accept="image/*" hidden>
-            <div id="body-map-region"></div>
-            <div class="body-map-legend"><span>None</span><div class="body-map-gradient"></div><span>Heavy</span></div>
-            <p class="body-map-caption">Colour reflects recent training volume. Older sessions fade over about two weeks. Only the trunk lights up — this is a core &amp; mat programme.</p>
-        </section>
     </div>
 
     <!-- ============ FACE PHOTO EDITOR (modal) ============ -->
@@ -2550,7 +2544,7 @@ permalink: /personal-trainer/
 
     <script src="/personal-trainer/body-muscles.umd.min.js"></script>
     <script>
-        const SW_VERSION = '2608010242';
+        const SW_VERSION = '2608010320';
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
@@ -3341,7 +3335,7 @@ permalink: /personal-trainer/
         const TAB_OF = {
             home: 'home', preview: 'home', player: 'home', complete: 'home',
             progress: 'progress', history: 'progress', achievements: 'progress',
-            records: 'progress', info: 'progress', bodymap: 'progress',
+            records: 'progress', info: 'progress',
             library: 'library', setup: 'setup'
         };
 
@@ -3531,7 +3525,7 @@ permalink: /personal-trainer/
             if (dx < 70 || dy > 60) return;
             // Sub-screens only — 'library' and 'setup' are root tabs now, and swiping
             // back from a root should do nothing rather than jump to another tab.
-            const canSwipeBack = ['preview', 'history', 'info', 'achievements', 'records', 'bodymap'].includes(activeScreenId());
+            const canSwipeBack = ['preview', 'history', 'info', 'achievements', 'records'].includes(activeScreenId());
             if (canSwipeBack) goBack();
         }, { passive: true });
 
@@ -3721,7 +3715,6 @@ permalink: /personal-trainer/
         document.getElementById('nav-history').addEventListener('click', () => { renderHistory(); navigate('history'); });
         document.getElementById('nav-info').addEventListener('click', () => navigate('info'));
         document.getElementById('nav-info-balance').addEventListener('click', () => navigate('info'));
-        document.getElementById('nav-bodymap').addEventListener('click', () => { renderBodyMap(); navigate('bodymap'); });
         bindChoiceRow('bodymap-view', (v) => {
             if (!window.BodyMuscles) return;
             bodyMapView = v === 'back' ? BodyMuscles.ViewSide.BACK : BodyMuscles.ViewSide.FRONT;
@@ -4116,6 +4109,7 @@ permalink: /personal-trainer/
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
 
             renderBalance();
+            renderBodyMap();
             renderAchProgress();
             renderRecPreview();
         }
