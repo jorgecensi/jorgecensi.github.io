@@ -24,13 +24,20 @@ permalink: /personal-trainer/
     <!-- Favicon -->
     <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
 
+    <!-- Type. Both families fall back to the old system stack, so a cold offline
+         first-run still renders correctly; add these two URLs to sw.js precache. -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Familjen+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
         :root {
             /* ---- Color -------------------------------------------------------- */
             --bg: #0f1521;
             --surface: #161d2a;
             --surface2: #1e2735;
-            --border: #2a3546;
+            /* A 10% white hairline instead of a solid slate line: surfaces separate
+               without the border itself becoming a visible grid on every card. */
+            --border: rgb(255 255 255 / 10%);
             --accent: #10b981;
             --accent-bright: #3ecf8e;
             --orange: #ef8a5f;
@@ -69,6 +76,10 @@ permalink: /personal-trainer/
             --fs-3xl: 1.75rem;
             --fs-display: 3.4rem;
 
+            /* Manrope for headings and numerals, Familjen Grotesk for body copy. */
+            --font-display: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --font-body: 'Familjen Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
             /* ---- Spacing (4px base) ------------------------------------------- */
             --sp-05: 2px;
             --sp-1: 4px;
@@ -82,9 +93,9 @@ permalink: /personal-trainer/
             /* ---- Radii -------------------------------------------------------- */
             /* Inner components sit at --r-md so they nest visibly inside --r-lg cards. */
             --r-xs: 4px;
-            --r-sm: 8px;
-            --r-md: 12px;
-            --r-lg: 16px;
+            --r-sm: 10px;
+            --r-md: 14px;
+            --r-lg: 20px;
             --r-full: 50%;
 
             /* ---- Motion ------------------------------------------------------- */
@@ -152,7 +163,7 @@ permalink: /personal-trainer/
 
         body {
             color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: var(--font-body);
             /* Base step, so anything that doesn't declare a size still lands on the
                scale instead of falling back to the UA's off-scale 16px. */
             font-size: var(--fs-md);
@@ -2122,6 +2133,212 @@ permalink: /personal-trainer/
             overflow-y: auto;
         }
 
+        /* ---- Type ------------------------------------------------------------- */
+        /* Headings and every numeral move to the display face; the numerals go
+           tabular so the countdown stops jittering as digits change width. */
+        header.topbar h1,
+        .modal-head h2,
+        .hero-greet,
+        #player-exname,
+        .btn,
+        .choice,
+        .stat .value,
+        #player-display,
+        .rec-best,
+        .summary-line,
+        .section-title,
+        .level-row strong,
+        .tier-badge,
+        .tab {
+            font-family: var(--font-display);
+        }
+
+        .stat .value,
+        #player-display,
+        .rec-best,
+        .bal-pct,
+        .ach-frac {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ---- Splash ----------------------------------------------------------- */
+        /* The app opened cold straight onto Today. This covers the first paint with
+           a calm ~2.6s intro: three rings breathing around Barnaby while the
+           wordmark settles under him. Tap to skip. Shown once per session, so the
+           service worker's controllerchange reload doesn't replay it. */
+        #splash {
+            position: fixed;
+            inset: 0;
+            z-index: 400;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background:
+                radial-gradient(120% 85% at 50% 40%, rgb(var(--accent-rgb) / 13%), transparent 72%),
+                linear-gradient(180deg, #131a27 0%, var(--bg) 55%, #0b0f18 100%);
+            transition: opacity var(--dur-slow) var(--ease-standard);
+        }
+
+        #splash.gone {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .splash-rings {
+            position: relative;
+            width: 268px;
+            height: 268px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .splash-rings > div {
+            position: absolute;
+            border-radius: var(--r-full);
+            animation: splash-breathe 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        .splash-rings > div:nth-child(1) { inset: 0; border: 1px solid var(--border); }
+        .splash-rings > div:nth-child(2) { inset: 36px; border: 1px solid rgb(var(--accent-rgb) / 30%); animation-delay: 0.2s; }
+        .splash-rings > div:nth-child(3) { inset: 72px; background: rgb(var(--accent-rgb) / 13%); animation-delay: 0.4s; }
+
+        .splash-rings img {
+            position: relative;
+            width: 158px;
+            animation: splash-settle 1.5s var(--ease-standard) both;
+        }
+
+        .splash-word {
+            margin-top: var(--sp-5);
+            font-family: var(--font-display);
+            font-size: var(--fs-3xl);
+            font-weight: 800;
+            letter-spacing: -0.015em;
+            animation: splash-in 1s 0.3s var(--ease-standard) both;
+        }
+
+        .splash-word span {
+            color: var(--accent);
+        }
+
+        .splash-tag {
+            margin-top: var(--sp-3);
+            font-size: var(--fs-2xs);
+            font-weight: 500;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            animation: splash-fade 1.3s 0.85s both;
+        }
+
+        .splash-track {
+            position: absolute;
+            bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+            width: 110px;
+            height: 2px;
+            border-radius: 2px;
+            background: var(--border);
+            overflow: hidden;
+        }
+
+        .splash-track > div {
+            height: 100%;
+            background: var(--accent);
+            animation: splash-track 2.6s linear both;
+        }
+
+        @keyframes splash-breathe {
+            0%, 100% { transform: scale(0.9); opacity: 0.5; }
+            50% { transform: scale(1.06); opacity: 1; }
+        }
+
+        @keyframes splash-settle {
+            from { opacity: 0; transform: scale(0.86) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes splash-in {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes splash-fade {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes splash-track {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        /* ---- Hero mascot ------------------------------------------------------ */
+        /* Barnaby only appeared on the feedback buttons and the achievement toast.
+           Putting him in the hero's top-right corner makes the app's personality
+           visible on the screen you actually open. Capping the greeting width keeps
+           the copy out from under him, and he sits above the session picker and the
+           Generate button rather than over them. */
+        .hero {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-greet,
+        .hero-sub {
+            max-width: 210px;
+        }
+
+        .hero-mascot {
+            position: absolute;
+            top: 12px;
+            right: -6px;
+            width: 104px;
+            opacity: 0.9;
+            pointer-events: none;
+        }
+
+        /* ---- Tab bar active pill --------------------------------------------- */
+        /* The active tab was carried by icon opacity and label colour alone, which
+           is easy to miss at a glance. A soft accent pill behind it reads instantly. */
+        .tab {
+            margin: var(--sp-1) var(--sp-2);
+            border-radius: var(--r-md);
+            transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+        }
+
+        .tab[aria-current="page"] {
+            background: rgb(var(--accent-rgb) / 13%);
+        }
+
+        /* ---- Preview stagger -------------------------------------------------- */
+        /* The generated plan used to appear all at once. Revealing rows in sequence
+           reads as the workout being assembled for you rather than dumped on you. */
+        @keyframes plan-in {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #preview-list .plan-item {
+            animation: plan-in var(--dur-slow) var(--ease-standard) both;
+        }
+
+        #preview-list .plan-item:nth-child(2) { animation-delay: 0.04s; }
+        #preview-list .plan-item:nth-child(3) { animation-delay: 0.08s; }
+        #preview-list .plan-item:nth-child(4) { animation-delay: 0.12s; }
+        #preview-list .plan-item:nth-child(5) { animation-delay: 0.16s; }
+        #preview-list .plan-item:nth-child(6) { animation-delay: 0.20s; }
+        #preview-list .plan-item:nth-child(7) { animation-delay: 0.24s; }
+        #preview-list .plan-item:nth-child(8) { animation-delay: 0.28s; }
+        #preview-list .plan-item:nth-child(9) { animation-delay: 0.32s; }
+        #preview-list .plan-item:nth-child(10) { animation-delay: 0.36s; }
+        #preview-list .plan-item:nth-child(11) { animation-delay: 0.40s; }
+        #preview-list .plan-item:nth-child(12) { animation-delay: 0.44s; }
+        #preview-list .plan-item:nth-child(13) { animation-delay: 0.48s; }
+        #preview-list .plan-item:nth-child(14) { animation-delay: 0.52s; }
+
         .banner-actions {
             display: flex;
             gap: var(--sp-2);
@@ -2130,6 +2347,19 @@ permalink: /personal-trainer/
 </head>
 
 <body>
+    <!-- ============ SPLASH ============ -->
+    <div id="splash">
+        <div class="splash-rings">
+            <div></div>
+            <div></div>
+            <div></div>
+            <img src="/img/pt/barnaby-easy.png" alt="Barnaby the capybara sitting calmly">
+        </div>
+        <div class="splash-word">Personal <span>Trainer</span></div>
+        <div class="splash-tag">Breathe &middot; Begin</div>
+        <div class="splash-track"><div></div></div>
+    </div>
+
     <div id="install-banner">
         <span>Install Personal Trainer for quick access</span>
         <div class="banner-actions">
@@ -2218,6 +2448,7 @@ permalink: /personal-trainer/
             <div class="hero">
                 <div class="hero-greet" id="hero-greet">Ready when you are</div>
                 <div class="hero-sub" id="hero-sub">Pick a length and go.</div>
+                <img class="hero-mascot" src="/img/pt/barnaby-right.png" alt="">
                 <div class="choice-row" id="home-duration">
                     <div class="choice" data-v="15">15 min</div>
                     <div class="choice" data-v="25">25 min</div>
@@ -2544,7 +2775,26 @@ permalink: /personal-trainer/
 
     <script src="/personal-trainer/body-muscles.umd.min.js"></script>
     <script>
-        const SW_VERSION = '2608041135';
+        const SW_VERSION = '2608041140';
+
+        // The splash covers the first paint. Session-scoped so the service worker's
+        // controllerchange reload on a cold profile doesn't replay it, and skippable
+        // on tap for anyone who just wants to train.
+        (function () {
+            const splash = document.getElementById('splash');
+            if (!splash) return;
+            if (sessionStorage.getItem('pt-splash-seen')) { splash.remove(); return; }
+            sessionStorage.setItem('pt-splash-seen', '1');
+            let dismissed = false;
+            const dismiss = () => {
+                if (dismissed) return;
+                dismissed = true;
+                splash.classList.add('gone');
+                setTimeout(() => splash.remove(), 400);
+            };
+            splash.addEventListener('click', dismiss);
+            setTimeout(dismiss, 2600);
+        })();
 
         if ('serviceWorker' in navigator) {
             let hasRefreshedForUpdate = false;
