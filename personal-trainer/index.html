@@ -1096,6 +1096,136 @@ permalink: /personal-trainer/
             justify-content: center;
         }
 
+        /* Session-type trigger: a compact one-line control that opens the picker modal,
+           standing in for what used to be a four-tile row on the hero. Reads
+           "Type   Auto ›". Matches the field treatment of the duration tiles and the
+           voice select so the hero's controls stay a set. */
+        .session-type-trigger {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            width: 100%;
+            margin-top: var(--sp-3);
+            padding: var(--sp-3) var(--sp-4);
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: var(--r-md);
+            color: var(--text);
+            font-family: inherit;
+            cursor: pointer;
+            transition: border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+        }
+
+        .session-type-trigger:active {
+            transform: scale(0.98);
+        }
+
+        .stt-key {
+            font-size: var(--fs-2xs);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+        }
+
+        .stt-value {
+            margin-left: auto;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: var(--fs-md);
+        }
+
+        .stt-chevron {
+            color: var(--muted);
+            font-size: var(--fs-lg);
+            line-height: 1;
+        }
+
+        /* Session-type options inside the picker modal: a radio list, each row a name +
+           one-line description, so the choice carries its explanation instead of a terse
+           tile sub-label. */
+        .type-option {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--sp-3);
+            width: 100%;
+            text-align: left;
+            padding: var(--sp-3);
+            margin-bottom: var(--sp-2);
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: var(--r-md);
+            color: var(--text);
+            font-family: inherit;
+            cursor: pointer;
+            transition: border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+        }
+
+        .type-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .type-option:active {
+            transform: scale(0.99);
+        }
+
+        .type-option.selected {
+            border-color: var(--accent);
+            background: rgb(var(--accent-rgb) / 10%);
+        }
+
+        .to-radio {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            margin-top: 2px;
+            border-radius: var(--r-full);
+            border: 2px solid var(--border);
+            position: relative;
+        }
+
+        .type-option.selected .to-radio {
+            border-color: var(--accent);
+        }
+
+        .type-option.selected .to-radio::after {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            border-radius: var(--r-full);
+            background: var(--accent);
+        }
+
+        .to-text {
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-1);
+        }
+
+        .to-name {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: var(--fs-md);
+        }
+
+        .to-tag {
+            display: inline-block;
+            font-size: var(--fs-2xs);
+            font-weight: 600;
+            color: var(--accent);
+            background: rgb(var(--accent-rgb) / 12%);
+            border-radius: var(--r-xs);
+            padding: 1px 6px;
+            margin-left: var(--sp-1);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .to-desc {
+            font-size: var(--fs-xs);
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
         /* Themed action buttons */
         /* "Generate today's workout" is the one action the home screen exists to
            drive, so it gets the strongest presence: a brighter gradient and a
@@ -2571,12 +2701,11 @@ permalink: /personal-trainer/
                 <div class="hero-greet" id="hero-greet">Ready when you are</div>
                 <div class="hero-sub" id="hero-sub">Pick a length and go.</div>
                 <img class="hero-mascot" src="/img/pt/barnaby-right.png" alt="">
-                <div class="choice-row cols-4" id="home-session-type">
-                    <div class="choice" data-v="auto">Auto<small>Smart pick</small></div>
-                    <div class="choice" data-v="core">Core<small>Circuit</small></div>
-                    <div class="choice" data-v="mixed">Mixed<small>+ mobility</small></div>
-                    <div class="choice" data-v="mobility">Mobility<small>Stretch</small></div>
-                </div>
+                <button class="session-type-trigger" id="home-session-type-btn" aria-haspopup="dialog" aria-label="Choose session type">
+                    <span class="stt-key">Type</span>
+                    <span class="stt-value" id="stt-value">Auto</span>
+                    <span class="stt-chevron" aria-hidden="true">›</span>
+                </button>
                 <div class="choice-row" id="home-duration">
                     <div class="choice" data-v="15">15 min</div>
                     <div class="choice" data-v="25">25 min</div>
@@ -2954,6 +3083,50 @@ permalink: /personal-trainer/
     </div>
 
     <!-- ============ HOW THE GENERATOR WORKS (modal) ============ -->
+    <!-- ============ SESSION TYPE PICKER (modal) ============ -->
+    <!-- Moved off the home hero to keep it uncluttered: the trigger shows the current
+         pick, and the full list of options with descriptions lives here. -->
+    <div class="modal-overlay" id="session-type-modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2>Session <span>type</span></h2>
+                <button class="modal-close" id="close-session-type" aria-label="Close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="session-type-options" role="radiogroup" aria-label="Session type">
+                    <button class="type-option" data-v="auto" role="radio">
+                        <span class="to-radio" aria-hidden="true"></span>
+                        <span class="to-text">
+                            <span class="to-name">Auto <span class="to-tag">Recommended</span></span>
+                            <span class="to-desc">Picks the best shape for today from how long since you stretched, your last check-in, and the length you chose.</span>
+                        </span>
+                    </button>
+                    <button class="type-option" data-v="core" role="radio">
+                        <span class="to-radio" aria-hidden="true"></span>
+                        <span class="to-text">
+                            <span class="to-name">Core</span>
+                            <span class="to-desc">Core and pilates circuit only — no mobility block.</span>
+                        </span>
+                    </button>
+                    <button class="type-option" data-v="mixed" role="radio">
+                        <span class="to-radio" aria-hidden="true"></span>
+                        <span class="to-text">
+                            <span class="to-name">Mixed</span>
+                            <span class="to-desc">Circuit plus a short mobility block before the stretches.</span>
+                        </span>
+                    </button>
+                    <button class="type-option" data-v="mobility" role="radio">
+                        <span class="to-radio" aria-hidden="true"></span>
+                        <span class="to-text">
+                            <span class="to-name">Mobility</span>
+                            <span class="to-desc">A gentle stretch session: warm-up, mobility, cool-down.</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="generator-info-modal">
         <div class="modal-card">
             <div class="modal-head">
@@ -4247,6 +4420,7 @@ permalink: /personal-trainer/
             clearPreviewVideos();
             clearLibraryVideos();
             closeGeneratorInfo();
+            closeSessionTypeModal();
             renderHome();
             show(rootScreenId());
             if (navDepth > 0) {
@@ -4279,6 +4453,7 @@ permalink: /personal-trainer/
             clearPreviewVideos();
             clearLibraryVideos();
             closeGeneratorInfo();
+            closeSessionTypeModal();
             currentTab = id;
             TAB_RENDER[id]();
             show(id);
@@ -4315,6 +4490,7 @@ permalink: /personal-trainer/
             clearPreviewVideos();
             clearLibraryVideos();
             closeGeneratorInfo();
+            closeSessionTypeModal();
             if (target === 'home' || target === 'progress') renderHome();
             if (target === 'setup') renderSettings();
             if (TAB_OF[target]) currentTab = TAB_OF[target];
@@ -4510,12 +4686,6 @@ permalink: /personal-trainer/
             state.duration = parseInt(v, 10);
             saveState();
             // Auto's pick depends on the length, so its subtext can change with duration.
-            document.getElementById('session-type-note').textContent = sessionTypeNote();
-        });
-
-        bindChoiceRow('home-session-type', (v) => {
-            state.sessionType = v;
-            saveState();
             document.getElementById('session-type-note').textContent = sessionTypeNote();
         });
 
@@ -4732,6 +4902,48 @@ permalink: /personal-trainer/
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && generatorInfoModal.classList.contains('open')) closeGeneratorInfo();
         });
+
+        // ---- Session-type picker modal ----
+        const SESSION_TYPE_LABELS = { auto: 'Auto', core: 'Core', mixed: 'Mixed', mobility: 'Mobility' };
+        const sessionTypeModal = document.getElementById('session-type-modal');
+
+        // Reflect the current pick onto the trigger value and the Auto-aware subtext,
+        // and light the matching option in the modal. Called on render and after a pick.
+        function refreshSessionTypeUI() {
+            const cur = state.sessionType || 'auto';
+            document.getElementById('stt-value').textContent = SESSION_TYPE_LABELS[cur] || 'Auto';
+            document.getElementById('session-type-note').textContent = sessionTypeNote();
+            sessionTypeModal.querySelectorAll('.type-option').forEach((o) => {
+                const on = o.dataset.v === cur;
+                o.classList.toggle('selected', on);
+                o.setAttribute('aria-checked', on ? 'true' : 'false');
+            });
+        }
+        function openSessionTypeModal() {
+            refreshSessionTypeUI();
+            sessionTypeModal.classList.add('open');
+        }
+        function closeSessionTypeModal() {
+            sessionTypeModal.classList.remove('open');
+        }
+        function setSessionType(v) {
+            state.sessionType = v;
+            saveState();
+            refreshSessionTypeUI();
+            closeSessionTypeModal();
+        }
+        document.getElementById('home-session-type-btn').addEventListener('click', openSessionTypeModal);
+        document.getElementById('close-session-type').addEventListener('click', closeSessionTypeModal);
+        sessionTypeModal.addEventListener('click', (e) => {
+            if (e.target === sessionTypeModal) closeSessionTypeModal();
+        });
+        sessionTypeModal.querySelectorAll('.type-option').forEach((o) => {
+            o.addEventListener('click', () => setSessionType(o.dataset.v));
+        });
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && sessionTypeModal.classList.contains('open')) closeSessionTypeModal();
+        });
+
         function bindClickableCard(id, handler) {
             const el = document.getElementById(id);
             el.addEventListener('click', handler);
@@ -4773,7 +4985,7 @@ permalink: /personal-trainer/
             shareAchievementCard(el.dataset.achId);
         });
         document.querySelectorAll('[data-back]').forEach((b) =>
-            b.addEventListener('click', () => { clearPreviewVideos(); clearLibraryVideos(); closeGeneratorInfo(); goBack(); }));
+            b.addEventListener('click', () => { clearPreviewVideos(); clearLibraryVideos(); closeGeneratorInfo(); closeSessionTypeModal(); goBack(); }));
 
         document.getElementById('btn-generate').addEventListener('click', () => {
             currentWorkout = generateWorkout();
@@ -4903,8 +5115,7 @@ permalink: /personal-trainer/
             sEl.textContent = state.streak;
             applyStreakGlow(state.streak);
             markSelected('home-duration', state.duration);
-            markSelected('home-session-type', state.sessionType || 'auto');
-            document.getElementById('session-type-note').textContent = sessionTypeNote();
+            refreshSessionTypeUI();
             document.getElementById('checkin-prompt').hidden = !checkinDue();
 
             const goal = state.weeklyGoal || 3;
