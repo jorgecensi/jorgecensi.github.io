@@ -579,8 +579,10 @@ permalink: /personal-trainer/
         }
         .level-row.row-core .tier { color: var(--orange); }
         .level-row.row-pilates .tier { color: var(--blue); }
+        .level-row.row-mobility .tier { color: var(--accent-bright); }
         #core-bar { background: var(--orange); }
         #pilates-bar { background: var(--blue); }
+        #mobility-bar { background: var(--accent-bright); }
 
         /* Muscle-balance readout: one row per trunk region, a bar showing how its
            recent share compares to an even split (the tick), and the % of recent
@@ -640,6 +642,120 @@ permalink: /personal-trainer/
         }
 
         .bal-pct.low { color: var(--orange); }
+
+        /* Mobility reuses the balance rows but reads as its own track, so its bars take
+           the accent-bright green rather than the trunk's accent. */
+        .bal-fill.mob { background: var(--accent-bright); }
+
+        /* ---- Check-in ---------------------------------------------------------- */
+        /* The hold timer counts *up* to a form break, so there is no ring to drain —
+           .no-ring hides it and this is just the numerals at player size. */
+        #ck-display {
+            position: relative;
+            font-size: var(--fs-display);
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        #ck-display.ready {
+            color: var(--warn);
+        }
+
+        /* A typed field flanked by two coarse steppers: on a mat, mid-measurement,
+           nudging is easier than typing, but a tape reading like -3.5 needs the field. */
+        .ck-stepper {
+            display: grid;
+            grid-template-columns: 64px 1fr 64px;
+            gap: var(--sp-3);
+            align-items: center;
+            margin: var(--sp-4) 0 var(--sp-3);
+        }
+
+        .ck-stepper .btn {
+            font-size: var(--fs-2xl);
+            padding: var(--sp-2);
+        }
+
+        .ck-stepper input {
+            width: 100%;
+            padding: var(--sp-3);
+            background-color: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: var(--r-md);
+            color: var(--text);
+            font-family: var(--font-display);
+            font-size: var(--fs-2xl);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .ck-stepper input:focus {
+            outline: none;
+            border-color: rgb(var(--accent-rgb) / 55%);
+        }
+
+        /* A single left/right bar: the two halves grow out from a centre line, so an
+           uneven pair reads as lopsided at a glance without parsing two numbers. */
+        .ck-sym {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            margin-top: var(--sp-3);
+        }
+
+        .ck-sym-track {
+            position: relative;
+            flex: 1;
+            display: flex;
+            height: 12px;
+            gap: 2px;
+        }
+
+        .ck-sym-track > div {
+            background: var(--accent);
+            border-radius: var(--r-xs);
+            transition: width var(--dur-slow) var(--ease-standard);
+        }
+
+        .ck-sym-track > div:first-child {
+            margin-left: auto;
+        }
+
+        /* The shorter side is what the next few weeks should bring up. */
+        .ck-sym-track > div.weak { background: var(--orange); }
+
+        .ck-sym-end {
+            width: 1.4em;
+            flex-shrink: 0;
+            font-size: var(--fs-xs);
+            color: var(--muted);
+        }
+
+        .ck-sym-end.right { text-align: right; }
+
+        /* Plank time across check-ins. Deliberately unlabelled — the shape is the
+           message, and the exact seconds are one row above it. */
+        .ck-spark {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 44px;
+            margin-top: var(--sp-3);
+        }
+
+        .ck-spark > div {
+            flex: 1;
+            min-height: 3px;
+            background: rgb(var(--accent-rgb) / 45%);
+            border-radius: var(--r-xs) var(--r-xs) 0 0;
+        }
+
+        .ck-spark > div:last-child {
+            background: var(--accent);
+        }
 
         #body-map-container {
             background: var(--surface2);
@@ -2040,6 +2156,10 @@ permalink: /personal-trainer/
         .center { text-align: center; }
         .txt-strong { color: var(--text); }
 
+        /* .btn and .choice set an explicit display, which would otherwise win over the
+           `hidden` attribute's UA rule and leave a "hidden" element on screen. */
+        [hidden] { display: none !important; }
+
         /* Named replacements for inline styles that were doing real component work. */
         .summary-line {
             font-size: var(--fs-lg);
@@ -2144,6 +2264,7 @@ permalink: /personal-trainer/
         .choice,
         .stat .value,
         #player-display,
+        #ck-display,
         .rec-best,
         .summary-line,
         .section-title,
@@ -2155,6 +2276,7 @@ permalink: /personal-trainer/
 
         .stat .value,
         #player-display,
+        #ck-display,
         .rec-best,
         .bal-pct,
         .ach-frac {
@@ -2449,12 +2571,27 @@ permalink: /personal-trainer/
                 <div class="hero-greet" id="hero-greet">Ready when you are</div>
                 <div class="hero-sub" id="hero-sub">Pick a length and go.</div>
                 <img class="hero-mascot" src="/img/pt/barnaby-right.png" alt="">
+                <div class="choice-row cols-4" id="home-session-type">
+                    <div class="choice" data-v="auto">Auto<small>Smart pick</small></div>
+                    <div class="choice" data-v="core">Core<small>Circuit</small></div>
+                    <div class="choice" data-v="mixed">Mixed<small>+ mobility</small></div>
+                    <div class="choice" data-v="mobility">Mobility<small>Stretch</small></div>
+                </div>
                 <div class="choice-row" id="home-duration">
                     <div class="choice" data-v="15">15 min</div>
                     <div class="choice" data-v="25">25 min</div>
                     <div class="choice" data-v="40">40 min</div>
                 </div>
                 <button class="btn mt-4" id="btn-generate"><img class="ico" src="/img/pt/generate-dark.png" alt="">Generate today's workout</button>
+                <p class="muted-note center mt-2" id="session-type-note"></p>
+            </div>
+            <!-- Opt-in and dismissible: a check-in is a useful nudge, never a gate on
+                 the one action this screen exists to drive. -->
+            <div class="card" id="checkin-prompt" hidden>
+                <div class="level-row"><strong>📋 Time for a check-in?</strong></div>
+                <p class="muted-note mt-2">It’s been a few weeks. A 6-minute self-test shows what’s improved and tunes your next workouts toward whatever tests weakest.</p>
+                <button class="btn mt-3" id="btn-checkin-start">Start check-in</button>
+                <button class="btn secondary" id="btn-checkin-later">Later</button>
             </div>
             <div class="stats-row">
                 <div class="stat accent-green"><img class="stat-ico" src="/img/pt/level.png" alt=""><div class="value" id="stat-level">–</div><div class="label">Level</div></div>
@@ -2496,6 +2633,16 @@ permalink: /personal-trainer/
                 <p class="muted-note mt-3" id="balance-note"></p>
                 <button class="info-link" id="nav-info-balance">ⓘ Why balance matters</button>
             </div>
+            <div class="card" id="mob-balance-card">
+                <div class="level-row"><strong>🧘 Mobility balance</strong><span class="tier" id="mob-balance-score"></span></div>
+                <div id="mob-balance-bars"></div>
+                <p class="muted-note mt-3" id="mob-balance-note"></p>
+            </div>
+            <div class="card" id="checkin-card">
+                <div class="level-row"><strong>📋 Check-in</strong><span class="tier" id="checkin-when"></span></div>
+                <div id="checkin-body"></div>
+                <button class="btn secondary mt-4" id="btn-run-checkin">Run a check-in</button>
+            </div>
             <div class="card" id="bodymap-card">
                 <div class="level-row"><strong><img class="ico" src="/img/pt/level.png" alt="">Body map</strong></div>
                 <div class="choice-row cols-2" id="bodymap-view">
@@ -2518,6 +2665,8 @@ permalink: /personal-trainer/
                 <div class="level-bar"><div id="core-bar" style="width:0%"></div></div>
                 <div class="level-row row-pilates mt-4"><strong><img class="ico" src="/img/pt/mat-pilates.png" alt="">Mat Pilates</strong><span class="tier" id="pilates-tier">Tier 1 of 5</span></div>
                 <div class="level-bar"><div id="pilates-bar" style="width:0%"></div></div>
+                <div class="level-row row-mobility mt-4"><strong>🧘 Mobility</strong><span class="tier" id="mobility-tier">Tier 1 of 5</span></div>
+                <div class="level-bar"><div id="mobility-bar" style="width:0%"></div></div>
                 <button class="info-link" id="nav-info">ⓘ How progression works</button>
             </div>
             <div class="home-nav">
@@ -2646,6 +2795,19 @@ permalink: /personal-trainer/
             </div>
 
             <div class="card">
+                <div class="section-title">Mobility, on its own track</div>
+                <p class="muted-note mb-3">Mobility is a third discipline with its own tier and its own balance ledger, kept over five joint areas — hips, hamstrings, t-spine, shoulders and ankles — rather than the four trunk regions. Stretching a hip isn't core training and doesn't pretend to be, so mobility work never moves your muscle balance and never lights up the body map.</p>
+                <p class="muted-note">On the Today tab you pick the shape of the session: <strong class="txt-strong">Core</strong> is the classic circuit, <strong class="txt-strong">Mixed</strong> adds a short mobility block after the work and before the stretches, and <strong class="txt-strong">Mobility</strong> is a gentle stretch day with longer holds and no circuit. Only the disciplines a session actually trained take your feedback afterwards.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">How check-ins work</div>
+                <p class="muted-note mb-3">A check-in is an optional six-minute battery of self-tests, meant to be run every five weeks or so. The core half is four max-effort holds — plank, side plank on each side, a back-extension hold and a glute-bridge hold — timed until your form breaks. The mobility half is three measured reaches, and needs a tape measure; you can skip it.</p>
+                <p class="muted-note mb-3">These are <strong class="txt-strong">endurance and range self-tests, not clinical strength tests</strong>. The back-extension hold is a Sørensen <em>proxy</em>, not the strapped clinical version, and you are the one judging when your form broke. So read two things and ignore everything else: <strong class="txt-strong">your own trend</strong> from one check-in to the next, and your <strong class="txt-strong">left-versus-right symmetry</strong>. Those are robust. Population percentiles for these tests come from small samples and would be false precision here, which is why you won't find a grade anywhere in the app.</p>
+                <p class="muted-note">For the trend to mean anything, retest the same way each time — same surface, same form standard, same time of day if you can. Results feed the generator: a region that tests weak gets pulled forward in the next few sessions on top of the usual volume balance, and the stiffest joint area steers your mobility blocks.</p>
+            </div>
+
+            <div class="card">
                 <div class="section-title">Your feedback drives it</div>
                 <p class="muted-note mb-3">After every workout you say how it felt, and both scores adjust:</p>
                 <div class="info-row"><span><img class="ico info-ico" src="/img/pt/feedback-easy.png" alt="">Too easy</span><span class="delta up">+8 points</span></div>
@@ -2699,6 +2861,73 @@ permalink: /personal-trainer/
             <p class="muted-note mb-3" id="rec-note"></p>
             <div id="records-list"></div>
         </section>
+
+        <!-- ============ CHECK-IN ============ -->
+        <section class="screen" id="checkin">
+            <header class="topbar">
+                <button class="back-btn" data-back>‹ Back</button>
+                <h1>Your <span>Check-in</span></h1>
+                <span></span>
+            </header>
+
+            <div id="checkin-intro">
+                <div class="card">
+                    <div class="section-title">What this is</div>
+                    <p class="muted-note mb-3">A short battery of self-tests — about six minutes — that measures what you can <em>hold</em> and how far you can <em>reach</em>. Your muscle balance tracks what you've trained; this tracks what that training has bought you.</p>
+                    <p class="muted-note mb-3">Read it as <strong class="txt-strong">your own trend</strong> and your <strong class="txt-strong">left-versus-right</strong>, not as a grade. The results steer the next few weeks toward whatever tests weakest.</p>
+                    <div class="info-row"><span>💪 Core battery</span><span class="muted-note">4 tests, 6 holds</span></div>
+                    <div class="info-row"><span>📏 Mobility battery</span><span class="muted-note">3 tests, needs a tape</span></div>
+                </div>
+                <div class="card">
+                    <div class="section-title">Mobility tests</div>
+                    <div class="choice-row cols-2" id="checkin-mob-toggle">
+                        <div class="choice selected" data-v="on">Include<small>Tape measure needed</small></div>
+                        <div class="choice" data-v="off">Skip<small>Core tests only</small></div>
+                    </div>
+                    <p class="muted-note mt-3">Skipping leaves your mobility targets exactly as they are — nothing is reset or guessed.</p>
+                </div>
+                <button class="btn" id="btn-checkin-begin">Begin check-in</button>
+                <p class="muted-note center mt-3">Rest as long as you like between tests. Retest the same way each time — same surface, same form standard — or the trend measures your mood instead of your training.</p>
+            </div>
+
+            <div id="checkin-run" hidden>
+                <p class="muted-note center" id="ck-step-count"></p>
+                <div class="card">
+                    <div class="level-row"><strong id="ck-name">Test</strong><span class="tier" id="ck-side"></span></div>
+                    <p class="muted-note mt-3" id="ck-setup"></p>
+                    <div class="mistake-note mt-3" id="ck-stop"></div>
+                </div>
+
+                <div id="ck-hold" hidden>
+                    <div class="player-timer no-ring">
+                        <div id="ck-display">0:00</div>
+                    </div>
+                    <button class="btn" id="ck-hold-action">Start the hold</button>
+                    <button class="btn secondary" id="ck-hold-skip">Skip this test</button>
+                </div>
+
+                <div id="ck-dist" hidden>
+                    <div class="ck-stepper">
+                        <button class="btn ghost" id="ck-minus" aria-label="Decrease">−</button>
+                        <input type="number" id="ck-value" inputmode="decimal" step="0.5" value="0" aria-label="Measurement in centimetres">
+                        <button class="btn ghost" id="ck-plus" aria-label="Increase">+</button>
+                    </div>
+                    <p class="muted-note center" id="ck-hint"></p>
+                    <button class="btn mt-3" id="ck-dist-save">Save &amp; continue</button>
+                    <button class="btn secondary" id="ck-dist-skip">Skip this test</button>
+                </div>
+            </div>
+
+            <div id="checkin-result" hidden>
+                <img class="big-emoji-ico" src="/img/pt/celebration.png" alt="">
+                <div class="card">
+                    <div class="level-row"><strong>Check-in complete</strong><span class="tier" id="ck-result-date"></span></div>
+                    <div id="ck-result-body"></div>
+                </div>
+                <button class="btn" id="ck-result-progress">See it on Progress</button>
+                <button class="btn secondary" id="ck-result-done">Done</button>
+            </div>
+        </section>
     </div>
 
     <!-- ============ FACE PHOTO EDITOR (modal) ============ -->
@@ -2736,13 +2965,16 @@ permalink: /personal-trainer/
                     <div class="section-title">The shape of a session</div>
                     <div class="info-row"><span><img class="ico info-ico" src="/img/pt/warmup.png" alt="">Warm-up</span><span class="muted-note">3 easy moves</span></div>
                     <div class="info-row"><span>💪 Main circuit</span><span class="muted-note">Core + Pilates, alternating</span></div>
+                    <div class="info-row"><span>🧘 Mobility</span><span class="muted-note">2–4 moves on a Mixed day</span></div>
                     <div class="info-row"><span><img class="ico info-ico" src="/img/pt/cooldown.png" alt="">Cool-down</span><span class="muted-note">3 stretches</span></div>
                     <p class="muted-note mt-3">Your session length sets the time budget, then the main circuit is filled with as many exercises as fit. Pick 40 minutes and the circuit repeats for a second round instead of just adding more moves.</p>
+                    <p class="muted-note mt-3">The session type you pick on Today reshapes this: <strong class="txt-strong">Core</strong> drops the mobility block, and <strong class="txt-strong">Mobility</strong> drops the circuit instead and spends that whole budget on longer-held joint work. <strong class="txt-strong">Auto</strong> — the default — picks one of the three for you from how long it's been since you last stretched, whether a check-in flagged a stiff joint, and the length you chose; the line under the Generate button always says which it landed on and why.</p>
                 </div>
 
                 <div class="card">
                     <div class="section-title">Picking the exercises</div>
-                    <p class="muted-note">Each pick comes from your current tier in that discipline (Core or Pilates), down to two tiers below it — so it's mostly familiar with a few fresh challenges mixed in. Within the session the list stays balanced across ab, oblique, back and glute focus, and it also leans toward whichever of those regions your <strong class="txt-strong">recent</strong> training has neglected (see “Training in balance” under How Progression Works). It skips whatever you did in your very last session so two in a row never feel identical.</p>
+                    <p class="muted-note">Each pick comes from your current tier in that discipline (Core or Pilates), down to two tiers below it — so it's mostly familiar with a few fresh challenges mixed in. Within the session the list stays balanced across ab, oblique, back and glute focus, and it also leans toward whichever of those regions your <strong class="txt-strong">recent</strong> training has neglected (see “Training in balance” under How Progression Works). If you've run a check-in, whatever tested weakest gets pulled forward on top of that. It skips whatever you did in your very last session so two in a row never feel identical.</p>
+                    <p class="muted-note mt-3">The mobility block is picked the same way, but from its own five joint areas and its own tier — the least-opened area goes first, and a check-in's stiffest reading pulls harder still.</p>
                 </div>
 
                 <div class="card">
@@ -2953,11 +3185,66 @@ permalink: /personal-trainer/
             ['cd-figurefour', 'Figure-Four Stretch', 'cooldown', 'glutes', 1, 'secs', 30, 0, 30, 1, ['Ankle over the opposite knee', 'Draw the thigh in, breathe into the hip'], 'Cranking the leg toward you fast makes the muscle fight back — draw it in slowly and let the hip open a little more on each exhale.'],
             ['cd-butterfly', 'Butterfly Stretch', 'cooldown', 'glutes', 1, 'secs', 30, 0, 30, 0, ['Soles of the feet together, knees fall open', 'Sit tall, hinge forward gently'], 'Bouncing the knees toward the floor can tweak the groin — let them settle under their own weight and hinge from the hips instead.'],
             ['cd-seatedfold', 'Seated Forward Fold', 'cooldown', 'back', 1, 'secs', 30, 0, 30, 0, ['Legs long, hinge from the hips', 'Let the head and neck hang heavy'], 'Rounding hard to grab your toes strains the lower back — hinge from the hips first and only round as far as feels easy.'],
-            ['cd-thread', 'Thread the Needle', 'cooldown', 'back', 1, 'secs', 30, 0, 30, 1, ['From all fours, thread one arm under the other', 'Rest the shoulder and temple down'], 'Dumping your weight onto your neck instead of your shoulder pinches it — sink into the shoulder and upper back, keeping the neck long.']
+            ['cd-thread', 'Thread the Needle', 'cooldown', 'back', 1, 'secs', 30, 0, 30, 1, ['From all fours, thread one arm under the other', 'Rest the shoulder and temple down'], 'Dumping your weight onto your neck instead of your shoulder pinches it — sink into the shoulder and upper back, keeping the neck long.'],
+
+            // ---- Mobility ----
+            // The `focus` slot holds a *joint area*, not a trunk region. FOCUS_MUSCLES has
+            // no entry for these, so mobility work contributes nothing to the trunk balance
+            // — it banks into its own ledger (mobilityLoad) instead. That separation is the
+            // point: opening a stiff hip is not the same currency as training an ab.
+            ['mob-hipflexor', 'Half-Kneeling Hip Flexor Stretch', 'mobility', 'hips', 1, 'secs', 30, 5, 45, 1, ['Back knee down, tuck the tailbone under', 'Shift gently forward until the front of the hip opens'], 'Arching the lower back to lean further just hides the stretch — tuck the pelvis under first, then move forward only as far as the hip itself opens.'],
+            ['mob-deepsquat', 'Deep Squat Hold', 'mobility', 'hips', 2, 'secs', 25, 5, 45, 0, ['Sink to the bottom, heels down, chest tall', 'Use elbows to gently push the knees out'], 'Letting the heels lift or the back round collapses the position — keep the heels planted and the chest up, and only sink as deep as that holds.'],
+            ['mob-pigeon', 'Pigeon Pose', 'mobility', 'hips', 3, 'secs', 30, 5, 45, 1, ['Front shin across, hips square', 'Fold forward slowly, breathe into the glute'], 'Collapsing onto the near hip twists the pelvis — keep both hips level and square before you fold, even if you fold less far.'],
+            ['mob-9090', '90/90 Hip Switch', 'mobility', 'hips', 2, 'reps', 10, 2, 18, 0, ['Rotate both knees floor-to-floor', 'Stay tall, move slowly through the middle'], 'Falling knee-to-knee with momentum skips the range that matters — control the sweep through the middle rather than flopping side to side.'],
+            ['mob-hamreach', 'Standing Hamstring Reach', 'mobility', 'hamstrings', 1, 'secs', 30, 5, 45, 0, ['Hinge from the hips, soft knees', 'Let the head and neck hang heavy'], 'Rounding the back to reach the floor takes the stretch off the hamstrings — hinge from the hips first and keep a long spine.'],
+            ['mob-hamfloss', 'Single-Leg Hamstring Floss', 'mobility', 'hamstrings', 2, 'reps', 10, 2, 16, 1, ['On your back, straighten and bend one leg', 'Move through the full range, no bounce'], 'Yanking the leg straight and holding at the end is not the drill — floss smoothly in and out of the range instead of forcing a static pull.'],
+            ['mob-seatedfold-a', 'Active Seated Fold', 'mobility', 'hamstrings', 2, 'secs', 30, 5, 45, 0, ['Legs long, hinge and reach for the toes', 'Pull gently on the feet, spine long'], 'Cranking into a rounded slump strains the back — lead with the hips and keep the chest reaching toward the toes.'],
+            ['mob-openbook', 'Open Book', 'mobility', 'tspine', 1, 'reps', 8, 2, 14, 1, ['Side-lying, knees stacked, sweep the top arm open', 'Follow the hand with your eyes, knees stay down'], 'Letting the knees peel apart turns this into a lumbar twist — pin the knees together so the rotation comes from the upper back.'],
+            ['mob-tspinerot', 'Quadruped T-Spine Rotation', 'mobility', 'tspine', 2, 'reps', 10, 2, 16, 1, ['Hand behind head, rotate elbow up to the ceiling', 'Hips stay square over the knees'], 'Rotating the hips to get the elbow higher cheats the thoracic spine — keep the hips locked and turn from the ribcage.'],
+            ['mob-thoracicext', 'Thoracic Extension over Support', 'mobility', 'tspine', 2, 'secs', 30, 5, 45, 0, ['Roller or cushion under the mid-back', 'Support the head, breathe the ribs open'], 'Extending from the lower back instead of the target segment just hinges the waist — keep the ribs down and let the mid-back drape over the support.'],
+            ['mob-wallslide', 'Wall Slides', 'mobility', 'shoulders', 1, 'reps', 10, 2, 16, 0, ['Back to wall, arms slide up and down', 'Keep wrists and lower back lightly on the wall'], 'Arching the back and shrugging to keep contact fakes the range — keep the ribs down and only slide as high as the arms stay on the wall.'],
+            ['mob-passthrough', 'Towel Pass-Through', 'mobility', 'shoulders', 2, 'reps', 10, 2, 16, 0, ['Wide grip on a towel, pass it overhead front to back', 'Arms straight, go only as wide as needed'], 'Bending the elbows to sneak the towel over defeats it — keep the arms straight and widen the grip until the pass is smooth.'],
+            ['mob-doorwaypec', 'Doorway Pec Stretch', 'mobility', 'shoulders', 1, 'secs', 30, 5, 45, 1, ['Forearm on the frame, step through gently', 'Chest open, shoulder down and back'], 'Twisting the whole torso through overshoots the stretch — step just far enough to feel the chest open, shoulder blade drawing down.'],
+            ['mob-anklerock', 'Kneeling Ankle Rock', 'mobility', 'ankles', 1, 'reps', 10, 2, 16, 1, ['Knee drives forward over the toes', 'Heel stays glued to the floor'], 'Letting the heel pop up to reach further is the whole thing you are training against — keep it down and only rock as far as it stays planted.'],
+            ['mob-calfstretch', 'Wall Calf Stretch', 'mobility', 'ankles', 1, 'secs', 30, 5, 45, 1, ['Back leg straight, heel down, lean into the wall', 'Then bend the knee for the lower calf'], 'Turning the foot out to feel more stretch skips the calf — keep the foot pointing straight ahead and the heel pressed down.']
         ].map(([id, name, disc, focus, tier, type, base, inc, max, perSide, cues, mistake]) =>
             ({ id, name, disc, focus, tier, type, base, inc, max, perSide: !!perSide, cues, mistake }));
 
         const EX_BY_ID = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
+
+        // ---- Check-in battery ----
+        // A ~6-minute self-test run every few weeks. It measures *capacity* (what you can
+        // hold, how far you can reach) where the muscle-balance engine measures *volume*
+        // (what you trained), and the two answer different questions. Deliberately framed
+        // as a personal trend plus a left/right comparison — the published norms for these
+        // tests come from small samples and self-scored form makes any single number
+        // fuzzy, so a pass/fail grade would be false precision.
+        const CHECKIN_TESTS = [
+            // Core battery — max-effort holds, counted UP; stop on form break.
+            { id: 'ck-plank', key: 'plank', name: 'Forearm Plank', battery: 'core', region: 'abs', measure: 'hold', perSide: false, exId: 'co-plank',
+              setup: 'Forearm plank, elbows under shoulders, one straight line shoulders-to-heels.',
+              stop: 'Stop the moment the hips sag or pike and you can’t reset.' },
+            { id: 'ck-sideplank', key: 'side', name: 'Side Plank', battery: 'core', region: 'obliques', measure: 'hold', perSide: true, exId: 'co-sideplank',
+              setup: 'Side plank on the forearm, feet stacked, hips lifted into a straight line.',
+              stop: 'Stop when the hip drops toward the floor.' },
+            { id: 'ck-superman', key: 'superman', name: 'Back-Extension Hold', battery: 'core', region: 'back', measure: 'hold', perSide: false,
+              setup: 'Face down, lift chest, arms and legs a few inches and hold. (A Sørensen proxy — not the strapped clinical test.)',
+              stop: 'Stop when you can no longer keep the chest and legs lifted.' },
+            { id: 'ck-bridge', key: 'bridge', name: 'Glute-Bridge Hold', battery: 'core', region: 'glutes', measure: 'hold', perSide: false,
+              setup: 'Glute bridge, hips fully extended to a straight line knees-to-shoulders.',
+              stop: 'Stop when the hips start to drift down and won’t reset.' },
+
+            // Mobility battery — measured distances (cm). Needs a tape/ruler.
+            { id: 'ck-sitreach', key: 'sitreach', name: 'Sit-and-Reach', battery: 'mob', area: 'hamstrings', measure: 'distance', perSide: false, unit: 'cm',
+              setup: 'Sit with legs straight, feet against a wall or box edge. Reach forward along a tape and record the centimetres past your toes — short of them counts as negative.',
+              hint: 'Zero the tape at your toes. Bigger is better.' },
+            { id: 'ck-kneewall', key: 'kneewall', name: 'Knee-to-Wall', battery: 'mob', area: 'ankles', measure: 'distance', perSide: true, unit: 'cm',
+              setup: 'Foot facing a wall, drive the knee forward to touch it without the heel lifting. Slide the foot back to the furthest distance where the knee still touches.',
+              hint: 'Record the toe-to-wall distance in cm. Bigger is better.' },
+            { id: 'ck-backscratch', key: 'backscratch', name: 'Back-Scratch', battery: 'mob', area: 'shoulders', measure: 'distance', perSide: true, unit: 'cm',
+              setup: 'One hand reaches over the shoulder, the other up the back. Measure the gap between fingertips — an overlap counts as negative.',
+              hint: 'Smaller (or negative) is better.' }
+        ];
 
         // Built-in form-guide videos shown by default. A user's own link saved in the
         // library (state.links) always takes precedence over the preset for that exercise.
@@ -3099,12 +3386,28 @@ permalink: /personal-trainer/
                 setupDone: false,
                 level: null,
                 duration: 25,
-                prog: { core: 0, pilates: 0 },
+                prog: { core: 0, pilates: 0, mobility: 0 },
                 // Recency-weighted training volume per trunk region, used to steer each
                 // new workout toward whatever's been neglected. Backfills to zero for
                 // anyone upgrading, then builds up as they train.
                 muscleLoad: { abs: 0, obliques: 0, back: 0, glutes: 0 },
                 muscleLoadTs: 0,
+                // The same idea for mobility, kept in its own ledger so joint work never
+                // reads as trunk training volume (and vice versa).
+                mobilityLoad: { hips: 0, hamstrings: 0, tspine: 0, shoulders: 0, ankles: 0 },
+                mobilityLoadTs: 0,
+                // Last time a session actually banked mobility work — the "days since you
+                // stretched" signal Auto reads. Separate from mobilityLoadTs, which is the
+                // decay anchor and moves on every workout regardless of what it contained.
+                lastMobilityTs: 0,
+                sessionType: 'auto',         // 'auto' | 'core' | 'mixed' | 'mobility'
+                // Check-ins: an opt-in self-test battery run every few weeks.
+                assessments: [],             // [{ ts, core:{…}, mob:{…}, derived:{…} }]
+                lastAssessment: 0,
+                assessmentIntervalDays: 35,
+                checkinSnoozedTs: 0,
+                assessmentBias: null,        // {abs,obliques,back,glutes} generator pull, or null
+                mobilityBias: null,          // {hips,hamstrings,tspine,shoulders,ankles} or null
                 history: [],
                 lastExerciseIds: [],
                 links: {},
@@ -3226,6 +3529,20 @@ permalink: /personal-trainer/
             return (nowTs - prevTs) < 48 * 3600 * 1000 || gapBridgedByFreezes(prevTs, nowTs);
         }
 
+        // The merge that rehydrates saved data is shallow, so a nested object present in
+        // the save (prog, muscleLoad) replaces the default wholesale — any key added to
+        // it in a later version arrives missing. Backfill those by hand, on every path
+        // that produces a state object from stored JSON (load *and* restore).
+        function migrateState(s) {
+            if (!s.prog) s.prog = { core: 0, pilates: 0, mobility: 0 };
+            if (s.prog.mobility === undefined) s.prog.mobility = 0;
+            if (!s.mobilityLoad) s.mobilityLoad = { hips: 0, hamstrings: 0, tspine: 0, shoulders: 0, ankles: 0 };
+            if (!s.assessments) s.assessments = [];
+            if (!s.sessionType) s.sessionType = 'auto';
+            if (s.lastMobilityTs === undefined) s.lastMobilityTs = 0;
+            return s;
+        }
+
         function loadState() {
             let raw = null;
             try {
@@ -3237,14 +3554,14 @@ permalink: /personal-trainer/
             if (!raw) return defaultState();
 
             try {
-                const parsed = Object.assign(defaultState(), JSON.parse(raw));
+                const parsed = migrateState(Object.assign(defaultState(), JSON.parse(raw)));
                 try { localStorage.setItem(BACKUP_KEY, raw); } catch (e) { /* best-effort */ }
                 return parsed;
             } catch (e) {
                 try {
                     const prev = localStorage.getItem(BACKUP_KEY);
                     if (prev) {
-                        const recovered = Object.assign(defaultState(), JSON.parse(prev));
+                        const recovered = migrateState(Object.assign(defaultState(), JSON.parse(prev)));
                         storageNotice = 'Saved data was damaged — restored your previous session. Back up from Settings.';
                         return recovered;
                     }
@@ -3301,7 +3618,7 @@ permalink: /personal-trainer/
             if (!('prog' in incoming) && !('history' in incoming) && !('records' in incoming)) {
                 throw new Error('missing recognisable fields');
             }
-            return Object.assign(defaultState(), incoming);
+            return migrateState(Object.assign(defaultState(), incoming));
         }
 
         function backupSummary(s) {
@@ -3369,6 +3686,14 @@ permalink: /personal-trainer/
         // whole trunk comes up together.
         const MUSCLE_GROUPS = ['abs', 'obliques', 'back', 'glutes'];
         const MUSCLE_LABELS = { abs: 'Abs', obliques: 'Obliques', back: 'Lower back', glutes: 'Glutes' };
+
+        // The mobility track's equivalent of the trunk regions: joint areas, kept in a
+        // separate list so the two ledgers never mix.
+        const MOBILITY_AREAS = ['hips', 'hamstrings', 'tspine', 'shoulders', 'ankles'];
+        const MOBILITY_LABELS = { hips: 'Hips', hamstrings: 'Hamstrings', tspine: 'T-Spine', shoulders: 'Shoulders', ankles: 'Ankles' };
+        // Slower than the trunk's 12 days: stiffness creeps back more gradually than
+        // training fatigue fades, so a recently-opened joint stays "done" for longer.
+        const MOBILITY_HALFLIFE_DAYS = 14;
 
         // How a work set's seconds credit the trunk regions. The primary region takes
         // the full share; the secondary shares encode real synergist activation — the
@@ -3438,6 +3763,52 @@ permalink: /personal-trainer/
             return { load, total, shares, target, score };
         }
 
+        // ---- Mobility balance ----
+        // The trunk engine again, keyed on joint areas. Simpler in one respect: a
+        // mobility drill credits its own area one-to-one, because "stretching the hip
+        // also loosens the shoulder" isn't a thing the way synergist activation is.
+        const emptyMobilityLoad = () => ({ hips: 0, hamstrings: 0, tspine: 0, shoulders: 0, ankles: 0 });
+
+        function decayedMobilityLoad(now) {
+            now = now === undefined ? Date.now() : now;
+            const load = Object.assign(emptyMobilityLoad(), state.mobilityLoad || {});
+            const last = state.mobilityLoadTs || 0;
+            if (last && now > last) {
+                const factor = Math.pow(0.5, (now - last) / (MOBILITY_HALFLIFE_DAYS * 86400000));
+                MOBILITY_AREAS.forEach((a) => { load[a] = (load[a] || 0) * factor; });
+            }
+            return load;
+        }
+
+        function creditMobilityLoad(items) {
+            const now = Date.now();
+            const load = decayedMobilityLoad(now);
+            let credited = false;
+            items.forEach((it) => {
+                if (it.kind !== 'work' || it.ex.disc !== 'mobility') return;
+                const a = it.ex.focus;
+                if (load[a] === undefined) return;
+                load[a] += it.secs; // holds and reps both bank time spent in the range
+                credited = true;
+            });
+            state.mobilityLoad = load;
+            state.mobilityLoadTs = now;
+            // Only stamp the "last stretched" marker when this session actually had
+            // mobility in it — a pure core day must not reset the days-since counter.
+            if (credited) state.lastMobilityTs = now;
+        }
+
+        function mobilityBalance(now) {
+            const load = decayedMobilityLoad(now);
+            const total = MOBILITY_AREAS.reduce((t, a) => t + (load[a] || 0), 0);
+            const target = 1 / MOBILITY_AREAS.length;
+            const shares = {};
+            MOBILITY_AREAS.forEach((a) => { shares[a] = total ? load[a] / total : target; });
+            const spread = MOBILITY_AREAS.reduce((t, a) => t + Math.abs(shares[a] - target), 0);
+            const score = Math.round(100 * (1 - spread / (2 * (1 - target))));
+            return { load, total, shares, target, score };
+        }
+
         const REGION_MUSCLE_IDS = {
             abs: ['abs-upper-left', 'abs-upper-right', 'abs-lower-left', 'abs-lower-right'],
             obliques: ['obliques-left', 'obliques-right'],
@@ -3482,16 +3853,120 @@ permalink: /personal-trainer/
             { id: 'finisher', label: 'Finisher', desc: 'a max hold to finish strong', finisher: true }
         ];
 
+        // A dedicated mobility session gets a fixed, gentle theme rather than a random
+        // twist: focus days and endurance multipliers are core-circuit ideas, and forcing
+        // extra range under a "doses up 20%" banner is exactly how a stretch turns into a
+        // strain. It never enters state.lastTwist, so it doesn't disturb the rotation.
+        const MOBILITY_TWIST = { id: 'mobility', label: 'Mobility flow', desc: 'range and control, no rush' };
+
+        // The mobility block, picked the way the trunk circuit is: lowest-count area
+        // first, seeded from how lopsided the mobility ledger currently is and pulled
+        // further by whatever the last check-in measured as stiffest.
+        function pickMobilityBlock(count, avoid) {
+            const cap = tierCap(state.prog.mobility || 0);
+            const pool = EXERCISES.filter((e) => e.disc === 'mobility' && e.tier <= cap);
+            const bal = mobilityBalance();
+            const areaCount = {};
+            if (bal.total > 0) {
+                MOBILITY_AREAS.forEach((a) => {
+                    let rel = (bal.shares[a] - bal.target) / bal.target;
+                    if (state.mobilityBias) rel -= (state.mobilityBias[a] || 0);
+                    areaCount[a] = Math.max(-BALANCE_BIAS, Math.min(BALANCE_BIAS, Math.round(rel * BALANCE_BIAS)));
+                });
+            } else if (state.mobilityBias) {
+                // Nothing trained yet, but a check-in has already said where you're tight.
+                MOBILITY_AREAS.forEach((a) => {
+                    areaCount[a] = -Math.round((state.mobilityBias[a] || 0) * BALANCE_BIAS);
+                });
+            }
+            // pickBalanced reads ex.focus, which for a mobility move *is* the joint area.
+            return pickBalanced(pool, count, avoid, areaCount);
+        }
+
+        // Days since a session last banked any mobility work. Infinity if never — a
+        // brand-new user has no gap to catch up on, which the cold-start guard below reads.
+        function daysSinceMobility() {
+            return state.lastMobilityTs ? (Date.now() - state.lastMobilityTs) / 86400000 : Infinity;
+        }
+
+        // The single stiffest joint area the last check-in measured, 0 if none.
+        function peakStiffness() {
+            if (!state.mobilityBias) return { area: null, value: 0 };
+            const area = MOBILITY_AREAS.slice()
+                .sort((a, b) => (state.mobilityBias[b] || 0) - (state.mobilityBias[a] || 0))[0];
+            return { area, value: state.mobilityBias[area] || 0 };
+        }
+
+        // Resolve the 'auto' session type into a concrete shape from data the app already
+        // keeps: how long since you stretched, whether a check-in flagged a stiff joint,
+        // and the length you picked. Returns the pick *and* a plain-English reason, so the
+        // choice is shown on Home rather than silently applied. Deliberately conservative:
+        // the default stays Mixed (a small mobility block always rides along), it only
+        // spends a whole session on mobility when the debt is real and there's time for it,
+        // and it never stacks two stretch days back to back.
+        function chooseSessionType() {
+            const dur = state.duration || 25;
+            const trained = (state.history || []).length;
+            const since = daysSinceMobility();
+            const stiff = peakStiffness();
+            const last = state.history && state.history[state.history.length - 1];
+            const lastWasMobility = last && last.type === 'mobility';
+            // Enough training logged that a mobility gap is a real gap, not a cold start —
+            // a new user's first sessions should be normal workouts, not a stretch day.
+            const debt = trained >= 4 && !lastWasMobility && (stiff.value >= 0.5 || since >= 10);
+
+            if (debt && dur >= 25) {
+                const why = stiff.value >= 0.5
+                    ? `${MOBILITY_LABELS[stiff.area].toLowerCase()} tested tight at your last check-in`
+                    : `${Math.round(since)} days since you last did mobility`;
+                return { type: 'mobility', reason: `mobility day — ${why}` };
+            }
+            if (dur <= 15 && !debt) {
+                return { type: 'core', reason: 'short session, so just the core circuit' };
+            }
+            return { type: 'mixed', reason: 'core circuit plus a short mobility block' };
+        }
+
+        // The requested type resolved to a concrete shape (Auto → its pick).
+        function resolvedSessionType() {
+            const req = state.sessionType || 'auto';
+            return req === 'auto' ? chooseSessionType().type : req;
+        }
+
+        // How many mobility moves fit the reserved budget. A mixed session gets a short
+        // top-off (2–4 moves); a dedicated one fills the slot but still caps out, because
+        // past about eight drills a stretch session stops being one.
+        function mobilityBlockSize(budget, doseMult, mobilityOnly) {
+            const cap = tierCap(state.prog.mobility || 0);
+            const pool = EXERCISES.filter((e) => e.disc === 'mobility' && e.tier <= cap);
+            if (!pool.length) return 0;
+            const avgSlot = pool.reduce((t, e) =>
+                t + estimateSecs(e, Math.round(doseFor(e, state.prog.mobility || 0) * doseMult)), 0) / pool.length + PREP_SECS;
+            const fits = Math.round(budget / avgSlot);
+            return mobilityOnly
+                ? Math.max(3, Math.min(8, fits, pool.length))
+                : Math.max(2, Math.min(4, fits, pool.length));
+        }
+
         function generateWorkout() {
+            const requestedType = state.sessionType || 'auto';
+            // Auto resolves here so the whole function downstream sees a concrete shape.
+            const sessionType = requestedType === 'auto' ? chooseSessionType().type : requestedType;
+            const mobilityOnly = sessionType === 'mobility';
             const durationSecs = state.duration * 60;
             const avg = (state.prog.core + state.prog.pilates) / 2;
             const cap = tierCap(avg);
-            const rounds = state.duration >= 40 ? 2 : 1;
+            const rounds = mobilityOnly || state.duration < 40 ? 1 : 2;
 
             // Pick a twist, never the same one twice in a row
-            const twistPool = TWISTS.filter((t) => t.id !== state.lastTwist);
-            const twist = twistPool[Math.floor(Math.random() * twistPool.length)];
-            state.lastTwist = twist.id;
+            let twist;
+            if (mobilityOnly) {
+                twist = MOBILITY_TWIST;
+            } else {
+                const twistPool = TWISTS.filter((t) => t.id !== state.lastTwist);
+                twist = twistPool[Math.floor(Math.random() * twistPool.length)];
+                state.lastTwist = twist.id;
+            }
             saveState();
 
             let restSecs = cap >= 4 ? 12 : cap >= 2 ? 15 : 20;
@@ -3502,7 +3977,33 @@ permalink: /personal-trainer/
 
             const fixedSecs = [...warmups, ...cooldowns]
                 .reduce((t, e) => t + estimateSecs(e, e.base) + 8, 0);
-            const mainBudget = durationSecs - fixedSecs;
+            let mainBudget = durationSecs - fixedSecs;
+
+            // A mixed session tops the circuit off with a short mobility block, so that
+            // slice of the budget is reserved before the circuit is sized — otherwise the
+            // block is pure overrun and a 25-minute session runs 30.
+            const mobilityDoseMult = mobilityOnly ? 1.3 : 1;
+            let mobilityBudget = 0;
+            if (sessionType === 'mixed') {
+                mobilityBudget = Math.round(mainBudget * 0.18);
+                mainBudget -= mobilityBudget;
+            } else if (mobilityOnly) {
+                mobilityBudget = mainBudget;
+                mainBudget = 0;
+            }
+            const mobility = mobilityBudget > 0
+                ? pickMobilityBlock(mobilityBlockSize(mobilityBudget, mobilityDoseMult, mobilityOnly), state.lastExerciseIds)
+                : [];
+            // A dedicated session runs out of library well before it runs out of budget —
+            // at the first tier there are only a handful of drills unlocked. Cycling the
+            // block a second or third time is how a stretch routine is normally run
+            // anyway, and it beats handing back a 15-minute session someone asked 25 for.
+            let mobilityRounds = 1;
+            if (mobilityOnly && mobility.length) {
+                const blockSecs = mobility.reduce((t, e) =>
+                    t + estimateSecs(e, Math.round(doseFor(e, state.prog.mobility || 0) * mobilityDoseMult)) + PREP_SECS, 0);
+                mobilityRounds = Math.max(1, Math.min(3, Math.round(mobilityBudget / blockSecs)));
+            }
 
             // How many main exercises fit, alternating core and pilates
             const corePool = pickPool('core');
@@ -3522,13 +4023,21 @@ permalink: /personal-trainer/
                     focusCount[g] = Math.max(-BALANCE_BIAS, Math.min(BALANCE_BIAS, Math.round(rel * BALANCE_BIAS)));
                 });
             }
+            // A recent check-in stacks on top of volume balance: it measured what you can
+            // actually hold, which can disagree with what you've been training. A region
+            // that tests weak gets pulled forward even if its volume share looks fine.
+            if (state.assessmentBias) {
+                MUSCLE_GROUPS.forEach((g) => {
+                    focusCount[g] = (focusCount[g] || 0) - Math.round((state.assessmentBias[g] || 0) * BALANCE_BIAS);
+                });
+            }
             if (twist.focus) twist.focus.forEach((f) => { focusCount[f] = (focusCount[f] || 0) - 3; });
             const avoid = state.lastExerciseIds;
 
             // Rough average time per main slot to size the list, then trim to budget
             const sample = [...corePool, ...pilatesPool];
             const avgSlot = sample.reduce((t, e) => t + estimateSecs(e, doseFor(e, state.prog[e.disc])), 0) / sample.length + restSecs;
-            let slots = Math.max(4, Math.min(12, Math.round(mainBudget / (avgSlot * rounds))));
+            let slots = mainBudget > 0 ? Math.max(4, Math.min(12, Math.round(mainBudget / (avgSlot * rounds)))) : 0;
             if (slots % 2) slots -= 1;
 
             const corePicks = pickBalanced(corePool, slots / 2, avoid, focusCount);
@@ -3539,7 +4048,8 @@ permalink: /personal-trainer/
                 if (pilatesPicks[i]) main.push(pilatesPicks[i]);
             }
 
-            const workout = { warmups, main, cooldowns, rounds, restSecs, twist, doseMult: twist.doseMult || 1 };
+            const workout = { warmups, main, mobility, mobilityRounds, cooldowns, rounds, restSecs, twist, sessionType, requestedType, mobilityDoseMult, doseMult: twist.doseMult || 1 };
+            workout.exCount = main.length + mobility.length;
             if (twist.finisher) {
                 // Exclude perSide moves — the finisher is a single all-out hold, not a two-sided set.
                 const finishers = EXERCISES.filter((e) => e.disc === 'core' && e.type === 'secs' && e.tier <= cap && !e.perSide);
@@ -3551,6 +4061,24 @@ permalink: /personal-trainer/
         }
 
         const PREP_SECS = 8; // brief breather to get into position when no rest is already scheduled
+
+        // The dose an exercise will actually be given in workout `w`, multipliers and all.
+        // Shared with the preview so the plan you read can't disagree with the plan you get.
+        function plannedDose(ex, w) {
+            let dose = doseFor(ex, state.prog[ex.disc] !== undefined
+                ? state.prog[ex.disc]
+                : (state.prog.core + state.prog.pilates) / 2);
+            // Endurance twist only scales the main work, not warm-up/cool-down
+            if ((ex.disc === 'core' || ex.disc === 'pilates') && (w.doseMult || 1) !== 1) {
+                dose = Math.max(1, Math.round(dose * w.doseMult));
+            }
+            // A dedicated mobility session holds each position longer — there's no
+            // circuit competing for the time, and range responds to duration.
+            if (ex.disc === 'mobility' && (w.mobilityDoseMult || 1) !== 1) {
+                dose = Math.max(1, Math.round(dose * w.mobilityDoseMult));
+            }
+            return dose;
+        }
 
         function buildItems(w) {
             const items = [];
@@ -3568,11 +4096,7 @@ permalink: /personal-trainer/
                 items.push(item);
             };
             const pushWork = (ex, phase) => {
-                let dose = doseFor(ex, state.prog[ex.disc] !== undefined ? state.prog[ex.disc] : (state.prog.core + state.prog.pilates) / 2);
-                // Endurance twist only scales the main work, not warm-up/cool-down
-                if ((ex.disc === 'core' || ex.disc === 'pilates') && (w.doseMult || 1) !== 1) {
-                    dose = Math.max(1, Math.round(dose * w.doseMult));
-                }
+                const dose = plannedDose(ex, w);
                 if (ex.perSide) {
                     pushOne({ kind: 'work', ex, dose, phase, side: 'Left side', secs: ex.type === 'secs' ? dose : dose * 3 });
                     pushOne({ kind: 'work', ex, dose, phase, side: 'Right side', secs: ex.type === 'secs' ? dose : dose * 3 });
@@ -3591,6 +4115,14 @@ permalink: /personal-trainer/
             if (w.finisherEx) {
                 items.push({ kind: 'rest', secs: w.restSecs, phase: 'Finisher' });
                 items.push({ kind: 'work', ex: w.finisherEx, dose: w.finisherEx.max, phase: 'Finisher', side: null, secs: w.finisherEx.max });
+            }
+            // Mobility sits after the work and before the stretches: joints open best once
+            // warm. Like warm-up and cool-down it takes only the short prep gap between
+            // moves rather than a full circuit rest — nothing here needs recovering from.
+            const mobRounds = w.mobilityRounds || 1;
+            for (let r = 0; r < mobRounds; r++) {
+                const phase = mobRounds > 1 ? `Mobility — round ${r + 1} of ${mobRounds}` : 'Mobility';
+                (w.mobility || []).forEach((ex) => pushWork(ex, phase));
             }
             w.cooldowns.forEach((ex) => pushWork(ex, 'Cool-down'));
             return items;
@@ -3613,13 +4145,16 @@ permalink: /personal-trainer/
         const TAB_OF = {
             home: 'home', preview: 'home', player: 'home', complete: 'home',
             progress: 'progress', history: 'progress', achievements: 'progress',
-            records: 'progress', info: 'progress',
+            records: 'progress', info: 'progress', checkin: 'progress',
             library: 'library', setup: 'setup'
         };
 
         function show(id) {
             document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
             window.scrollTo(0, 0);
+            // One choke point for abandoning a part-run check-in, rather than adding a
+            // call to every path that can leave the screen (back, tab, swipe, popstate).
+            if (id !== 'checkin') resetCheckin();
             // The bar is chrome for browsing, not for training: during a workout and
             // its feedback step the screen is the task, and during first-run setup
             // there is nowhere else to go yet.
@@ -3663,6 +4198,7 @@ permalink: /personal-trainer/
             const bars = [
                 document.getElementById('core-bar'),
                 document.getElementById('pilates-bar'),
+                document.getElementById('mobility-bar'),
                 ...document.querySelectorAll('#ach-progress .mini-bar > div')
             ];
             bars.forEach((bar, i) => {
@@ -3803,7 +4339,7 @@ permalink: /personal-trainer/
             if (dx < 70 || dy > 60) return;
             // Sub-screens only — 'library' and 'setup' are root tabs now, and swiping
             // back from a root should do nothing rather than jump to another tab.
-            const canSwipeBack = ['preview', 'history', 'info', 'achievements', 'records'].includes(activeScreenId());
+            const canSwipeBack = ['preview', 'history', 'info', 'achievements', 'records', 'checkin'].includes(activeScreenId());
             if (canSwipeBack) goBack();
         }, { passive: true });
 
@@ -3973,6 +4509,14 @@ permalink: /personal-trainer/
         bindChoiceRow('home-duration', (v) => {
             state.duration = parseInt(v, 10);
             saveState();
+            // Auto's pick depends on the length, so its subtext can change with duration.
+            document.getElementById('session-type-note').textContent = sessionTypeNote();
+        });
+
+        bindChoiceRow('home-session-type', (v) => {
+            state.sessionType = v;
+            saveState();
+            document.getElementById('session-type-note').textContent = sessionTypeNote();
         });
 
         // ---- Settings ----
@@ -4329,6 +4873,23 @@ permalink: /personal-trainer/
             renderProgress();
         }
 
+        const SESSION_TYPE_NOTES = {
+            core: 'Core and pilates circuit only — no mobility block.',
+            mixed: 'Circuit plus a short mobility block before the stretches.',
+            mobility: 'A gentle stretch session: warm-up, mobility, cool-down.'
+        };
+
+        // The subtext under Generate. For an explicit choice it's the static line; on Auto
+        // it names the shape the app would pick right now and why, so the decision is
+        // visible rather than a surprise when the workout appears.
+        function sessionTypeNote() {
+            const t = state.sessionType || 'auto';
+            if (t !== 'auto') return SESSION_TYPE_NOTES[t] || SESSION_TYPE_NOTES.mixed;
+            const c = chooseSessionType();
+            const cap = c.reason.charAt(0).toUpperCase() + c.reason.slice(1);
+            return `Auto: ${cap}.`;
+        }
+
         function renderToday() {
             document.getElementById('stat-level').textContent = levelLabel();
             // Set the numeric stats to their final value synchronously so the DOM is
@@ -4342,6 +4903,9 @@ permalink: /personal-trainer/
             sEl.textContent = state.streak;
             applyStreakGlow(state.streak);
             markSelected('home-duration', state.duration);
+            markSelected('home-session-type', state.sessionType || 'auto');
+            document.getElementById('session-type-note').textContent = sessionTypeNote();
+            document.getElementById('checkin-prompt').hidden = !checkinDue();
 
             const goal = state.weeklyGoal || 3;
             const done = workoutsThisWeek();
@@ -4376,8 +4940,8 @@ permalink: /personal-trainer/
         }
 
         function renderProgress() {
-            ['core', 'pilates'].forEach((disc) => {
-                const score = state.prog[disc];
+            ['core', 'pilates', 'mobility'].forEach((disc) => {
+                const score = state.prog[disc] || 0;
                 const cap = tierCap(score);
                 document.getElementById(`${disc}-tier`).textContent = `Tier ${cap} of 5`;
                 document.getElementById(`${disc}-bar`).style.width = `${Math.min(100, (score / MAX_SCORE) * 100)}%`;
@@ -4387,6 +4951,8 @@ permalink: /personal-trainer/
             document.getElementById('ach-badge-count').textContent = unlocked ? `${unlocked}/${ACHIEVEMENTS.length}` : '';
 
             renderBalance();
+            renderMobilityBalance();
+            renderCheckinCard();
             renderBodyMap();
             renderAchProgress();
             renderRecPreview();
@@ -4428,6 +4994,44 @@ permalink: /personal-trainer/
                 const list = lagging.length === 1 ? lagging[0]
                     : lagging.slice(0, -1).join(', ') + ' and ' + lagging[lagging.length - 1];
                 note.textContent = `Your ${list} ${lagging.length === 1 ? 'is' : 'are'} lagging — the next few workouts will lean that way to even you out.`;
+            }
+        }
+
+        // The same read-out for the joint areas. Deliberately kept off the body map: that
+        // diagram is a trunk-volume picture and mobility isn't trunk volume.
+        function renderMobilityBalance() {
+            const bars = document.getElementById('mob-balance-bars');
+            const scoreEl = document.getElementById('mob-balance-score');
+            const note = document.getElementById('mob-balance-note');
+            const bal = mobilityBalance();
+            const last = latestAssessment();
+            const symmetry = last ? mobilitySymmetryHtml(last.derived) : '';
+            if (!bal.total) {
+                scoreEl.textContent = '';
+                bars.innerHTML = symmetry;
+                note.textContent = 'Pick a Mixed or Mobility session on Today and your joint work shows up here — each session leans toward whatever area you’ve opened least.';
+                return;
+            }
+            scoreEl.textContent = `${bal.score}% even`;
+            const isLow = (a) => bal.shares[a] / bal.target < 0.85;
+            bars.innerHTML = MOBILITY_AREAS.map((a) => {
+                const fill = Math.max(3, Math.min(100, (bal.shares[a] / bal.target) / 2 * 100));
+                const low = isLow(a) ? ' low' : ' mob';
+                return `<div class="bal-row">
+                    <span class="bal-label">${MOBILITY_LABELS[a]}</span>
+                    <div class="bal-track"><div class="bal-fill${low}" style="width:${fill}%"></div><span class="bal-target"></span></div>
+                    <span class="bal-pct${isLow(a) ? ' low' : ''}">${Math.round(bal.shares[a] * 100)}%</span>
+                </div>`;
+            }).join('') + symmetry;
+            const lagging = MOBILITY_AREAS.filter(isLow)
+                .sort((a, b) => bal.shares[a] - bal.shares[b])
+                .map((a) => MOBILITY_LABELS[a].toLowerCase());
+            if (!lagging.length) {
+                note.textContent = 'Every area is getting its share of range work.';
+            } else {
+                const list = lagging.length === 1 ? lagging[0]
+                    : lagging.slice(0, -1).join(', ') + ' and ' + lagging[lagging.length - 1];
+                note.textContent = `Least-opened lately: ${list}. The next mobility block will lean that way.`;
             }
         }
 
@@ -4643,20 +5247,31 @@ permalink: /personal-trainer/
                         <span class="tier-badge t${ex.tier}">T${ex.tier}</span>
                         <div>
                             <div class="name">${ex.name}</div>
-                            <div class="meta">${ex.disc === 'core' ? 'Core' : ex.disc === 'pilates' ? 'Pilates' : ex.focus}</div>
+                            <div class="meta">${ex.disc === 'core' ? 'Core' : ex.disc === 'pilates' ? 'Pilates' : ex.disc === 'mobility' ? MOBILITY_LABELS[ex.focus] || ex.focus : ex.focus}</div>
                         </div>
-                        <span class="dose">${doseLabel(ex, doseFor(ex, state.prog[ex.disc] ?? 0))}</span>
+                        <span class="dose">${doseLabel(ex, plannedDose(ex, w))}</span>
                         ${hasVideo ? `<button class="plan-play" data-play="${ex.id}" aria-label="Preview ${ex.name} video">▶</button>` : ''}
                         ${hasVideo ? `<div class="plan-video" id="pv-${ex.id}"></div>` : ''}
                     </div>`;
                 }).join('')}`;
 
             const mins = Math.round(w.totalSecs / 60);
+            const exCount = w.exCount !== undefined ? w.exCount : w.main.length;
+            // When Auto chose the shape, name it here too — the user didn't pick this, so
+            // the preview shouldn't be the first place they notice it's a stretch day.
+            const AUTO_SHAPE = { core: 'a core session', mixed: 'a mixed session', mobility: 'a mobility day' };
+            const autoNote = w.requestedType === 'auto'
+                ? `<p class="muted-note mb-2">🧠 Auto picked <strong class="txt-strong">${AUTO_SHAPE[w.sessionType] || 'a session'}</strong> for you.</p>`
+                : '';
             list.innerHTML =
-                `<p class="muted-note mb-2">≈ ${mins} min · ${w.main.length} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level · tap ▶ to preview</p>` +
+                `<p class="muted-note mb-2">≈ ${mins} min · ${exCount} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level · tap ▶ to preview</p>` +
+                autoNote +
                 (w.twist ? `<p class="muted-note mb-2"><img class="ico twist-ico" src="/img/pt/twists.png" alt="">Today's twist: <strong class="txt-strong">${w.twist.label}</strong> — ${w.twist.desc}</p>` : '') +
                 section('Warm-up', w.warmups) +
-                section(w.rounds > 1 ? `Main circuit — ${w.rounds} rounds` : 'Main workout', w.main) +
+                (w.main.length ? section(w.rounds > 1 ? `Main circuit — ${w.rounds} rounds` : 'Main workout', w.main) : '') +
+                (w.mobility && w.mobility.length
+                    ? section(w.mobilityRounds > 1 ? `Mobility — ${w.mobilityRounds} rounds` : 'Mobility', w.mobility)
+                    : '') +
                 section('Cool-down', w.cooldowns);
 
             list.querySelectorAll('[data-play]').forEach((btn) => {
@@ -5184,7 +5799,7 @@ permalink: /personal-trainer/
             const mins = Math.max(1, Math.round((Date.now() - player.startedAt) / 60000));
             const prs = currentWorkout.newRecords || 0;
             document.getElementById('complete-summary').textContent =
-                `${mins} min · ${currentWorkout.main.length} exercises${currentWorkout.rounds > 1 ? ` × ${currentWorkout.rounds} rounds` : ''}`
+                `${mins} min · ${currentWorkout.exCount} exercises${currentWorkout.rounds > 1 ? ` × ${currentWorkout.rounds} rounds` : ''}`
                 + (prs ? ` · ${prs} new record${prs === 1 ? '' : 's'} 🏅` : '');
 
             // Show the streak/goal this workout is about to secure
@@ -5210,12 +5825,13 @@ permalink: /personal-trainer/
 
         const FEEDBACK_DELTA = { easy: 8, right: 4, hard: -5 };
 
-        const DISC_NAMES = { core: 'Core Fitness', pilates: 'Mat Pilates' };
-        // Discipline-flavoured confetti palettes (Core orange, Pilates blue), each
-        // with a couple of accent flecks so a tier-up burst reads as "that one".
+        const DISC_NAMES = { core: 'Core Fitness', pilates: 'Mat Pilates', mobility: 'Mobility' };
+        // Discipline-flavoured confetti palettes (Core orange, Pilates blue, Mobility
+        // green), each with a couple of accent flecks so a tier-up burst reads as "that one".
         const DISC_CONFETTI = {
             core: ['#ef8a5f', '#f0a874', '#fbbf24'],
-            pilates: ['#6bb8ef', '#8fcbf3', '#3ecf8e']
+            pilates: ['#6bb8ef', '#8fcbf3', '#3ecf8e'],
+            mobility: ['#10b981', '#3ecf8e', '#6bb8ef']
         };
         const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -5224,10 +5840,18 @@ permalink: /personal-trainer/
                 const fb = btn.dataset.fb;
                 const delta = FEEDBACK_DELTA[fb];
                 // Snapshot what a reward would be measured against, before we mutate.
-                const beforeTier = { core: tierCap(state.prog.core), pilates: tierCap(state.prog.pilates) };
+                const beforeTier = { core: tierCap(state.prog.core), pilates: tierCap(state.prog.pilates), mobility: tierCap(state.prog.mobility) };
                 const beforeStreak = state.streak;
 
-                ['core', 'pilates'].forEach((disc) => {
+                // Only the disciplines this session actually trained move. A mobility-only
+                // session says nothing about your plank, and a core-only one says nothing
+                // about your hips — advancing the untrained track on that feedback would
+                // hand out doses you never earned.
+                const trained = new Set(currentWorkout.items
+                    .filter((it) => it.kind === 'work')
+                    .map((it) => it.ex.disc));
+                ['core', 'pilates', 'mobility'].forEach((disc) => {
+                    if (!trained.has(disc)) return;
                     state.prog[disc] = Math.max(0, Math.min(MAX_SCORE, state.prog[disc] + delta));
                 });
 
@@ -5238,22 +5862,29 @@ permalink: /personal-trainer/
                 state.history.push({
                     ts: now,
                     mins: currentWorkout.actualMins,
-                    count: currentWorkout.main.length,
+                    count: currentWorkout.exCount,
                     rounds: currentWorkout.rounds,
                     fb,
+                    // The resolved shape, so Auto can see whether the last session was
+                    // already a mobility day and avoid stacking two in a row.
+                    type: currentWorkout.sessionType,
                     level: levelLabel()
                 });
-                state.lastExerciseIds = currentWorkout.main.map((e) => e.id);
+                state.lastExerciseIds = currentWorkout.main
+                    .concat(currentWorkout.mobility || [])
+                    .map((e) => e.id);
                 // Fold this session's work into the running muscle balance so the next
-                // workouts can steer toward whatever regions it left behind.
+                // workouts can steer toward whatever regions it left behind. The two
+                // ledgers are credited separately and never see each other's items.
                 creditMuscleLoad(currentWorkout.items);
+                creditMobilityLoad(currentWorkout.items);
                 state.bestStreak = Math.max(state.bestStreak || 0, state.streak);
                 const unlocked = checkAchievements();
                 saveState();
                 goHome();
 
                 // ---- Celebrate the payoff, richest moment first ------------------
-                const tierUps = ['core', 'pilates'].filter((d) => tierCap(state.prog[d]) > beforeTier[d]);
+                const tierUps = ['core', 'pilates', 'mobility'].filter((d) => tierCap(state.prog[d]) > beforeTier[d]);
                 const streakMilestone = state.streak > beforeStreak && STREAK_MILESTONES.includes(state.streak);
 
                 // A tier-up upgrades the finish confetti to that discipline's colours
@@ -5701,7 +6332,7 @@ permalink: /personal-trainer/
         // =====================================================
         // Library (with editable YouTube links)
         // =====================================================
-        const DISC_TITLES = { warmup: 'Warm-up', core: 'Core Fitness', pilates: 'Mat Pilates', cooldown: 'Cool-down' };
+        const DISC_TITLES = { warmup: 'Warm-up', core: 'Core Fitness', pilates: 'Mat Pilates', mobility: 'Mobility', cooldown: 'Cool-down' };
 
         // Stop and remove every inline preview video in the exercise library.
         function clearLibraryVideos() {
@@ -5731,7 +6362,7 @@ permalink: /personal-trainer/
             // ones that would otherwise render as an empty titled card.
             const q = (document.getElementById('lib-search').value || '').trim().toLowerCase();
             const matches = (e) => !q || e.name.toLowerCase().includes(q);
-            const groups = ['core', 'pilates', 'warmup', 'cooldown']
+            const groups = ['core', 'pilates', 'mobility', 'warmup', 'cooldown']
                 .filter((disc) => EXERCISES.some((e) => e.disc === disc && matches(e)));
             if (!groups.length) {
                 list.innerHTML = '<div class="card"><p class="muted-note center">No exercises match that search.</p></div>';
@@ -5824,6 +6455,17 @@ permalink: /personal-trainer/
         // Each badge tracks a numeric metric toward a target, so partial progress can be shown.
         const totalMinutes = () => state.history.reduce((t, h) => t + h.mins, 0);
         const maxDiscTier = () => tierCap(Math.max(state.prog.core, state.prog.pilates));
+        const bestCheckinPlank = () =>
+            (state.assessments || []).reduce((t, a) => Math.max(t, (a.core && a.core.plank) || 0), 0);
+        // A side-plank imbalance that was worth acting on (below 0.9) and has since come
+        // back to near-even. The earlier lopsided check-in has to come first, so this
+        // can't be earned by simply testing even from the start.
+        const symmetryRestored = () => {
+            const ratios = (state.assessments || [])
+                .map((a) => a.derived && a.derived.sideSymmetry)
+                .filter((r) => typeof r === 'number');
+            return ratios.some((r, i) => r < 0.9 && ratios.slice(i + 1).some((later) => later >= 0.95));
+        };
         const ACHIEVEMENTS = [
             { id: 'first', emoji: '🎯', name: 'First workout', desc: 'Complete your first session', value: () => state.history.length, target: 1 },
             { id: 'w5', emoji: '⭐', name: 'Warmed up', desc: 'Complete 5 workouts', value: () => state.history.length, target: 5 },
@@ -5856,7 +6498,11 @@ permalink: /personal-trainer/
             { id: 'year1', emoji: '🎂', name: 'One-year club', desc: 'Train across a full year', value: historySpanDays, target: 365 },
             { id: 'explorer', emoji: '🧭', name: 'Explorer', desc: 'Set records on 25 different exercises', value: recordedExerciseCount, target: 25 },
             { id: 'pr10', emoji: '📈', name: 'Record breaker', desc: 'Beat your own records 10 times', value: improvementCount, target: 10 },
-            { id: 'pr25', emoji: '💥', name: 'Limit pusher', desc: 'Beat your own records 25 times', value: improvementCount, target: 25 }
+            { id: 'pr25', emoji: '💥', name: 'Limit pusher', desc: 'Beat your own records 25 times', value: improvementCount, target: 25 },
+            { id: 'checkin1', emoji: '📋', name: 'Measured', desc: 'Complete your first check-in', value: () => (state.assessments || []).length, target: 1 },
+            { id: 'checkin4', emoji: '📊', name: 'Tracked', desc: 'Complete 4 check-ins', value: () => (state.assessments || []).length, target: 4 },
+            { id: 'plank60', emoji: '🪵', name: 'Minute plank', desc: 'Hold a 60-second plank in a check-in', value: bestCheckinPlank, target: 60 },
+            { id: 'symmetry', emoji: '⚖️', name: 'Evened out', desc: 'Bring a lopsided side plank back to within 5%', value: () => (symmetryRestored() ? 1 : 0), target: 1 }
         ].map((a) => Object.assign(a, { test: () => a.value() >= a.target }));
 
         function checkAchievements() {
@@ -5929,6 +6575,472 @@ permalink: /personal-trainer/
                 </div>`;
             }).join('');
         }
+
+        // =====================================================
+        // Check-ins
+        // =====================================================
+        // The muscle-balance engine measures training *volume*. A check-in measures
+        // *capacity*: what you can actually hold and how far you can actually reach.
+        // The two can disagree — a region you've trained plenty can still test weak —
+        // and when they do, the measured answer is the more interesting one, so it
+        // stacks an extra pull on top of the volume balance in the generator.
+        //
+        // Everything below presents personal trend and left/right symmetry only. The
+        // published norms for these tests come from small samples, the form standard is
+        // whatever you decided it was, and the back-extension here is a Sørensen *proxy*
+        // rather than the strapped clinical test — a percentile grade off any of that
+        // would be false precision dressed up as a verdict.
+
+        function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+
+        function latestAssessment() {
+            const list = state.assessments || [];
+            return list.length ? list[list.length - 1] : null;
+        }
+
+        function scoreCheckin(core, mob) {
+            // core: { plank, sideL, sideR, superman, bridge } seconds (any may be missing)
+            // mob:  { sitreach, kneewallL, kneewallR, backscratchL, backscratchR } cm
+            const derived = {};
+
+            // ---- Core: capacity per trunk region, normalised to shares ----
+            // Only tests you actually ran take part. A skipped test is missing data, not
+            // a score of zero — counting it as zero would read as "maximally weak" and
+            // send the generator chasing a region you never measured.
+            const cap = {};
+            if (core) {
+                if (core.plank != null) cap.abs = core.plank;
+                const sides = [core.sideL, core.sideR].filter((v) => v != null);
+                if (sides.length) cap.obliques = sides.reduce((t, v) => t + v, 0) / sides.length;
+                if (core.superman != null) cap.back = core.superman;
+                if (core.bridge != null) cap.glutes = core.bridge;
+            }
+            const measured = MUSCLE_GROUPS.filter((g) => cap[g] !== undefined);
+            if (measured.length) {
+                const total = measured.reduce((t, g) => t + cap[g], 0) || 1;
+                const shares = {};
+                measured.forEach((g) => { shares[g] = cap[g] / total; });
+                // "How weak", 0..1: how far each measured region sits below an even share
+                // of the measured total. At or above its share it pulls nothing.
+                const target = 1 / measured.length;
+                const weak = {};
+                MUSCLE_GROUPS.forEach((g) => {
+                    weak[g] = cap[g] === undefined ? 0 : Math.max(0, (target - shares[g]) / target);
+                });
+                derived.coreCapacity = cap;
+                derived.coreShares = shares;
+                derived.coreMeasured = measured;
+                derived.coreWeak = weak;
+                if (core.sideL != null && core.sideR != null) {
+                    const lo = Math.min(core.sideL, core.sideR);
+                    const hi = Math.max(core.sideL, core.sideR) || 1;
+                    derived.sideSymmetry = lo / hi;   // 1 = even; below 0.9 is worth acting on
+                    derived.weakSide = core.sideL < core.sideR ? 'left' : 'right';
+                }
+            }
+
+            // ---- Mobility: each test converted to a 0..1 "how stiff" weight ----
+            if (mob) {
+                const stiff = {};
+                if (mob.sitreach != null) stiff.hamstrings = clamp01((15 - mob.sitreach) / 30);
+                if (mob.kneewallL != null && mob.kneewallR != null) {
+                    const avg = (mob.kneewallL + mob.kneewallR) / 2;
+                    stiff.ankles = clamp01((10 - avg) / 10);   // under ~10cm is a restricted ankle
+                    const lo = Math.min(mob.kneewallL, mob.kneewallR);
+                    const hi = Math.max(mob.kneewallL, mob.kneewallR) || 1;
+                    derived.ankleSymmetry = lo / hi;
+                    derived.stiffAnkle = mob.kneewallL < mob.kneewallR ? 'left' : 'right';
+                }
+                if (mob.backscratchL != null && mob.backscratchR != null) {
+                    const worse = Math.max(mob.backscratchL, mob.backscratchR); // a bigger gap is worse
+                    stiff.shoulders = clamp01((worse + 5) / 20);
+                    derived.shoulderSymmetry = 1 - Math.min(1, Math.abs(mob.backscratchL - mob.backscratchR) / 15);
+                    derived.stiffShoulder = mob.backscratchL > mob.backscratchR ? 'left' : 'right';
+                }
+                derived.mobStiff = stiff;
+            }
+            return derived;
+        }
+
+        // ---- Check-in read-outs ----
+        // A two-sided bar. Each half's length is that side's *goodness*, so a longer bar
+        // always means the better side — tests where a smaller number is better get
+        // flipped first rather than drawn upside-down.
+        function symmetryRowHtml(title, left, right, unit, smallerIsBetter) {
+            if (left == null || right == null) return '';
+            const good = (v) => Math.max(1, smallerIsBetter ? 30 - v : v);
+            const gl = good(left);
+            const gr = good(right);
+            const hi = Math.max(gl, gr);
+            const ratio = Math.min(gl, gr) / hi;
+            const even = gl === gr;
+            const weakLeft = !even && gl < gr;
+            const weakRight = !even && gr < gl;
+            const fmt = (v) => `${v}${unit}`;
+            const verdict = even || ratio >= 0.9
+                ? 'Evenly matched.'
+                : `Your ${weakLeft ? 'left' : 'right'} side is behind — the plan will keep an eye on it.`;
+            return `<div class="section-title">${title}</div>
+                <div class="ck-sym">
+                    <span class="ck-sym-end">L</span>
+                    <div class="ck-sym-track">
+                        <div class="${weakLeft ? 'weak' : ''}" style="width:${(gl / hi * 50).toFixed(1)}%"></div>
+                        <div class="${weakRight ? 'weak' : ''}" style="width:${(gr / hi * 50).toFixed(1)}%"></div>
+                    </div>
+                    <span class="ck-sym-end right">R</span>
+                </div>
+                <p class="muted-note mt-2">${fmt(left)} left · ${fmt(right)} right · ${Math.round(ratio * 100)}% even. ${verdict}</p>`;
+        }
+
+        // The mobility card's symmetry footer — ankles and shoulders, the two tests that
+        // are measured on both sides.
+        function mobilitySymmetryHtml(derived) {
+            if (!derived) return '';
+            const a = latestAssessment();
+            const mob = (a && a.mob) || {};
+            return symmetryRowHtml('Ankle range (knee-to-wall)', mob.kneewallL, mob.kneewallR, 'cm', false)
+                + symmetryRowHtml('Shoulder reach (back-scratch)', mob.backscratchL, mob.backscratchR, 'cm', true);
+        }
+
+        // Measured capacity per trunk region, as shares against an even split — the same
+        // bar language as the volume balance, so the two cards can be read against each
+        // other without relearning anything.
+        function coreCapacityBarsHtml(derived) {
+            if (!derived || !derived.coreShares) return '';
+            // Untested regions are left off rather than drawn as an empty bar, which would
+            // read as "you scored nothing here".
+            const groups = derived.coreMeasured || MUSCLE_GROUPS.filter((g) => derived.coreShares[g] !== undefined);
+            if (!groups.length) return '';
+            const target = 1 / groups.length;
+            return groups.map((g) => {
+                const share = derived.coreShares[g] || 0;
+                const secs = Math.round(derived.coreCapacity[g] || 0);
+                const low = share / target < 0.85;
+                const fill = Math.max(3, Math.min(100, (share / target) / 2 * 100));
+                return `<div class="bal-row">
+                    <span class="bal-label">${MUSCLE_LABELS[g]}</span>
+                    <div class="bal-track"><div class="bal-fill${low ? ' low' : ''}" style="width:${fill}%"></div><span class="bal-target"></span></div>
+                    <span class="bal-pct${low ? ' low' : ''}">${secs}s</span>
+                </div>`;
+            }).join('');
+        }
+
+        // Plank hold across every check-in that recorded one. The shape is the message;
+        // the current number sits above it.
+        function plankSparkHtml() {
+            const vals = (state.assessments || [])
+                .map((a) => (a.core && a.core.plank) || 0)
+                .filter((v) => v > 0);
+            if (vals.length < 2) return '';
+            const hi = Math.max(...vals);
+            const first = vals[0];
+            const last = vals[vals.length - 1];
+            const delta = last - first;
+            const bars = vals.map((v) => `<div style="height:${Math.max(8, (v / hi) * 100)}%"></div>`).join('');
+            return `<div class="section-title">Plank hold over time</div>
+                <div class="ck-spark">${bars}</div>
+                <p class="muted-note mt-2">${last}s now, ${first}s at your first check-in — ${delta === 0 ? 'holding steady' : `${delta > 0 ? '▲ +' : '▼ '}${Math.abs(delta)}s`}.</p>`;
+        }
+
+        function renderCheckinCard() {
+            const whenEl = document.getElementById('checkin-when');
+            const body = document.getElementById('checkin-body');
+            const btn = document.getElementById('btn-run-checkin');
+            const a = latestAssessment();
+            if (!a) {
+                whenEl.textContent = '';
+                body.innerHTML = '<p class="muted-note mt-2">A six-minute battery of holds and reaches that measures what your training has actually bought you — and steers the next few weeks toward whatever tests weakest. Optional, and nothing is graded against anyone else.</p>';
+                btn.textContent = 'Run your first check-in';
+                return;
+            }
+            const days = Math.floor((Date.now() - a.ts) / 86400000);
+            whenEl.textContent = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+            btn.textContent = 'Run a check-in';
+            body.innerHTML =
+                (coreCapacityBarsHtml(a.derived) || '<p class="muted-note mt-2">No core holds recorded last time.</p>') +
+                symmetryRowHtml('Side plank, left vs right', a.core && a.core.sideL, a.core && a.core.sideR, 's', false) +
+                plankSparkHtml();
+        }
+
+        // ---- The runner ----
+        const checkin = {
+            steps: [],
+            idx: 0,
+            core: {},
+            mob: {},
+            includeMob: true,
+            timer: null,
+            startedAt: 0,
+            phase: 'idle' // 'idle' → 'ready' (5s to get set) → 'holding'
+        };
+
+        function buildCheckinSteps(includeMob) {
+            const steps = [];
+            CHECKIN_TESTS.forEach((t) => {
+                if (t.battery === 'mob' && !includeMob) return;
+                if (t.perSide) {
+                    steps.push({ test: t, side: 'Left', key: `${t.key}L` });
+                    steps.push({ test: t, side: 'Right', key: `${t.key}R` });
+                } else {
+                    steps.push({ test: t, side: null, key: t.key });
+                }
+            });
+            return steps;
+        }
+
+        function stopCheckinTimer() {
+            if (checkin.timer) {
+                clearInterval(checkin.timer);
+                checkin.timer = null;
+            }
+        }
+
+        // Leaving the screen abandons the run: a half-finished battery isn't a result,
+        // and silently resuming one from days ago would quietly corrupt the trend.
+        function resetCheckin() {
+            stopCheckinTimer();
+            checkin.phase = 'idle';
+            document.getElementById('checkin-run').hidden = true;
+            document.getElementById('checkin-result').hidden = true;
+            document.getElementById('checkin-intro').hidden = false;
+        }
+
+        function startCheckin() {
+            checkin.includeMob = selectedValue('checkin-mob-toggle') !== 'off';
+            checkin.steps = buildCheckinSteps(checkin.includeMob);
+            checkin.idx = 0;
+            checkin.core = {};
+            checkin.mob = {};
+            document.getElementById('checkin-intro').hidden = true;
+            document.getElementById('checkin-result').hidden = true;
+            document.getElementById('checkin-run').hidden = false;
+            showCheckinStep();
+        }
+
+        function setCheckinDisplay(secs) {
+            document.getElementById('ck-display').textContent = fmtTime(secs);
+        }
+
+        function showCheckinStep() {
+            stopCheckinTimer();
+            if (checkin.idx >= checkin.steps.length) {
+                finishCheckin();
+                return;
+            }
+            const step = checkin.steps[checkin.idx];
+            const t = step.test;
+            document.getElementById('ck-step-count').textContent = `Test ${checkin.idx + 1} of ${checkin.steps.length}`;
+            document.getElementById('ck-name').textContent = t.name;
+            document.getElementById('ck-side').textContent = step.side ? `${step.side} side` : '';
+            document.getElementById('ck-setup').textContent = t.setup;
+            document.getElementById('ck-stop').innerHTML = t.stop
+                ? `<span class="mistake-icon">⏱️</span><span><strong>Stop when:</strong> ${escapeHtml(t.stop)}</span>`
+                : '';
+
+            const isHold = t.measure === 'hold';
+            document.getElementById('ck-hold').hidden = !isHold;
+            document.getElementById('ck-dist').hidden = isHold;
+            if (isHold) {
+                checkin.phase = 'idle';
+                document.getElementById('ck-display').classList.remove('ready');
+                setCheckinDisplay(0);
+                document.getElementById('ck-hold-action').textContent = 'Start the hold';
+            } else {
+                document.getElementById('ck-hint').textContent = t.hint || '';
+                document.getElementById('ck-value').value = '0';
+            }
+            speak(step.side ? `${t.name}, ${step.side} side` : t.name, true);
+            window.scrollTo(0, 0);
+        }
+
+        function checkinHoldAction() {
+            if (checkin.phase === 'idle') startCheckinReady();
+            else if (checkin.phase === 'holding') recordCheckinHold();
+        }
+
+        function startCheckinReady() {
+            checkin.phase = 'ready';
+            let left = 5;
+            const disp = document.getElementById('ck-display');
+            disp.classList.add('ready');
+            disp.textContent = left;
+            document.getElementById('ck-hold-action').textContent = 'Getting into position…';
+            speak('Get into position', true);
+            checkin.timer = setInterval(() => {
+                left -= 1;
+                if (left > 0) {
+                    disp.textContent = left;
+                    beep(660);
+                    haptic('countdown');
+                    return;
+                }
+                stopCheckinTimer();
+                startCheckinHold();
+            }, 1000);
+        }
+
+        function startCheckinHold() {
+            checkin.phase = 'holding';
+            checkin.startedAt = Date.now();
+            const disp = document.getElementById('ck-display');
+            disp.classList.remove('ready');
+            setCheckinDisplay(0);
+            document.getElementById('ck-hold-action').textContent = '✓ Form broke — stop';
+            beep(880);
+            haptic('work');
+            speak('Hold', true);
+            // Driven off a start timestamp rather than a tick count: this timer runs for
+            // minutes with the screen possibly asleep, and a throttled interval would
+            // quietly under-report the hold.
+            checkin.timer = setInterval(() => {
+                setCheckinDisplay(Math.floor((Date.now() - checkin.startedAt) / 1000));
+            }, 200);
+        }
+
+        function recordCheckinHold() {
+            stopCheckinTimer();
+            const step = checkin.steps[checkin.idx];
+            checkin.core[step.key] = Math.max(0, Math.round((Date.now() - checkin.startedAt) / 1000));
+            beep(1100);
+            haptic('record');
+            checkin.idx += 1;
+            showCheckinStep();
+        }
+
+        function saveCheckinDistance() {
+            const raw = parseFloat(document.getElementById('ck-value').value);
+            if (!isFinite(raw)) return;
+            checkin.mob[checkin.steps[checkin.idx].key] = raw;
+            haptic('record');
+            checkin.idx += 1;
+            showCheckinStep();
+        }
+
+        function skipCheckinStep() {
+            stopCheckinTimer();
+            checkin.idx += 1;
+            showCheckinStep();
+        }
+
+        function nudgeCheckinValue(delta) {
+            const el = document.getElementById('ck-value');
+            const cur = parseFloat(el.value);
+            el.value = ((isFinite(cur) ? cur : 0) + delta).toFixed(1).replace(/\.0$/, '');
+        }
+
+        // A max hold is a completed dose like any other, so it can set a personal record.
+        // For a two-sided test the honest number is the weaker side — that's the one you
+        // could repeat on both.
+        function bankCheckinRecords(core) {
+            const now = Date.now();
+            CHECKIN_TESTS.forEach((t) => {
+                if (t.measure !== 'hold' || !t.exId) return;
+                const ex = EX_BY_ID[t.exId];
+                if (!ex || ex.type !== 'secs') return;
+                const secs = t.perSide
+                    ? Math.min(core[`${t.key}L`] ?? 0, core[`${t.key}R`] ?? 0)
+                    : (core[t.key] ?? 0);
+                if (!secs) return;
+                const rec = state.records[ex.id] || (state.records[ex.id] = { type: ex.type, best: 0, hist: [] });
+                if (secs <= rec.best) return;
+                rec.best = secs;
+                rec.hist.push({ ts: now, v: secs });
+                if (rec.hist.length > 30) rec.hist.shift();
+            });
+        }
+
+        function finishCheckin() {
+            stopCheckinTimer();
+            const core = checkin.core;
+            const mob = checkin.includeMob ? checkin.mob : null;
+            const derived = scoreCheckin(core, mob);
+            const entry = { ts: Date.now(), core, mob: mob || {}, derived };
+            state.assessments.push(entry);
+            if (state.assessments.length > 40) state.assessments.shift();
+            if (derived.coreWeak) state.assessmentBias = derived.coreWeak;
+            // Untested areas stay at zero rather than inheriting an old pull, so skipping
+            // the tape leaves your mobility targets exactly where they were.
+            if (derived.mobStiff) {
+                state.mobilityBias = Object.assign(emptyMobilityLoad(), derived.mobStiff);
+            }
+            state.lastAssessment = entry.ts;
+            state.checkinSnoozedTs = 0;
+            bankCheckinRecords(core);
+            const unlocked = checkAchievements();
+            saveState();
+            renderHome();
+            renderCheckinResult(entry);
+            document.getElementById('checkin-run').hidden = true;
+            document.getElementById('checkin-result').hidden = false;
+            window.scrollTo(0, 0);
+            beep(880);
+            setTimeout(() => beep(1100), 200);
+            haptic('complete');
+            speak('Check-in complete.', true);
+            celebrate();
+            showAchievementToasts(unlocked);
+        }
+
+        function renderCheckinResult(a) {
+            document.getElementById('ck-result-date').textContent =
+                new Date(a.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            const d = a.derived || {};
+            const measured = d.coreMeasured || [];
+            const weakest = d.coreWeak
+                ? MUSCLE_GROUPS.slice().sort((x, y) => (d.coreWeak[y] || 0) - (d.coreWeak[x] || 0))[0]
+                : null;
+            let lead;
+            if (!measured.length) {
+                lead = 'No core holds recorded this time — the mobility results below still count.';
+            } else if (measured.length < 2) {
+                lead = 'Only one core region was tested, so there’s nothing to compare across the trunk this time.';
+            } else if (weakest && d.coreWeak[weakest] > 0) {
+                lead = `Your <strong class="txt-strong">${MUSCLE_LABELS[weakest].toLowerCase()}</strong> held out shortest today, so the next few sessions will lean that way.`;
+            } else {
+                lead = 'The regions you tested held up evenly today — nothing to chase.';
+            }
+            const stiffest = d.mobStiff && Object.keys(d.mobStiff).length
+                ? Object.keys(d.mobStiff).sort((x, y) => d.mobStiff[y] - d.mobStiff[x])[0]
+                : null;
+            const mobLead = stiffest && d.mobStiff[stiffest] > 0.15
+                ? `<p class="muted-note mt-3">Tightest area: <strong class="txt-strong">${MOBILITY_LABELS[stiffest].toLowerCase()}</strong>. Your mobility blocks will favour it.</p>`
+                : '';
+            document.getElementById('ck-result-body').innerHTML =
+                `<p class="muted-note mt-2">${lead}</p>` + mobLead +
+                coreCapacityBarsHtml(d) +
+                symmetryRowHtml('Side plank, left vs right', a.core.sideL, a.core.sideR, 's', false) +
+                symmetryRowHtml('Ankle range (knee-to-wall)', a.mob.kneewallL, a.mob.kneewallR, 'cm', false) +
+                symmetryRowHtml('Shoulder reach (back-scratch)', a.mob.backscratchL, a.mob.backscratchR, 'cm', true) +
+                '<p class="muted-note mt-4">These are endurance and range self-tests, not clinical measurements. Compare them to your own last check-in, not to anyone else’s numbers.</p>';
+        }
+
+        // Overdue, and not snoozed in the last week. Gated on a real training history so
+        // it can't greet someone on their second session.
+        function checkinDue() {
+            if (!state.setupDone || state.history.length < 6) return false;
+            const now = Date.now();
+            const interval = (state.assessmentIntervalDays || 35) * 86400000;
+            if (now - (state.lastAssessment || 0) < interval) return false;
+            return now - (state.checkinSnoozedTs || 0) > 7 * 86400000;
+        }
+
+        bindChoiceRow('checkin-mob-toggle', () => { /* read at Begin — nothing to persist */ });
+        document.getElementById('btn-checkin-begin').addEventListener('click', startCheckin);
+        document.getElementById('ck-hold-action').addEventListener('click', checkinHoldAction);
+        document.getElementById('ck-hold-skip').addEventListener('click', skipCheckinStep);
+        document.getElementById('ck-dist-save').addEventListener('click', saveCheckinDistance);
+        document.getElementById('ck-dist-skip').addEventListener('click', skipCheckinStep);
+        document.getElementById('ck-minus').addEventListener('click', () => nudgeCheckinValue(-0.5));
+        document.getElementById('ck-plus').addEventListener('click', () => nudgeCheckinValue(0.5));
+        document.getElementById('ck-result-progress').addEventListener('click', () => switchTab('progress'));
+        document.getElementById('ck-result-done').addEventListener('click', goHome);
+        document.getElementById('btn-run-checkin').addEventListener('click', () => navigate('checkin'));
+        document.getElementById('btn-checkin-start').addEventListener('click', () => navigate('checkin'));
+        document.getElementById('btn-checkin-later').addEventListener('click', () => {
+            state.checkinSnoozedTs = Date.now();
+            saveState();
+            renderHome();
+        });
 
         function showToast(innerHtml, ms, onDone) {
             const el = document.createElement('div');
