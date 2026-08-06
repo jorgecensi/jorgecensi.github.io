@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2608050941';
+const CACHE_VERSION = '2608060755';
 const CACHE_NAME = `personal-trainer-${CACHE_VERSION}`;
 const OFFLINE_URL = '/personal-trainer/';
 // Google Fonts serves the stylesheet from one host and the woff2 files from another,
