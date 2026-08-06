@@ -5905,7 +5905,13 @@ permalink: /personal-trainer/
             renderExerciseMedia(ex);
             beep(880);
             haptic('work');
-            speak(`${ex.name}${item.side ? ', ' + item.side : ''}`, true);
+            // Read the move out, then its form cues — the screen only shows one cue at a
+            // time (glanceable, mid-effort), so speaking the full set is how you hear the
+            // whole instruction without looking. Skipped on the right side of a two-sided
+            // move: the left side read the same cues a few seconds ago, so repeating them
+            // on the switch is just chatter. All of this no-ops when voice is off.
+            const spokenCues = item.side === 'Right side' ? '' : cuesToSpeech(ex.cues);
+            speak(`${ex.name}${item.side ? ', ' + item.side : ''}${spokenCues}`, true);
 
             if (ex.type === 'secs') {
                 actionBtn.textContent = 'Pause';
@@ -5915,6 +5921,14 @@ permalink: /personal-trainer/
                 timerEl.classList.add('no-ring');
                 displayEl.textContent = `${item.dose} reps`;
             }
+        }
+
+        // Join an exercise's form cues into one spoken clause, with sentence pauses so the
+        // synthesizer breaks between them rather than running them together. The leading
+        // separator lets it flow straight on after the move name in a single utterance.
+        function cuesToSpeech(cues) {
+            if (!cues || !cues.length) return '';
+            return '. ' + cues.map((c) => c.replace(/[.!?]+$/, '')).join('. ') + '.';
         }
 
         // One cue at a time during work, cycling every few seconds — a bulleted list is
