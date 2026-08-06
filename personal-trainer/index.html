@@ -2571,10 +2571,11 @@ permalink: /personal-trainer/
                 <div class="hero-greet" id="hero-greet">Ready when you are</div>
                 <div class="hero-sub" id="hero-sub">Pick a length and go.</div>
                 <img class="hero-mascot" src="/img/pt/barnaby-right.png" alt="">
-                <div class="choice-row" id="home-session-type">
-                    <div class="choice" data-v="core">Core<small>Circuit only</small></div>
+                <div class="choice-row cols-4" id="home-session-type">
+                    <div class="choice" data-v="auto">Auto<small>Smart pick</small></div>
+                    <div class="choice" data-v="core">Core<small>Circuit</small></div>
                     <div class="choice" data-v="mixed">Mixed<small>+ mobility</small></div>
-                    <div class="choice" data-v="mobility">Mobility<small>Stretch day</small></div>
+                    <div class="choice" data-v="mobility">Mobility<small>Stretch</small></div>
                 </div>
                 <div class="choice-row" id="home-duration">
                     <div class="choice" data-v="15">15 min</div>
@@ -2967,7 +2968,7 @@ permalink: /personal-trainer/
                     <div class="info-row"><span>🧘 Mobility</span><span class="muted-note">2–4 moves on a Mixed day</span></div>
                     <div class="info-row"><span><img class="ico info-ico" src="/img/pt/cooldown.png" alt="">Cool-down</span><span class="muted-note">3 stretches</span></div>
                     <p class="muted-note mt-3">Your session length sets the time budget, then the main circuit is filled with as many exercises as fit. Pick 40 minutes and the circuit repeats for a second round instead of just adding more moves.</p>
-                    <p class="muted-note mt-3">The session type you pick on Today reshapes this: <strong class="txt-strong">Core</strong> drops the mobility block, and <strong class="txt-strong">Mobility</strong> drops the circuit instead and spends that whole budget on longer-held joint work.</p>
+                    <p class="muted-note mt-3">The session type you pick on Today reshapes this: <strong class="txt-strong">Core</strong> drops the mobility block, and <strong class="txt-strong">Mobility</strong> drops the circuit instead and spends that whole budget on longer-held joint work. <strong class="txt-strong">Auto</strong> — the default — picks one of the three for you from how long it's been since you last stretched, whether a check-in flagged a stiff joint, and the length you chose; the line under the Generate button always says which it landed on and why.</p>
                 </div>
 
                 <div class="card">
@@ -3395,7 +3396,11 @@ permalink: /personal-trainer/
                 // reads as trunk training volume (and vice versa).
                 mobilityLoad: { hips: 0, hamstrings: 0, tspine: 0, shoulders: 0, ankles: 0 },
                 mobilityLoadTs: 0,
-                sessionType: 'mixed',        // 'core' | 'mixed' | 'mobility'
+                // Last time a session actually banked mobility work — the "days since you
+                // stretched" signal Auto reads. Separate from mobilityLoadTs, which is the
+                // decay anchor and moves on every workout regardless of what it contained.
+                lastMobilityTs: 0,
+                sessionType: 'auto',         // 'auto' | 'core' | 'mixed' | 'mobility'
                 // Check-ins: an opt-in self-test battery run every few weeks.
                 assessments: [],             // [{ ts, core:{…}, mob:{…}, derived:{…} }]
                 lastAssessment: 0,
@@ -3533,7 +3538,8 @@ permalink: /personal-trainer/
             if (s.prog.mobility === undefined) s.prog.mobility = 0;
             if (!s.mobilityLoad) s.mobilityLoad = { hips: 0, hamstrings: 0, tspine: 0, shoulders: 0, ankles: 0 };
             if (!s.assessments) s.assessments = [];
-            if (!s.sessionType) s.sessionType = 'mixed';
+            if (!s.sessionType) s.sessionType = 'auto';
+            if (s.lastMobilityTs === undefined) s.lastMobilityTs = 0;
             return s;
         }
 
@@ -3777,14 +3783,19 @@ permalink: /personal-trainer/
         function creditMobilityLoad(items) {
             const now = Date.now();
             const load = decayedMobilityLoad(now);
+            let credited = false;
             items.forEach((it) => {
                 if (it.kind !== 'work' || it.ex.disc !== 'mobility') return;
                 const a = it.ex.focus;
                 if (load[a] === undefined) return;
                 load[a] += it.secs; // holds and reps both bank time spent in the range
+                credited = true;
             });
             state.mobilityLoad = load;
             state.mobilityLoadTs = now;
+            // Only stamp the "last stretched" marker when this session actually had
+            // mobility in it — a pure core day must not reset the days-since counter.
+            if (credited) state.lastMobilityTs = now;
         }
 
         function mobilityBalance(now) {
@@ -3872,6 +3883,56 @@ permalink: /personal-trainer/
             return pickBalanced(pool, count, avoid, areaCount);
         }
 
+        // Days since a session last banked any mobility work. Infinity if never — a
+        // brand-new user has no gap to catch up on, which the cold-start guard below reads.
+        function daysSinceMobility() {
+            return state.lastMobilityTs ? (Date.now() - state.lastMobilityTs) / 86400000 : Infinity;
+        }
+
+        // The single stiffest joint area the last check-in measured, 0 if none.
+        function peakStiffness() {
+            if (!state.mobilityBias) return { area: null, value: 0 };
+            const area = MOBILITY_AREAS.slice()
+                .sort((a, b) => (state.mobilityBias[b] || 0) - (state.mobilityBias[a] || 0))[0];
+            return { area, value: state.mobilityBias[area] || 0 };
+        }
+
+        // Resolve the 'auto' session type into a concrete shape from data the app already
+        // keeps: how long since you stretched, whether a check-in flagged a stiff joint,
+        // and the length you picked. Returns the pick *and* a plain-English reason, so the
+        // choice is shown on Home rather than silently applied. Deliberately conservative:
+        // the default stays Mixed (a small mobility block always rides along), it only
+        // spends a whole session on mobility when the debt is real and there's time for it,
+        // and it never stacks two stretch days back to back.
+        function chooseSessionType() {
+            const dur = state.duration || 25;
+            const trained = (state.history || []).length;
+            const since = daysSinceMobility();
+            const stiff = peakStiffness();
+            const last = state.history && state.history[state.history.length - 1];
+            const lastWasMobility = last && last.type === 'mobility';
+            // Enough training logged that a mobility gap is a real gap, not a cold start —
+            // a new user's first sessions should be normal workouts, not a stretch day.
+            const debt = trained >= 4 && !lastWasMobility && (stiff.value >= 0.5 || since >= 10);
+
+            if (debt && dur >= 25) {
+                const why = stiff.value >= 0.5
+                    ? `${MOBILITY_LABELS[stiff.area].toLowerCase()} tested tight at your last check-in`
+                    : `${Math.round(since)} days since you last did mobility`;
+                return { type: 'mobility', reason: `mobility day — ${why}` };
+            }
+            if (dur <= 15 && !debt) {
+                return { type: 'core', reason: 'short session, so just the core circuit' };
+            }
+            return { type: 'mixed', reason: 'core circuit plus a short mobility block' };
+        }
+
+        // The requested type resolved to a concrete shape (Auto → its pick).
+        function resolvedSessionType() {
+            const req = state.sessionType || 'auto';
+            return req === 'auto' ? chooseSessionType().type : req;
+        }
+
         // How many mobility moves fit the reserved budget. A mixed session gets a short
         // top-off (2–4 moves); a dedicated one fills the slot but still caps out, because
         // past about eight drills a stretch session stops being one.
@@ -3888,7 +3949,9 @@ permalink: /personal-trainer/
         }
 
         function generateWorkout() {
-            const sessionType = state.sessionType || 'mixed';
+            const requestedType = state.sessionType || 'auto';
+            // Auto resolves here so the whole function downstream sees a concrete shape.
+            const sessionType = requestedType === 'auto' ? chooseSessionType().type : requestedType;
             const mobilityOnly = sessionType === 'mobility';
             const durationSecs = state.duration * 60;
             const avg = (state.prog.core + state.prog.pilates) / 2;
@@ -3985,7 +4048,7 @@ permalink: /personal-trainer/
                 if (pilatesPicks[i]) main.push(pilatesPicks[i]);
             }
 
-            const workout = { warmups, main, mobility, mobilityRounds, cooldowns, rounds, restSecs, twist, sessionType, mobilityDoseMult, doseMult: twist.doseMult || 1 };
+            const workout = { warmups, main, mobility, mobilityRounds, cooldowns, rounds, restSecs, twist, sessionType, requestedType, mobilityDoseMult, doseMult: twist.doseMult || 1 };
             workout.exCount = main.length + mobility.length;
             if (twist.finisher) {
                 // Exclude perSide moves — the finisher is a single all-out hold, not a two-sided set.
@@ -4446,12 +4509,14 @@ permalink: /personal-trainer/
         bindChoiceRow('home-duration', (v) => {
             state.duration = parseInt(v, 10);
             saveState();
+            // Auto's pick depends on the length, so its subtext can change with duration.
+            document.getElementById('session-type-note').textContent = sessionTypeNote();
         });
 
         bindChoiceRow('home-session-type', (v) => {
             state.sessionType = v;
             saveState();
-            document.getElementById('session-type-note').textContent = SESSION_TYPE_NOTES[v] || SESSION_TYPE_NOTES.mixed;
+            document.getElementById('session-type-note').textContent = sessionTypeNote();
         });
 
         // ---- Settings ----
@@ -4814,6 +4879,17 @@ permalink: /personal-trainer/
             mobility: 'A gentle stretch session: warm-up, mobility, cool-down.'
         };
 
+        // The subtext under Generate. For an explicit choice it's the static line; on Auto
+        // it names the shape the app would pick right now and why, so the decision is
+        // visible rather than a surprise when the workout appears.
+        function sessionTypeNote() {
+            const t = state.sessionType || 'auto';
+            if (t !== 'auto') return SESSION_TYPE_NOTES[t] || SESSION_TYPE_NOTES.mixed;
+            const c = chooseSessionType();
+            const cap = c.reason.charAt(0).toUpperCase() + c.reason.slice(1);
+            return `Auto: ${cap}.`;
+        }
+
         function renderToday() {
             document.getElementById('stat-level').textContent = levelLabel();
             // Set the numeric stats to their final value synchronously so the DOM is
@@ -4827,8 +4903,8 @@ permalink: /personal-trainer/
             sEl.textContent = state.streak;
             applyStreakGlow(state.streak);
             markSelected('home-duration', state.duration);
-            markSelected('home-session-type', state.sessionType || 'mixed');
-            document.getElementById('session-type-note').textContent = SESSION_TYPE_NOTES[state.sessionType] || SESSION_TYPE_NOTES.mixed;
+            markSelected('home-session-type', state.sessionType || 'auto');
+            document.getElementById('session-type-note').textContent = sessionTypeNote();
             document.getElementById('checkin-prompt').hidden = !checkinDue();
 
             const goal = state.weeklyGoal || 3;
@@ -5181,8 +5257,15 @@ permalink: /personal-trainer/
 
             const mins = Math.round(w.totalSecs / 60);
             const exCount = w.exCount !== undefined ? w.exCount : w.main.length;
+            // When Auto chose the shape, name it here too — the user didn't pick this, so
+            // the preview shouldn't be the first place they notice it's a stretch day.
+            const AUTO_SHAPE = { core: 'a core session', mixed: 'a mixed session', mobility: 'a mobility day' };
+            const autoNote = w.requestedType === 'auto'
+                ? `<p class="muted-note mb-2">🧠 Auto picked <strong class="txt-strong">${AUTO_SHAPE[w.sessionType] || 'a session'}</strong> for you.</p>`
+                : '';
             list.innerHTML =
                 `<p class="muted-note mb-2">≈ ${mins} min · ${exCount} exercises${w.rounds > 1 ? ` × ${w.rounds} rounds` : ''} · ${levelLabel()} level · tap ▶ to preview</p>` +
+                autoNote +
                 (w.twist ? `<p class="muted-note mb-2"><img class="ico twist-ico" src="/img/pt/twists.png" alt="">Today's twist: <strong class="txt-strong">${w.twist.label}</strong> — ${w.twist.desc}</p>` : '') +
                 section('Warm-up', w.warmups) +
                 (w.main.length ? section(w.rounds > 1 ? `Main circuit — ${w.rounds} rounds` : 'Main workout', w.main) : '') +
@@ -5782,6 +5865,9 @@ permalink: /personal-trainer/
                     count: currentWorkout.exCount,
                     rounds: currentWorkout.rounds,
                     fb,
+                    // The resolved shape, so Auto can see whether the last session was
+                    // already a mobility day and avoid stacking two in a row.
+                    type: currentWorkout.sessionType,
                     level: levelLabel()
                 });
                 state.lastExerciseIds = currentWorkout.main
