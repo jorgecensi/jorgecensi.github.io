@@ -5567,13 +5567,24 @@ permalink: /personal-trainer/
             }
         });
 
-        async function startWorkout() {
+        function startWorkout() {
             clearPreviewVideos();
             clearVideo(); // start from a clean slate so no stale clip is carried over
             player.idx = 0;
             player.paused = false;
             player.startedAt = Date.now();
-            await requestWakeLock();
+            // Wake lock is best-effort and already tolerant of failure (see
+            // requestWakeLock) — fire it off without awaiting. iOS Safari, especially
+            // installed as a PWA, only grants speechSynthesis the audio session when
+            // speak() runs synchronously inside the tap's own call stack; awaiting
+            // anything first drops out of that gesture, so the opening "Get into
+            // position" cue from loadItem() below goes out silently and voice only
+            // starts working once something later happens to unlock it (hence "kicks
+            // in a couple of exercises in"). Android has no such gesture requirement,
+            // which is why it always worked there. Keeping navigate()+loadItem()
+            // synchronous with the click fixes that for iOS without changing behavior
+            // elsewhere.
+            requestWakeLock();
             navigate('player');
             loadItem();
         }
