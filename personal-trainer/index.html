@@ -2668,7 +2668,7 @@ permalink: /personal-trainer/
                     <div class="choice" data-v="off">Off<small>No speech</small></div>
                 </div>
                 <select id="setup-voice-picker" class="voice-select" aria-label="Voice"></select>
-                <div class="setting-hint">Voices come from your device. For a natural voice on iOS, download an <b>Enhanced</b> voice under Settings → Accessibility → Spoken Content → Voices, then pick it here.</div>
+                <div class="setting-hint">Voices come from your device — only higher-quality (Enhanced/Premium) voices are listed here, once installed. On iOS, download one under Settings → Accessibility → Spoken Content → Voices, then pick it here.</div>
                 <div class="setting-label">Vibration</div>
                 <div class="choice-row cols-2" id="setup-haptics">
                     <div class="choice selected" data-v="on">On<small>Buzz on change</small></div>
@@ -4569,7 +4569,7 @@ permalink: /personal-trainer/
             optAuto.value = '';
             optAuto.textContent = auto ? `Automatic — ${auto.name}` : 'Automatic';
             sel.appendChild(optAuto);
-            rankedVoices().forEach((v) => {
+            pickerVoices().forEach((v) => {
                 const o = document.createElement('option');
                 o.value = v.voiceURI;
                 o.textContent = `${v.name} (${v.lang})`;
@@ -5668,13 +5668,18 @@ permalink: /personal-trainer/
             } catch (e) { /* speech is optional */ }
         }
 
+        // iOS ships a "compact" (robotic) default; its Enhanced/Premium variants —
+        // and Neural voices elsewhere — sound markedly better when installed. Only
+        // those carry this in v.name; there's no other flag for it on any platform.
+        function isHighQualityVoice(v) {
+            return /enhanced|premium|neural/i.test(v.name || '');
+        }
+
         // Rank voices so "Automatic" lands on the most natural one present.
-        // iOS ships a "compact" (robotic) default; its Enhanced/Premium variants
-        // — and Neural voices elsewhere — sound markedly better when installed.
         function voiceScore(v) {
             const name = (v.name || '').toLowerCase();
             let s = 0;
-            if (/enhanced|premium|neural/.test(name)) s += 10;
+            if (isHighQualityVoice(v)) s += 10;
             if (/compact/.test(name)) s -= 5;
             if (v.localService) s += 1; // on-device → no network lag mid-timer
             return s;
@@ -5691,6 +5696,18 @@ permalink: /personal-trainer/
             return (pool.length ? pool : availableVoices)
                 .slice()
                 .sort((a, b) => voiceScore(b) - voiceScore(a));
+        }
+
+        // What the picker actually lists: Enhanced/Premium/Neural voices only — the
+        // whole point of picking one over Automatic is to get a better-than-compact
+        // voice, so the robotic default just clutters the menu. Falls back to the
+        // full ranked list when none are installed (or the platform makes no such
+        // distinction, e.g. Android/desktop), so the picker is never left with
+        // nothing but "Automatic".
+        function pickerVoices() {
+            const ranked = rankedVoices();
+            const quality = ranked.filter(isHighQualityVoice);
+            return quality.length ? quality : ranked;
         }
 
         function resolveVoice() {
