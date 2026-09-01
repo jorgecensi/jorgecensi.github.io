@@ -88,6 +88,39 @@ permalink: /auto-runner/
     const EYE_COL = '#ffffff';
     const LABEL = ['P1', 'P2'];
 
+    // ── Achievements & cosmetic palettes ──────────────────────────
+    // Each achievement, once unlocked, adds a selectable robot color pair.
+    // `check(r)` receives the just-finished run's summary (see gameOver()).
+    const ACHIEVEMENTS = [
+      { id: 'distance500',   label: 'First 500m',         colors: ['#ff8a3d', '#ffd23d'], check: r => r.dist >= 500 },
+      { id: 'stage3',        label: 'Reach Stage 3',       colors: ['#3dffb0', '#3dd6ff'], check: r => r.stage >= 2 },
+      { id: 'stage5',        label: 'Reach Stage 5',       colors: ['#b03dff', '#ff3dd6'], check: r => r.stage >= 4 },
+      { id: 'revives5',      label: '5 Revives, One Run',  colors: ['#ff3d3d', '#ff9d3d'], check: r => r.revives >= 5 },
+      { id: 'sync3',         label: '3 Sync Jumps',        colors: ['#3dfff0', '#3d7bff'], check: r => r.sync >= 3 },
+      { id: 'nearmiss10',    label: '10 Near-Misses',      colors: ['#fff23d', '#ff3d8a'], check: r => r.nearMiss >= 10 },
+      { id: 'deathless1000', label: '1000m Deathless',     colors: ['#3dff6b', '#d6ff3d'], check: r => r.deathless >= 1000 },
+    ];
+
+    function unlockedPaletteIds() { return ['default', ...stats.achievements]; }
+
+    function paletteColors(id) {
+      const a = ACHIEVEMENTS.find(a => a.id === id);
+      return a ? a.colors : COLORS;
+    }
+
+    function currentRobotColors() {
+      const ids = unlockedPaletteIds();
+      return paletteColors(ids.includes(stats.selectedPalette) ? stats.selectedPalette : 'default');
+    }
+
+    function cyclePalette() {
+      const ids = unlockedPaletteIds();
+      const i = ids.indexOf(stats.selectedPalette);
+      stats.selectedPalette = ids[(i + 1) % ids.length];
+      saveStats();
+      init(); // re-color the roster immediately
+    }
+
     // ── Difficulty progression ───────────────────────────────────
     // A new stage unlocks every 500m. Speed ramps smoothly toward the stage's
     // target (see SPEED_EASE below) and caps out at the final stage. Obstacle
@@ -180,6 +213,13 @@ permalink: /auto-runner/
       popups.push({ x, y, text, color, life: 45, maxLife: 45 });
     }
 
+    // Achievement unlock toast — a queue since two could unlock off one run.
+    let achievementQueue, achievementToastText, achievementToastTimer;
+
+    function queueAchievementToast(label) {
+      achievementQueue.push(label);
+    }
+
     // ── Persistence ────────────────────────────────────────────
     // 'ar-best' held the old quadratic frame*speed/8 score, which isn't
     // comparable to the new linearly-accumulated distance — start a new key
@@ -198,6 +238,8 @@ permalink: /auto-runner/
         totalRevives: 0,
         longestDeathless: 0,
         mode: 2, // 1 = solo, 2 = co-op — remembered across visits
+        achievements: [],          // unlocked achievement ids
+        selectedPalette: 'default', // 'default' or an unlocked achievement id
       };
     }
 
@@ -231,6 +273,9 @@ permalink: /auto-runner/
     }
 
     loadStats();
+    achievementQueue = [];
+    achievementToastText = '';
+    achievementToastTimer = 0;
 
     // ── Players ────────────────────────────────────────────────
     let players;
@@ -245,9 +290,11 @@ permalink: /auto-runner/
     }
 
     // mode 1 (solo) gets a single centered robot; mode 2 (co-op) gets the pair.
+    // Colors come from whichever cosmetic palette the player has selected.
     function makePlayers(playerMode) {
-      if (playerMode === 1) return [makePlayer(144, COLORS[0])];
-      return [makePlayer(120, COLORS[0]), makePlayer(168, COLORS[1])];
+      const colors = currentRobotColors();
+      if (playerMode === 1) return [makePlayer(144, colors[0])];
+      return [makePlayer(120, colors[0]), makePlayer(168, colors[1])];
     }
 
     // ── Initialise / Reset ─────────────────────────────────────
@@ -574,6 +621,15 @@ permalink: /auto-runner/
     function update() {
       tick++;
 
+      // Achievement toast — advances in every state so it survives the
+      // game-over → title screen transition.
+      if (achievementToastTimer > 0) {
+        achievementToastTimer--;
+      } else if (achievementQueue.length) {
+        achievementToastText = '🏆 ' + achievementQueue.shift();
+        achievementToastTimer = 220;
+      }
+
       if (state === 'waiting') {
         players.forEach(p => { p.bob = Math.sin(tick / 18) * 3; });
         return;
@@ -881,6 +937,16 @@ permalink: /auto-runner/
       if (dist > stats.bestDistance) stats.bestDistance = dist;
       if (stageIndex > stats.bestStage) stats.bestStage = stageIndex;
       if (runRevives === 0 && dist > stats.longestDeathless) stats.longestDeathless = dist;
+
+      const summary = { dist, stage: stageIndex, revives: runRevives, sync: runSyncCount,
+                         nearMiss: runNearMiss, deathless: runRevives === 0 ? dist : 0 };
+      ACHIEVEMENTS.forEach(a => {
+        if (!stats.achievements.includes(a.id) && a.check(summary)) {
+          stats.achievements.push(a.id);
+          queueAchievementToast(a.label);
+        }
+      });
+
       saveStats();
     }
 
@@ -1259,6 +1325,21 @@ permalink: /auto-runner/
       // HUD
       drawHUD();
 
+      // Achievement unlock toast — shown over any state, including game-over
+      if (achievementToastTimer > 0) {
+        const t = achievementToastTimer / 220;
+        const a = t > 0.85 ? (1 - t) / 0.15 : Math.min(1, t / 0.1);
+        const y = GH - 46;
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 13px monospace';
+        const w = ctx.measureText(achievementToastText).width + 24;
+        ctx.fillStyle = `rgba(20,16,40,${0.8 * a})`;
+        rr(GW / 2 - w / 2, y - 14, w, 24, 6);
+        ctx.fill();
+        ctx.fillStyle = `rgba(255,215,0,${a})`;
+        ctx.fillText(achievementToastText, GW / 2, y + 3);
+      }
+
       // Flash overlay
       if (flashAlpha > 0) {
         ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
@@ -1366,6 +1447,26 @@ permalink: /auto-runner/
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 12px monospace';
         ctx.fillText((mode === 1 ? '1P' : '2P') + ' mode', r.x + r.w / 2, r.y + r.h / 2 + 4);
+
+        // Cosmetic palette swatch — cycles unlocked robot color pairs
+        const sw = PALETTE_SWATCH_RECT;
+        const unlocked = unlockedPaletteIds();
+        const swatchColors = currentRobotColors();
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        rr(sw.x, sw.y, sw.w, sw.h, 6);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        rr(sw.x, sw.y, sw.w, sw.h, 6);
+        ctx.stroke();
+        ctx.fillStyle = swatchColors[0];
+        ctx.fillRect(sw.x + 8, sw.y + sw.h / 2 - 6, 12, 12);
+        ctx.fillStyle = swatchColors[1] || swatchColors[0];
+        ctx.fillRect(sw.x + 22, sw.y + sw.h / 2 - 6, 12, 12);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(unlocked.length + '/' + (ACHIEVEMENTS.length + 1) + ' (P)', sw.x + 40, sw.y + sw.h / 2 + 3);
+        ctx.textAlign = 'center';
       }
 
       if (state === 'gameover') {
@@ -1468,10 +1569,19 @@ permalink: /auto-runner/
         y >= MODE_TOGGLE_RECT.y && y <= MODE_TOGGLE_RECT.y + MODE_TOGGLE_RECT.h;
     }
 
+    // Cosmetic palette swatch, stacked under the mode toggle, title screen only.
+    const PALETTE_SWATCH_RECT = { x: GW - 96, y: 40, w: 86, h: 26 };
+    function hitsPaletteSwatch(x, y) {
+      return state === 'waiting' &&
+        x >= PALETTE_SWATCH_RECT.x && x <= PALETTE_SWATCH_RECT.x + PALETTE_SWATCH_RECT.w &&
+        y >= PALETTE_SWATCH_RECT.y && y <= PALETTE_SWATCH_RECT.y + PALETTE_SWATCH_RECT.h;
+    }
+
     document.addEventListener('keydown', e => {
       if (e.repeat) return; // ignore OS key-repeat — a held key shouldn't re-buffer a jump
       const k = e.key.toLowerCase();
       if (state === 'waiting' && (k === '1' || k === '2')) { setMode(k === '1' ? 1 : 2); return; }
+      if (state === 'waiting' && k === 'p') { cyclePalette(); return; }
       if (k === 'a' || k === 'arrowleft')  { e.preventDefault(); doJump(0); }
       if (k === 'd' || k === 'arrowright' || k === ' ') { e.preventDefault(); doJump(1); }
     });
@@ -1494,6 +1604,7 @@ permalink: /auto-runner/
         const tx = (t.clientX - rect.left) / scale;
         const ty = (t.clientY - rect.top) / scale;
         if (hitsModeToggle(tx, ty)) { setMode(mode === 1 ? 2 : 1); continue; }
+        if (hitsPaletteSwatch(tx, ty)) { cyclePalette(); continue; }
         const idx = tx < GW / 2 ? 0 : 1;
         touchPlayer.set(t.identifier, idx);
         doJump(idx);
@@ -1518,6 +1629,7 @@ permalink: /auto-runner/
       const mx = (e.clientX - rect.left) / scale;
       const my = (e.clientY - rect.top) / scale;
       if (hitsModeToggle(mx, my)) { setMode(mode === 1 ? 2 : 1); return; }
+      if (hitsPaletteSwatch(mx, my)) { cyclePalette(); return; }
       mouseHeldIdx = mx < GW / 2 ? 0 : 1;
       doJump(mouseHeldIdx);
     });
