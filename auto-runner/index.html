@@ -305,21 +305,99 @@ permalink: /auto-runner/
 
     // ── Obstacle helpers ───────────────────────────────────────
     const T = 32; // tile size
+    const MIN_REACT_STEPS = 24; // minimum time between two independent hazards in a chunk
+
+    // Ground hazard pool. `w` is a relative spawn weight, `minStage` gates
+    // when it starts appearing (0 = from the very first stage).
+    const GROUND_POOL = [
+      { type: 'block1',   w: 1 },
+      { type: 'block2',   w: 1 },
+      { type: 'spike1',   w: 1 },
+      { type: 'spike2',   w: 1 },
+      { type: 'tallBlock', w: 0.7, minStage: 2 },
+      { type: 'pit',       w: 0.4, minStage: 3 },
+    ];
+
+    function pickGroundType() {
+      const pool = GROUND_POOL.filter(e => stageIndex >= (e.minStage || 0));
+      const total = pool.reduce((s, e) => s + e.w, 0);
+      let r = Math.random() * total;
+      for (const e of pool) { r -= e.w; if (r <= 0) return e.type; }
+      return pool[pool.length - 1].type;
+    }
+
+    function makeGroundObstacle(type, x) {
+      switch (type) {
+        case 'block2':    return { x, w: T * 2, h: T,     spike: false, isFloat: false };
+        case 'spike1':    return { x, w: T,     h: T,     spike: true,  isFloat: false };
+        case 'spike2':    return { x, w: T * 2, h: T,     spike: true,  isFloat: false };
+        case 'tallBlock': return { x, w: T,     h: T * 2, spike: false, isFloat: false };
+        case 'pit':       return { x, w: T * 2 + Math.round(Math.random() * T), h: 0,
+                                    spike: false, isFloat: false, isPit: true };
+        case 'block1':
+        default:          return { x, w: T,     h: T,     spike: false, isFloat: false };
+      }
+    }
+
+    // Hand-authored ground-hazard sequences. Each non-first item's `dx` is the
+    // gap (in steps, at the stage's floor speed — the hardest case, since a
+    // higher speed only widens the effective jump reach) between the previous
+    // item's right edge and this one's left edge. `sameJump: true` means both
+    // must clear in a single leap; otherwise it's just two independent
+    // hazards close enough together to need a real reaction, not a stroll.
+    const CHUNKS = [
+      { minStage: 0, items: [{ type: 'spike2' }, { type: 'spike1', dx: 10, sameJump: true }] },
+      { minStage: 0, items: [{ type: 'block1' }, { type: 'block2', dx: 30 }] },
+      { minStage: 2, items: [{ type: 'block1' }, { type: 'tallBlock', dx: 34 }] },
+      { minStage: 3, items: [{ type: 'spike1' }, { type: 'pit', dx: 14, sameJump: true }] },
+    ];
+
+    // Worst-case width for each hazard type, used when validating a chunk so
+    // the check holds even for the widest obstacle spawnObstacle can roll.
+    const MAX_HAZARD_WIDTH = { block1: T, block2: T * 2, spike1: T, spike2: T * 2, tallBlock: T, pit: T * 3 };
+
+    function validateChunk(chunk, speed) {
+      const reachPx = JUMP_AIR_STEPS * speed;
+      for (let i = 1; i < chunk.items.length; i++) {
+        const it = chunk.items[i];
+        const dx = it.dx || 0;
+        if (it.sameJump) {
+          // The whole leap — takeoff before the previous hazard to landing
+          // past this one's far edge — must fit inside one jump's reach.
+          const trailingWidth = MAX_HAZARD_WIDTH[it.type] || T;
+          if (dx * speed + trailingWidth > reachPx - P_SIZE) return false;
+        } else if (dx < MIN_REACT_STEPS) {
+          return false; // not enough time to react to the second hazard
+        }
+      }
+      return true;
+    }
+
+    function availableChunks() {
+      return CHUNKS.filter(c => stageIndex >= c.minStage && validateChunk(c, STAGES[stageIndex].speed));
+    }
+
+    function spawnChunk(chunk) {
+      let x = GW + 10;
+      chunk.items.forEach((it, i) => {
+        if (i > 0) x += speed * (it.dx || 0);
+        const o = makeGroundObstacle(it.type, x);
+        obstacles.push(o);
+        x += o.w;
+      });
+    }
 
     function spawnObstacle() {
       const roll = Math.random();
       if (roll < STAGES[stageIndex].floatChance) { spawnFloatPair(); return; }
 
-      const r2 = Math.random();
-      let type;
-      if (r2 < 0.25)       type = 'block1';
-      else if (r2 < 0.50)  type = 'block2';
-      else if (r2 < 0.72)  type = 'spike1';
-      else                  type = 'spike2';
+      const chunks = availableChunks();
+      if (chunks.length && Math.random() < 0.25) {
+        spawnChunk(chunks[Math.floor(Math.random() * chunks.length)]);
+        return;
+      }
 
-      const wide  = (type === 'block2' || type === 'spike2') ? T * 2 : T;
-      const spike = type === 'spike1' || type === 'spike2';
-      obstacles.push({ x: GW + 10, w: wide, h: T, spike, isFloat: false });
+      obstacles.push(makeGroundObstacle(pickGroundType(), GW + 10));
     }
 
     function spawnFloatPair() {
@@ -341,20 +419,35 @@ permalink: /auto-runner/
       const platW  = Math.round(220 - progress * 70);  // 220 → 150 (was 124 → 80)
       const xOff   = 60 + Math.round(Math.random() * 40);  // 60–100 (was 138–168)
 
-      obstacles.push({
+      const platform = {
         x: GW + 10 + xOff,
+        y0: floatY,
         w: platW,
         h: 10,
         spike: false,
         isFloat: true,
         floatY,
         glowPhase: Math.random() * Math.PI * 2,
-      });
+      };
+
+      // Stage 5+: some platforms carry a spike hazard — land on either side
+      // of it, not on it. Stage 6+: some platforms slowly bob up and down.
+      const variant = Math.random();
+      if (stageIndex >= 5 && variant < 0.3) {
+        platform.bob = true;
+        platform.baseY = floatY;
+        platform.bobAmp = 12;
+        platform.bobPhase = Math.random() * Math.PI * 2;
+      } else if (stageIndex >= 4 && variant < 0.6) {
+        platform.topSpikeAt = Math.round(platW * 0.3 + Math.random() * platW * 0.4);
+      }
+
+      obstacles.push(platform);
     }
 
     // ── AABB collision with slight shrink ─────────────────────
     function collides(p, o) {
-      if (o.isFloat) return false;  // floating platforms: only land on top
+      if (o.isFloat || o.isPit) return false; // handled separately (land-on-top / fall-through)
       const pad = 5;
       const px = p.x + pad, py = p.y + pad;
       const pw = P_SIZE - pad * 2, ph = P_SIZE - pad * 2;
@@ -460,7 +553,10 @@ permalink: /auto-runner/
       }
 
       // Move obstacles
-      obstacles.forEach(o => { o.x -= speed; });
+      obstacles.forEach(o => {
+        o.x -= speed;
+        if (o.bob) o.floatY = o.baseY + Math.sin(tick * 0.05 + o.bobPhase) * o.bobAmp;
+      });
       obstacles = obstacles.filter(o => o.x + o.w > -10);
 
       // Move revive stars
@@ -506,14 +602,22 @@ permalink: /auto-runner/
           p.jumpCut = true;
         }
 
-        // Floor snap
-        if (p.y >= FLOOR_Y - P_SIZE) {
+        // Floor snap — unless the feet are over a pit, in which case fall through
+        const footL = p.x + 5, footR = p.x + P_SIZE - 5;
+        const overPit = obstacles.some(o => o.isPit && footR > o.x && footL < o.x + o.w);
+        if (p.y >= FLOOR_Y - P_SIZE && !(overPit && !p.onPlatform)) {
           p.y = FLOOR_Y - P_SIZE;
           p.vy = 0;
           p.grounded = true;
           p.onPlatform = null;
         } else {
           p.grounded = false;
+        }
+
+        // Fell through a pit far enough to be unrecoverable
+        if (!p.grounded && !p.onPlatform && p.invincible <= 0 && p.y > FLOOR_Y + 60) {
+          killPlayer(i);
+          return;
         }
 
         // Platform support — keeps player riding a platform they landed on
@@ -544,6 +648,13 @@ permalink: /auto-runner/
               break;
             }
           }
+        }
+
+        // A platform-mounted spike hazard — land beside it, not on it
+        if (p.onPlatform && p.onPlatform.topSpikeAt != null && p.invincible <= 0) {
+          const o = p.onPlatform;
+          const sx = o.x + o.topSpikeAt, sw = 16;
+          if (p.x + P_SIZE - 6 > sx && p.x + 6 < sx + sw) { killPlayer(i); return; }
         }
 
         // Coyote time — a jump input just after support drops out (a platform's
@@ -756,9 +867,35 @@ permalink: /auto-runner/
         ctx.fillText('↑', o.x + o.w / 2, y - 6);
         ctx.textAlign = 'left';
       }
+
+      // A spike hazard mounted on the platform itself — land beside it
+      if (o.topSpikeAt != null) {
+        const sx = o.x + o.topSpikeAt;
+        ctx.fillStyle = '#ffe1e1';
+        ctx.shadowColor = 'rgba(255,120,120,0.7)';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(sx, y);
+        ctx.lineTo(sx + 8, y - 16);
+        ctx.lineTo(sx + 16, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function drawPit(o) {
+      const bg = paletteForStage(stageIndex || 0).bg;
+      ctx.fillStyle = bg;
+      ctx.fillRect(o.x, FLOOR_Y - 2, o.w, GH - FLOOR_Y + 2);
+      ctx.strokeStyle = 'rgba(255,90,90,0.6)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(o.x, FLOOR_Y - 1); ctx.lineTo(o.x, FLOOR_Y + 12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(o.x + o.w, FLOOR_Y - 1); ctx.lineTo(o.x + o.w, FLOOR_Y + 12); ctx.stroke();
     }
 
     function drawObstacle(o) {
+      if (o.isPit) { drawPit(o); return; }
       if (o.isFloat) { drawPlatform(o); return; }
       const oy = FLOOR_Y - o.h;
       ctx.shadowColor = 'rgba(255,255,255,0.6)';
