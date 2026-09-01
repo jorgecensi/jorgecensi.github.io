@@ -84,6 +84,10 @@ permalink: /auto-runner/
     const EYE_COL = '#ffffff';
     const LABEL = ['P1', 'P2'];
 
+    const STEP_MS = 1000 / 60;   // fixed simulation step (60 Hz), independent of display refresh
+    const MAX_FRAME_MS = 100;    // clamp a stalled/backgrounded tab so it can't fast-forward
+    const MAX_STEPS_PER_FRAME = 10; // avoid a spiral of death if the tab was suspended
+
     // ── Canvas / Scale ─────────────────────────────────────────
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -99,6 +103,7 @@ permalink: /auto-runner/
 
     // ── State ──────────────────────────────────────────────────
     let state;          // 'waiting' | 'playing' | 'gameover'
+    let tick;           // increments every fixed step, in every state — drives all animation timing
     let frame, score, bestScore, speed, goTimer, flashAlpha;
     let obstacles, nextObstacleGap;
     let stars, groundX;
@@ -125,6 +130,7 @@ permalink: /auto-runner/
     // ── Initialise / Reset ─────────────────────────────────────
     function init() {
       state = 'waiting';
+      tick = 0;
       frame = 0; score = 0; speed = BASE_SPEED;
       goTimer = 0; flashAlpha = 0;
       obstacles = [];
@@ -280,8 +286,10 @@ permalink: /auto-runner/
 
     // ── Update ─────────────────────────────────────────────────
     function update() {
+      tick++;
+
       if (state === 'waiting') {
-        players.forEach(p => { p.bob = Math.sin(Date.now() / 300) * 3; });
+        players.forEach(p => { p.bob = Math.sin(tick / 18) * 3; });
         return;
       }
 
@@ -794,7 +802,7 @@ permalink: /auto-runner/
         ctx.fillStyle = COLORS[1];
         ctx.fillText('TAP RIGHT  ▶  (D)', GW * 0.72, GH / 2 + 8);
 
-        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 450);
+        const pulse = 0.5 + 0.5 * Math.sin(tick / 7.5);
         ctx.fillStyle = `rgba(255,255,255,${0.45 + pulse * 0.35})`;
         ctx.font = '12px monospace';
         ctx.fillText('2 players — jump together, survive together', GW / 2, GH / 2 + 32);
@@ -834,8 +842,26 @@ permalink: /auto-runner/
     }
 
     // ── Game Loop ──────────────────────────────────────────────
-    function loop() {
-      update();
+    // Simulation runs at a fixed 60 Hz step via an accumulator, decoupled from the
+    // display's refresh rate — a 120 Hz phone must not simulate twice as fast.
+    let manualDrive = false;   // true once a debug harness takes over stepping (see debug hook)
+    let lastFrameTime = null;
+    let stepAcc = 0;
+
+    function loop(now) {
+      if (lastFrameTime === null) lastFrameTime = now;
+      let dt = now - lastFrameTime;
+      lastFrameTime = now;
+      if (dt > MAX_FRAME_MS) dt = MAX_FRAME_MS; // backgrounded tab: don't fast-forward on return
+      if (!manualDrive) {
+        stepAcc += dt;
+        let steps = 0;
+        while (stepAcc >= STEP_MS && steps < MAX_STEPS_PER_FRAME) {
+          update();
+          stepAcc -= STEP_MS;
+          steps++;
+        }
+      }
       render();
       requestAnimationFrame(loop);
     }
@@ -867,7 +893,7 @@ permalink: /auto-runner/
     // ── Boot ───────────────────────────────────────────────────
     resize();
     init();
-    loop();
+    requestAnimationFrame(loop);
 
   })();
   </script>
