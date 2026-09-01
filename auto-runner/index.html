@@ -158,12 +158,26 @@ permalink: /auto-runner/
     let state;          // 'waiting' | 'playing' | 'paused' | 'resuming' | 'gameover'
     let tick;           // increments every fixed step, in every state — drives all animation timing
     let frame, distance, speed, goTimer, flashAlpha;
-    let stageIndex, stageBannerTimer;
+    let stageIndex;
+    let bannerText, bannerTimer, bannerLife; // the big centered "STAGE n" / "NEW BEST" banner
     let obstacles, nextGapSteps;
     let stars, groundX;
     let reviveStars, reviveStarCooldown;
     let resumeCountdown;   // steps remaining in the 3-2-1 countdown after unpausing
     let runRevives;        // revives used so far this run, shown on the game-over summary
+
+    // ── In-run feedback state ────────────────────────────────────
+    let distanceMarkers;    // scrolling "100m" ground markers
+    let nextMarkerAt;       // next distance (m) that spawns a marker
+    let bestFlagAt, bestFlagSpawned; // flags the previous best distance in-run
+    let popups;             // transient floaty text (CLOSE!, SYNC!, …)
+    let comboCount, comboTimer; // near-miss combo
+    let lastSyncStep;       // frame of the last credited sync-jump bonus
+    let runNearMiss, runSyncCount; // per-run counters, feed the summary/achievements
+
+    function spawnPopup(x, y, text, color) {
+      popups.push({ x, y, text, color, life: 45, maxLife: 45 });
+    }
 
     // ── Persistence ────────────────────────────────────────────
     // 'ar-best' held the old quadratic frame*speed/8 score, which isn't
@@ -212,10 +226,10 @@ permalink: /auto-runner/
       return [
         { x: 120, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
           rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null, invincible: 0,
-          jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0 },
+          jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0, lastJumpStep: -999 },
         { x: 168, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
           rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null, invincible: 0,
-          jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0 },
+          jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0, lastJumpStep: -999 },
       ];
     }
 
@@ -224,13 +238,19 @@ permalink: /auto-runner/
       state = 'waiting';
       tick = 0;
       frame = 0; distance = 0; speed = STAGES[0].speed;
-      stageIndex = 0; stageBannerTimer = 0;
+      stageIndex = 0; bannerText = ''; bannerTimer = 0; bannerLife = 150;
       goTimer = 0; flashAlpha = 0;
       obstacles = [];
       nextGapSteps = STAGES[0].minGap;
       groundX = 0;
       reviveStars = [];
       reviveStarCooldown = 0;
+      distanceMarkers = []; nextMarkerAt = 100;
+      bestFlagAt = bestDistance; bestFlagSpawned = bestDistance <= 0;
+      popups = [];
+      comboCount = 0; comboTimer = 0;
+      lastSyncStep = -999;
+      runNearMiss = 0; runSyncCount = 0;
       players = makePlayers();
       stars = Array.from({ length: 55 }, () => ({
         x: Math.random() * GW,
@@ -244,18 +264,25 @@ permalink: /auto-runner/
       state = 'playing';
       announce('Run started');
       frame = 0; distance = 0; speed = STAGES[0].speed;
-      stageIndex = 0; stageBannerTimer = 0;
+      stageIndex = 0; bannerText = ''; bannerTimer = 0; bannerLife = 150;
       obstacles = [];
       nextGapSteps = STAGES[0].minGap;
       reviveStars = [];
       reviveStarCooldown = 0;
       runRevives = 0;
+      distanceMarkers = []; nextMarkerAt = 100;
+      bestFlagAt = bestDistance; bestFlagSpawned = bestDistance <= 0;
+      popups = [];
+      comboCount = 0; comboTimer = 0;
+      lastSyncStep = -999;
+      runNearMiss = 0; runSyncCount = 0;
       players.forEach(p => {
         p.y = FLOOR_Y - P_SIZE; p.vy = 0;
         p.grounded = true; p.rot = 0; p.dead = false;
         p.onPlatform = null; p.invincible = 0;
         p.jumpHeld = false; p.jumpCut = false;
         p.coyote = 0; p.jumpBuffer = 0; p.squash = 0;
+        p.lastJumpStep = -999;
       });
     }
 
@@ -274,7 +301,7 @@ permalink: /auto-runner/
       if (state === 'waiting') startGame();
       const p = players[idx];
       if (p.dead) return;
-      if (!performJump(p)) {
+      if (!performJump(p, idx)) {
         // Not grounded and no coyote window — buffer it so a tap slightly
         // before landing still fires the instant support is regained.
         p.jumpBuffer = JUMP_BUFFER_STEPS;
@@ -283,7 +310,7 @@ permalink: /auto-runner/
 
     // Actually launches a jump if the player currently has ground support
     // (standing or within the coyote window). Returns false if it can't fire.
-    function performJump(p) {
+    function performJump(p, idx) {
       if (!p.grounded && p.coyote <= 0) return false;
       p.vy = JUMP_V;
       p.grounded = false;
@@ -293,6 +320,16 @@ permalink: /auto-runner/
       p.jumpHeld = true;
       p.jumpCut = false;
       p.squash = 1; // stretch on takeoff
+
+      p.lastJumpStep = frame;
+      const other = players[1 - idx];
+      if (other && !other.dead && Math.abs(frame - other.lastJumpStep) <= 4 &&
+          frame - lastSyncStep > 30) {
+        lastSyncStep = frame;
+        distance += 5;
+        runSyncCount++;
+        spawnPopup((p.x + other.x) / 2 + P_SIZE / 2, Math.min(p.y, other.y) - 8, 'SYNC!', '#a0eeff');
+      }
       return true;
     }
 
@@ -327,16 +364,19 @@ permalink: /auto-runner/
     }
 
     function makeGroundObstacle(type, x) {
+      let o;
       switch (type) {
-        case 'block2':    return { x, w: T * 2, h: T,     spike: false, isFloat: false };
-        case 'spike1':    return { x, w: T,     h: T,     spike: true,  isFloat: false };
-        case 'spike2':    return { x, w: T * 2, h: T,     spike: true,  isFloat: false };
-        case 'tallBlock': return { x, w: T,     h: T * 2, spike: false, isFloat: false };
-        case 'pit':       return { x, w: T * 2 + Math.round(Math.random() * T), h: 0,
-                                    spike: false, isFloat: false, isPit: true };
+        case 'block2':    o = { x, w: T * 2, h: T,     spike: false, isFloat: false }; break;
+        case 'spike1':    o = { x, w: T,     h: T,     spike: true,  isFloat: false }; break;
+        case 'spike2':    o = { x, w: T * 2, h: T,     spike: true,  isFloat: false }; break;
+        case 'tallBlock': o = { x, w: T,     h: T * 2, spike: false, isFloat: false }; break;
+        case 'pit':       o = { x, w: T * 2 + Math.round(Math.random() * T), h: 0,
+                                 spike: false, isFloat: false, isPit: true }; break;
         case 'block1':
-        default:          return { x, w: T,     h: T,     spike: false, isFloat: false };
+        default:          o = { x, w: T,     h: T,     spike: false, isFloat: false };
       }
+      o.passedBy = [false, false]; // per-player near-miss tracking
+      return o;
     }
 
     // Hand-authored ground-hazard sequences. Each non-first item's `dx` is the
@@ -531,11 +571,39 @@ permalink: /auto-runner/
       const newStageIndex = stageIndexForDistance(distance);
       if (newStageIndex !== stageIndex) {
         stageIndex = newStageIndex;
-        stageBannerTimer = 150;
-        announce('Stage ' + (stageIndex + 1));
+        bannerText = 'STAGE ' + (stageIndex + 1);
+        bannerTimer = bannerLife = 150;
+        announce(bannerText);
       }
       speed += (STAGES[stageIndex].speed - speed) * SPEED_EASE;
-      if (stageBannerTimer > 0) stageBannerTimer--;
+      if (bannerTimer > 0) bannerTimer--;
+
+      // Milestone markers every 100m
+      if (distance >= nextMarkerAt) {
+        distanceMarkers.push({ x: GW + 10, meters: nextMarkerAt });
+        announce(nextMarkerAt + ' meters');
+        flashAlpha = Math.max(flashAlpha, 0.06);
+        nextMarkerAt += 100;
+      }
+      distanceMarkers.forEach(m => { m.x -= speed; });
+      distanceMarkers = distanceMarkers.filter(m => m.x > -60);
+
+      // Best-distance flag — spawns once, when this run overtakes the
+      // previous best, and flashes a small "NEW BEST" banner in-run.
+      if (!bestFlagSpawned && distance >= bestFlagAt) {
+        bestFlagSpawned = true;
+        distanceMarkers.push({ x: GW + 10, meters: bestFlagAt, isBest: true });
+        bannerText = '✦ NEW BEST! ✦';
+        bannerTimer = bannerLife = 130;
+        announce('New best distance!');
+      }
+
+      // Combo window for near-misses
+      if (comboTimer > 0) { comboTimer--; if (comboTimer === 0) comboCount = 0; }
+
+      // Popups (CLOSE!, SYNC!, …) float up and fade
+      popups.forEach(t => { t.x -= speed; t.y -= 0.6; t.life--; });
+      popups = popups.filter(t => t.life > 0);
 
       // Scroll ground
       groundX = (groundX - speed + GW) % GW;
@@ -675,7 +743,7 @@ permalink: /auto-runner/
         // support (ground, or the coyote window) is regained.
         if (p.jumpBuffer > 0) {
           p.jumpBuffer--;
-          if (p.grounded || p.coyote > 0) performJump(p);
+          if (p.grounded || p.coyote > 0) performJump(p, i);
         }
 
         // Rotation
@@ -691,6 +759,23 @@ permalink: /auto-runner/
           for (const o of obstacles) {
             if (o === p.onPlatform) continue;
             if (collides(p, o)) { killPlayer(i); return; }
+          }
+        }
+
+        // Near-miss — checked the instant a ground hazard's trailing edge
+        // passes the player, using the vertical clearance at that moment.
+        for (const o of obstacles) {
+          if (o.isFloat || o.isPit || !o.passedBy || o.passedBy[i]) continue;
+          if (o.x + o.w > p.x) continue;
+          o.passedBy[i] = true;
+          const hazardTopY = FLOOR_Y - o.h - (o.spike ? 18 : 0);
+          const clearance = hazardTopY - (p.y + P_SIZE);
+          if (clearance >= 0 && clearance <= 6) {
+            comboCount++;
+            comboTimer = 90;
+            runNearMiss++;
+            distance += 10;
+            spawnPopup(p.x + P_SIZE / 2, p.y - 10, comboCount >= 3 ? 'CLOSE! x' + comboCount : 'CLOSE!', p.color);
           }
         }
 
@@ -942,6 +1027,26 @@ permalink: /auto-runner/
       }
     }
 
+    function drawDistanceMarker(m) {
+      const color = m.isBest ? '#ffd700' : 'rgba(255,255,255,0.55)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(m.x, FLOOR_Y); ctx.lineTo(m.x, FLOOR_Y - (m.isBest ? 34 : 18)); ctx.stroke();
+      if (m.isBest) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(m.x, FLOOR_Y - 34);
+        ctx.lineTo(m.x + 14, FLOOR_Y - 28);
+        ctx.lineTo(m.x, FLOOR_Y - 22);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = color;
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(m.meters + 'm', m.x, FLOOR_Y - (m.isBest ? 40 : 24));
+    }
+
     function drawReviveStar(s) {
       const pulse = 0.7 + 0.3 * Math.sin((frame * 0.1) + s.phase);
       ctx.save();
@@ -1021,6 +1126,9 @@ permalink: /auto-runner/
         ctx.beginPath(); ctx.moveTo(x, FLOOR_Y); ctx.lineTo(x, FLOOR_Y + 8); ctx.stroke();
       }
 
+      // Distance / best-flag markers
+      distanceMarkers.forEach(drawDistanceMarker);
+
       // Obstacles
       obstacles.forEach(drawObstacle);
 
@@ -1029,6 +1137,17 @@ permalink: /auto-runner/
 
       // Players
       players.forEach(drawRobot);
+
+      // Popups (CLOSE!, SYNC!, …)
+      popups.forEach(t => {
+        const a = t.life / t.maxLife;
+        ctx.fillStyle = t.color;
+        ctx.globalAlpha = a;
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(t.text, t.x, t.y);
+        ctx.globalAlpha = 1;
+      });
 
       // Touch zone hints (first 2.5s of playing)
       if (state === 'playing' && frame < 150) {
@@ -1050,15 +1169,15 @@ permalink: /auto-runner/
       }
 
       // Stage banner — fades in then out over its ~2.5s lifetime
-      if (state === 'playing' && stageBannerTimer > 0) {
-        const t = stageBannerTimer / 150;
+      if (state === 'playing' && bannerTimer > 0) {
+        const t = bannerTimer / bannerLife;
         const a = t > 0.7 ? (1 - t) / 0.3 : Math.min(1, t / 0.15);
         ctx.textAlign = 'center';
         ctx.fillStyle = `rgba(255,255,255,${0.9 * a})`;
         ctx.font = 'bold 22px monospace';
         ctx.shadowColor = palette.glow;
         ctx.shadowBlur = 14;
-        ctx.fillText('STAGE ' + (stageIndex + 1), GW / 2, 70);
+        ctx.fillText(bannerText, GW / 2, 70);
         ctx.shadowBlur = 0;
       }
 
@@ -1104,6 +1223,15 @@ permalink: /auto-runner/
           ctx.fillText('✕', dx, dotY + 3);
         }
       });
+
+      // Near-miss combo badge
+      if (state === 'playing' && comboCount >= 3 && comboTimer > 0) {
+        ctx.fillStyle = '#ffb020';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText('x' + comboCount + ' COMBO', GW - 14, 46);
+        ctx.textAlign = 'left';
+      }
 
       // Revive hint — blinks while a revive star is on screen
       if (state === 'playing' && reviveStars.length > 0) {
