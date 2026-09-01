@@ -180,6 +180,72 @@ permalink: /auto-runner/
       if (announceEl) announceEl.textContent = text;
     }
 
+    // ── Audio (synthesized — no audio files) ──────────────────────
+    // Created lazily on the first user gesture; browsers refuse to start an
+    // AudioContext before one.
+    let audioCtx = null;
+    function ensureAudio() {
+      if (audioCtx) return audioCtx;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        audioCtx = null;
+      }
+      return audioCtx;
+    }
+    document.addEventListener('touchstart', () => ensureAudio(), { once: true, passive: true });
+    document.addEventListener('mousedown', () => ensureAudio(), { once: true });
+    document.addEventListener('keydown', () => ensureAudio(), { once: true });
+
+    function playTone(freq, duration, type, peak, freqEnd) {
+      if (!stats || stats.muted) return;
+      const ac = ensureAudio();
+      if (!ac) return;
+      if (ac.state === 'suspended') ac.resume();
+      const t0 = ac.currentTime;
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t0 + duration);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(peak || 0.12, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+      osc.connect(gain).connect(ac.destination);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    }
+
+    function sfxJump()      { playTone(520, 0.09, 'square', 0.10, 780); }
+    function sfxLand()      { playTone(160, 0.07, 'sine', 0.08, 90); }
+    function sfxDeath()     { playTone(220, 0.35, 'sawtooth', 0.14, 40); }
+    function sfxStar()      { playTone(880, 0.16, 'triangle', 0.12, 1320); }
+    function sfxMilestone() { playTone(1000, 0.05, 'sine', 0.05); }
+    function sfxStage() {
+      [660, 880, 1100].forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'square', 0.09), i * 90));
+    }
+
+    function toggleMute() { stats.muted = !stats.muted; saveStats(); }
+
+    // ── Haptics ────────────────────────────────────────────────
+    function vibrate(ms) {
+      try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* unsupported */ }
+    }
+
+    // ── Particles (landing dust, death burst, star sparkle) ───────
+    const MAX_PARTICLES = 120;
+    function spawnParticles(x, y, color, count, spread) {
+      for (let i = 0; i < count; i++) {
+        if (particles.length >= MAX_PARTICLES) particles.shift();
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 0.6 + Math.random() * spread;
+        particles.push({
+          x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 1.5,
+          life: 22 + Math.random() * 14, maxLife: 36, color, size: 2 + Math.random() * 2,
+        });
+      }
+    }
+
     function resize() {
       scale = Math.min(window.innerWidth / GW, window.innerHeight / GH);
       canvas.width  = GW;
@@ -208,6 +274,9 @@ permalink: /auto-runner/
     let comboCount, comboTimer; // near-miss combo
     let lastSyncStep;       // frame of the last credited sync-jump bonus
     let runNearMiss, runSyncCount, runShields; // per-run counters, feed the summary/achievements
+    let particles;                  // landing dust / death burst / star sparkle
+    let shakeTimer, shakeMag;        // screen shake on death
+    let parallaxX;                   // far silhouette layer scroll accumulator
 
     function spawnPopup(x, y, text, color) {
       popups.push({ x, y, text, color, life: 45, maxLife: 45 });
@@ -240,6 +309,7 @@ permalink: /auto-runner/
         mode: 2, // 1 = solo, 2 = co-op — remembered across visits
         achievements: [],          // unlocked achievement ids
         selectedPalette: 'default', // 'default' or an unlocked achievement id
+        muted: false,
       };
     }
 
@@ -316,6 +386,7 @@ permalink: /auto-runner/
       comboCount = 0; comboTimer = 0;
       lastSyncStep = -999;
       runNearMiss = 0; runSyncCount = 0; runShields = 0;
+      particles = []; shakeTimer = 0; shakeMag = 0; parallaxX = 0;
       players = makePlayers(mode);
       stars = Array.from({ length: 55 }, () => ({
         x: Math.random() * GW,
@@ -342,6 +413,7 @@ permalink: /auto-runner/
       comboCount = 0; comboTimer = 0;
       lastSyncStep = -999;
       runNearMiss = 0; runSyncCount = 0; runShields = 0;
+      particles = []; shakeTimer = 0; shakeMag = 0; parallaxX = 0;
       players.forEach(p => {
         p.y = FLOOR_Y - P_SIZE; p.vy = 0;
         p.grounded = true; p.rot = 0; p.dead = false;
@@ -389,6 +461,7 @@ permalink: /auto-runner/
     // buffered jump that gets released before it fires still short-hops.)
     function performJump(p, idx) {
       if (!p.grounded && p.coyote <= 0) return false;
+      sfxJump();
       p.vy = JUMP_V;
       p.grounded = false;
       p.onPlatform = null;
@@ -600,6 +673,10 @@ permalink: /auto-runner/
       p.dead = true;
       p.onPlatform = null;
       flashAlpha = Math.max(flashAlpha, 0.55);
+      sfxDeath();
+      vibrate(60);
+      spawnParticles(p.x + P_SIZE / 2, p.y + P_SIZE / 2, p.color, 14, 3.5);
+      shakeTimer = 10; shakeMag = 4;
       if (players.every(pl => pl.dead)) {
         gameOver();
         return;
@@ -662,6 +739,7 @@ permalink: /auto-runner/
         bannerText = 'STAGE ' + (stageIndex + 1);
         bannerTimer = bannerLife = 150;
         announce(bannerText);
+        sfxStage();
       }
       speed += (STAGES[stageIndex].speed - speed) * SPEED_EASE;
       if (bannerTimer > 0) bannerTimer--;
@@ -671,6 +749,7 @@ permalink: /auto-runner/
         distanceMarkers.push({ x: GW + 10, meters: nextMarkerAt });
         announce(nextMarkerAt + ' meters');
         flashAlpha = Math.max(flashAlpha, 0.06);
+        sfxMilestone();
         nextMarkerAt += 100;
       }
       distanceMarkers.forEach(m => { m.x -= speed; });
@@ -684,6 +763,7 @@ permalink: /auto-runner/
         bannerText = '✦ NEW BEST! ✦';
         bannerTimer = bannerLife = 130;
         announce('New best distance!');
+        sfxStage();
       }
 
       // Combo window for near-misses
@@ -692,6 +772,16 @@ permalink: /auto-runner/
       // Popups (CLOSE!, SYNC!, …) float up and fade
       popups.forEach(t => { t.x -= speed; t.y -= 0.6; t.life--; });
       popups = popups.filter(t => t.life > 0);
+
+      // Particles (gravity + fade)
+      particles.forEach(pt => { pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.15; pt.life--; });
+      particles = particles.filter(pt => pt.life > 0);
+
+      // Screen shake decay
+      if (shakeTimer > 0) shakeTimer--;
+
+      // Parallax silhouette scroll (slower than the foreground)
+      parallaxX += speed;
 
       // Scroll ground
       groundX = (groundX - speed + GW) % GW;
@@ -828,7 +918,11 @@ permalink: /auto-runner/
         }
 
         // Landing squash / takeoff stretch (takeoff stretch is set in performJump)
-        if (!wasGrounded && p.grounded) p.squash = -1;
+        if (!wasGrounded && p.grounded) {
+          p.squash = -1;
+          sfxLand();
+          spawnParticles(p.x + P_SIZE / 2, p.y + P_SIZE, 'rgba(255,255,255,0.8)', 6, 1.8);
+        }
         p.squash *= SQUASH_DECAY;
         if (Math.abs(p.squash) < 0.02) p.squash = 0;
 
@@ -893,6 +987,9 @@ permalink: /auto-runner/
             const dx = cx - s.x, dy = cy - s.y;
             if (dx * dx + dy * dy < (s.r + P_SIZE / 2 - 4) * (s.r + P_SIZE / 2 - 4)) {
               missedStarStreak = 0;
+              sfxStar();
+              vibrate(30);
+              spawnParticles(s.x, s.y, '#ffe066', 10, 2.5);
               if (mode === 1) {
                 p.shielded = true;
                 spawnPopup(p.x + P_SIZE / 2, p.y - 10, 'SHIELD UP', '#ffd700');
@@ -1226,6 +1323,12 @@ permalink: /auto-runner/
     function render() {
       const palette = paletteForStage(stageIndex || 0);
 
+      ctx.save();
+      if (shakeTimer > 0) {
+        const m = shakeMag * (shakeTimer / 10);
+        ctx.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m);
+      }
+
       // Background
       ctx.fillStyle = palette.bg;
       ctx.fillRect(0, 0, GW, GH);
@@ -1235,6 +1338,9 @@ permalink: /auto-runner/
         ctx.fillStyle = `rgba(255,255,255,${s.a})`;
         ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
       });
+
+      // Parallax silhouette layer — scrolls slower than the foreground
+      drawParallax(palette);
 
       // Ground surface
       ctx.fillStyle = palette.ground;
@@ -1268,6 +1374,14 @@ permalink: /auto-runner/
 
       // Players
       players.forEach(drawRobot);
+
+      // Particles (landing dust, death burst, star sparkle)
+      particles.forEach(pt => {
+        ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+        ctx.fillStyle = pt.color;
+        ctx.fillRect(pt.x - pt.size / 2, pt.y - pt.size / 2, pt.size, pt.size);
+      });
+      ctx.globalAlpha = 1;
 
       // Popups (CLOSE!, SYNC!, …)
       popups.forEach(t => {
@@ -1344,6 +1458,50 @@ permalink: /auto-runner/
       if (flashAlpha > 0) {
         ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
         ctx.fillRect(0, 0, GW, GH);
+      }
+
+      ctx.restore(); // undo the screen-shake translate before drawing fixed UI
+
+      // Mute button — fixed, so it doesn't shake with the world
+      drawMuteButton();
+    }
+
+    // A repeating silhouette skyline, well behind the ground, scrolling at
+    // 0.3x the foreground speed for a cheap sense of depth.
+    const PARALLAX_PERIOD = 220;
+    const PARALLAX_HEIGHTS = [30, 55, 40, 70, 35, 60, 45];
+    function drawParallax(palette) {
+      const scrolled = parallaxX * 0.3;
+      const offset = scrolled % PARALLAX_PERIOD;
+      const baseIdx = Math.floor(scrolled / PARALLAX_PERIOD);
+      ctx.fillStyle = palette.ground;
+      ctx.globalAlpha = 0.32;
+      for (let i = -1; i * PARALLAX_PERIOD - offset < GW; i++) {
+        const h = PARALLAX_HEIGHTS[((baseIdx + i) % PARALLAX_HEIGHTS.length + PARALLAX_HEIGHTS.length) % PARALLAX_HEIGHTS.length];
+        const x = i * PARALLAX_PERIOD - offset;
+        ctx.fillRect(x, FLOOR_Y - h, PARALLAX_PERIOD * 0.65, h);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawMuteButton() {
+      const r = MUTE_RECT;
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 1.5;
+      const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+      // Speaker body
+      ctx.beginPath();
+      ctx.moveTo(cx - 7, cy - 3); ctx.lineTo(cx - 3, cy - 3); ctx.lineTo(cx + 2, cy - 7);
+      ctx.lineTo(cx + 2, cy + 7); ctx.lineTo(cx - 3, cy + 3); ctx.lineTo(cx - 7, cy + 3);
+      ctx.closePath();
+      ctx.stroke();
+      if (stats.muted) {
+        ctx.beginPath(); ctx.moveTo(cx + 5, cy - 5); ctx.lineTo(cx + 9, cy + 5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + 9, cy - 5); ctx.lineTo(cx + 5, cy + 5); ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.arc(cx + 5, cy, 5, -0.6, 0.6); ctx.stroke();
       }
     }
 
@@ -1577,11 +1735,22 @@ permalink: /auto-runner/
         y >= PALETTE_SWATCH_RECT.y && y <= PALETTE_SWATCH_RECT.y + PALETTE_SWATCH_RECT.h;
     }
 
+    // Mute button, bottom-right corner. Only clickable off the 'playing'
+    // state so it can't be mistaken for a P2 jump tap mid-run — the 'm' key
+    // still works anytime.
+    const MUTE_RECT = { x: GW - 34, y: GH - 34, w: 24, h: 24 };
+    function hitsMute(x, y) {
+      return state !== 'playing' &&
+        x >= MUTE_RECT.x && x <= MUTE_RECT.x + MUTE_RECT.w &&
+        y >= MUTE_RECT.y && y <= MUTE_RECT.y + MUTE_RECT.h;
+    }
+
     document.addEventListener('keydown', e => {
       if (e.repeat) return; // ignore OS key-repeat — a held key shouldn't re-buffer a jump
       const k = e.key.toLowerCase();
       if (state === 'waiting' && (k === '1' || k === '2')) { setMode(k === '1' ? 1 : 2); return; }
       if (state === 'waiting' && k === 'p') { cyclePalette(); return; }
+      if (k === 'm') { toggleMute(); return; }
       if (k === 'a' || k === 'arrowleft')  { e.preventDefault(); doJump(0); }
       if (k === 'd' || k === 'arrowright' || k === ' ') { e.preventDefault(); doJump(1); }
     });
@@ -1605,6 +1774,7 @@ permalink: /auto-runner/
         const ty = (t.clientY - rect.top) / scale;
         if (hitsModeToggle(tx, ty)) { setMode(mode === 1 ? 2 : 1); continue; }
         if (hitsPaletteSwatch(tx, ty)) { cyclePalette(); continue; }
+        if (hitsMute(tx, ty)) { toggleMute(); continue; }
         const idx = tx < GW / 2 ? 0 : 1;
         touchPlayer.set(t.identifier, idx);
         doJump(idx);
@@ -1630,6 +1800,7 @@ permalink: /auto-runner/
       const my = (e.clientY - rect.top) / scale;
       if (hitsModeToggle(mx, my)) { setMode(mode === 1 ? 2 : 1); return; }
       if (hitsPaletteSwatch(mx, my)) { cyclePalette(); return; }
+      if (hitsMute(mx, my)) { toggleMute(); return; }
       mouseHeldIdx = mx < GW / 2 ? 0 : 1;
       doJump(mouseHeldIdx);
     });
