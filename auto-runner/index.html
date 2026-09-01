@@ -33,6 +33,7 @@ permalink: /auto-runner/
 </head>
 <body>
   <canvas id="canvas" role="img" aria-label="Auto Runner game screen"></canvas>
+  <div id="ar-announce" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></div>
 
   <script>
     const SW_VERSION = '2607300229';
@@ -93,6 +94,12 @@ permalink: /auto-runner/
     const ctx = canvas.getContext('2d');
     let scale = 1;
 
+    // ── Screen-reader announcements ──────────────────────────────
+    const announceEl = document.getElementById('ar-announce');
+    function announce(text) {
+      if (announceEl) announceEl.textContent = text;
+    }
+
     function resize() {
       scale = Math.min(window.innerWidth / GW, window.innerHeight / GH);
       canvas.width  = GW;
@@ -102,12 +109,14 @@ permalink: /auto-runner/
     }
 
     // ── State ──────────────────────────────────────────────────
-    let state;          // 'waiting' | 'playing' | 'gameover'
+    let state;          // 'waiting' | 'playing' | 'paused' | 'resuming' | 'gameover'
     let tick;           // increments every fixed step, in every state — drives all animation timing
     let frame, score, bestScore, speed, goTimer, flashAlpha;
     let obstacles, nextObstacleGap;
     let stars, groundX;
     let reviveStars, reviveStarCooldown;
+    let resumeCountdown;   // steps remaining in the 3-2-1 countdown after unpausing
+    let runRevives;        // revives used so far this run, shown on the game-over summary
 
     try {
       bestScore = parseInt(localStorage.getItem('ar-best') || '0', 10);
@@ -149,11 +158,13 @@ permalink: /auto-runner/
 
     function startGame() {
       state = 'playing';
+      announce('Run started');
       frame = 0; score = 0; speed = BASE_SPEED;
       obstacles = [];
       nextObstacleGap = 320;
       reviveStars = [];
       reviveStarCooldown = 0;
+      runRevives = 0;
       players.forEach(p => {
         p.y = FLOOR_Y - P_SIZE; p.vy = 0;
         p.grounded = true; p.rot = 0; p.dead = false;
@@ -161,16 +172,18 @@ permalink: /auto-runner/
       });
     }
 
-    function restart() {
-      startGame();
-    }
-
     // ── Jump ───────────────────────────────────────────────────
     function doJump(idx) {
       if (state === 'gameover') {
-        if (goTimer > 55) restart();
+        if (goTimer > 55) init(); // back to the title screen; a further tap starts a new run
         return;
       }
+      if (state === 'paused') {
+        resumeCountdown = 180; // 3 seconds at 60 steps/sec
+        state = 'resuming';
+        return;
+      }
+      if (state === 'resuming') return; // ignore input mid-countdown
       if (state === 'waiting') startGame();
       const p = players[idx];
       if (!p.dead && p.grounded) {
@@ -296,6 +309,14 @@ permalink: /auto-runner/
       if (state === 'gameover') {
         goTimer++;
         flashAlpha = Math.max(0, flashAlpha - 0.04);
+        return;
+      }
+
+      if (state === 'paused') return; // fully frozen — nothing advances while backgrounded
+
+      if (state === 'resuming') {
+        resumeCountdown--;
+        if (resumeCountdown <= 0) { state = 'playing'; announce('Resumed'); }
         return;
       }
 
@@ -426,6 +447,7 @@ permalink: /auto-runner/
                   dp.grounded = false;
                   dp.onPlatform = null;
                   dp.invincible = 120; // ~2s of invincibility after revive
+                  runRevives++;
                 }
               });
               flashAlpha = Math.max(flashAlpha, 0.4);
@@ -440,6 +462,7 @@ permalink: /auto-runner/
     function gameOver() {
       if (state === 'gameover') return;
       state = 'gameover';
+      announce('Game over. Distance ' + score + ' meters. Revives used ' + runRevives + '.');
       goTimer = 0;
       flashAlpha = 0.85;
       if (score > bestScore) {
@@ -814,30 +837,58 @@ permalink: /auto-runner/
 
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ff4c4c';
-        ctx.font = 'bold 38px monospace';
+        ctx.font = 'bold 34px monospace';
         ctx.shadowColor = 'rgba(255,50,50,0.7)';
         ctx.shadowBlur = 16;
-        ctx.fillText('GAME OVER', GW / 2, GH / 2 - 28);
+        ctx.fillText('GAME OVER', GW / 2, GH / 2 - 66);
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 22px monospace';
-        ctx.fillText(score + 'm', GW / 2, GH / 2 + 8);
+        ctx.fillText(score + 'm', GW / 2, GH / 2 - 30);
 
         if (score > 0 && score >= bestScore) {
           ctx.fillStyle = '#ffd700';
           ctx.font = 'bold 13px monospace';
-          ctx.fillText('✦ NEW BEST! ✦', GW / 2, GH / 2 + 28);
+          ctx.fillText('✦ NEW BEST! ✦', GW / 2, GH / 2 - 10);
         }
+
+        // Run summary
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.font = '12px monospace';
+        ctx.fillText('best ' + bestScore + 'm   ·   revives ' + runRevives, GW / 2, GH / 2 + 14);
 
         if (goTimer > 55) {
           const blink = Math.floor(goTimer / 14) % 2 === 0;
           ctx.fillStyle = `rgba(255,255,255,${blink ? 0.9 : 0.35})`;
           ctx.font = '13px monospace';
-          ctx.fillText('tap or press key to play again', GW / 2, GH / 2 + 52);
+          ctx.fillText('tap or press key to continue', GW / 2, GH / 2 + 44);
         }
+      }
 
-        if (goTimer > 160) restart();
+      if (state === 'paused') {
+        ctx.fillStyle = 'rgba(10,8,30,0.72)';
+        ctx.fillRect(0, 0, GW, GH);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 26px monospace';
+        ctx.fillText('PAUSED', GW / 2, GH / 2 - 10);
+        ctx.font = '13px monospace';
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillText('tap or press key to resume', GW / 2, GH / 2 + 16);
+      }
+
+      if (state === 'resuming') {
+        ctx.fillStyle = 'rgba(10,8,30,0.5)';
+        ctx.fillRect(0, 0, GW, GH);
+        ctx.textAlign = 'center';
+        const n = Math.ceil(resumeCountdown / 60);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px monospace';
+        ctx.shadowColor = 'rgba(124,120,255,0.8)';
+        ctx.shadowBlur = 18;
+        ctx.fillText(String(Math.max(1, n)), GW / 2, GH / 2 + 16);
+        ctx.shadowBlur = 0;
       }
     }
 
@@ -889,6 +940,10 @@ permalink: /auto-runner/
     });
 
     window.addEventListener('resize', resize);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && state === 'playing') { state = 'paused'; announce('Paused'); }
+    });
 
     // ── Boot ───────────────────────────────────────────────────
     resize();
