@@ -130,6 +130,7 @@ permalink: /auto-runner/
     const MAX_FRAME_MS = 100;    // clamp a stalled/backgrounded tab so it can't fast-forward
     const MAX_STEPS_PER_FRAME = 10; // avoid a spiral of death if the tab was suspended
 
+    const MISS_COOLDOWNS = [80, 140, 200]; // escalating respawn delay for a missed revive/shield star
     const JUMP_BUFFER_STEPS = 6; // a jump pressed this many steps before landing still fires
     const COYOTE_STEPS = 5;      // a jump pressed this many steps after leaving support still fires
     const JUMP_CUT_MULT = 0.45;  // releasing early while rising multiplies vy by this (short hop)
@@ -162,7 +163,7 @@ permalink: /auto-runner/
     let bannerText, bannerTimer, bannerLife; // the big centered "STAGE n" / "NEW BEST" banner
     let obstacles, nextGapSteps;
     let stars, groundX;
-    let reviveStars, reviveStarCooldown;
+    let reviveStars, reviveStarCooldown, missedStarStreak;
     let resumeCountdown;   // steps remaining in the 3-2-1 countdown after unpausing
     let runRevives;        // revives used so far this run, shown on the game-over summary
 
@@ -173,7 +174,7 @@ permalink: /auto-runner/
     let popups;             // transient floaty text (CLOSE!, SYNC!, …)
     let comboCount, comboTimer; // near-miss combo
     let lastSyncStep;       // frame of the last credited sync-jump bonus
-    let runNearMiss, runSyncCount; // per-run counters, feed the summary/achievements
+    let runNearMiss, runSyncCount, runShields; // per-run counters, feed the summary/achievements
 
     function spawnPopup(x, y, text, color) {
       popups.push({ x, y, text, color, life: 45, maxLife: 45 });
@@ -196,8 +197,11 @@ permalink: /auto-runner/
         bestStage: 0,
         totalRevives: 0,
         longestDeathless: 0,
+        mode: 2, // 1 = solo, 2 = co-op — remembered across visits
       };
     }
+
+    let mode; // mirrors stats.mode; kept as its own variable since it's read every step
 
     function loadStats() {
       try {
@@ -211,10 +215,19 @@ permalink: /auto-runner/
       } catch (e) {
         stats = defaultStats();
       }
+      mode = stats.mode === 1 ? 1 : 2;
     }
 
     function saveStats() {
       try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) { /* unavailable */ }
+    }
+
+    function setMode(m) {
+      if (mode === m) return;
+      mode = m;
+      stats.mode = m;
+      saveStats();
+      init(); // rebuild the player roster for the new mode
     }
 
     loadStats();
@@ -222,15 +235,19 @@ permalink: /auto-runner/
     // ── Players ────────────────────────────────────────────────
     let players;
 
-    function makePlayers() {
-      return [
-        { x: 120, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null, invincible: 0,
-          jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0, lastJumpStep: -999 },
-        { x: 168, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null, invincible: 0,
-          jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0, lastJumpStep: -999 },
-      ];
+    function makePlayer(x, color) {
+      return {
+        x, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
+        rot: 0, bob: 0, color, dead: false, onPlatform: null, invincible: 0,
+        jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0,
+        lastJumpStep: -999, shielded: false, holdCount: 0,
+      };
+    }
+
+    // mode 1 (solo) gets a single centered robot; mode 2 (co-op) gets the pair.
+    function makePlayers(playerMode) {
+      if (playerMode === 1) return [makePlayer(144, COLORS[0])];
+      return [makePlayer(120, COLORS[0]), makePlayer(168, COLORS[1])];
     }
 
     // ── Initialise / Reset ─────────────────────────────────────
@@ -245,13 +262,14 @@ permalink: /auto-runner/
       groundX = 0;
       reviveStars = [];
       reviveStarCooldown = 0;
+      missedStarStreak = 0;
       distanceMarkers = []; nextMarkerAt = 100;
       bestFlagAt = bestDistance; bestFlagSpawned = bestDistance <= 0;
       popups = [];
       comboCount = 0; comboTimer = 0;
       lastSyncStep = -999;
-      runNearMiss = 0; runSyncCount = 0;
-      players = makePlayers();
+      runNearMiss = 0; runSyncCount = 0; runShields = 0;
+      players = makePlayers(mode);
       stars = Array.from({ length: 55 }, () => ({
         x: Math.random() * GW,
         y: Math.random() * (FLOOR_Y - 20),
@@ -269,20 +287,21 @@ permalink: /auto-runner/
       nextGapSteps = STAGES[0].minGap;
       reviveStars = [];
       reviveStarCooldown = 0;
+      missedStarStreak = 0;
       runRevives = 0;
       distanceMarkers = []; nextMarkerAt = 100;
       bestFlagAt = bestDistance; bestFlagSpawned = bestDistance <= 0;
       popups = [];
       comboCount = 0; comboTimer = 0;
       lastSyncStep = -999;
-      runNearMiss = 0; runSyncCount = 0;
+      runNearMiss = 0; runSyncCount = 0; runShields = 0;
       players.forEach(p => {
         p.y = FLOOR_Y - P_SIZE; p.vy = 0;
         p.grounded = true; p.rot = 0; p.dead = false;
         p.onPlatform = null; p.invincible = 0;
         p.jumpHeld = false; p.jumpCut = false;
         p.coyote = 0; p.jumpBuffer = 0; p.squash = 0;
-        p.lastJumpStep = -999;
+        p.lastJumpStep = -999; p.shielded = false; p.holdCount = 0;
       });
     }
 
@@ -299,9 +318,18 @@ permalink: /auto-runner/
       }
       if (state === 'resuming') return; // ignore input mid-countdown
       if (state === 'waiting') startGame();
-      const p = players[idx];
+      const targetIdx = mode === 1 ? 0 : idx; // solo: either side/key controls the one robot
+      const p = players[targetIdx];
       if (p.dead) return;
-      if (!performJump(p, idx)) {
+
+      // Track how many input sources are currently holding this player's
+      // jump — in solo mode both sides/keys drive the same robot, so
+      // releasing one of two simultaneously-held inputs must not cut the
+      // jump short while the other is still down.
+      p.holdCount = (p.holdCount || 0) + 1;
+      p.jumpHeld = true;
+
+      if (!performJump(p, targetIdx)) {
         // Not grounded and no coyote window — buffer it so a tap slightly
         // before landing still fires the instant support is regained.
         p.jumpBuffer = JUMP_BUFFER_STEPS;
@@ -310,6 +338,8 @@ permalink: /auto-runner/
 
     // Actually launches a jump if the player currently has ground support
     // (standing or within the coyote window). Returns false if it can't fire.
+    // (jumpHeld reflects whatever doJump/releaseJump have already set — a
+    // buffered jump that gets released before it fires still short-hops.)
     function performJump(p, idx) {
       if (!p.grounded && p.coyote <= 0) return false;
       p.vy = JUMP_V;
@@ -317,7 +347,6 @@ permalink: /auto-runner/
       p.onPlatform = null;
       p.coyote = 0;
       p.jumpBuffer = 0;
-      p.jumpHeld = true;
       p.jumpCut = false;
       p.squash = 1; // stretch on takeoff
 
@@ -334,10 +363,13 @@ permalink: /auto-runner/
     }
 
     // Called on touchend/keyup/mouseup — releasing early while still rising
-    // cuts the jump short (variable jump height).
+    // cuts the jump short (variable jump height), unless another input for
+    // the same player (solo mode's mirrored zones/keys) is still held.
     function releaseJump(idx) {
-      const p = players[idx];
-      if (p) p.jumpHeld = false;
+      const p = players[mode === 1 ? 0 : idx];
+      if (!p) return;
+      p.holdCount = Math.max(0, (p.holdCount || 0) - 1);
+      if (p.holdCount === 0) p.jumpHeld = false;
     }
 
     // ── Obstacle helpers ───────────────────────────────────────
@@ -627,20 +659,25 @@ permalink: /auto-runner/
       });
       obstacles = obstacles.filter(o => o.x + o.w > -10);
 
-      // Move revive stars
+      // Move revive/shield stars — a missed one takes progressively longer to
+      // reappear (80, 140, 200 steps), reset the moment one is actually caught.
       reviveStars.forEach(s => { s.x -= speed; });
       reviveStars = reviveStars.filter(s => {
         if (s.x + s.r < -20) {
-          reviveStarCooldown = 80; // respawn soon
+          reviveStarCooldown = MISS_COOLDOWNS[Math.min(missedStarStreak, MISS_COOLDOWNS.length - 1)];
+          missedStarStreak++;
           return false;
         }
         return true;
       });
 
-      // Spawn a revive star if someone is dead and someone is alive
-      const hasDead  = players.some(p => p.dead);
+      // Spawn a star: in co-op it revives a dead partner; solo has no
+      // partner to revive, so the same pickup grants a one-hit shield
+      // instead, spawned periodically rather than only after a death.
+      const hasDead  = mode === 2 && players.some(p => p.dead);
       const hasAlive = players.some(p => !p.dead);
-      if (hasDead && hasAlive && reviveStars.length === 0) {
+      const wantsPickup = mode === 2 ? (hasDead && hasAlive) : !players[0].shielded;
+      if (wantsPickup && reviveStars.length === 0) {
         if (reviveStarCooldown > 0) reviveStarCooldown--;
         else spawnReviveStar();
       }
@@ -754,11 +791,24 @@ permalink: /auto-runner/
           p.rot -= 0.12; // spin while airborne
         }
 
-        // Collision check — skip the platform the player rides, skip if invincible
+        // Collision check — skip the platform the player rides, skip if invincible.
+        // A shielded player (solo mode) survives one hit instead of dying.
         if (p.invincible <= 0) {
           for (const o of obstacles) {
             if (o === p.onPlatform) continue;
-            if (collides(p, o)) { killPlayer(i); return; }
+            if (collides(p, o)) {
+              if (p.shielded) {
+                p.shielded = false;
+                p.invincible = 60;
+                flashAlpha = Math.max(flashAlpha, 0.35);
+                spawnPopup(p.x + P_SIZE / 2, p.y - 10, 'SHIELD BROKEN', '#ffd700');
+                runShields++;
+                break; // this step's invincibility isn't active yet — stop checking now
+              } else {
+                killPlayer(i);
+                return;
+              }
+            }
           }
         }
 
@@ -779,24 +829,30 @@ permalink: /auto-runner/
           }
         }
 
-        // Collect revive star
+        // Collect revive/shield star
         if (reviveStars.length > 0) {
           const cx = p.x + P_SIZE / 2;
           const cy = p.y + P_SIZE / 2;
           reviveStars = reviveStars.filter(s => {
             const dx = cx - s.x, dy = cy - s.y;
             if (dx * dx + dy * dy < (s.r + P_SIZE / 2 - 4) * (s.r + P_SIZE / 2 - 4)) {
-              players.forEach(dp => {
-                if (dp.dead) {
-                  dp.dead = false;
-                  dp.y = FLOOR_Y - P_SIZE;
-                  dp.vy = -10;
-                  dp.grounded = false;
-                  dp.onPlatform = null;
-                  dp.invincible = 120; // ~2s of invincibility after revive
-                  runRevives++;
-                }
-              });
+              missedStarStreak = 0;
+              if (mode === 1) {
+                p.shielded = true;
+                spawnPopup(p.x + P_SIZE / 2, p.y - 10, 'SHIELD UP', '#ffd700');
+              } else {
+                players.forEach(dp => {
+                  if (dp.dead) {
+                    dp.dead = false;
+                    dp.y = FLOOR_Y - P_SIZE;
+                    dp.vy = -10;
+                    dp.grounded = false;
+                    dp.onPlatform = null;
+                    dp.invincible = 120; // ~2s of invincibility after revive
+                    runRevives++;
+                  }
+                });
+              }
               flashAlpha = Math.max(flashAlpha, 0.4);
               return false;
             }
@@ -888,6 +944,15 @@ permalink: /auto-runner/
       ctx.fillStyle = mc;
       for (let i = 0; i < 3; i++) {
         ctx.fillRect(-hh + 8 + i * 7, hh - 14, 4, 4);
+      }
+
+      // Shield ring (solo mode)
+      if (p.shielded) {
+        ctx.strokeStyle = `rgba(255,215,0,${0.6 + 0.3 * Math.sin(tick * 0.15)})`;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, hh + 7, 0, Math.PI * 2);
+        ctx.stroke();
       }
 
       ctx.globalAlpha = 1;
@@ -1152,19 +1217,29 @@ permalink: /auto-runner/
       // Touch zone hints (first 2.5s of playing)
       if (state === 'playing' && frame < 150) {
         const a = Math.min(1, (150 - frame) / 80) * 0.10;
-        ctx.fillStyle = `rgba(232,64,64,${a})`;
-        ctx.fillRect(0, 0, GW / 2, GH);
-        ctx.fillStyle = `rgba(58,142,255,${a})`;
-        ctx.fillRect(GW / 2, 0, GW / 2, GH);
+        if (mode === 2) {
+          ctx.fillStyle = `rgba(232,64,64,${a})`;
+          ctx.fillRect(0, 0, GW / 2, GH);
+          ctx.fillStyle = `rgba(58,142,255,${a})`;
+          ctx.fillRect(GW / 2, 0, GW / 2, GH);
+        } else {
+          ctx.fillStyle = `rgba(232,64,64,${a})`;
+          ctx.fillRect(0, 0, GW, GH);
+        }
 
         // Zone labels near bottom
         ctx.globalAlpha = Math.min(1, (150 - frame) / 80) * 0.55;
         ctx.font = 'bold 13px monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = COLORS[0];
-        ctx.fillText('◀  P1', GW * 0.25, GH - 28);
-        ctx.fillStyle = COLORS[1];
-        ctx.fillText('P2  ▶', GW * 0.75, GH - 28);
+        if (mode === 2) {
+          ctx.fillStyle = COLORS[0];
+          ctx.fillText('◀  P1', GW * 0.25, GH - 28);
+          ctx.fillStyle = COLORS[1];
+          ctx.fillText('P2  ▶', GW * 0.75, GH - 28);
+        } else {
+          ctx.fillStyle = COLORS[0];
+          ctx.fillText('TAP ANYWHERE TO JUMP', GW / 2, GH - 28);
+        }
         ctx.globalAlpha = 1;
       }
 
@@ -1207,7 +1282,7 @@ permalink: /auto-runner/
       // Player indicator dots
       const dotY = GH - 13;
       const gap = 22;
-      const startX = GW / 2 - gap / 2;
+      const startX = GW / 2 - (players.length - 1) * gap / 2;
       players.forEach((p, i) => {
         const dx = startX + i * gap;
         ctx.beginPath(); ctx.arc(dx, dotY, 6, 0, Math.PI * 2);
@@ -1233,15 +1308,16 @@ permalink: /auto-runner/
         ctx.textAlign = 'left';
       }
 
-      // Revive hint — blinks while a revive star is on screen
+      // Revive/shield hint — blinks while a star is on screen
       if (state === 'playing' && reviveStars.length > 0) {
         const blink = Math.floor(frame / 18) % 2 === 0;
-        const deadIdx = players.findIndex(p => p.dead);
+        const deadIdx = mode === 2 ? players.findIndex(p => p.dead) : (players[0].shielded ? -1 : 0);
         if (deadIdx >= 0 && blink) {
+          const label = mode === 2 ? ('REVIVE ' + LABEL[deadIdx]) : 'SHIELD';
           ctx.fillStyle = '#ffd700';
           ctx.font = 'bold 11px monospace';
           ctx.textAlign = 'right';
-          ctx.fillText('★ CATCH STAR → REVIVE ' + LABEL[deadIdx], GW - 14, 28);
+          ctx.fillText('★ CATCH STAR → ' + label, GW - 14, 28);
         }
         ctx.textAlign = 'left';
       }
@@ -1260,15 +1336,36 @@ permalink: /auto-runner/
         ctx.shadowBlur = 0;
 
         ctx.font = '14px monospace';
-        ctx.fillStyle = COLORS[0];
-        ctx.fillText('◀  TAP LEFT  (A)', GW * 0.28, GH / 2 + 8);
-        ctx.fillStyle = COLORS[1];
-        ctx.fillText('TAP RIGHT  ▶  (D)', GW * 0.72, GH / 2 + 8);
+        if (mode === 2) {
+          ctx.fillStyle = COLORS[0];
+          ctx.fillText('◀  TAP LEFT  (A)', GW * 0.28, GH / 2 + 8);
+          ctx.fillStyle = COLORS[1];
+          ctx.fillText('TAP RIGHT  ▶  (D)', GW * 0.72, GH / 2 + 8);
+        } else {
+          ctx.fillStyle = COLORS[0];
+          ctx.fillText('TAP ANYWHERE  (A / D / SPACE)', GW / 2, GH / 2 + 8);
+        }
 
         const pulse = 0.5 + 0.5 * Math.sin(tick / 7.5);
         ctx.fillStyle = `rgba(255,255,255,${0.45 + pulse * 0.35})`;
         ctx.font = '12px monospace';
-        ctx.fillText('2 players — jump together, survive together', GW / 2, GH / 2 + 32);
+        ctx.fillText(
+          mode === 2 ? '2 players — jump together, survive together' : 'solo — catch stars for a shield',
+          GW / 2, GH / 2 + 32
+        );
+
+        // 1P/2P mode toggle button
+        const r = MODE_TOGGLE_RECT;
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        rr(r.x, r.y, r.w, r.h, 6);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 1;
+        rr(r.x, r.y, r.w, r.h, 6);
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText((mode === 1 ? '1P' : '2P') + ' mode', r.x + r.w / 2, r.y + r.h / 2 + 4);
       }
 
       if (state === 'gameover') {
@@ -1298,7 +1395,8 @@ permalink: /auto-runner/
         ctx.fillStyle = 'rgba(255,255,255,0.55)';
         ctx.font = '12px monospace';
         ctx.fillText(
-          'best ' + bestDistance + 'm   ·   stage ' + (stageIndex + 1) + '   ·   revives ' + runRevives,
+          'best ' + bestDistance + 'm   ·   stage ' + (stageIndex + 1) + '   ·   ' +
+          (mode === 2 ? 'revives ' + runRevives : 'shields used ' + runShields),
           GW / 2, GH / 2 + 14
         );
 
@@ -1362,9 +1460,18 @@ permalink: /auto-runner/
     }
 
     // ── Input ──────────────────────────────────────────────────
+    // 1P/2P toggle hot-zone, top-right of the title screen only.
+    const MODE_TOGGLE_RECT = { x: GW - 96, y: 8, w: 86, h: 26 };
+    function hitsModeToggle(x, y) {
+      return state === 'waiting' &&
+        x >= MODE_TOGGLE_RECT.x && x <= MODE_TOGGLE_RECT.x + MODE_TOGGLE_RECT.w &&
+        y >= MODE_TOGGLE_RECT.y && y <= MODE_TOGGLE_RECT.y + MODE_TOGGLE_RECT.h;
+    }
+
     document.addEventListener('keydown', e => {
       if (e.repeat) return; // ignore OS key-repeat — a held key shouldn't re-buffer a jump
       const k = e.key.toLowerCase();
+      if (state === 'waiting' && (k === '1' || k === '2')) { setMode(k === '1' ? 1 : 2); return; }
       if (k === 'a' || k === 'arrowleft')  { e.preventDefault(); doJump(0); }
       if (k === 'd' || k === 'arrowright' || k === ' ') { e.preventDefault(); doJump(1); }
     });
@@ -1385,6 +1492,8 @@ permalink: /auto-runner/
         const t = e.changedTouches[i];
         const rect = canvas.getBoundingClientRect();
         const tx = (t.clientX - rect.left) / scale;
+        const ty = (t.clientY - rect.top) / scale;
+        if (hitsModeToggle(tx, ty)) { setMode(mode === 1 ? 2 : 1); continue; }
         const idx = tx < GW / 2 ? 0 : 1;
         touchPlayer.set(t.identifier, idx);
         doJump(idx);
@@ -1406,7 +1515,10 @@ permalink: /auto-runner/
     let mouseHeldIdx = null;
     canvas.addEventListener('mousedown', e => {
       const rect = canvas.getBoundingClientRect();
-      mouseHeldIdx = (e.clientX - rect.left) / scale < GW / 2 ? 0 : 1;
+      const mx = (e.clientX - rect.left) / scale;
+      const my = (e.clientY - rect.top) / scale;
+      if (hitsModeToggle(mx, my)) { setMode(mode === 1 ? 2 : 1); return; }
+      mouseHeldIdx = mx < GW / 2 ? 0 : 1;
       doJump(mouseHeldIdx);
     });
 
