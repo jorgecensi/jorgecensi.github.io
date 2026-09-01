@@ -78,12 +78,53 @@ permalink: /auto-runner/
     const GRAVITY = 0.58;
     const JUMP_V = -13.5;
     const P_SIZE = 38;                 // player square side
-    const BASE_SPEED = 4.5;
-    const ACCEL = 0.0005;              // speed increase per frame
+
+    // A full-height jump covers this many steps airborne and this many px of
+    // apex height at any speed — used to size safe obstacle/platform spacing.
+    const JUMP_AIR_STEPS = Math.ceil(2 * (-JUMP_V) / GRAVITY); // ~47
+    const JUMP_APEX_PX = (JUMP_V * JUMP_V) / (2 * GRAVITY);    // ~157
 
     const COLORS = ['#e84040', '#3a8eff'];
     const EYE_COL = '#ffffff';
     const LABEL = ['P1', 'P2'];
+
+    // ── Difficulty progression ───────────────────────────────────
+    // A new stage unlocks every 500m. Speed ramps smoothly toward the stage's
+    // target (see SPEED_EASE below) and caps out at the final stage. Obstacle
+    // spacing (minGap/gapJitter) is in STEPS, not pixels, so the reaction
+    // window a player gets stays constant no matter how fast the world moves —
+    // the old formula measured the gap in pixels, so it shrank as speed rose
+    // and became unfairly tight by the third minute of a run.
+    const STAGES = [
+      { at: 0,    speed: 4.5, minGap: 60, gapJitter: 20, floatChance: 0.00 },
+      { at: 500,  speed: 5.2, minGap: 56, gapJitter: 19, floatChance: 0.08 },
+      { at: 1000, speed: 5.9, minGap: 52, gapJitter: 18, floatChance: 0.14 },
+      { at: 1500, speed: 6.6, minGap: 48, gapJitter: 17, floatChance: 0.18 },
+      { at: 2000, speed: 7.2, minGap: 46, gapJitter: 16, floatChance: 0.22 },
+      { at: 2500, speed: 7.8, minGap: 44, gapJitter: 15, floatChance: 0.24 },
+      { at: 3000, speed: 8.3, minGap: 42, gapJitter: 14, floatChance: 0.26 },
+      { at: 3500, speed: 8.8, minGap: 40, gapJitter: 13, floatChance: 0.27 },
+      { at: 4000, speed: 9.2, minGap: 39, gapJitter: 12, floatChance: 0.28 },
+      { at: 4500, speed: 9.5, minGap: 38, gapJitter: 12, floatChance: 0.28 }, // speed cap
+    ];
+    const SPEED_EASE = 0.025; // per-step lerp toward the stage's target speed (~2s to settle)
+
+    function stageIndexForDistance(d) {
+      let idx = 0;
+      for (let i = 0; i < STAGES.length; i++) if (d >= STAGES[i].at) idx = i;
+      return idx;
+    }
+
+    // Programmatic per-stage palette — a slow hue drift so the world visibly
+    // changes without hand-tuning ten literal color sets.
+    function paletteForStage(i) {
+      const hue = (246 + i * 22) % 360;
+      return {
+        bg:     `hsl(${hue}, 36%, 23%)`,
+        ground: `hsl(${hue}, 28%, 32%)`,
+        glow:   `hsla(${(hue + 16) % 360}, 70%, 82%, 0.5)`,
+      };
+    }
 
     const STEP_MS = 1000 / 60;   // fixed simulation step (60 Hz), independent of display refresh
     const MAX_FRAME_MS = 100;    // clamp a stalled/backgrounded tab so it can't fast-forward
@@ -116,18 +157,53 @@ permalink: /auto-runner/
     // ── State ──────────────────────────────────────────────────
     let state;          // 'waiting' | 'playing' | 'paused' | 'resuming' | 'gameover'
     let tick;           // increments every fixed step, in every state — drives all animation timing
-    let frame, score, bestScore, speed, goTimer, flashAlpha;
-    let obstacles, nextObstacleGap;
+    let frame, distance, speed, goTimer, flashAlpha;
+    let stageIndex, stageBannerTimer;
+    let obstacles, nextGapSteps;
     let stars, groundX;
     let reviveStars, reviveStarCooldown;
     let resumeCountdown;   // steps remaining in the 3-2-1 countdown after unpausing
     let runRevives;        // revives used so far this run, shown on the game-over summary
 
-    try {
-      bestScore = parseInt(localStorage.getItem('ar-best') || '0', 10);
-    } catch (e) {
-      bestScore = 0;
+    // ── Persistence ────────────────────────────────────────────
+    // 'ar-best' held the old quadratic frame*speed/8 score, which isn't
+    // comparable to the new linearly-accumulated distance — start a new key
+    // rather than migrate a number that means something different now.
+    const BEST_KEY = 'ar-best-v2';
+    const STATS_KEY = 'ar-stats';
+    let bestDistance = 0;
+    let stats;
+
+    function defaultStats() {
+      return {
+        runs: 0,
+        totalDistance: 0,
+        bestDistance: 0,
+        bestStage: 0,
+        totalRevives: 0,
+        longestDeathless: 0,
+      };
     }
+
+    function loadStats() {
+      try {
+        bestDistance = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0;
+      } catch (e) {
+        bestDistance = 0;
+      }
+      try {
+        const raw = localStorage.getItem(STATS_KEY);
+        stats = Object.assign(defaultStats(), raw ? JSON.parse(raw) : null);
+      } catch (e) {
+        stats = defaultStats();
+      }
+    }
+
+    function saveStats() {
+      try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) { /* unavailable */ }
+    }
+
+    loadStats();
 
     // ── Players ────────────────────────────────────────────────
     let players;
@@ -147,10 +223,11 @@ permalink: /auto-runner/
     function init() {
       state = 'waiting';
       tick = 0;
-      frame = 0; score = 0; speed = BASE_SPEED;
+      frame = 0; distance = 0; speed = STAGES[0].speed;
+      stageIndex = 0; stageBannerTimer = 0;
       goTimer = 0; flashAlpha = 0;
       obstacles = [];
-      nextObstacleGap = 320;
+      nextGapSteps = STAGES[0].minGap;
       groundX = 0;
       reviveStars = [];
       reviveStarCooldown = 0;
@@ -166,9 +243,10 @@ permalink: /auto-runner/
     function startGame() {
       state = 'playing';
       announce('Run started');
-      frame = 0; score = 0; speed = BASE_SPEED;
+      frame = 0; distance = 0; speed = STAGES[0].speed;
+      stageIndex = 0; stageBannerTimer = 0;
       obstacles = [];
-      nextObstacleGap = 320;
+      nextGapSteps = STAGES[0].minGap;
       reviveStars = [];
       reviveStarCooldown = 0;
       runRevives = 0;
@@ -230,9 +308,7 @@ permalink: /auto-runner/
 
     function spawnObstacle() {
       const roll = Math.random();
-      // floating platform pairs unlock at frame 400 and ramp up to 28% chance
-      const floatChance = frame > 400 ? Math.min(0.28, 0.06 + (frame - 400) / 7000) : 0;
-      if (roll < floatChance) { spawnFloatPair(); return; }
+      if (roll < STAGES[stageIndex].floatChance) { spawnFloatPair(); return; }
 
       const r2 = Math.random();
       let type;
@@ -247,7 +323,7 @@ permalink: /auto-runner/
     }
 
     function spawnFloatPair() {
-      const progress = Math.min(1, (frame - 400) / 5000);
+      const progress = stageIndex / (STAGES.length - 1);
 
       // ground obstacle — the trigger to jump
       const spike = Math.random() < 0.45;
@@ -354,20 +430,33 @@ permalink: /auto-runner/
 
       // playing
       frame++;
-      speed = BASE_SPEED + frame * ACCEL;
-      score = Math.floor(frame * speed / 8);
+      distance += speed / 8;
       flashAlpha = Math.max(0, flashAlpha - 0.03);
+
+      // Stage progression — speed eases toward the new stage's target rather
+      // than snapping, so a stage-up doesn't yank the pace instantly.
+      const newStageIndex = stageIndexForDistance(distance);
+      if (newStageIndex !== stageIndex) {
+        stageIndex = newStageIndex;
+        stageBannerTimer = 150;
+        announce('Stage ' + (stageIndex + 1));
+      }
+      speed += (STAGES[stageIndex].speed - speed) * SPEED_EASE;
+      if (stageBannerTimer > 0) stageBannerTimer--;
 
       // Scroll ground
       groundX = (groundX - speed + GW) % GW;
 
-      // Spawn obstacles
+      // Spawn obstacles — gap is in STEPS (time), converted to px at the
+      // current speed, so the reaction window a player gets never shrinks
+      // as the world accelerates.
       const lastX = obstacles.length
         ? obstacles[obstacles.length - 1].x + obstacles[obstacles.length - 1].w
         : 0;
-      if (frame > 80 && GW - lastX >= nextObstacleGap) {
+      if (frame > 80 && GW - lastX >= speed * nextGapSteps) {
         spawnObstacle();
-        nextObstacleGap = Math.max(220, 330 - frame * 0.06) + Math.random() * 80;
+        const st = STAGES[stageIndex];
+        nextGapSteps = st.minGap + Math.random() * st.gapJitter;
       }
 
       // Move obstacles
@@ -524,17 +613,23 @@ permalink: /auto-runner/
     function gameOver() {
       if (state === 'gameover') return;
       state = 'gameover';
-      announce('Game over. Distance ' + score + ' meters. Revives used ' + runRevives + '.');
+      const dist = Math.floor(distance);
+      announce('Game over. Distance ' + dist + ' meters. Revives used ' + runRevives + '.');
       goTimer = 0;
       flashAlpha = 0.85;
-      if (score > bestScore) {
-        bestScore = score;
-        try {
-          localStorage.setItem('ar-best', bestScore);
-        } catch (e) {
-          // localStorage unavailable (private browsing / quota) — best score just won't persist
-        }
+
+      if (dist > bestDistance) {
+        bestDistance = dist;
+        try { localStorage.setItem(BEST_KEY, bestDistance); } catch (e) { /* unavailable */ }
       }
+
+      stats.runs++;
+      stats.totalDistance += dist;
+      stats.totalRevives += runRevives;
+      if (dist > stats.bestDistance) stats.bestDistance = dist;
+      if (stageIndex > stats.bestStage) stats.bestStage = stageIndex;
+      if (runRevives === 0 && dist > stats.longestDeathless) stats.longestDeathless = dist;
+      saveStats();
     }
 
     // ── Draw helpers ───────────────────────────────────────────
@@ -756,8 +851,10 @@ permalink: /auto-runner/
 
     // ── Render ─────────────────────────────────────────────────
     function render() {
+      const palette = paletteForStage(stageIndex || 0);
+
       // Background
-      ctx.fillStyle = '#2d2b55';
+      ctx.fillStyle = palette.bg;
       ctx.fillRect(0, 0, GW, GH);
 
       // Stars
@@ -767,13 +864,13 @@ permalink: /auto-runner/
       });
 
       // Ground surface
-      ctx.fillStyle = '#3a3870';
+      ctx.fillStyle = palette.ground;
       ctx.fillRect(0, FLOOR_Y, GW, GH - FLOOR_Y);
 
       // Glow line
       ctx.strokeStyle = 'rgba(255,255,255,0.75)';
       ctx.lineWidth = 2;
-      ctx.shadowColor = 'rgba(200,200,255,0.5)';
+      ctx.shadowColor = palette.glow;
       ctx.shadowBlur = 8;
       ctx.beginPath(); ctx.moveTo(0, FLOOR_Y); ctx.lineTo(GW, FLOOR_Y); ctx.stroke();
       ctx.shadowBlur = 0;
@@ -815,6 +912,19 @@ permalink: /auto-runner/
         ctx.globalAlpha = 1;
       }
 
+      // Stage banner — fades in then out over its ~2.5s lifetime
+      if (state === 'playing' && stageBannerTimer > 0) {
+        const t = stageBannerTimer / 150;
+        const a = t > 0.7 ? (1 - t) / 0.3 : Math.min(1, t / 0.15);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = `rgba(255,255,255,${0.9 * a})`;
+        ctx.font = 'bold 22px monospace';
+        ctx.shadowColor = palette.glow;
+        ctx.shadowBlur = 14;
+        ctx.fillText('STAGE ' + (stageIndex + 1), GW / 2, 70);
+        ctx.shadowBlur = 0;
+      }
+
       // HUD
       drawHUD();
 
@@ -830,12 +940,12 @@ permalink: /auto-runner/
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.font = 'bold 20px monospace';
       ctx.textAlign = 'left';
-      ctx.fillText(score + 'm', 14, 28);
+      ctx.fillText(Math.floor(distance) + 'm', 14, 28);
 
-      if (bestScore > 0) {
+      if (bestDistance > 0) {
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.font = '12px monospace';
-        ctx.fillText('best ' + bestScore + 'm', 14, 46);
+        ctx.fillText('best ' + bestDistance + 'm', 14, 46);
       }
 
       // Player indicator dots
@@ -910,9 +1020,10 @@ permalink: /auto-runner/
 
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 22px monospace';
-        ctx.fillText(score + 'm', GW / 2, GH / 2 - 30);
+        const dist = Math.floor(distance);
+        ctx.fillText(dist + 'm', GW / 2, GH / 2 - 30);
 
-        if (score > 0 && score >= bestScore) {
+        if (dist > 0 && dist >= bestDistance) {
           ctx.fillStyle = '#ffd700';
           ctx.font = 'bold 13px monospace';
           ctx.fillText('✦ NEW BEST! ✦', GW / 2, GH / 2 - 10);
@@ -921,7 +1032,10 @@ permalink: /auto-runner/
         // Run summary
         ctx.fillStyle = 'rgba(255,255,255,0.55)';
         ctx.font = '12px monospace';
-        ctx.fillText('best ' + bestScore + 'm   ·   revives ' + runRevives, GW / 2, GH / 2 + 14);
+        ctx.fillText(
+          'best ' + bestDistance + 'm   ·   stage ' + (stageIndex + 1) + '   ·   revives ' + runRevives,
+          GW / 2, GH / 2 + 14
+        );
 
         if (goTimer > 55) {
           const blink = Math.floor(goTimer / 14) % 2 === 0;
