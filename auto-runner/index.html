@@ -89,6 +89,11 @@ permalink: /auto-runner/
     const MAX_FRAME_MS = 100;    // clamp a stalled/backgrounded tab so it can't fast-forward
     const MAX_STEPS_PER_FRAME = 10; // avoid a spiral of death if the tab was suspended
 
+    const JUMP_BUFFER_STEPS = 6; // a jump pressed this many steps before landing still fires
+    const COYOTE_STEPS = 5;      // a jump pressed this many steps after leaving support still fires
+    const JUMP_CUT_MULT = 0.45;  // releasing early while rising multiplies vy by this (short hop)
+    const SQUASH_DECAY = 0.75;   // per-step decay of the landing-squash / takeoff-stretch effect
+
     // ── Canvas / Scale ─────────────────────────────────────────
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -130,9 +135,11 @@ permalink: /auto-runner/
     function makePlayers() {
       return [
         { x: 120, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null, invincible: 0 },
+          rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null, invincible: 0,
+          jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0 },
         { x: 168, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null, invincible: 0 },
+          rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null, invincible: 0,
+          jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0 },
       ];
     }
 
@@ -169,6 +176,8 @@ permalink: /auto-runner/
         p.y = FLOOR_Y - P_SIZE; p.vy = 0;
         p.grounded = true; p.rot = 0; p.dead = false;
         p.onPlatform = null; p.invincible = 0;
+        p.jumpHeld = false; p.jumpCut = false;
+        p.coyote = 0; p.jumpBuffer = 0; p.squash = 0;
       });
     }
 
@@ -186,11 +195,34 @@ permalink: /auto-runner/
       if (state === 'resuming') return; // ignore input mid-countdown
       if (state === 'waiting') startGame();
       const p = players[idx];
-      if (!p.dead && p.grounded) {
-        p.vy = JUMP_V;
-        p.grounded = false;
-        p.onPlatform = null;
+      if (p.dead) return;
+      if (!performJump(p)) {
+        // Not grounded and no coyote window — buffer it so a tap slightly
+        // before landing still fires the instant support is regained.
+        p.jumpBuffer = JUMP_BUFFER_STEPS;
       }
+    }
+
+    // Actually launches a jump if the player currently has ground support
+    // (standing or within the coyote window). Returns false if it can't fire.
+    function performJump(p) {
+      if (!p.grounded && p.coyote <= 0) return false;
+      p.vy = JUMP_V;
+      p.grounded = false;
+      p.onPlatform = null;
+      p.coyote = 0;
+      p.jumpBuffer = 0;
+      p.jumpHeld = true;
+      p.jumpCut = false;
+      p.squash = 1; // stretch on takeoff
+      return true;
+    }
+
+    // Called on touchend/keyup/mouseup — releasing early while still rising
+    // cuts the jump short (variable jump height).
+    function releaseJump(idx) {
+      const p = players[idx];
+      if (p) p.jumpHeld = false;
     }
 
     // ── Obstacle helpers ───────────────────────────────────────
@@ -372,9 +404,18 @@ permalink: /auto-runner/
 
         if (p.invincible > 0) p.invincible--;
 
+        const wasGrounded = p.grounded;
+
         p.vy += GRAVITY;
         p.y  += p.vy;
         p.bob = 0;
+
+        // Variable jump height — releasing early while still rising cuts the
+        // arc short, once per jump. Holding gives the full 157px arc.
+        if (p.vy < 0 && !p.jumpHeld && !p.jumpCut) {
+          p.vy *= JUMP_CUT_MULT;
+          p.jumpCut = true;
+        }
 
         // Floor snap
         if (p.y >= FLOOR_Y - P_SIZE) {
@@ -414,6 +455,27 @@ permalink: /auto-runner/
               break;
             }
           }
+        }
+
+        // Coyote time — a jump input just after support drops out (a platform's
+        // trailing edge scrolling past underfoot) still counts. Not armed by an
+        // intentional jump, since grounded there was already false last step.
+        if (wasGrounded && !p.grounded) {
+          p.coyote = COYOTE_STEPS;
+        } else if (p.coyote > 0) {
+          p.coyote--;
+        }
+
+        // Landing squash / takeoff stretch (takeoff stretch is set in performJump)
+        if (!wasGrounded && p.grounded) p.squash = -1;
+        p.squash *= SQUASH_DECAY;
+        if (Math.abs(p.squash) < 0.02) p.squash = 0;
+
+        // Buffered jump — a tap slightly before landing fires the instant
+        // support (ground, or the coyote window) is regained.
+        if (p.jumpBuffer > 0) {
+          p.jumpBuffer--;
+          if (p.grounded || p.coyote > 0) performJump(p);
         }
 
         // Rotation
@@ -496,6 +558,9 @@ permalink: /auto-runner/
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(p.rot);
+      // Squash (landing, negative) / stretch (takeoff, positive) — decays to 0
+      const sq = p.squash || 0;
+      ctx.scale(1 - sq * 0.15, 1 + sq * 0.15);
 
       const h = P_SIZE, hh = h / 2;
       const blink = p.invincible > 0 && Math.floor(p.invincible / 5) % 2 === 0;
@@ -919,10 +984,21 @@ permalink: /auto-runner/
 
     // ── Input ──────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
+      if (e.repeat) return; // ignore OS key-repeat — a held key shouldn't re-buffer a jump
       const k = e.key.toLowerCase();
       if (k === 'a' || k === 'arrowleft')  { e.preventDefault(); doJump(0); }
       if (k === 'd' || k === 'arrowright' || k === ' ') { e.preventDefault(); doJump(1); }
     });
+
+    document.addEventListener('keyup', e => {
+      const k = e.key.toLowerCase();
+      if (k === 'a' || k === 'arrowleft')  { releaseJump(0); }
+      if (k === 'd' || k === 'arrowright' || k === ' ') { releaseJump(1); }
+    });
+
+    // Tracks which player each active touch is jumping, so touchend can
+    // release the right side's hold for variable jump height.
+    const touchPlayer = new Map();
 
     canvas.addEventListener('touchstart', e => {
       e.preventDefault();
@@ -930,13 +1006,33 @@ permalink: /auto-runner/
         const t = e.changedTouches[i];
         const rect = canvas.getBoundingClientRect();
         const tx = (t.clientX - rect.left) / scale;
-        doJump(tx < GW / 2 ? 0 : 1);
+        const idx = tx < GW / 2 ? 0 : 1;
+        touchPlayer.set(t.identifier, idx);
+        doJump(idx);
       }
     }, { passive: false });
 
+    function handleTouchEnd(e) {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const id = e.changedTouches[i].identifier;
+        if (touchPlayer.has(id)) {
+          releaseJump(touchPlayer.get(id));
+          touchPlayer.delete(id);
+        }
+      }
+    }
+    canvas.addEventListener('touchend', handleTouchEnd);
+    canvas.addEventListener('touchcancel', handleTouchEnd);
+
+    let mouseHeldIdx = null;
     canvas.addEventListener('mousedown', e => {
       const rect = canvas.getBoundingClientRect();
-      doJump((e.clientX - rect.left) / scale < GW / 2 ? 0 : 1);
+      mouseHeldIdx = (e.clientX - rect.left) / scale < GW / 2 ? 0 : 1;
+      doJump(mouseHeldIdx);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (mouseHeldIdx !== null) { releaseJump(mouseHeldIdx); mouseHeldIdx = null; }
     });
 
     window.addEventListener('resize', resize);
