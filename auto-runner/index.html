@@ -36,7 +36,7 @@ permalink: /auto-runner/
   <div id="ar-announce" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></div>
 
   <script>
-    const SW_VERSION = '2607300229';
+    const SW_VERSION = '2609012200';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function askUpdate(reg) {
@@ -1814,6 +1814,43 @@ permalink: /auto-runner/
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && state === 'playing') { state = 'paused'; announce('Paused'); }
     });
+
+    // ── Debug hook (?debug=1) ─────────────────────────────────────
+    // Exposes a small read/step API for automated testing (see
+    // tools/auto-runner-e2e/) and validates every authored chunk against
+    // every stage it could spawn at, rather than trusting it silently.
+    if (/(?:^|[?&])debug=1(?:&|$)/.test(location.search)) {
+      window.__autoRunner = {
+        get state() { return state; },
+        get distance() { return distance; },
+        get stage() { return stageIndex; },
+        get speed() { return speed; },
+        get mode() { return mode; },
+        get players() {
+          return players.map(p => ({ x: p.x, y: p.y, dead: p.dead, grounded: p.grounded, shielded: p.shielded }));
+        },
+        get obstacles() {
+          return obstacles.map(o => ({
+            x: o.x, w: o.w, h: o.h, spike: !!o.spike, isFloat: !!o.isFloat, isPit: !!o.isPit,
+          }));
+        },
+        // Taking manual control of stepping disables the rAF-driven
+        // simulation for the rest of the session — a test then owns time.
+        stepOnce() { manualDrive = true; update(); },
+        setInput(idx, down) { manualDrive = true; if (down) doJump(idx); else releaseJump(idx); },
+      };
+
+      let chunkFailures = 0;
+      CHUNKS.forEach((c, ci) => {
+        for (let s = c.minStage; s < STAGES.length; s++) {
+          if (!validateChunk(c, STAGES[s].speed)) {
+            chunkFailures++;
+            console.error(`[auto-runner debug] chunk #${ci} fails validation at stage ${s + 1} (speed ${STAGES[s].speed})`, c);
+          }
+        }
+      });
+      console.log(chunkFailures ? `[auto-runner debug] ${chunkFailures} chunk validation failure(s)` : '[auto-runner debug] all chunks validated OK');
+    }
 
     // ── Boot ───────────────────────────────────────────────────
     resize();
