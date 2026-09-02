@@ -36,7 +36,7 @@ permalink: /auto-runner/
   <div id="ar-announce" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></div>
 
   <script>
-    const SW_VERSION = '2609020226';
+    const SW_VERSION = '2609020430';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function askUpdate(reg) {
@@ -592,27 +592,67 @@ permalink: /auto-runner/
       obstacles.push(makeGroundObstacle(pickGroundType(), GW + 10));
     }
 
+    // How many hazards riding the platform skips, beyond the one you had to
+    // jump to catch it. Ramps up with stage so the reward (and the ground
+    // route's difficulty) grows alongside everything else.
+    function gauntletSkipCount() {
+      return 1 + Math.min(3, Math.floor(stageIndex / 2));
+    }
+
+    // Builds a [marker, ...skipped] items array (same shape as a CHUNKS
+    // entry) and validates it against the live speed before use, retrying
+    // with safer spacing rather than ever spawning an unfair layout. The
+    // last couple of attempts drop sameJump pairs entirely (a pure
+    // reaction-gap chain always validates), so this always terminates with
+    // something fair.
+    function buildGauntletItems(skipCount, liveSpeed) {
+      const markerSpike = Math.random() < 0.45;
+      const marker = { type: markerSpike ? 'spike1' : 'block2' };
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const forceSafe = attempt >= 4;
+        const items = [marker];
+        for (let i = 0; i < skipCount; i++) {
+          const type = pickGroundType();
+          if (!forceSafe && Math.random() < 0.35) {
+            items.push({ type, dx: 8 + Math.round(Math.random() * 8), sameJump: true });
+          } else {
+            items.push({ type, dx: MIN_REACT_STEPS + Math.round(Math.random() * 12) });
+          }
+        }
+        if (validateChunk({ items }, liveSpeed)) return items;
+      }
+      return [marker]; // defensive fallback; forceSafe above always validates in practice
+    }
+
     function spawnFloatPair() {
       const progress = stageIndex / (STAGES.length - 1);
+      const skipCount = gauntletSkipCount();
+      const items = buildGauntletItems(skipCount, speed);
 
-      // ground obstacle — the trigger to jump
-      const spike = Math.random() < 0.45;
-      const gw = spike ? T : T * 2;
-      obstacles.push({ x: GW + 10, w: gw, h: T, spike, isFloat: false, pairTrigger: true });
+      // Place the marker, then the skipped hazards after it — the gap
+      // between each is the validated `dx` (steps) converted to px at the
+      // live speed, exactly like spawnChunk().
+      let x = GW + 10;
+      items.forEach((it, i) => {
+        if (i > 0) x += speed * (it.dx || 0);
+        const o = makeGroundObstacle(it.type, x);
+        if (i === 0) o.pairTrigger = true; // only the marker gets the "jump here" hint
+        obstacles.push(o);
+        x += o.w;
+      });
+      const gauntletEnd = x; // world x just past the last skipped hazard
 
-      // optional second ground obstacle underneath / just after the platform
-      if (progress > 0.35 && Math.random() < 0.55) {
-        const x2 = GW + 10 + gw + 28 + Math.round(Math.random() * T);
-        obstacles.push({ x: x2, w: T, h: T, spike: true, isFloat: false });
-      }
-
-      // floating platform — longer so it spans over multiple obstacles
+      // Floating platform — catch timing is unchanged (floatY/xOff formulas
+      // are the same as before); only the width changes, stretching to
+      // cover every skipped hazard so landing on it clears them all at once.
       const floatY = Math.round(158 - progress * 38);  // 158 → 120
-      const platW  = Math.round(220 - progress * 70);  // 220 → 150 (was 124 → 80)
-      const xOff   = 60 + Math.round(Math.random() * 40);  // 60–100 (was 138–168)
+      const xOff   = 60 + Math.round(Math.random() * 40);  // 60–100
+      const platStartX = GW + 10 + xOff;
+      const minPlatW = Math.round(220 - progress * 70);  // 220 → 150 — floor for a 1-hazard gauntlet
+      const platW = Math.max(minPlatW, gauntletEnd - platStartX + 24);
 
       const platform = {
-        x: GW + 10 + xOff,
+        x: platStartX,
         y0: floatY,
         w: platW,
         h: 10,
@@ -1172,12 +1212,14 @@ permalink: /auto-runner/
         ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx, y + o.h); ctx.stroke();
       }
 
-      // Jump hint arrow (only while platform is still far enough to react)
+      // Jump hint arrow, anchored near the platform's leading edge — that's
+      // where the catch timing actually matters, not its (now much wider,
+      // gauntlet-spanning) middle.
       if (o.x > 220) {
         ctx.fillStyle = `rgba(160,238,255,${Math.min(1, (o.x - 220) / 120) * 0.85})`;
         ctx.font = 'bold 11px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('↑', o.x + o.w / 2, y - 6);
+        ctx.fillText('↑', o.x + Math.min(30, o.w / 2), y - 6);
         ctx.textAlign = 'left';
       }
 
