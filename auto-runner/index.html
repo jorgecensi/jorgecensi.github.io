@@ -33,9 +33,10 @@ permalink: /auto-runner/
 </head>
 <body>
   <canvas id="canvas" role="img" aria-label="Auto Runner game screen"></canvas>
+  <div id="ar-announce" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></div>
 
   <script>
-    const SW_VERSION = '2607300229';
+    const SW_VERSION = '2609012200';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function askUpdate(reg) {
@@ -77,17 +78,173 @@ permalink: /auto-runner/
     const GRAVITY = 0.58;
     const JUMP_V = -13.5;
     const P_SIZE = 38;                 // player square side
-    const BASE_SPEED = 4.5;
-    const ACCEL = 0.0005;              // speed increase per frame
+
+    // A full-height jump covers this many steps airborne and this many px of
+    // apex height at any speed — used to size safe obstacle/platform spacing.
+    const JUMP_AIR_STEPS = Math.ceil(2 * (-JUMP_V) / GRAVITY); // ~47
+    const JUMP_APEX_PX = (JUMP_V * JUMP_V) / (2 * GRAVITY);    // ~157
 
     const COLORS = ['#e84040', '#3a8eff'];
     const EYE_COL = '#ffffff';
     const LABEL = ['P1', 'P2'];
 
+    // ── Achievements & cosmetic palettes ──────────────────────────
+    // Each achievement, once unlocked, adds a selectable robot color pair.
+    // `check(r)` receives the just-finished run's summary (see gameOver()).
+    const ACHIEVEMENTS = [
+      { id: 'distance500',   label: 'First 500m',         colors: ['#ff8a3d', '#ffd23d'], check: r => r.dist >= 500 },
+      { id: 'stage3',        label: 'Reach Stage 3',       colors: ['#3dffb0', '#3dd6ff'], check: r => r.stage >= 2 },
+      { id: 'stage5',        label: 'Reach Stage 5',       colors: ['#b03dff', '#ff3dd6'], check: r => r.stage >= 4 },
+      { id: 'revives5',      label: '5 Revives, One Run',  colors: ['#ff3d3d', '#ff9d3d'], check: r => r.revives >= 5 },
+      { id: 'sync3',         label: '3 Sync Jumps',        colors: ['#3dfff0', '#3d7bff'], check: r => r.sync >= 3 },
+      { id: 'nearmiss10',    label: '10 Near-Misses',      colors: ['#fff23d', '#ff3d8a'], check: r => r.nearMiss >= 10 },
+      { id: 'deathless1000', label: '1000m Deathless',     colors: ['#3dff6b', '#d6ff3d'], check: r => r.deathless >= 1000 },
+    ];
+
+    function unlockedPaletteIds() { return ['default', ...stats.achievements]; }
+
+    function paletteColors(id) {
+      const a = ACHIEVEMENTS.find(a => a.id === id);
+      return a ? a.colors : COLORS;
+    }
+
+    function currentRobotColors() {
+      const ids = unlockedPaletteIds();
+      return paletteColors(ids.includes(stats.selectedPalette) ? stats.selectedPalette : 'default');
+    }
+
+    function cyclePalette() {
+      const ids = unlockedPaletteIds();
+      const i = ids.indexOf(stats.selectedPalette);
+      stats.selectedPalette = ids[(i + 1) % ids.length];
+      saveStats();
+      init(); // re-color the roster immediately
+    }
+
+    // ── Difficulty progression ───────────────────────────────────
+    // A new stage unlocks every 500m. Speed ramps smoothly toward the stage's
+    // target (see SPEED_EASE below) and caps out at the final stage. Obstacle
+    // spacing (minGap/gapJitter) is in STEPS, not pixels, so the reaction
+    // window a player gets stays constant no matter how fast the world moves —
+    // the old formula measured the gap in pixels, so it shrank as speed rose
+    // and became unfairly tight by the third minute of a run.
+    const STAGES = [
+      { at: 0,    speed: 4.5, minGap: 60, gapJitter: 20, floatChance: 0.00 },
+      { at: 500,  speed: 5.2, minGap: 56, gapJitter: 19, floatChance: 0.08 },
+      { at: 1000, speed: 5.9, minGap: 52, gapJitter: 18, floatChance: 0.14 },
+      { at: 1500, speed: 6.6, minGap: 48, gapJitter: 17, floatChance: 0.18 },
+      { at: 2000, speed: 7.2, minGap: 46, gapJitter: 16, floatChance: 0.22 },
+      { at: 2500, speed: 7.8, minGap: 44, gapJitter: 15, floatChance: 0.24 },
+      { at: 3000, speed: 8.3, minGap: 42, gapJitter: 14, floatChance: 0.26 },
+      { at: 3500, speed: 8.8, minGap: 40, gapJitter: 13, floatChance: 0.27 },
+      { at: 4000, speed: 9.2, minGap: 39, gapJitter: 12, floatChance: 0.28 },
+      { at: 4500, speed: 9.5, minGap: 38, gapJitter: 12, floatChance: 0.28 }, // speed cap
+    ];
+    const SPEED_EASE = 0.025; // per-step lerp toward the stage's target speed (~2s to settle)
+
+    function stageIndexForDistance(d) {
+      let idx = 0;
+      for (let i = 0; i < STAGES.length; i++) if (d >= STAGES[i].at) idx = i;
+      return idx;
+    }
+
+    // Programmatic per-stage palette — a slow hue drift so the world visibly
+    // changes without hand-tuning ten literal color sets.
+    function paletteForStage(i) {
+      const hue = (246 + i * 22) % 360;
+      return {
+        bg:     `hsl(${hue}, 36%, 23%)`,
+        ground: `hsl(${hue}, 28%, 32%)`,
+        glow:   `hsla(${(hue + 16) % 360}, 70%, 82%, 0.5)`,
+      };
+    }
+
+    const STEP_MS = 1000 / 60;   // fixed simulation step (60 Hz), independent of display refresh
+    const MAX_FRAME_MS = 100;    // clamp a stalled/backgrounded tab so it can't fast-forward
+    const MAX_STEPS_PER_FRAME = 10; // avoid a spiral of death if the tab was suspended
+
+    const MISS_COOLDOWNS = [80, 140, 200]; // escalating respawn delay for a missed revive/shield star
+    const JUMP_BUFFER_STEPS = 6; // a jump pressed this many steps before landing still fires
+    const COYOTE_STEPS = 5;      // a jump pressed this many steps after leaving support still fires
+    const JUMP_CUT_MULT = 0.45;  // releasing early while rising multiplies vy by this (short hop)
+    const SQUASH_DECAY = 0.75;   // per-step decay of the landing-squash / takeoff-stretch effect
+
     // ── Canvas / Scale ─────────────────────────────────────────
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     let scale = 1;
+
+    // ── Screen-reader announcements ──────────────────────────────
+    const announceEl = document.getElementById('ar-announce');
+    function announce(text) {
+      if (announceEl) announceEl.textContent = text;
+    }
+
+    // ── Audio (synthesized — no audio files) ──────────────────────
+    // Created lazily on the first user gesture; browsers refuse to start an
+    // AudioContext before one.
+    let audioCtx = null;
+    function ensureAudio() {
+      if (audioCtx) return audioCtx;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        audioCtx = null;
+      }
+      return audioCtx;
+    }
+    document.addEventListener('touchstart', () => ensureAudio(), { once: true, passive: true });
+    document.addEventListener('mousedown', () => ensureAudio(), { once: true });
+    document.addEventListener('keydown', () => ensureAudio(), { once: true });
+
+    function playTone(freq, duration, type, peak, freqEnd) {
+      if (!stats || stats.muted) return;
+      const ac = ensureAudio();
+      if (!ac) return;
+      if (ac.state === 'suspended') ac.resume();
+      const t0 = ac.currentTime;
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t0 + duration);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(peak || 0.12, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+      osc.connect(gain).connect(ac.destination);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    }
+
+    function sfxJump()      { playTone(520, 0.09, 'square', 0.10, 780); }
+    function sfxLand()      { playTone(160, 0.07, 'sine', 0.08, 90); }
+    function sfxDeath()     { playTone(220, 0.35, 'sawtooth', 0.14, 40); }
+    function sfxStar()      { playTone(880, 0.16, 'triangle', 0.12, 1320); }
+    function sfxMilestone() { playTone(1000, 0.05, 'sine', 0.05); }
+    function sfxStage() {
+      [660, 880, 1100].forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'square', 0.09), i * 90));
+    }
+
+    function toggleMute() { stats.muted = !stats.muted; saveStats(); }
+
+    // ── Haptics ────────────────────────────────────────────────
+    function vibrate(ms) {
+      try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* unsupported */ }
+    }
+
+    // ── Particles (landing dust, death burst, star sparkle) ───────
+    const MAX_PARTICLES = 120;
+    function spawnParticles(x, y, color, count, spread) {
+      for (let i = 0; i < count; i++) {
+        if (particles.length >= MAX_PARTICLES) particles.shift();
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 0.6 + Math.random() * spread;
+        particles.push({
+          x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 1.5,
+          life: 22 + Math.random() * 14, maxLife: 36, color, size: 2 + Math.random() * 2,
+        });
+      }
+    }
 
     function resize() {
       scale = Math.min(window.innerWidth / GW, window.innerHeight / GH);
@@ -98,41 +255,139 @@ permalink: /auto-runner/
     }
 
     // ── State ──────────────────────────────────────────────────
-    let state;          // 'waiting' | 'playing' | 'gameover'
-    let frame, score, bestScore, speed, goTimer, flashAlpha;
-    let obstacles, nextObstacleGap;
+    let state;          // 'waiting' | 'playing' | 'paused' | 'resuming' | 'gameover'
+    let tick;           // increments every fixed step, in every state — drives all animation timing
+    let frame, distance, speed, goTimer, flashAlpha;
+    let stageIndex;
+    let bannerText, bannerTimer, bannerLife; // the big centered "STAGE n" / "NEW BEST" banner
+    let obstacles, nextGapSteps;
     let stars, groundX;
-    let reviveStars, reviveStarCooldown;
+    let reviveStars, reviveStarCooldown, missedStarStreak;
+    let resumeCountdown;   // steps remaining in the 3-2-1 countdown after unpausing
+    let runRevives;        // revives used so far this run, shown on the game-over summary
 
-    try {
-      bestScore = parseInt(localStorage.getItem('ar-best') || '0', 10);
-    } catch (e) {
-      bestScore = 0;
+    // ── In-run feedback state ────────────────────────────────────
+    let distanceMarkers;    // scrolling "100m" ground markers
+    let nextMarkerAt;       // next distance (m) that spawns a marker
+    let bestFlagAt, bestFlagSpawned; // flags the previous best distance in-run
+    let popups;             // transient floaty text (CLOSE!, SYNC!, …)
+    let comboCount, comboTimer; // near-miss combo
+    let lastSyncStep;       // frame of the last credited sync-jump bonus
+    let runNearMiss, runSyncCount, runShields; // per-run counters, feed the summary/achievements
+    let particles;                  // landing dust / death burst / star sparkle
+    let shakeTimer, shakeMag;        // screen shake on death
+    let parallaxX;                   // far silhouette layer scroll accumulator
+
+    function spawnPopup(x, y, text, color) {
+      popups.push({ x, y, text, color, life: 45, maxLife: 45 });
     }
+
+    // Achievement unlock toast — a queue since two could unlock off one run.
+    let achievementQueue, achievementToastText, achievementToastTimer;
+
+    function queueAchievementToast(label) {
+      achievementQueue.push(label);
+    }
+
+    // ── Persistence ────────────────────────────────────────────
+    // 'ar-best' held the old quadratic frame*speed/8 score, which isn't
+    // comparable to the new linearly-accumulated distance — start a new key
+    // rather than migrate a number that means something different now.
+    const BEST_KEY = 'ar-best-v2';
+    const STATS_KEY = 'ar-stats';
+    let bestDistance = 0;
+    let stats;
+
+    function defaultStats() {
+      return {
+        runs: 0,
+        totalDistance: 0,
+        bestDistance: 0,
+        bestStage: 0,
+        totalRevives: 0,
+        longestDeathless: 0,
+        mode: 2, // 1 = solo, 2 = co-op — remembered across visits
+        achievements: [],          // unlocked achievement ids
+        selectedPalette: 'default', // 'default' or an unlocked achievement id
+        muted: false,
+      };
+    }
+
+    let mode; // mirrors stats.mode; kept as its own variable since it's read every step
+
+    function loadStats() {
+      try {
+        bestDistance = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0;
+      } catch (e) {
+        bestDistance = 0;
+      }
+      try {
+        const raw = localStorage.getItem(STATS_KEY);
+        stats = Object.assign(defaultStats(), raw ? JSON.parse(raw) : null);
+      } catch (e) {
+        stats = defaultStats();
+      }
+      mode = stats.mode === 1 ? 1 : 2;
+    }
+
+    function saveStats() {
+      try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) { /* unavailable */ }
+    }
+
+    function setMode(m) {
+      if (mode === m) return;
+      mode = m;
+      stats.mode = m;
+      saveStats();
+      init(); // rebuild the player roster for the new mode
+    }
+
+    loadStats();
+    achievementQueue = [];
+    achievementToastText = '';
+    achievementToastTimer = 0;
 
     // ── Players ────────────────────────────────────────────────
     let players;
 
-    function makePlayers() {
-      return [
-        { x: 120, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[0], dead: false, onPlatform: null, invincible: 0 },
-        { x: 168, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
-          rot: 0, bob: 0, color: COLORS[1], dead: false, onPlatform: null, invincible: 0 },
-      ];
+    function makePlayer(x, color) {
+      return {
+        x, y: FLOOR_Y - P_SIZE, vy: 0, grounded: true,
+        rot: 0, bob: 0, color, dead: false, onPlatform: null, invincible: 0,
+        jumpHeld: false, jumpCut: false, coyote: 0, jumpBuffer: 0, squash: 0,
+        lastJumpStep: -999, shielded: false, holdCount: 0,
+      };
+    }
+
+    // mode 1 (solo) gets a single centered robot; mode 2 (co-op) gets the pair.
+    // Colors come from whichever cosmetic palette the player has selected.
+    function makePlayers(playerMode) {
+      const colors = currentRobotColors();
+      if (playerMode === 1) return [makePlayer(144, colors[0])];
+      return [makePlayer(120, colors[0]), makePlayer(168, colors[1])];
     }
 
     // ── Initialise / Reset ─────────────────────────────────────
     function init() {
       state = 'waiting';
-      frame = 0; score = 0; speed = BASE_SPEED;
+      tick = 0;
+      frame = 0; distance = 0; speed = STAGES[0].speed;
+      stageIndex = 0; bannerText = ''; bannerTimer = 0; bannerLife = 150;
       goTimer = 0; flashAlpha = 0;
       obstacles = [];
-      nextObstacleGap = 320;
+      nextGapSteps = STAGES[0].minGap;
       groundX = 0;
       reviveStars = [];
       reviveStarCooldown = 0;
-      players = makePlayers();
+      missedStarStreak = 0;
+      distanceMarkers = []; nextMarkerAt = 100;
+      bestFlagAt = bestDistance; bestFlagSpawned = bestDistance <= 0;
+      popups = [];
+      comboCount = 0; comboTimer = 0;
+      lastSyncStep = -999;
+      runNearMiss = 0; runSyncCount = 0; runShields = 0;
+      particles = []; shakeTimer = 0; shakeMag = 0; parallaxX = 0;
+      players = makePlayers(mode);
       stars = Array.from({ length: 55 }, () => ({
         x: Math.random() * GW,
         y: Math.random() * (FLOOR_Y - 20),
@@ -143,60 +398,202 @@ permalink: /auto-runner/
 
     function startGame() {
       state = 'playing';
-      frame = 0; score = 0; speed = BASE_SPEED;
+      announce('Run started');
+      frame = 0; distance = 0; speed = STAGES[0].speed;
+      stageIndex = 0; bannerText = ''; bannerTimer = 0; bannerLife = 150;
       obstacles = [];
-      nextObstacleGap = 320;
+      nextGapSteps = STAGES[0].minGap;
       reviveStars = [];
       reviveStarCooldown = 0;
+      missedStarStreak = 0;
+      runRevives = 0;
+      distanceMarkers = []; nextMarkerAt = 100;
+      bestFlagAt = bestDistance; bestFlagSpawned = bestDistance <= 0;
+      popups = [];
+      comboCount = 0; comboTimer = 0;
+      lastSyncStep = -999;
+      runNearMiss = 0; runSyncCount = 0; runShields = 0;
+      particles = []; shakeTimer = 0; shakeMag = 0; parallaxX = 0;
       players.forEach(p => {
         p.y = FLOOR_Y - P_SIZE; p.vy = 0;
         p.grounded = true; p.rot = 0; p.dead = false;
         p.onPlatform = null; p.invincible = 0;
+        p.jumpHeld = false; p.jumpCut = false;
+        p.coyote = 0; p.jumpBuffer = 0; p.squash = 0;
+        p.lastJumpStep = -999; p.shielded = false; p.holdCount = 0;
       });
-    }
-
-    function restart() {
-      startGame();
     }
 
     // ── Jump ───────────────────────────────────────────────────
     function doJump(idx) {
       if (state === 'gameover') {
-        if (goTimer > 55) restart();
+        if (goTimer > 55) init(); // back to the title screen; a further tap starts a new run
         return;
       }
-      if (state === 'waiting') startGame();
-      const p = players[idx];
-      if (!p.dead && p.grounded) {
-        p.vy = JUMP_V;
-        p.grounded = false;
-        p.onPlatform = null;
+      if (state === 'paused') {
+        resumeCountdown = 180; // 3 seconds at 60 steps/sec
+        state = 'resuming';
+        return;
       }
+      if (state === 'resuming') return; // ignore input mid-countdown
+      if (state === 'waiting') startGame();
+      const targetIdx = mode === 1 ? 0 : idx; // solo: either side/key controls the one robot
+      const p = players[targetIdx];
+      if (p.dead) return;
+
+      // Track how many input sources are currently holding this player's
+      // jump — in solo mode both sides/keys drive the same robot, so
+      // releasing one of two simultaneously-held inputs must not cut the
+      // jump short while the other is still down.
+      p.holdCount = (p.holdCount || 0) + 1;
+      p.jumpHeld = true;
+
+      if (!performJump(p, targetIdx)) {
+        // Not grounded and no coyote window — buffer it so a tap slightly
+        // before landing still fires the instant support is regained.
+        p.jumpBuffer = JUMP_BUFFER_STEPS;
+      }
+    }
+
+    // Actually launches a jump if the player currently has ground support
+    // (standing or within the coyote window). Returns false if it can't fire.
+    // (jumpHeld reflects whatever doJump/releaseJump have already set — a
+    // buffered jump that gets released before it fires still short-hops.)
+    function performJump(p, idx) {
+      if (!p.grounded && p.coyote <= 0) return false;
+      sfxJump();
+      p.vy = JUMP_V;
+      p.grounded = false;
+      p.onPlatform = null;
+      p.coyote = 0;
+      p.jumpBuffer = 0;
+      p.jumpCut = false;
+      p.squash = 1; // stretch on takeoff
+
+      p.lastJumpStep = frame;
+      const other = players[1 - idx];
+      if (other && !other.dead && Math.abs(frame - other.lastJumpStep) <= 4 &&
+          frame - lastSyncStep > 30) {
+        lastSyncStep = frame;
+        distance += 5;
+        runSyncCount++;
+        spawnPopup((p.x + other.x) / 2 + P_SIZE / 2, Math.min(p.y, other.y) - 8, 'SYNC!', '#a0eeff');
+      }
+      return true;
+    }
+
+    // Called on touchend/keyup/mouseup — releasing early while still rising
+    // cuts the jump short (variable jump height), unless another input for
+    // the same player (solo mode's mirrored zones/keys) is still held.
+    function releaseJump(idx) {
+      const p = players[mode === 1 ? 0 : idx];
+      if (!p) return;
+      p.holdCount = Math.max(0, (p.holdCount || 0) - 1);
+      if (p.holdCount === 0) p.jumpHeld = false;
     }
 
     // ── Obstacle helpers ───────────────────────────────────────
     const T = 32; // tile size
+    const MIN_REACT_STEPS = 24; // minimum time between two independent hazards in a chunk
+
+    // Ground hazard pool. `w` is a relative spawn weight, `minStage` gates
+    // when it starts appearing (0 = from the very first stage).
+    const GROUND_POOL = [
+      { type: 'block1',   w: 1 },
+      { type: 'block2',   w: 1 },
+      { type: 'spike1',   w: 1 },
+      { type: 'spike2',   w: 1 },
+      { type: 'tallBlock', w: 0.7, minStage: 2 },
+      { type: 'pit',       w: 0.4, minStage: 3 },
+    ];
+
+    function pickGroundType() {
+      const pool = GROUND_POOL.filter(e => stageIndex >= (e.minStage || 0));
+      const total = pool.reduce((s, e) => s + e.w, 0);
+      let r = Math.random() * total;
+      for (const e of pool) { r -= e.w; if (r <= 0) return e.type; }
+      return pool[pool.length - 1].type;
+    }
+
+    function makeGroundObstacle(type, x) {
+      let o;
+      switch (type) {
+        case 'block2':    o = { x, w: T * 2, h: T,     spike: false, isFloat: false }; break;
+        case 'spike1':    o = { x, w: T,     h: T,     spike: true,  isFloat: false }; break;
+        case 'spike2':    o = { x, w: T * 2, h: T,     spike: true,  isFloat: false }; break;
+        case 'tallBlock': o = { x, w: T,     h: T * 2, spike: false, isFloat: false }; break;
+        case 'pit':       o = { x, w: T * 2 + Math.round(Math.random() * T), h: 0,
+                                 spike: false, isFloat: false, isPit: true }; break;
+        case 'block1':
+        default:          o = { x, w: T,     h: T,     spike: false, isFloat: false };
+      }
+      o.passedBy = [false, false]; // per-player near-miss tracking
+      return o;
+    }
+
+    // Hand-authored ground-hazard sequences. Each non-first item's `dx` is the
+    // gap (in steps, at the stage's floor speed — the hardest case, since a
+    // higher speed only widens the effective jump reach) between the previous
+    // item's right edge and this one's left edge. `sameJump: true` means both
+    // must clear in a single leap; otherwise it's just two independent
+    // hazards close enough together to need a real reaction, not a stroll.
+    const CHUNKS = [
+      { minStage: 0, items: [{ type: 'spike2' }, { type: 'spike1', dx: 10, sameJump: true }] },
+      { minStage: 0, items: [{ type: 'block1' }, { type: 'block2', dx: 30 }] },
+      { minStage: 2, items: [{ type: 'block1' }, { type: 'tallBlock', dx: 34 }] },
+      { minStage: 3, items: [{ type: 'spike1' }, { type: 'pit', dx: 14, sameJump: true }] },
+    ];
+
+    // Worst-case width for each hazard type, used when validating a chunk so
+    // the check holds even for the widest obstacle spawnObstacle can roll.
+    const MAX_HAZARD_WIDTH = { block1: T, block2: T * 2, spike1: T, spike2: T * 2, tallBlock: T, pit: T * 3 };
+
+    function validateChunk(chunk, speed) {
+      const reachPx = JUMP_AIR_STEPS * speed;
+      for (let i = 1; i < chunk.items.length; i++) {
+        const it = chunk.items[i];
+        const dx = it.dx || 0;
+        if (it.sameJump) {
+          // The whole leap — takeoff before the previous hazard to landing
+          // past this one's far edge — must fit inside one jump's reach.
+          const trailingWidth = MAX_HAZARD_WIDTH[it.type] || T;
+          if (dx * speed + trailingWidth > reachPx - P_SIZE) return false;
+        } else if (dx < MIN_REACT_STEPS) {
+          return false; // not enough time to react to the second hazard
+        }
+      }
+      return true;
+    }
+
+    function availableChunks() {
+      return CHUNKS.filter(c => stageIndex >= c.minStage && validateChunk(c, STAGES[stageIndex].speed));
+    }
+
+    function spawnChunk(chunk) {
+      let x = GW + 10;
+      chunk.items.forEach((it, i) => {
+        if (i > 0) x += speed * (it.dx || 0);
+        const o = makeGroundObstacle(it.type, x);
+        obstacles.push(o);
+        x += o.w;
+      });
+    }
 
     function spawnObstacle() {
       const roll = Math.random();
-      // floating platform pairs unlock at frame 400 and ramp up to 28% chance
-      const floatChance = frame > 400 ? Math.min(0.28, 0.06 + (frame - 400) / 7000) : 0;
-      if (roll < floatChance) { spawnFloatPair(); return; }
+      if (roll < STAGES[stageIndex].floatChance) { spawnFloatPair(); return; }
 
-      const r2 = Math.random();
-      let type;
-      if (r2 < 0.25)       type = 'block1';
-      else if (r2 < 0.50)  type = 'block2';
-      else if (r2 < 0.72)  type = 'spike1';
-      else                  type = 'spike2';
+      const chunks = availableChunks();
+      if (chunks.length && Math.random() < 0.25) {
+        spawnChunk(chunks[Math.floor(Math.random() * chunks.length)]);
+        return;
+      }
 
-      const wide  = (type === 'block2' || type === 'spike2') ? T * 2 : T;
-      const spike = type === 'spike1' || type === 'spike2';
-      obstacles.push({ x: GW + 10, w: wide, h: T, spike, isFloat: false });
+      obstacles.push(makeGroundObstacle(pickGroundType(), GW + 10));
     }
 
     function spawnFloatPair() {
-      const progress = Math.min(1, (frame - 400) / 5000);
+      const progress = stageIndex / (STAGES.length - 1);
 
       // ground obstacle — the trigger to jump
       const spike = Math.random() < 0.45;
@@ -214,20 +611,35 @@ permalink: /auto-runner/
       const platW  = Math.round(220 - progress * 70);  // 220 → 150 (was 124 → 80)
       const xOff   = 60 + Math.round(Math.random() * 40);  // 60–100 (was 138–168)
 
-      obstacles.push({
+      const platform = {
         x: GW + 10 + xOff,
+        y0: floatY,
         w: platW,
         h: 10,
         spike: false,
         isFloat: true,
         floatY,
         glowPhase: Math.random() * Math.PI * 2,
-      });
+      };
+
+      // Stage 5+: some platforms carry a spike hazard — land on either side
+      // of it, not on it. Stage 6+: some platforms slowly bob up and down.
+      const variant = Math.random();
+      if (stageIndex >= 5 && variant < 0.3) {
+        platform.bob = true;
+        platform.baseY = floatY;
+        platform.bobAmp = 12;
+        platform.bobPhase = Math.random() * Math.PI * 2;
+      } else if (stageIndex >= 4 && variant < 0.6) {
+        platform.topSpikeAt = Math.round(platW * 0.3 + Math.random() * platW * 0.4);
+      }
+
+      obstacles.push(platform);
     }
 
     // ── AABB collision with slight shrink ─────────────────────
     function collides(p, o) {
-      if (o.isFloat) return false;  // floating platforms: only land on top
+      if (o.isFloat || o.isPit) return false; // handled separately (land-on-top / fall-through)
       const pad = 5;
       const px = p.x + pad, py = p.y + pad;
       const pw = P_SIZE - pad * 2, ph = P_SIZE - pad * 2;
@@ -261,6 +673,10 @@ permalink: /auto-runner/
       p.dead = true;
       p.onPlatform = null;
       flashAlpha = Math.max(flashAlpha, 0.55);
+      sfxDeath();
+      vibrate(60);
+      spawnParticles(p.x + P_SIZE / 2, p.y + P_SIZE / 2, p.color, 14, 3.5);
+      shakeTimer = 10; shakeMag = 4;
       if (players.every(pl => pl.dead)) {
         gameOver();
         return;
@@ -280,8 +696,19 @@ permalink: /auto-runner/
 
     // ── Update ─────────────────────────────────────────────────
     function update() {
+      tick++;
+
+      // Achievement toast — advances in every state so it survives the
+      // game-over → title screen transition.
+      if (achievementToastTimer > 0) {
+        achievementToastTimer--;
+      } else if (achievementQueue.length) {
+        achievementToastText = '🏆 ' + achievementQueue.shift();
+        achievementToastTimer = 220;
+      }
+
       if (state === 'waiting') {
-        players.forEach(p => { p.bob = Math.sin(Date.now() / 300) * 3; });
+        players.forEach(p => { p.bob = Math.sin(tick / 18) * 3; });
         return;
       }
 
@@ -291,42 +718,112 @@ permalink: /auto-runner/
         return;
       }
 
+      if (state === 'paused') return; // fully frozen — nothing advances while backgrounded
+
+      if (state === 'resuming') {
+        resumeCountdown--;
+        if (resumeCountdown <= 0) { state = 'playing'; announce('Resumed'); }
+        return;
+      }
+
       // playing
       frame++;
-      speed = BASE_SPEED + frame * ACCEL;
-      score = Math.floor(frame * speed / 8);
+      distance += speed / 8;
       flashAlpha = Math.max(0, flashAlpha - 0.03);
+
+      // Stage progression — speed eases toward the new stage's target rather
+      // than snapping, so a stage-up doesn't yank the pace instantly.
+      const newStageIndex = stageIndexForDistance(distance);
+      if (newStageIndex !== stageIndex) {
+        stageIndex = newStageIndex;
+        bannerText = 'STAGE ' + (stageIndex + 1);
+        bannerTimer = bannerLife = 150;
+        announce(bannerText);
+        sfxStage();
+      }
+      speed += (STAGES[stageIndex].speed - speed) * SPEED_EASE;
+      if (bannerTimer > 0) bannerTimer--;
+
+      // Milestone markers every 100m
+      if (distance >= nextMarkerAt) {
+        distanceMarkers.push({ x: GW + 10, meters: nextMarkerAt });
+        announce(nextMarkerAt + ' meters');
+        flashAlpha = Math.max(flashAlpha, 0.06);
+        sfxMilestone();
+        nextMarkerAt += 100;
+      }
+      distanceMarkers.forEach(m => { m.x -= speed; });
+      distanceMarkers = distanceMarkers.filter(m => m.x > -60);
+
+      // Best-distance flag — spawns once, when this run overtakes the
+      // previous best, and flashes a small "NEW BEST" banner in-run.
+      if (!bestFlagSpawned && distance >= bestFlagAt) {
+        bestFlagSpawned = true;
+        distanceMarkers.push({ x: GW + 10, meters: bestFlagAt, isBest: true });
+        bannerText = '✦ NEW BEST! ✦';
+        bannerTimer = bannerLife = 130;
+        announce('New best distance!');
+        sfxStage();
+      }
+
+      // Combo window for near-misses
+      if (comboTimer > 0) { comboTimer--; if (comboTimer === 0) comboCount = 0; }
+
+      // Popups (CLOSE!, SYNC!, …) float up and fade
+      popups.forEach(t => { t.x -= speed; t.y -= 0.6; t.life--; });
+      popups = popups.filter(t => t.life > 0);
+
+      // Particles (gravity + fade)
+      particles.forEach(pt => { pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.15; pt.life--; });
+      particles = particles.filter(pt => pt.life > 0);
+
+      // Screen shake decay
+      if (shakeTimer > 0) shakeTimer--;
+
+      // Parallax silhouette scroll (slower than the foreground)
+      parallaxX += speed;
 
       // Scroll ground
       groundX = (groundX - speed + GW) % GW;
 
-      // Spawn obstacles
+      // Spawn obstacles — gap is in STEPS (time), converted to px at the
+      // current speed, so the reaction window a player gets never shrinks
+      // as the world accelerates.
       const lastX = obstacles.length
         ? obstacles[obstacles.length - 1].x + obstacles[obstacles.length - 1].w
         : 0;
-      if (frame > 80 && GW - lastX >= nextObstacleGap) {
+      if (frame > 80 && GW - lastX >= speed * nextGapSteps) {
         spawnObstacle();
-        nextObstacleGap = Math.max(220, 330 - frame * 0.06) + Math.random() * 80;
+        const st = STAGES[stageIndex];
+        nextGapSteps = st.minGap + Math.random() * st.gapJitter;
       }
 
       // Move obstacles
-      obstacles.forEach(o => { o.x -= speed; });
+      obstacles.forEach(o => {
+        o.x -= speed;
+        if (o.bob) o.floatY = o.baseY + Math.sin(tick * 0.05 + o.bobPhase) * o.bobAmp;
+      });
       obstacles = obstacles.filter(o => o.x + o.w > -10);
 
-      // Move revive stars
+      // Move revive/shield stars — a missed one takes progressively longer to
+      // reappear (80, 140, 200 steps), reset the moment one is actually caught.
       reviveStars.forEach(s => { s.x -= speed; });
       reviveStars = reviveStars.filter(s => {
         if (s.x + s.r < -20) {
-          reviveStarCooldown = 80; // respawn soon
+          reviveStarCooldown = MISS_COOLDOWNS[Math.min(missedStarStreak, MISS_COOLDOWNS.length - 1)];
+          missedStarStreak++;
           return false;
         }
         return true;
       });
 
-      // Spawn a revive star if someone is dead and someone is alive
-      const hasDead  = players.some(p => p.dead);
+      // Spawn a star: in co-op it revives a dead partner; solo has no
+      // partner to revive, so the same pickup grants a one-hit shield
+      // instead, spawned periodically rather than only after a death.
+      const hasDead  = mode === 2 && players.some(p => p.dead);
       const hasAlive = players.some(p => !p.dead);
-      if (hasDead && hasAlive && reviveStars.length === 0) {
+      const wantsPickup = mode === 2 ? (hasDead && hasAlive) : !players[0].shielded;
+      if (wantsPickup && reviveStars.length === 0) {
         if (reviveStarCooldown > 0) reviveStarCooldown--;
         else spawnReviveStar();
       }
@@ -343,18 +840,35 @@ permalink: /auto-runner/
 
         if (p.invincible > 0) p.invincible--;
 
+        const wasGrounded = p.grounded;
+
         p.vy += GRAVITY;
         p.y  += p.vy;
         p.bob = 0;
 
-        // Floor snap
-        if (p.y >= FLOOR_Y - P_SIZE) {
+        // Variable jump height — releasing early while still rising cuts the
+        // arc short, once per jump. Holding gives the full 157px arc.
+        if (p.vy < 0 && !p.jumpHeld && !p.jumpCut) {
+          p.vy *= JUMP_CUT_MULT;
+          p.jumpCut = true;
+        }
+
+        // Floor snap — unless the feet are over a pit, in which case fall through
+        const footL = p.x + 5, footR = p.x + P_SIZE - 5;
+        const overPit = obstacles.some(o => o.isPit && footR > o.x && footL < o.x + o.w);
+        if (p.y >= FLOOR_Y - P_SIZE && !(overPit && !p.onPlatform)) {
           p.y = FLOOR_Y - P_SIZE;
           p.vy = 0;
           p.grounded = true;
           p.onPlatform = null;
         } else {
           p.grounded = false;
+        }
+
+        // Fell through a pit far enough to be unrecoverable
+        if (!p.grounded && !p.onPlatform && p.invincible <= 0 && p.y > FLOOR_Y + 60) {
+          killPlayer(i);
+          return;
         }
 
         // Platform support — keeps player riding a platform they landed on
@@ -387,6 +901,38 @@ permalink: /auto-runner/
           }
         }
 
+        // A platform-mounted spike hazard — land beside it, not on it
+        if (p.onPlatform && p.onPlatform.topSpikeAt != null && p.invincible <= 0) {
+          const o = p.onPlatform;
+          const sx = o.x + o.topSpikeAt, sw = 16;
+          if (p.x + P_SIZE - 6 > sx && p.x + 6 < sx + sw) { killPlayer(i); return; }
+        }
+
+        // Coyote time — a jump input just after support drops out (a platform's
+        // trailing edge scrolling past underfoot) still counts. Not armed by an
+        // intentional jump, since grounded there was already false last step.
+        if (wasGrounded && !p.grounded) {
+          p.coyote = COYOTE_STEPS;
+        } else if (p.coyote > 0) {
+          p.coyote--;
+        }
+
+        // Landing squash / takeoff stretch (takeoff stretch is set in performJump)
+        if (!wasGrounded && p.grounded) {
+          p.squash = -1;
+          sfxLand();
+          spawnParticles(p.x + P_SIZE / 2, p.y + P_SIZE, 'rgba(255,255,255,0.8)', 6, 1.8);
+        }
+        p.squash *= SQUASH_DECAY;
+        if (Math.abs(p.squash) < 0.02) p.squash = 0;
+
+        // Buffered jump — a tap slightly before landing fires the instant
+        // support (ground, or the coyote window) is regained.
+        if (p.jumpBuffer > 0) {
+          p.jumpBuffer--;
+          if (p.grounded || p.coyote > 0) performJump(p, i);
+        }
+
         // Rotation
         if (p.grounded) {
           p.rot *= 0.7;
@@ -395,31 +941,71 @@ permalink: /auto-runner/
           p.rot -= 0.12; // spin while airborne
         }
 
-        // Collision check — skip the platform the player rides, skip if invincible
+        // Collision check — skip the platform the player rides, skip if invincible.
+        // A shielded player (solo mode) survives one hit instead of dying.
         if (p.invincible <= 0) {
           for (const o of obstacles) {
             if (o === p.onPlatform) continue;
-            if (collides(p, o)) { killPlayer(i); return; }
+            if (collides(p, o)) {
+              if (p.shielded) {
+                p.shielded = false;
+                p.invincible = 60;
+                flashAlpha = Math.max(flashAlpha, 0.35);
+                spawnPopup(p.x + P_SIZE / 2, p.y - 10, 'SHIELD BROKEN', '#ffd700');
+                runShields++;
+                break; // this step's invincibility isn't active yet — stop checking now
+              } else {
+                killPlayer(i);
+                return;
+              }
+            }
           }
         }
 
-        // Collect revive star
+        // Near-miss — checked the instant a ground hazard's trailing edge
+        // passes the player, using the vertical clearance at that moment.
+        for (const o of obstacles) {
+          if (o.isFloat || o.isPit || !o.passedBy || o.passedBy[i]) continue;
+          if (o.x + o.w > p.x) continue;
+          o.passedBy[i] = true;
+          const hazardTopY = FLOOR_Y - o.h - (o.spike ? 18 : 0);
+          const clearance = hazardTopY - (p.y + P_SIZE);
+          if (clearance >= 0 && clearance <= 6) {
+            comboCount++;
+            comboTimer = 90;
+            runNearMiss++;
+            distance += 10;
+            spawnPopup(p.x + P_SIZE / 2, p.y - 10, comboCount >= 3 ? 'CLOSE! x' + comboCount : 'CLOSE!', p.color);
+          }
+        }
+
+        // Collect revive/shield star
         if (reviveStars.length > 0) {
           const cx = p.x + P_SIZE / 2;
           const cy = p.y + P_SIZE / 2;
           reviveStars = reviveStars.filter(s => {
             const dx = cx - s.x, dy = cy - s.y;
             if (dx * dx + dy * dy < (s.r + P_SIZE / 2 - 4) * (s.r + P_SIZE / 2 - 4)) {
-              players.forEach(dp => {
-                if (dp.dead) {
-                  dp.dead = false;
-                  dp.y = FLOOR_Y - P_SIZE;
-                  dp.vy = -10;
-                  dp.grounded = false;
-                  dp.onPlatform = null;
-                  dp.invincible = 120; // ~2s of invincibility after revive
-                }
-              });
+              missedStarStreak = 0;
+              sfxStar();
+              vibrate(30);
+              spawnParticles(s.x, s.y, '#ffe066', 10, 2.5);
+              if (mode === 1) {
+                p.shielded = true;
+                spawnPopup(p.x + P_SIZE / 2, p.y - 10, 'SHIELD UP', '#ffd700');
+              } else {
+                players.forEach(dp => {
+                  if (dp.dead) {
+                    dp.dead = false;
+                    dp.y = FLOOR_Y - P_SIZE;
+                    dp.vy = -10;
+                    dp.grounded = false;
+                    dp.onPlatform = null;
+                    dp.invincible = 120; // ~2s of invincibility after revive
+                    runRevives++;
+                  }
+                });
+              }
               flashAlpha = Math.max(flashAlpha, 0.4);
               return false;
             }
@@ -432,16 +1018,33 @@ permalink: /auto-runner/
     function gameOver() {
       if (state === 'gameover') return;
       state = 'gameover';
+      const dist = Math.floor(distance);
+      announce('Game over. Distance ' + dist + ' meters. Revives used ' + runRevives + '.');
       goTimer = 0;
       flashAlpha = 0.85;
-      if (score > bestScore) {
-        bestScore = score;
-        try {
-          localStorage.setItem('ar-best', bestScore);
-        } catch (e) {
-          // localStorage unavailable (private browsing / quota) — best score just won't persist
-        }
+
+      if (dist > bestDistance) {
+        bestDistance = dist;
+        try { localStorage.setItem(BEST_KEY, bestDistance); } catch (e) { /* unavailable */ }
       }
+
+      stats.runs++;
+      stats.totalDistance += dist;
+      stats.totalRevives += runRevives;
+      if (dist > stats.bestDistance) stats.bestDistance = dist;
+      if (stageIndex > stats.bestStage) stats.bestStage = stageIndex;
+      if (runRevives === 0 && dist > stats.longestDeathless) stats.longestDeathless = dist;
+
+      const summary = { dist, stage: stageIndex, revives: runRevives, sync: runSyncCount,
+                         nearMiss: runNearMiss, deathless: runRevives === 0 ? dist : 0 };
+      ACHIEVEMENTS.forEach(a => {
+        if (!stats.achievements.includes(a.id) && a.check(summary)) {
+          stats.achievements.push(a.id);
+          queueAchievementToast(a.label);
+        }
+      });
+
+      saveStats();
     }
 
     // ── Draw helpers ───────────────────────────────────────────
@@ -465,6 +1068,9 @@ permalink: /auto-runner/
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(p.rot);
+      // Squash (landing, negative) / stretch (takeoff, positive) — decays to 0
+      const sq = p.squash || 0;
+      ctx.scale(1 - sq * 0.15, 1 + sq * 0.15);
 
       const h = P_SIZE, hh = h / 2;
       const blink = p.invincible > 0 && Math.floor(p.invincible / 5) % 2 === 0;
@@ -501,6 +1107,15 @@ permalink: /auto-runner/
       ctx.fillStyle = mc;
       for (let i = 0; i < 3; i++) {
         ctx.fillRect(-hh + 8 + i * 7, hh - 14, 4, 4);
+      }
+
+      // Shield ring (solo mode)
+      if (p.shielded) {
+        ctx.strokeStyle = `rgba(255,215,0,${0.6 + 0.3 * Math.sin(tick * 0.15)})`;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, hh + 7, 0, Math.PI * 2);
+        ctx.stroke();
       }
 
       ctx.globalAlpha = 1;
@@ -565,9 +1180,35 @@ permalink: /auto-runner/
         ctx.fillText('↑', o.x + o.w / 2, y - 6);
         ctx.textAlign = 'left';
       }
+
+      // A spike hazard mounted on the platform itself — land beside it
+      if (o.topSpikeAt != null) {
+        const sx = o.x + o.topSpikeAt;
+        ctx.fillStyle = '#ffe1e1';
+        ctx.shadowColor = 'rgba(255,120,120,0.7)';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(sx, y);
+        ctx.lineTo(sx + 8, y - 16);
+        ctx.lineTo(sx + 16, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function drawPit(o) {
+      const bg = paletteForStage(stageIndex || 0).bg;
+      ctx.fillStyle = bg;
+      ctx.fillRect(o.x, FLOOR_Y - 2, o.w, GH - FLOOR_Y + 2);
+      ctx.strokeStyle = 'rgba(255,90,90,0.6)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(o.x, FLOOR_Y - 1); ctx.lineTo(o.x, FLOOR_Y + 12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(o.x + o.w, FLOOR_Y - 1); ctx.lineTo(o.x + o.w, FLOOR_Y + 12); ctx.stroke();
     }
 
     function drawObstacle(o) {
+      if (o.isPit) { drawPit(o); return; }
       if (o.isFloat) { drawPlatform(o); return; }
       const oy = FLOOR_Y - o.h;
       ctx.shadowColor = 'rgba(255,255,255,0.6)';
@@ -612,6 +1253,26 @@ permalink: /auto-runner/
         ctx.fillText('↑', o.x + o.w / 2, oy - 8 + bob);
         ctx.textAlign = 'left';
       }
+    }
+
+    function drawDistanceMarker(m) {
+      const color = m.isBest ? '#ffd700' : 'rgba(255,255,255,0.55)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(m.x, FLOOR_Y); ctx.lineTo(m.x, FLOOR_Y - (m.isBest ? 34 : 18)); ctx.stroke();
+      if (m.isBest) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(m.x, FLOOR_Y - 34);
+        ctx.lineTo(m.x + 14, FLOOR_Y - 28);
+        ctx.lineTo(m.x, FLOOR_Y - 22);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = color;
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(m.meters + 'm', m.x, FLOOR_Y - (m.isBest ? 40 : 24));
     }
 
     function drawReviveStar(s) {
@@ -660,8 +1321,16 @@ permalink: /auto-runner/
 
     // ── Render ─────────────────────────────────────────────────
     function render() {
+      const palette = paletteForStage(stageIndex || 0);
+
+      ctx.save();
+      if (shakeTimer > 0) {
+        const m = shakeMag * (shakeTimer / 10);
+        ctx.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m);
+      }
+
       // Background
-      ctx.fillStyle = '#2d2b55';
+      ctx.fillStyle = palette.bg;
       ctx.fillRect(0, 0, GW, GH);
 
       // Stars
@@ -670,14 +1339,17 @@ permalink: /auto-runner/
         ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
       });
 
+      // Parallax silhouette layer — scrolls slower than the foreground
+      drawParallax(palette);
+
       // Ground surface
-      ctx.fillStyle = '#3a3870';
+      ctx.fillStyle = palette.ground;
       ctx.fillRect(0, FLOOR_Y, GW, GH - FLOOR_Y);
 
       // Glow line
       ctx.strokeStyle = 'rgba(255,255,255,0.75)';
       ctx.lineWidth = 2;
-      ctx.shadowColor = 'rgba(200,200,255,0.5)';
+      ctx.shadowColor = palette.glow;
       ctx.shadowBlur = 8;
       ctx.beginPath(); ctx.moveTo(0, FLOOR_Y); ctx.lineTo(GW, FLOOR_Y); ctx.stroke();
       ctx.shadowBlur = 0;
@@ -691,6 +1363,9 @@ permalink: /auto-runner/
         ctx.beginPath(); ctx.moveTo(x, FLOOR_Y); ctx.lineTo(x, FLOOR_Y + 8); ctx.stroke();
       }
 
+      // Distance / best-flag markers
+      distanceMarkers.forEach(drawDistanceMarker);
+
       // Obstacles
       obstacles.forEach(drawObstacle);
 
@@ -700,32 +1375,133 @@ permalink: /auto-runner/
       // Players
       players.forEach(drawRobot);
 
+      // Particles (landing dust, death burst, star sparkle)
+      particles.forEach(pt => {
+        ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+        ctx.fillStyle = pt.color;
+        ctx.fillRect(pt.x - pt.size / 2, pt.y - pt.size / 2, pt.size, pt.size);
+      });
+      ctx.globalAlpha = 1;
+
+      // Popups (CLOSE!, SYNC!, …)
+      popups.forEach(t => {
+        const a = t.life / t.maxLife;
+        ctx.fillStyle = t.color;
+        ctx.globalAlpha = a;
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(t.text, t.x, t.y);
+        ctx.globalAlpha = 1;
+      });
+
       // Touch zone hints (first 2.5s of playing)
       if (state === 'playing' && frame < 150) {
         const a = Math.min(1, (150 - frame) / 80) * 0.10;
-        ctx.fillStyle = `rgba(232,64,64,${a})`;
-        ctx.fillRect(0, 0, GW / 2, GH);
-        ctx.fillStyle = `rgba(58,142,255,${a})`;
-        ctx.fillRect(GW / 2, 0, GW / 2, GH);
+        if (mode === 2) {
+          ctx.fillStyle = `rgba(232,64,64,${a})`;
+          ctx.fillRect(0, 0, GW / 2, GH);
+          ctx.fillStyle = `rgba(58,142,255,${a})`;
+          ctx.fillRect(GW / 2, 0, GW / 2, GH);
+        } else {
+          ctx.fillStyle = `rgba(232,64,64,${a})`;
+          ctx.fillRect(0, 0, GW, GH);
+        }
 
         // Zone labels near bottom
         ctx.globalAlpha = Math.min(1, (150 - frame) / 80) * 0.55;
         ctx.font = 'bold 13px monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = COLORS[0];
-        ctx.fillText('◀  P1', GW * 0.25, GH - 28);
-        ctx.fillStyle = COLORS[1];
-        ctx.fillText('P2  ▶', GW * 0.75, GH - 28);
+        if (mode === 2) {
+          ctx.fillStyle = COLORS[0];
+          ctx.fillText('◀  P1', GW * 0.25, GH - 28);
+          ctx.fillStyle = COLORS[1];
+          ctx.fillText('P2  ▶', GW * 0.75, GH - 28);
+        } else {
+          ctx.fillStyle = COLORS[0];
+          ctx.fillText('TAP ANYWHERE TO JUMP', GW / 2, GH - 28);
+        }
         ctx.globalAlpha = 1;
+      }
+
+      // Stage banner — fades in then out over its ~2.5s lifetime
+      if (state === 'playing' && bannerTimer > 0) {
+        const t = bannerTimer / bannerLife;
+        const a = t > 0.7 ? (1 - t) / 0.3 : Math.min(1, t / 0.15);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = `rgba(255,255,255,${0.9 * a})`;
+        ctx.font = 'bold 22px monospace';
+        ctx.shadowColor = palette.glow;
+        ctx.shadowBlur = 14;
+        ctx.fillText(bannerText, GW / 2, 70);
+        ctx.shadowBlur = 0;
       }
 
       // HUD
       drawHUD();
 
+      // Achievement unlock toast — shown over any state, including game-over
+      if (achievementToastTimer > 0) {
+        const t = achievementToastTimer / 220;
+        const a = t > 0.85 ? (1 - t) / 0.15 : Math.min(1, t / 0.1);
+        const y = GH - 46;
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 13px monospace';
+        const w = ctx.measureText(achievementToastText).width + 24;
+        ctx.fillStyle = `rgba(20,16,40,${0.8 * a})`;
+        rr(GW / 2 - w / 2, y - 14, w, 24, 6);
+        ctx.fill();
+        ctx.fillStyle = `rgba(255,215,0,${a})`;
+        ctx.fillText(achievementToastText, GW / 2, y + 3);
+      }
+
       // Flash overlay
       if (flashAlpha > 0) {
         ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
         ctx.fillRect(0, 0, GW, GH);
+      }
+
+      ctx.restore(); // undo the screen-shake translate before drawing fixed UI
+
+      // Mute button — fixed, so it doesn't shake with the world
+      drawMuteButton();
+    }
+
+    // A repeating silhouette skyline, well behind the ground, scrolling at
+    // 0.3x the foreground speed for a cheap sense of depth.
+    const PARALLAX_PERIOD = 220;
+    const PARALLAX_HEIGHTS = [30, 55, 40, 70, 35, 60, 45];
+    function drawParallax(palette) {
+      const scrolled = parallaxX * 0.3;
+      const offset = scrolled % PARALLAX_PERIOD;
+      const baseIdx = Math.floor(scrolled / PARALLAX_PERIOD);
+      ctx.fillStyle = palette.ground;
+      ctx.globalAlpha = 0.32;
+      for (let i = -1; i * PARALLAX_PERIOD - offset < GW; i++) {
+        const h = PARALLAX_HEIGHTS[((baseIdx + i) % PARALLAX_HEIGHTS.length + PARALLAX_HEIGHTS.length) % PARALLAX_HEIGHTS.length];
+        const x = i * PARALLAX_PERIOD - offset;
+        ctx.fillRect(x, FLOOR_Y - h, PARALLAX_PERIOD * 0.65, h);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawMuteButton() {
+      const r = MUTE_RECT;
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 1.5;
+      const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+      // Speaker body
+      ctx.beginPath();
+      ctx.moveTo(cx - 7, cy - 3); ctx.lineTo(cx - 3, cy - 3); ctx.lineTo(cx + 2, cy - 7);
+      ctx.lineTo(cx + 2, cy + 7); ctx.lineTo(cx - 3, cy + 3); ctx.lineTo(cx - 7, cy + 3);
+      ctx.closePath();
+      ctx.stroke();
+      if (stats.muted) {
+        ctx.beginPath(); ctx.moveTo(cx + 5, cy - 5); ctx.lineTo(cx + 9, cy + 5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + 9, cy - 5); ctx.lineTo(cx + 5, cy + 5); ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.arc(cx + 5, cy, 5, -0.6, 0.6); ctx.stroke();
       }
     }
 
@@ -734,18 +1510,18 @@ permalink: /auto-runner/
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.font = 'bold 20px monospace';
       ctx.textAlign = 'left';
-      ctx.fillText(score + 'm', 14, 28);
+      ctx.fillText(Math.floor(distance) + 'm', 14, 28);
 
-      if (bestScore > 0) {
+      if (bestDistance > 0) {
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.font = '12px monospace';
-        ctx.fillText('best ' + bestScore + 'm', 14, 46);
+        ctx.fillText('best ' + bestDistance + 'm', 14, 46);
       }
 
       // Player indicator dots
       const dotY = GH - 13;
       const gap = 22;
-      const startX = GW / 2 - gap / 2;
+      const startX = GW / 2 - (players.length - 1) * gap / 2;
       players.forEach((p, i) => {
         const dx = startX + i * gap;
         ctx.beginPath(); ctx.arc(dx, dotY, 6, 0, Math.PI * 2);
@@ -762,15 +1538,25 @@ permalink: /auto-runner/
         }
       });
 
-      // Revive hint — blinks while a revive star is on screen
+      // Near-miss combo badge
+      if (state === 'playing' && comboCount >= 3 && comboTimer > 0) {
+        ctx.fillStyle = '#ffb020';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText('x' + comboCount + ' COMBO', GW - 14, 46);
+        ctx.textAlign = 'left';
+      }
+
+      // Revive/shield hint — blinks while a star is on screen
       if (state === 'playing' && reviveStars.length > 0) {
         const blink = Math.floor(frame / 18) % 2 === 0;
-        const deadIdx = players.findIndex(p => p.dead);
+        const deadIdx = mode === 2 ? players.findIndex(p => p.dead) : (players[0].shielded ? -1 : 0);
         if (deadIdx >= 0 && blink) {
+          const label = mode === 2 ? ('REVIVE ' + LABEL[deadIdx]) : 'SHIELD';
           ctx.fillStyle = '#ffd700';
           ctx.font = 'bold 11px monospace';
           ctx.textAlign = 'right';
-          ctx.fillText('★ CATCH STAR → REVIVE ' + LABEL[deadIdx], GW - 14, 28);
+          ctx.fillText('★ CATCH STAR → ' + label, GW - 14, 28);
         }
         ctx.textAlign = 'left';
       }
@@ -789,15 +1575,56 @@ permalink: /auto-runner/
         ctx.shadowBlur = 0;
 
         ctx.font = '14px monospace';
-        ctx.fillStyle = COLORS[0];
-        ctx.fillText('◀  TAP LEFT  (A)', GW * 0.28, GH / 2 + 8);
-        ctx.fillStyle = COLORS[1];
-        ctx.fillText('TAP RIGHT  ▶  (D)', GW * 0.72, GH / 2 + 8);
+        if (mode === 2) {
+          ctx.fillStyle = COLORS[0];
+          ctx.fillText('◀  TAP LEFT  (A)', GW * 0.28, GH / 2 + 8);
+          ctx.fillStyle = COLORS[1];
+          ctx.fillText('TAP RIGHT  ▶  (D)', GW * 0.72, GH / 2 + 8);
+        } else {
+          ctx.fillStyle = COLORS[0];
+          ctx.fillText('TAP ANYWHERE  (A / D / SPACE)', GW / 2, GH / 2 + 8);
+        }
 
-        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 450);
+        const pulse = 0.5 + 0.5 * Math.sin(tick / 7.5);
         ctx.fillStyle = `rgba(255,255,255,${0.45 + pulse * 0.35})`;
         ctx.font = '12px monospace';
-        ctx.fillText('2 players — jump together, survive together', GW / 2, GH / 2 + 32);
+        ctx.fillText(
+          mode === 2 ? '2 players — jump together, survive together' : 'solo — catch stars for a shield',
+          GW / 2, GH / 2 + 32
+        );
+
+        // 1P/2P mode toggle button
+        const r = MODE_TOGGLE_RECT;
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        rr(r.x, r.y, r.w, r.h, 6);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 1;
+        rr(r.x, r.y, r.w, r.h, 6);
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText((mode === 1 ? '1P' : '2P') + ' mode', r.x + r.w / 2, r.y + r.h / 2 + 4);
+
+        // Cosmetic palette swatch — cycles unlocked robot color pairs
+        const sw = PALETTE_SWATCH_RECT;
+        const unlocked = unlockedPaletteIds();
+        const swatchColors = currentRobotColors();
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        rr(sw.x, sw.y, sw.w, sw.h, 6);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        rr(sw.x, sw.y, sw.w, sw.h, 6);
+        ctx.stroke();
+        ctx.fillStyle = swatchColors[0];
+        ctx.fillRect(sw.x + 8, sw.y + sw.h / 2 - 6, 12, 12);
+        ctx.fillStyle = swatchColors[1] || swatchColors[0];
+        ctx.fillRect(sw.x + 22, sw.y + sw.h / 2 - 6, 12, 12);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(unlocked.length + '/' + (ACHIEVEMENTS.length + 1) + ' (P)', sw.x + 40, sw.y + sw.h / 2 + 3);
+        ctx.textAlign = 'center';
       }
 
       if (state === 'gameover') {
@@ -806,46 +1633,137 @@ permalink: /auto-runner/
 
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ff4c4c';
-        ctx.font = 'bold 38px monospace';
+        ctx.font = 'bold 34px monospace';
         ctx.shadowColor = 'rgba(255,50,50,0.7)';
         ctx.shadowBlur = 16;
-        ctx.fillText('GAME OVER', GW / 2, GH / 2 - 28);
+        ctx.fillText('GAME OVER', GW / 2, GH / 2 - 66);
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 22px monospace';
-        ctx.fillText(score + 'm', GW / 2, GH / 2 + 8);
+        const dist = Math.floor(distance);
+        ctx.fillText(dist + 'm', GW / 2, GH / 2 - 30);
 
-        if (score > 0 && score >= bestScore) {
+        if (dist > 0 && dist >= bestDistance) {
           ctx.fillStyle = '#ffd700';
           ctx.font = 'bold 13px monospace';
-          ctx.fillText('✦ NEW BEST! ✦', GW / 2, GH / 2 + 28);
+          ctx.fillText('✦ NEW BEST! ✦', GW / 2, GH / 2 - 10);
         }
+
+        // Run summary
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.font = '12px monospace';
+        ctx.fillText(
+          'best ' + bestDistance + 'm   ·   stage ' + (stageIndex + 1) + '   ·   ' +
+          (mode === 2 ? 'revives ' + runRevives : 'shields used ' + runShields),
+          GW / 2, GH / 2 + 14
+        );
 
         if (goTimer > 55) {
           const blink = Math.floor(goTimer / 14) % 2 === 0;
           ctx.fillStyle = `rgba(255,255,255,${blink ? 0.9 : 0.35})`;
           ctx.font = '13px monospace';
-          ctx.fillText('tap or press key to play again', GW / 2, GH / 2 + 52);
+          ctx.fillText('tap or press key to continue', GW / 2, GH / 2 + 44);
         }
+      }
 
-        if (goTimer > 160) restart();
+      if (state === 'paused') {
+        ctx.fillStyle = 'rgba(10,8,30,0.72)';
+        ctx.fillRect(0, 0, GW, GH);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 26px monospace';
+        ctx.fillText('PAUSED', GW / 2, GH / 2 - 10);
+        ctx.font = '13px monospace';
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillText('tap or press key to resume', GW / 2, GH / 2 + 16);
+      }
+
+      if (state === 'resuming') {
+        ctx.fillStyle = 'rgba(10,8,30,0.5)';
+        ctx.fillRect(0, 0, GW, GH);
+        ctx.textAlign = 'center';
+        const n = Math.ceil(resumeCountdown / 60);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px monospace';
+        ctx.shadowColor = 'rgba(124,120,255,0.8)';
+        ctx.shadowBlur = 18;
+        ctx.fillText(String(Math.max(1, n)), GW / 2, GH / 2 + 16);
+        ctx.shadowBlur = 0;
       }
     }
 
     // ── Game Loop ──────────────────────────────────────────────
-    function loop() {
-      update();
+    // Simulation runs at a fixed 60 Hz step via an accumulator, decoupled from the
+    // display's refresh rate — a 120 Hz phone must not simulate twice as fast.
+    let manualDrive = false;   // true once a debug harness takes over stepping (see debug hook)
+    let lastFrameTime = null;
+    let stepAcc = 0;
+
+    function loop(now) {
+      if (lastFrameTime === null) lastFrameTime = now;
+      let dt = now - lastFrameTime;
+      lastFrameTime = now;
+      if (dt > MAX_FRAME_MS) dt = MAX_FRAME_MS; // backgrounded tab: don't fast-forward on return
+      if (!manualDrive) {
+        stepAcc += dt;
+        let steps = 0;
+        while (stepAcc >= STEP_MS && steps < MAX_STEPS_PER_FRAME) {
+          update();
+          stepAcc -= STEP_MS;
+          steps++;
+        }
+      }
       render();
       requestAnimationFrame(loop);
     }
 
     // ── Input ──────────────────────────────────────────────────
+    // 1P/2P toggle hot-zone, top-right of the title screen only.
+    const MODE_TOGGLE_RECT = { x: GW - 96, y: 8, w: 86, h: 26 };
+    function hitsModeToggle(x, y) {
+      return state === 'waiting' &&
+        x >= MODE_TOGGLE_RECT.x && x <= MODE_TOGGLE_RECT.x + MODE_TOGGLE_RECT.w &&
+        y >= MODE_TOGGLE_RECT.y && y <= MODE_TOGGLE_RECT.y + MODE_TOGGLE_RECT.h;
+    }
+
+    // Cosmetic palette swatch, stacked under the mode toggle, title screen only.
+    const PALETTE_SWATCH_RECT = { x: GW - 96, y: 40, w: 86, h: 26 };
+    function hitsPaletteSwatch(x, y) {
+      return state === 'waiting' &&
+        x >= PALETTE_SWATCH_RECT.x && x <= PALETTE_SWATCH_RECT.x + PALETTE_SWATCH_RECT.w &&
+        y >= PALETTE_SWATCH_RECT.y && y <= PALETTE_SWATCH_RECT.y + PALETTE_SWATCH_RECT.h;
+    }
+
+    // Mute button, bottom-right corner. Only clickable off the 'playing'
+    // state so it can't be mistaken for a P2 jump tap mid-run — the 'm' key
+    // still works anytime.
+    const MUTE_RECT = { x: GW - 34, y: GH - 34, w: 24, h: 24 };
+    function hitsMute(x, y) {
+      return state !== 'playing' &&
+        x >= MUTE_RECT.x && x <= MUTE_RECT.x + MUTE_RECT.w &&
+        y >= MUTE_RECT.y && y <= MUTE_RECT.y + MUTE_RECT.h;
+    }
+
     document.addEventListener('keydown', e => {
+      if (e.repeat) return; // ignore OS key-repeat — a held key shouldn't re-buffer a jump
       const k = e.key.toLowerCase();
+      if (state === 'waiting' && (k === '1' || k === '2')) { setMode(k === '1' ? 1 : 2); return; }
+      if (state === 'waiting' && k === 'p') { cyclePalette(); return; }
+      if (k === 'm') { toggleMute(); return; }
       if (k === 'a' || k === 'arrowleft')  { e.preventDefault(); doJump(0); }
       if (k === 'd' || k === 'arrowright' || k === ' ') { e.preventDefault(); doJump(1); }
     });
+
+    document.addEventListener('keyup', e => {
+      const k = e.key.toLowerCase();
+      if (k === 'a' || k === 'arrowleft')  { releaseJump(0); }
+      if (k === 'd' || k === 'arrowright' || k === ' ') { releaseJump(1); }
+    });
+
+    // Tracks which player each active touch is jumping, so touchend can
+    // release the right side's hold for variable jump height.
+    const touchPlayer = new Map();
 
     canvas.addEventListener('touchstart', e => {
       e.preventDefault();
@@ -853,21 +1771,91 @@ permalink: /auto-runner/
         const t = e.changedTouches[i];
         const rect = canvas.getBoundingClientRect();
         const tx = (t.clientX - rect.left) / scale;
-        doJump(tx < GW / 2 ? 0 : 1);
+        const ty = (t.clientY - rect.top) / scale;
+        if (hitsModeToggle(tx, ty)) { setMode(mode === 1 ? 2 : 1); continue; }
+        if (hitsPaletteSwatch(tx, ty)) { cyclePalette(); continue; }
+        if (hitsMute(tx, ty)) { toggleMute(); continue; }
+        const idx = tx < GW / 2 ? 0 : 1;
+        touchPlayer.set(t.identifier, idx);
+        doJump(idx);
       }
     }, { passive: false });
 
+    function handleTouchEnd(e) {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const id = e.changedTouches[i].identifier;
+        if (touchPlayer.has(id)) {
+          releaseJump(touchPlayer.get(id));
+          touchPlayer.delete(id);
+        }
+      }
+    }
+    canvas.addEventListener('touchend', handleTouchEnd);
+    canvas.addEventListener('touchcancel', handleTouchEnd);
+
+    let mouseHeldIdx = null;
     canvas.addEventListener('mousedown', e => {
       const rect = canvas.getBoundingClientRect();
-      doJump((e.clientX - rect.left) / scale < GW / 2 ? 0 : 1);
+      const mx = (e.clientX - rect.left) / scale;
+      const my = (e.clientY - rect.top) / scale;
+      if (hitsModeToggle(mx, my)) { setMode(mode === 1 ? 2 : 1); return; }
+      if (hitsPaletteSwatch(mx, my)) { cyclePalette(); return; }
+      if (hitsMute(mx, my)) { toggleMute(); return; }
+      mouseHeldIdx = mx < GW / 2 ? 0 : 1;
+      doJump(mouseHeldIdx);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (mouseHeldIdx !== null) { releaseJump(mouseHeldIdx); mouseHeldIdx = null; }
     });
 
     window.addEventListener('resize', resize);
 
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && state === 'playing') { state = 'paused'; announce('Paused'); }
+    });
+
+    // ── Debug hook (?debug=1) ─────────────────────────────────────
+    // Exposes a small read/step API for automated testing (see
+    // tools/auto-runner-e2e/) and validates every authored chunk against
+    // every stage it could spawn at, rather than trusting it silently.
+    if (/(?:^|[?&])debug=1(?:&|$)/.test(location.search)) {
+      window.__autoRunner = {
+        get state() { return state; },
+        get distance() { return distance; },
+        get stage() { return stageIndex; },
+        get speed() { return speed; },
+        get mode() { return mode; },
+        get players() {
+          return players.map(p => ({ x: p.x, y: p.y, dead: p.dead, grounded: p.grounded, shielded: p.shielded }));
+        },
+        get obstacles() {
+          return obstacles.map(o => ({
+            x: o.x, w: o.w, h: o.h, spike: !!o.spike, isFloat: !!o.isFloat, isPit: !!o.isPit,
+          }));
+        },
+        // Taking manual control of stepping disables the rAF-driven
+        // simulation for the rest of the session — a test then owns time.
+        stepOnce() { manualDrive = true; update(); },
+        setInput(idx, down) { manualDrive = true; if (down) doJump(idx); else releaseJump(idx); },
+      };
+
+      let chunkFailures = 0;
+      CHUNKS.forEach((c, ci) => {
+        for (let s = c.minStage; s < STAGES.length; s++) {
+          if (!validateChunk(c, STAGES[s].speed)) {
+            chunkFailures++;
+            console.error(`[auto-runner debug] chunk #${ci} fails validation at stage ${s + 1} (speed ${STAGES[s].speed})`, c);
+          }
+        }
+      });
+      console.log(chunkFailures ? `[auto-runner debug] ${chunkFailures} chunk validation failure(s)` : '[auto-runner debug] all chunks validated OK');
+    }
+
     // ── Boot ───────────────────────────────────────────────────
     resize();
     init();
-    loop();
+    requestAnimationFrame(loop);
 
   })();
   </script>
