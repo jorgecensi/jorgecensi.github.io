@@ -116,13 +116,13 @@ permalink: /elastomania/
       <button class="touch-btn" id="btn-switch" aria-label="Switch side">⇄</button>
     </div>
     <div class="btn-group">
-      <button class="touch-btn" id="btn-spin-back" aria-label="Backward spin">↺</button>
-      <button class="touch-btn" id="btn-spin-fwd" aria-label="Forward spin">↻</button>
+      <button class="touch-btn" id="btn-spin-back" aria-label="Volt counter-clockwise">↺</button>
+      <button class="touch-btn" id="btn-spin-fwd" aria-label="Volt clockwise">↻</button>
     </div>
   </div>
 
   <script>
-    const SW_VERSION = '2607300229';
+    const SW_VERSION = '2609270000';
     if ('serviceWorker' in navigator) {
       let refreshed = false;
       function showBanner(reg) {
@@ -237,45 +237,56 @@ permalink: /elastomania/
     const FORK_ALIGN_VEL_K   = 0.4;  // perp relative-velocity damping
 
     // Engine torque acts BETWEEN the rear wheel and the frame, like the real
-    // game: gassing spins the wheel up and kicks the frame back (nose-up), so
-    // holding full throttle from a standstill loops you over backwards in
-    // about a second and a half unless you lean forward, and throttle/brake
-    // rotate the bike in mid-air. MOTOR_REACTION scales the
-    // I_wheel/I_chassis reaction reaching the frame — a feel knob. With
-    // both wheels held on their suspension axes there is no trailing-wheel
-    // weight transfer any more, so the reaction torque is the sole wheelie
-    // source (as in the original game). MOTOR_REACTION is the full-kick
-    // value: suddenly opening the throttle at full kick budget lifts the
-    // nose hard (and loops if held), while steady throttle fades toward
-    // KICK_FLOOR of it and just rides with a mild rear-weighted attitude.
-    const MOTOR_ACCEL    = 0.12;   // wheel spin gain per 16.67ms frame
-    const MOTOR_REACTION = 1.6;
+    // game: gassing spins the wheel up and kicks the frame back (nose-up) by
+    // the matching reaction, and throttle/brake rotate the bike in mid-air.
+    // The reaction is proportional to the spin ACTUALLY added to the wheel
+    // — once the wheel is at its spin cap (airborne, or cruising at top
+    // speed) the engine delivers no more torque and so no more kick, which
+    // keeps angular momentum honest: holding gas in the air gives one
+    // bounded nudge instead of an endless backflip. MOTOR_REACTION scales
+    // the I_wheel/I_chassis reaction reaching the frame — a feel knob.
+    const MOTOR_ACCEL    = 0.12;   // wheel spin gain per step
+    const MOTOR_REACTION = 0.5;
     // Brake couples both wheels to the frame (locks them relative to it, no
-    // reverse thrust) — turn around with the flip key instead, as in the
-    // original.
-    const BRAKE_LOCK     = 0.25;   // per-frame lock-up fraction
-    // Wheel spin cap near the rolling rate at top speed (2.2 rad/step ×
-    // 13px ≈ 29px/step of surface speed). Bounding slip keeps traction
+    // reverse thrust) — turn around with Space instead, as in the original.
+    const BRAKE_LOCK     = 0.25;   // per-step lock-up fraction
+    // Share of the braked wheels' spin handed to the frame. At a full 1:1
+    // a hard stop from top speed pitches the bike over its front wheel;
+    // half gives the original's feel — a firm nose dip on the ground and a
+    // clear forward rotation when braking in the air.
+    const BRAKE_REACTION = 0.5;
+    // Wheel spin cap = the bike's top speed (1.2 rad/step × 13px ≈ 15.6
+    // px/step of surface speed, the speed the level generator's ramps and
+    // walls are designed around). With air drag gone this cap, not drag,
+    // is what sets top speed. Bounding slip also keeps traction
     // predictable at any attitude instead of letting the wheel rev away.
-    const MAX_WHEEL_SPIN = 2.2;
-    // Throttle kick: wheelies come from SUDDENLY opening the throttle, not
-    // from steady cruising. A "kick budget" is full after coasting and
-    // drains while gas is held — the frame reaction scales from full
-    // (punchy: a flat-out from coast lifts the nose hard) down to
-    // KICK_FLOOR (steady throttle just settles into a mild rear-weighted
-    // attitude).
-    const KICK_FLOOR  = 0.55;
-    const KICK_DRAIN  = 0.010;     // per-frame drain while gassing
-    const KICK_REFILL = 0.007;     // per-frame refill while off throttle
-    // Terminal velocity for every bike body (px per 16.67ms step). Long
-    // free-falls and monster jumps otherwise build impact speeds that
-    // outrun the collision solver.
+    const MAX_WHEEL_SPIN = 1.2;
+    // Terminal velocity for every bike body (px per step). Long free-falls
+    // and monster jumps otherwise build impact speeds that outrun the
+    // collision solver.
     const MAX_SPEED = 22;
-    // Lean ("spin") input: kept very subtle — it nudges the bike's rotation
-    // for balance corrections rather than whipping it around. Still strong
-    // enough (about 5× the throttle's reaction torque) to hold a wheelie
-    // down under full gas.
-    const LEAN_ACCEL     = 0.02;
+    // Air drag. The original has essentially none — a jump keeps its
+    // horizontal speed and a fall keeps accelerating — so this is only a
+    // whisker of damping to bleed off solver jitter. (It used to be 1–2%
+    // per step, which visibly braked the bike in every jump.)
+    const WHEEL_AIR_DRAG   = 0.002;
+    const CHASSIS_AIR_DRAG = 0.004;
+    // Volts — the original's rotation: Left/Right don't lean continuously,
+    // each PRESS fires one sharp rotational kick of the whole bike about
+    // its centre of mass (a short torque pulse over VOLT_STEPS steps), with
+    // a short lockout before the next one can fire. That's how you lift the
+    // front wheel over a bump, pull a wheelie, or save a bad landing.
+    const VOLT_SPIN     = 0.055;  // total angular velocity added, rad/step
+    const VOLT_STEPS    = 6;     // pulse length
+    const VOLT_COOLDOWN = 18;    // steps from one volt's start to the next
+
+    // Fixed simulation step: physics always advances in 60Hz steps,
+    // decoupled from requestAnimationFrame by an accumulator, so the bike
+    // behaves identically on 60Hz, 120Hz and throttled displays. (Matter's
+    // constraint solver runs once per update, so the old variable-dt loop
+    // made the suspension stiffer and the engine punchier on fast screens.)
+    const STEP_MS = 1000 / 60;
+    const MAX_STEPS_PER_FRAME = 5;
 
     const SPAWN_X = 80;
     const SPAWN_Y = 400;
@@ -482,7 +493,7 @@ permalink: /elastomania/
       get(target, prop) {
         if (prop === 'length') return TOTAL_LEVELS;
         const i = Number(prop);
-        if (Number.isInteger(i) && i >= 0) return getLevel(i);
+        if (Number.isInteger(i) && (i >= 0 || levelCache[i])) return getLevel(i);
         return target[prop];
       }
     });
@@ -576,6 +587,10 @@ permalink: /elastomania/
     // head counts as a collision (as in the original game), not the wheels,
     // frame, or legs clipping a bump.
     const UPPER_BODY_OFFSET = { x: 4, y: -27 };
+    // The head is a circle, as in the original: it kills on touching the
+    // ground from ANY side — including riding face-first into a steep wall,
+    // which a "centre point below the surface" test missed.
+    const HEAD_R = 7;
 
     function getUpperBodyPos() {
       const a = chassis.angle;
@@ -597,13 +612,17 @@ permalink: /elastomania/
     // ── Game state ─────────────────────────────────────────────
     let state = 'start'; // 'start' | 'playing' | 'dead' | 'win'
     let rearWheel, frontWheel, chassis;
+    let suspensionDampers = []; // { c: constraint, wheel, k: damping }
     let apples = [];
     let camera  = { x: 0, y: 0 };
     let keys    = {};
-    let touch   = { gas: 0, brake: false, leanFwd: false, leanBack: false };
+    let touch   = { gas: 0, brake: false };
     let facing  = 1; // 1 = the bike drives/faces right, -1 = flipped to the left
-    let throttleKick = 1; // reaction budget: full after coasting, drains while gassing
-    let startTime   = 0;
+    let voltTimer   = 0;  // steps left in the current volt lockout
+    let voltPulse   = 0;  // steps left in the current volt's torque pulse
+    let voltDir     = 0;  // +1 clockwise, -1 counter-clockwise (screen space)
+    let pendingVolt = 0;  // volt requested by a key/button press, consumed next step
+    let playSteps   = 0;  // simulation steps since the level started (the clock)
     let elapsedTime = 0;
     let deadTimer   = 0;
     let lastTs      = 0;
@@ -646,31 +665,36 @@ permalink: /elastomania/
       });
     }
 
+    // ── Wheels ─────────────────────────────────────────────────
+    // Matter builds "circles" as polygons with at most one side per pixel
+    // of radius — a 14-gon for these wheels, which rolls on its corners and
+    // shakes the whole bike on flat ground. 32 sides keeps each facet's
+    // bump under a tenth of a pixel, so the tyre rolls smoothly.
+    const WHEEL_SIDES = 32;
+    function makeWheel(x, label) {
+      return Bodies.polygon(x, SPAWN_Y, WHEEL_SIDES, WHEEL_R, {
+        circleRadius: WHEEL_R,
+        friction: 0.95,
+        density: 0.002,
+        restitution: 0.05,
+        frictionAir: WHEEL_AIR_DRAG,
+        collisionFilter: { category: 0x0001, mask: 0x0002 },
+        label
+      });
+    }
+
     // ── Physics init / reset ───────────────────────────────────
     function initPhysics() {
       Composite.clear(world, false);
+      suspensionDampers = [];
 
-      rearWheel = Bodies.circle(SPAWN_X - WHEELBASE_HALF, SPAWN_Y, WHEEL_R, {
-        friction: 0.95,
-        density: 0.002,
-        restitution: 0.05,
-        frictionAir: 0.01,
-        collisionFilter: { category: 0x0001, mask: 0x0002 },
-        label: 'rearWheel'
-      });
+      rearWheel = makeWheel(SPAWN_X - WHEELBASE_HALF, 'rearWheel');
 
-      frontWheel = Bodies.circle(SPAWN_X + WHEELBASE_HALF, SPAWN_Y, WHEEL_R, {
-        friction: 0.95,
-        density: 0.002,
-        restitution: 0.05,
-        frictionAir: 0.01,
-        collisionFilter: { category: 0x0001, mask: 0x0002 },
-        label: 'frontWheel'
-      });
+      frontWheel = makeWheel(SPAWN_X + WHEELBASE_HALF, 'frontWheel');
 
       chassis = Bodies.rectangle(SPAWN_X, SPAWN_Y - 20, CHASSIS_W, CHASSIS_H, {
         density: 0.005,
-        frictionAir: 0.02,
+        frictionAir: CHASSIS_AIR_DRAG,
         collisionFilter: { category: 0x0004, mask: 0x0000 },
         label: 'chassis'
       });
@@ -697,23 +721,30 @@ permalink: /elastomania/
         const susDamp   = side > 0 ? FRONT_SUS_DAMPING     : SUSPENSION_DAMPING;
         const brStiff   = side > 0 ? FRONT_BRACE_STIFFNESS : BRACE_STIFFNESS;
         const brDamp    = side > 0 ? FRONT_BRACE_DAMPING   : BRACE_DAMPING;
-        return [
+        // Matter's own constraint damping is left OFF: it damps the two
+        // bodies' LINEAR velocities along the link, ignoring the frame's
+        // rotation, so on a spinning bike it reads the wheels' orbit as
+        // spring motion and brakes the spin (a mid-air volt lost ~2% of its
+        // rotation per step). dampSuspension() does it properly instead.
+        const links = [
           Constraint.create({
             bodyA: chassis, bodyB: wheel,
             pointA: { x: side * WHEELBASE_HALF, y: SUSPENSION_ANCHOR_Y }, pointB: { x: 0, y: 0 },
-            stiffness: susStiff, damping: susDamp, length: SUSPENSION_LENGTH
+            stiffness: susStiff, damping: 0, length: SUSPENSION_LENGTH
           }),
           Constraint.create({
             bodyA: chassis, bodyB: wheel,
             pointA: { x: side * 12, y: 2 }, pointB: { x: 0, y: 0 },
-            stiffness: brStiff, damping: brDamp
+            stiffness: brStiff, damping: 0
           }),
           Constraint.create({
             bodyA: chassis, bodyB: wheel,
             pointA: { x: side * 24, y: 0 }, pointB: { x: 0, y: 0 },
-            stiffness: brStiff, damping: brDamp
+            stiffness: brStiff, damping: 0
           })
         ];
+        links.forEach((c, i) => suspensionDampers.push({ c, wheel, k: i === 0 ? susDamp : brDamp }));
+        return links;
       }
 
       const terrainBodies = [];
@@ -724,15 +755,15 @@ permalink: /elastomania/
         ));
       }
 
-      const floor = Bodies.rectangle(1400, 720, 2800, 60, {
+      const floor = Bodies.rectangle(WORLD_W / 2, 720, WORLD_W + 200, 60, {
         isStatic: true, friction: 0.85, frictionStatic: 1.0, restitution: 0.05,
         collisionFilter: { category: 0x0002, mask: 0x0001 }, label: 'terrain'
       });
-      const wallL = Bodies.rectangle(-20, 350, 40, 700, {
+      const wallL = Bodies.rectangle(-20, 0, 40, 1400, {
         isStatic: true,
         collisionFilter: { category: 0x0002, mask: 0x0001 }, label: 'terrain'
       });
-      const wallR = Bodies.rectangle(WORLD_W + 20, 350, 40, 700, {
+      const wallR = Bodies.rectangle(WORLD_W + 20, 0, 40, 1400, {
         isStatic: true,
         collisionFilter: { category: 0x0002, mask: 0x0001 }, label: 'terrain'
       });
@@ -754,21 +785,28 @@ permalink: /elastomania/
     }
 
     // ── Input ──────────────────────────────────────────────────
+    // Keyboard layout follows the original game: Up = gas, Down = brake,
+    // Left/Right = volt (rotate the bike counter-clockwise / clockwise),
+    // Space = turn around. WASD mirrors the arrows.
     window.addEventListener('keydown', (e) => {
       keys[e.code] = true;
-      if (state === 'start') {
-        if (e.code === 'Space') startGame();
-        if (e.code === 'ArrowRight' || e.code === 'KeyD') changeSelectedLevel(1);
-        if (e.code === 'ArrowLeft'  || e.code === 'KeyA') changeSelectedLevel(-1);
-      }
-      if (e.code === 'KeyR' && state === 'win')   resetToStart();
-      // Restart in place, like Esc in the original — with loops legal it's
-      // possible to end up wedged/upside-down without a head touch.
-      if (e.code === 'KeyR' && state === 'playing' && !e.repeat) die();
-      if (e.code === 'KeyF' && state === 'playing' && !e.repeat) flipBike();
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
         e.preventDefault();
       }
+      if (state === 'start') {
+        if (e.code === 'Space' || e.code === 'Enter') startGame();
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') changeSelectedLevel(1);
+        if (e.code === 'ArrowLeft'  || e.code === 'KeyA') changeSelectedLevel(-1);
+        return;
+      }
+      if (e.code === 'KeyR' && state === 'win') { resetToStart(); return; }
+      if (state !== 'playing' || e.repeat) return;
+      // Restart in place, like Esc in the original — with loops legal it's
+      // possible to end up wedged/upside-down without a head touch.
+      if (e.code === 'KeyR') die();
+      if (e.code === 'Space' || e.code === 'KeyF') flipBike();
+      if (e.code === 'ArrowLeft'  || e.code === 'KeyA') requestVolt(-1);
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') requestVolt(1);
     });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
@@ -812,9 +850,24 @@ permalink: /elastomania/
       el.addEventListener('pointercancel', release);
       el.addEventListener('pointerleave',  release);
     }
-    bindBtn('btn-brake',     'brake');
-    bindBtn('btn-spin-fwd',  'leanFwd');
-    bindBtn('btn-spin-back', 'leanBack');
+    bindBtn('btn-brake', 'brake');
+
+    // Volt buttons: one volt per tap, like a key press.
+    function bindVolt(id, dir) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        el.classList.add('pressed');
+        if (state === 'playing') requestVolt(dir);
+      });
+      const release = () => el.classList.remove('pressed');
+      el.addEventListener('pointerup',     release);
+      el.addEventListener('pointercancel', release);
+      el.addEventListener('pointerleave',  release);
+    }
+    bindVolt('btn-spin-back', -1);
+    bindVolt('btn-spin-fwd',   1);
 
     // Throttle slider: slide the knob up for more gas — the throttle is
     // analog (knob height = throttle amount) and snaps shut on release.
@@ -872,67 +925,131 @@ permalink: /elastomania/
       facing = -facing;
     }
 
-    // ── Controls application ───────────────────────────────────
-    function applyControls(dt) {
-      // Keyboard throttle is full-on; the touch slider is analog (0..1).
-      const gasAmount = (keys['ArrowRight'] || keys['KeyD']) ? 1 : touch.gas;
-      const brake     = keys['ArrowLeft']  || keys['KeyA'] || touch.brake;
-      const leanFwd  = keys['ArrowUp']    || keys['KeyW'] || touch.leanFwd;
-      const leanBack = keys['ArrowDown']  || keys['KeyS'] || touch.leanBack;
+    function requestVolt(dir) {
+      pendingVolt = dir;
+    }
 
-      // Scale per-frame accelerations to elapsed time so input feels the
-      // same regardless of frame rate (was previously applied flat per
-      // animation frame, which spiked torque at high frame rates).
-      const scale = dt / 16.67;
+    // Total mass and centre of mass of the bike (both wheels + frame).
+    function bikeCentre() {
+      let m = 0, x = 0, y = 0;
+      for (const b of [rearWheel, frontWheel, chassis]) {
+        m += b.mass; x += b.position.x * b.mass; y += b.position.y * b.mass;
+      }
+      return { x: x / m, y: y / m };
+    }
+
+    // Spin the whole bike rigidly about its centre of mass by dOmega
+    // (rad/step, positive = clockwise on screen). Adding the same angular
+    // velocity to the frame and the matching tangential velocity to both
+    // wheels keeps the suspension links at their current length and the
+    // bike's linear momentum unchanged — a volt rotates the bike, it
+    // doesn't shove it sideways or fight the springs.
+    function spinBike(dOmega) {
+      const c = bikeCentre();
+      for (const b of [rearWheel, frontWheel]) {
+        Body.setVelocity(b, {
+          x: b.velocity.x - dOmega * (b.position.y - c.y),
+          y: b.velocity.y + dOmega * (b.position.x - c.x)
+        });
+      }
+      Body.setVelocity(chassis, {
+        x: chassis.velocity.x - dOmega * (chassis.position.y - c.y),
+        y: chassis.velocity.y + dOmega * (chassis.position.x - c.x)
+      });
+      Body.setAngularVelocity(chassis, chassis.angularVelocity + dOmega);
+    }
+
+    // ── Controls application (one fixed step) ──────────────────
+    function applyControls() {
+      // Keyboard throttle is full-on; the touch slider is analog (0..1).
+      const gasAmount = (keys['ArrowUp'] || keys['KeyW']) ? 1 : touch.gas;
+      const brake     = keys['ArrowDown'] || keys['KeyS'] || touch.brake;
 
       // Spin a wheel and apply the scaled reaction torque to the frame —
       // engine and brake torque act between wheel and chassis, which is what
       // makes throttle wheelies, in-air throttle rotation, and the brake
       // "gyro" behave like the original game.
-      function spinPair(wheel, dOmega) {
+      function spinPair(wheel, dOmega, reaction) {
         Body.setAngularVelocity(wheel, wheel.angularVelocity + dOmega);
         Body.setAngularVelocity(chassis,
-          chassis.angularVelocity - dOmega * MOTOR_REACTION * wheel.inertia / chassis.inertia);
+          chassis.angularVelocity - dOmega * reaction * wheel.inertia / chassis.inertia);
       }
 
-      // Drive/lean respect `facing`, so a flipped bike accelerates and spins
-      // the correct way relative to the direction it faces. The driven wheel
-      // is always the VISUAL rear wheel: flipping mirrors the sprite around
-      // the chassis centre, so when facing left the physical front body is
-      // the one under the swingarm.
+      // Drive respects `facing`, so a turned bike accelerates the way it
+      // faces. The driven wheel is always the VISUAL rear wheel: turning
+      // mirrors the sprite around the chassis centre, so when facing left
+      // the physical front body is the one under the swingarm.
       const driveWheel = facing > 0 ? rearWheel : frontWheel;
       if (gasAmount > 0) {
-        throttleKick = Math.max(0, throttleKick - KICK_DRAIN * scale * gasAmount);
         const room = facing > 0
           ? MAX_WHEEL_SPIN - driveWheel.angularVelocity
           : driveWheel.angularVelocity + MAX_WHEEL_SPIN;
-        const d = Math.min(MOTOR_ACCEL * scale * gasAmount, Math.max(0, room));
-        if (d > 0) {
-          Body.setAngularVelocity(driveWheel, driveWheel.angularVelocity + d * facing);
-        }
-        // The frame reaction follows the THROTTLE, not the wheel's spin
-        // headroom, scaled by the kick budget — so a sudden flat-out
-        // pitches the nose up while held throttle settles down.
-        const r = MOTOR_ACCEL * scale * gasAmount * MOTOR_REACTION
-                * (KICK_FLOOR + (1 - KICK_FLOOR) * throttleKick)
-                * driveWheel.inertia / chassis.inertia;
-        Body.setAngularVelocity(chassis, chassis.angularVelocity - r * facing);
-      } else {
-        throttleKick = Math.min(1, throttleKick + KICK_REFILL * scale);
+        const d = Math.min(MOTOR_ACCEL * gasAmount, Math.max(0, room));
+        if (d > 0) spinPair(driveWheel, d * facing, MOTOR_REACTION);
       }
       if (brake) {
         // Lock both wheels to the frame (no reverse thrust, as in the
-        // original — turn around with the flip key instead).
-        const lock = Math.min(1, BRAKE_LOCK * scale);
+        // original — turn around with Space instead). The wheels' spin is
+        // handed to the frame, which is the original's brake "gyro":
+        // braking in the air tips the nose down.
         for (const w of [rearWheel, frontWheel]) {
-          spinPair(w, (chassis.angularVelocity - w.angularVelocity) * lock);
+          spinPair(w, (chassis.angularVelocity - w.angularVelocity) * BRAKE_LOCK, BRAKE_REACTION);
         }
       }
-      if (leanFwd) {
-        Body.setAngularVelocity(chassis, chassis.angularVelocity + LEAN_ACCEL * scale * facing);
+
+      // Volts: a press starts a short torque pulse unless the previous
+      // volt's lockout is still running (then the press is dropped, as in
+      // the original — mashing doesn't stack rotations).
+      if (voltTimer > 0) voltTimer--;
+      if (pendingVolt !== 0 && voltTimer === 0) {
+        voltDir   = pendingVolt;
+        voltPulse = VOLT_STEPS;
+        voltTimer = VOLT_COOLDOWN;
       }
-      if (leanBack) {
-        Body.setAngularVelocity(chassis, chassis.angularVelocity - LEAN_ACCEL * scale * facing);
+      pendingVolt = 0;
+      if (voltPulse > 0) {
+        spinBike(voltDir * VOLT_SPIN / VOLT_STEPS);
+        voltPulse--;
+      }
+    }
+
+    // Velocity of the chassis-fixed point currently under world point p
+    // (linear velocity plus the rotation's ω × r). Wheel velocities must be
+    // measured relative to THIS, not the chassis centre's velocity — or a
+    // spinning bike reads as the wheels sliding sideways, and damping that
+    // "slide" brakes every rotation.
+    function chassisPointVelocity(p) {
+      const w = chassis.angularVelocity;
+      return {
+        x: chassis.velocity.x - w * (p.y - chassis.position.y),
+        y: chassis.velocity.y + w * (p.x - chassis.position.x)
+      };
+    }
+
+    // ── Suspension damping ─────────────────────────────────────
+    // Each link removes a fraction k of the wheel's velocity along the link
+    // RELATIVE TO THE FRAME POINT it hangs from (ω × r included), as an
+    // equal-and-opposite impulse on wheel and frame — so it damps only real
+    // suspension travel and conserves the bike's momentum and spin.
+    function dampSuspension() {
+      const mc = chassis.mass, Ic = chassis.inertia;
+      for (const { c, wheel, k } of suspensionDampers) {
+        // Matter keeps pointA rotated with the frame, so this is its
+        // current world-space offset from the frame's centre.
+        const ax = chassis.position.x + c.pointA.x;
+        const ay = chassis.position.y + c.pointA.y;
+        let nx = wheel.position.x - ax, ny = wheel.position.y - ay;
+        const len = Math.hypot(nx, ny);
+        if (len < 1e-6) continue;
+        nx /= len; ny /= len;
+        const cv = chassisPointVelocity({ x: ax, y: ay });
+        const vrel = (wheel.velocity.x - cv.x) * nx + (wheel.velocity.y - cv.y) * ny;
+        const mw = wheel.mass;
+        const j = -k * vrel * mc * mw / (mc + mw); // impulse on the wheel along n
+        Body.setVelocity(wheel, { x: wheel.velocity.x + j * nx / mw, y: wheel.velocity.y + j * ny / mw });
+        Body.setVelocity(chassis, { x: chassis.velocity.x - j * nx / mc, y: chassis.velocity.y - j * ny / mc });
+        Body.setAngularVelocity(chassis,
+          chassis.angularVelocity - (c.pointA.x * j * ny - c.pointA.y * j * nx) / Ic);
       }
     }
 
@@ -960,6 +1077,15 @@ permalink: /elastomania/
         const upX = sin, upY = -cos;
         const groundLimit = getTerrainY(tx) - WHEEL_R + 2;
         if (ty > groundLimit) {
+          // The frame has already travelled past the stop this step (a hard
+          // landing moves it 15+px per step, faster than the soft springs
+          // can catch it). Cancelling its velocity alone leaves it sunk
+          // into the wheels, and a few steps later the three-link hookup
+          // snaps into its mirror pose with the frame hanging BELOW the
+          // axles. So also lift the frame back out by the overshoot — a
+          // pure translation, so it can't pitch the bike.
+          const lift = ty - groundLimit;
+          Body.setPosition(chassis, { x: chassis.position.x, y: chassis.position.y - lift });
           ty = groundLimit;
           const approach = chassis.velocity.x * -upX + chassis.velocity.y * -upY;
           if (approach > 0) {
@@ -970,8 +1096,9 @@ permalink: /elastomania/
           }
         }
         Body.setPosition(w, { x: tx, y: ty });
-        const inward = (w.velocity.x - chassis.velocity.x) * upX
-                     + (w.velocity.y - chassis.velocity.y) * upY;
+        const cv = chassisPointVelocity(w.position);
+        const inward = (w.velocity.x - cv.x) * upX
+                     + (w.velocity.y - cv.y) * upY;
         if (inward > 0) {
           Body.setVelocity(w, {
             x: w.velocity.x - inward * upX,
@@ -1013,8 +1140,9 @@ permalink: /elastomania/
       // Damp the perpendicular part of the wheel's relative velocity.
       const px = -dir.y * cos - dir.x * sin;
       const py = -dir.y * sin + dir.x * cos;
-      const pv = ((w.velocity.x - chassis.velocity.x) * px
-                + (w.velocity.y - chassis.velocity.y) * py) * FORK_ALIGN_VEL_K;
+      const cv = chassisPointVelocity(w.position);
+      const pv = ((w.velocity.x - cv.x) * px
+                + (w.velocity.y - cv.y) * py) * FORK_ALIGN_VEL_K;
       Body.setVelocity(w, {
         x: w.velocity.x - pv * px,
         y: w.velocity.y - pv * py
@@ -1037,10 +1165,27 @@ permalink: /elastomania/
       // full mid-air loops are fine (as in the original game): being upside
       // down only kills once the head actually meets the ground, which it
       // does on its own if the bike comes to rest inverted.
-      const upperBody = getUpperBodyPos();
-      const groundY = getTerrainY(upperBody.x);
-      if (upperBody.y > groundY) { die(); return; }
-      if (upperBody.y > WORLD_H + 50) { die(); return; }
+      const head = getUpperBodyPos();
+      if (head.y > getTerrainY(head.x) || head.y > WORLD_H + 50) { die(); return; }
+      if (distanceToTerrain(head.x, head.y, HEAD_R) < HEAD_R) die();
+    }
+
+    // Distance from a point to the terrain surface polyline, only checking
+    // the segments within `reach` horizontally.
+    function distanceToTerrain(px, py, reach) {
+      let best = Infinity;
+      for (let i = 0; i < TERRAIN.length - 1; i++) {
+        const x1 = TERRAIN[i][0], y1 = TERRAIN[i][1];
+        const x2 = TERRAIN[i+1][0], y2 = TERRAIN[i+1][1];
+        if (x2 < px - reach) continue;
+        if (x1 > px + reach) break;
+        const dx = x2 - x1, dy = y2 - y1;
+        const len2 = dx * dx + dy * dy;
+        if (len2 === 0) continue; // the generator can emit a zero-length last segment
+        const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / len2));
+        best = Math.min(best, Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy)));
+      }
+      return best;
     }
 
     // ── Apple & flower checks ──────────────────────────────────
@@ -1081,29 +1226,35 @@ permalink: /elastomania/
       loadLevel(selectedLevel);
       initPickups();
       initPhysics();
-      facing = 1;
-      throttleKick = 1;
+      resetBikeControls();
       state = 'playing';
-      startTime = performance.now();
-      lastTs = performance.now();
+      playSteps = 0;
+    }
+
+    function resetBikeControls() {
+      facing = 1;
+      voltTimer = voltPulse = voltDir = pendingVolt = 0;
     }
 
     function die() {
       state = 'dead';
+      elapsedTime = playSteps * STEP_MS / 1000;
       deadTimer = performance.now();
     }
 
+    // A crash restarts the level from scratch, as in the original: every
+    // apple comes back and the clock resets.
     function respawn() {
-      initPhysics(); // keeps apples collected state
-      facing = 1;
-      throttleKick = 1;
+      initPickups();
+      initPhysics();
+      resetBikeControls();
       state = 'playing';
-      lastTs = performance.now();
+      playSteps = 0;
     }
 
     function win() {
       state = 'win';
-      elapsedTime = (performance.now() - startTime) / 1000;
+      elapsedTime = playSteps * STEP_MS / 1000;
       if (currentLevelIndex + 1 >= unlockedCount) {
         unlockedCount = Math.min(currentLevelIndex + 2, LEVELS.length);
         saveUnlockedCount(unlockedCount);
@@ -1343,8 +1494,10 @@ permalink: /elastomania/
       if (state !== 'playing' && state !== 'dead') return;
       const collected = apples.filter(a => a.collected).length;
       const total     = apples.length;
+      // The clock is simulation time, so it can't drift from the physics
+      // (a backgrounded tab or a slow frame doesn't eat into your time).
       const elapsed   = state === 'playing'
-        ? (performance.now() - startTime) / 1000
+        ? playSteps * STEP_MS / 1000
         : elapsedTime;
 
       const mins    = Math.floor(elapsed / 60);
@@ -1448,8 +1601,8 @@ permalink: /elastomania/
       ctx.fillStyle = '#aaaaaa';
       ctx.fillText(
         unlockedCount > 1
-          ? '← → choose level   ↑ ↓ lean   F flip   R restart'
-          : '← → throttle/brake   ↑ ↓ lean   F flip   R restart',
+          ? '← → level  ·  ↑ gas  ↓ brake  ← → volt  Space turn'
+          : '↑ gas   ↓ brake   ← → volt   Space turn   R restart',
         cx, cy + 100
       );
 
@@ -1481,7 +1634,7 @@ permalink: /elastomania/
         ctx.fillText('BOOM! 💥', canvas.width / 2, canvas.height / 2 - 18);
         ctx.font = '20px system-ui, sans-serif';
         ctx.fillStyle = '#ffffff';
-        ctx.fillText('Respawning…', canvas.width / 2, canvas.height / 2 + 26);
+        ctx.fillText('Restarting…', canvas.width / 2, canvas.height / 2 + 26);
         ctx.globalAlpha = 1;
       }
       ctx.restore();
@@ -1562,28 +1715,50 @@ permalink: /elastomania/
     }
 
     // ── Game loop ──────────────────────────────────────────────
+    function clampSpeeds() {
+      for (const b of [rearWheel, frontWheel, chassis]) {
+        const sp = Math.hypot(b.velocity.x, b.velocity.y);
+        if (sp > MAX_SPEED) {
+          Body.setVelocity(b, {
+            x: b.velocity.x * MAX_SPEED / sp,
+            y: b.velocity.y * MAX_SPEED / sp
+          });
+        }
+      }
+    }
+
+    function stepSim() {
+      if (state !== 'playing') return;
+      applyControls();
+      clampSpeeds();
+      dampSuspension();
+      Engine.update(engine, STEP_MS);
+      applyBumpStops();
+      alignWheelAxes();
+      playSteps++;
+      checkApples();
+      checkDeath();
+      checkWin();
+    }
+
+    let stepAccumulator = 0;
+    let manualStepping  = false; // set by the ?debug=1 test API
     function loop(ts) {
       requestAnimationFrame(loop);
-      const dt = Math.min(ts - lastTs, 33);
+      // Clamp long gaps (tab in background, debugger pause) so the sim
+      // doesn't try to catch up seconds of physics at once.
+      const frame = Math.min(Math.max(ts - lastTs, 0), 250);
       lastTs = ts;
 
-      if (state === 'playing') {
-        applyControls(dt);
-        for (const b of [rearWheel, frontWheel, chassis]) {
-          const sp = Math.hypot(b.velocity.x, b.velocity.y);
-          if (sp > MAX_SPEED) {
-            Body.setVelocity(b, {
-              x: b.velocity.x * MAX_SPEED / sp,
-              y: b.velocity.y * MAX_SPEED / sp
-            });
-          }
+      if (!manualStepping) {
+        stepAccumulator += frame;
+        let n = 0;
+        while (stepAccumulator >= STEP_MS && n < MAX_STEPS_PER_FRAME) {
+          stepSim();
+          stepAccumulator -= STEP_MS;
+          n++;
         }
-        Engine.update(engine, dt);
-        applyBumpStops();
-        alignWheelAxes();
-        checkApples();
-        checkDeath();
-        checkWin();
+        if (n === MAX_STEPS_PER_FRAME) stepAccumulator = 0;
       }
 
       updateCamera();
@@ -1603,13 +1778,71 @@ permalink: /elastomania/
       if (!chassis) return { state };
       return {
         state,
-        chassis: { x: chassis.position.x, y: chassis.position.y, angle: chassis.angle },
+        chassis: { x: chassis.position.x, y: chassis.position.y, angle: chassis.angle,
+                   vx: chassis.velocity.x, vy: chassis.velocity.y, spin: chassis.angularVelocity },
         rear:  { x: rearWheel.position.x,  y: rearWheel.position.y,  spin: rearWheel.angularVelocity },
         front: { x: frontWheel.position.x, y: frontWheel.position.y, spin: frontWheel.angularVelocity },
         head: getUpperBodyPos(),
-        groundAtChassis: getTerrainY(chassis.position.x)
+        groundAtChassis: getTerrainY(chassis.position.x),
+        facing, playSteps
       };
     };
+
+    // ?debug=1 test API (see tools/elastomania-e2e/README.md). The first
+    // call to step() hands the clock to the test: the rAF loop stops
+    // advancing physics for the rest of the page's life.
+    if (new URLSearchParams(location.search).has('debug')) {
+      window.__elasto = {
+        get state() { return state; },
+        get level() { return LEVELS[currentLevelIndex]; },
+        get apples() { return apples.map(a => ({ x: a.x, y: a.y, collected: a.collected })); },
+        snapshot: () => window.__DBG(),
+        start(levelIndex = 0) {
+          selectedLevel = levelIndex;
+          state = 'start';
+          startGame();
+        },
+        step(n = 1) {
+          manualStepping = true;
+          for (let i = 0; i < n; i++) stepSim();
+          return window.__DBG();
+        },
+        // input: { gas: 0..1, brake: bool } — held until changed.
+        setInput(input) {
+          if ('gas' in input)   touch.gas = input.gas;
+          if ('brake' in input) touch.brake = !!input.brake;
+        },
+        volt: (dir) => requestVolt(dir),
+        turn: () => flipBike(),
+        terrainY: (x) => getTerrainY(x),
+        // Play a hand-built level: terrain is [[x, y], ...]; apples and
+        // flower are optional (default: no apples, flower far away).
+        startCustom({ terrain, apples = [], flower }) {
+          const worldW = terrain[terrain.length - 1][0];
+          levelCache[-1] = { name: 'Test', worldW, terrain, apples,
+            flower: flower || { x: worldW - 40, y: terrain[terrain.length - 1][1] - 22 } };
+          selectedLevel = -1;
+          state = 'start';
+          startGame();
+        },
+        // Place the whole bike (at rest) with its chassis at x, y.
+        placeBike(x, y, angle = 0) {
+          initPhysics();
+          const dx = x - chassis.position.x, dy = y - chassis.position.y;
+          for (const b of [rearWheel, frontWheel, chassis]) {
+            Body.setPosition(b, { x: b.position.x + dx, y: b.position.y + dy });
+          }
+          if (angle) {
+            const c = { x, y }, cos = Math.cos(angle), sin = Math.sin(angle);
+            for (const b of [rearWheel, frontWheel, chassis]) {
+              const rx = b.position.x - c.x, ry = b.position.y - c.y;
+              Body.setPosition(b, { x: c.x + rx * cos - ry * sin, y: c.y + rx * sin + ry * cos });
+            }
+            Body.setAngle(chassis, angle);
+          }
+        }
+      };
+    }
 
   })();
   </script>
