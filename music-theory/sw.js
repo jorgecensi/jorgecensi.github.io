@@ -1,9 +1,15 @@
-const CACHE_VERSION = '2607300229';
+const CACHE_VERSION = '2609290003';
 const CACHE_NAME = `music-theory-${CACHE_VERSION}`;
 const OFFLINE_URL = '/music-theory/';
+// Piano samples (Salamander) live on another origin and are large, so they get
+// their own cache: filled on first online visit, and not wiped by version bumps
+// (the activate cleanup only deletes caches prefixed `music-theory-`).
+const SAMPLES_CACHE = 'mt-samples-v1';
+const SAMPLES_PREFIX = 'https://tonejs.github.io/audio/salamander/';
 const PRECACHE_URLS = [
   '/music-theory/',
   '/music-theory/manifest.json',
+  '/music-theory/lib/Tone.js',
   '/img/music-theory-icon-192.png',
   '/img/music-theory-icon-512.png',
 ];
@@ -41,6 +47,21 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request).catch(() =>
         caches.match(OFFLINE_URL)
+      )
+    );
+    return;
+  }
+
+  if (event.request.url.startsWith(SAMPLES_PREFIX)) {
+    event.respondWith(
+      caches.open(SAMPLES_CACHE).then((cache) =>
+        cache.match(event.request).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request).then((response) => {
+            if (response && response.status === 200) cache.put(event.request, response.clone());
+            return response;
+          });
+        })
       )
     );
     return;

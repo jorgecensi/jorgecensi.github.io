@@ -15,7 +15,7 @@ title: Music Theory
   <link rel="manifest" href="/music-theory/manifest.json">
   <link rel="apple-touch-icon" href="/img/music-theory-icon-192.png">
   <link rel="icon" href="/img/music-theory-icon-192.png" type="image/png">
-  <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+  <script src="/music-theory/lib/Tone.js"></script> <!-- Tone.js 14.8.49, self-hosted so the app works offline -->
   <title>Music Theory</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -450,11 +450,21 @@ title: Music Theory
     .key-white.in-scale .key-note, .key-white.is-root .key-note { color: rgba(0,0,0,0.65); }
     .key-black.in-scale .key-note, .key-black.is-root .key-note { color: rgba(0,0,0,0.7); }
 
-    .key-octave {
+    /* C keys carry their octave ("C4") so you always know where you are */
+    .key-white.key-c .key-note { font-size: 11px; color: rgba(0,0,0,0.6); }
+    .key-white.key-c { border-left: 2px solid #8a8070; }
+    .key-middle {
       font-size: 8px;
-      color: rgba(0,0,0,0.25);
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      color: var(--bg);
+      background: var(--accent);
+      border-radius: 4px;
+      padding: 2px 4px;
       pointer-events: none;
       line-height: 1;
+      margin-bottom: 3px;
     }
 
     /* ── Landscape / short viewport: compact the chrome so the white keys
@@ -555,6 +565,21 @@ title: Music Theory
     .quiz-opt-btn.correct { background: rgba(16,185,129,0.22); border-color: #10b981; color: #10b981; }
     .quiz-opt-btn.wrong   { background: rgba(239,68,68,0.18);  border-color: #ef4444; color: #ef4444; }
     .quiz-opt-btn:disabled { cursor: default; }
+
+    /* Measures quiz: rhythm staff + multiple-choice answers */
+    .quiz-staff { display: none; justify-content: center; color: var(--text); }
+    .quiz-staff.visible { display: flex; }
+    .quiz-staff svg { width: 100%; max-width: 520px; height: auto; max-height: 92px; }
+    .quiz-choices {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+      gap: 6px;
+    }
+    .quiz-choices .quiz-opt-btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 7px 8px;
+    }
+    .quiz-choices .quiz-opt-btn svg { width: 14px; height: 26px; flex-shrink: 0; }
 
     .quiz-feedback { font-size: 13px; font-weight: 600; text-align: center; min-height: 18px; }
     .quiz-feedback.correct { color: #10b981; }
@@ -703,6 +728,7 @@ title: Music Theory
           <button class="quiz-type-btn active" data-type="chords">Chords</button>
           <button class="quiz-type-btn" data-type="scales">Scales</button>
           <button class="quiz-type-btn" data-type="notes">Notes</button>
+          <button class="quiz-type-btn" data-type="measures">Measures</button>
         </div>
         <button class="quiz-level-btn" id="quiz-level-btn" title="Tap to change difficulty"></button>
         <div class="quiz-score" id="quiz-score">— / —</div>
@@ -713,6 +739,7 @@ title: Music Theory
           <button class="play-btn" id="quiz-play-btn">🔊 Play</button>
           <button class="play-btn secondary" id="quiz-next-btn" style="visibility:hidden">Next →</button>
         </div>
+        <div class="quiz-staff" id="quiz-staff" aria-hidden="true"></div>
         <div class="quiz-options" id="quiz-options"></div>
         <div class="quiz-feedback" id="quiz-feedback"></div>
       </div>
@@ -861,6 +888,7 @@ title: Music Theory
     const WHITE_PCS = [0,2,4,5,7,9,11];
     const MIDI_START = 36;  // C2
     const MIDI_END   = 108; // C8
+const MIDDLE_C   = 60;  // C4
     const WHITE_W    = 61; // px per white key (width + 1px gap)
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -999,14 +1027,16 @@ title: Music Theory
           el.setAttribute('aria-label', `${NOTE_NAMES[pc]}${octave}`);
 
           if (pc === 0) {
-            const octLabel = document.createElement('span');
-            octLabel.className = 'key-octave';
-            octLabel.textContent = octave;
-            el.appendChild(noteLabel);
-            el.appendChild(octLabel);
-          } else {
-            el.appendChild(noteLabel);
+            el.classList.add('key-c');
+            noteLabel.textContent = `C${octave}`;
+            if (midi === MIDDLE_C) {
+              const tag = document.createElement('span');
+              tag.className = 'key-middle';
+              tag.textContent = 'Middle C';
+              el.appendChild(tag);
+            }
           }
+          el.appendChild(noteLabel);
           whiteCount++;
         } else {
           el.className = 'key key-black';
@@ -1244,17 +1274,13 @@ title: Music Theory
         diff === 0 ? 'Same note' : `${diff} semitone${diff !== 1 ? 's' : ''}`;
     }
 
-    function scrollToRoot(rootPc) {
-      // Find first key with this pitch class
-      const keys = document.querySelectorAll('.key-white');
-      for (const k of keys) {
-        if (parseInt(k.dataset.pc) === rootPc) {
-          const wrap = document.getElementById('keyboard-wrap');
-          const target = k.offsetLeft - wrap.clientWidth / 2 + 20;
-          wrap.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
-          break;
-        }
-      }
+    // Centre the keyboard on this pitch class in the middle octave (C4–B4).
+    function scrollToRoot(rootPc, smooth = true) {
+      const k = document.querySelector(`.key[data-midi="${MIDDLE_C + rootPc}"]`);
+      if (!k) return;
+      const wrap = document.getElementById('keyboard-wrap');
+      const target = k.offsetLeft + k.offsetWidth / 2 - wrap.clientWidth / 2;
+      wrap.scrollTo({ left: Math.max(0, target), behavior: smooth ? 'smooth' : 'auto' });
     }
 
     // ── Pickers ───────────────────────────────────────────────────────────────
@@ -1374,7 +1400,8 @@ title: Music Theory
     function playQuizPrompt() {
       const q = state.quizQuestion;
       if (!q) return;
-      if (state.quizType === 'chords')      playChord(q.midis);
+      if (state.quizType === 'measures')    playMeasurePrompt(q);
+      else if (state.quizType === 'chords') playChord(q.midis);
       else if (state.quizType === 'scales') playScaleSequence(q.midis);
       else                                  playNote(q.midis[0]);
     }
@@ -1390,6 +1417,8 @@ title: Music Theory
     }
 
     function startQuizRound() {
+      if (state.quizType === 'measures') { startMeasureRound(); return; }
+      document.getElementById('quiz-staff').classList.remove('visible');
       state.quizAnswered = false;
       state.quizPlayed = new Set();
       state.quizQuestion =
@@ -1418,6 +1447,7 @@ title: Music Theory
     // player struck and auto-check once enough distinct notes are down.
     function registerQuizKey(midi) {
       if (state.quizAnswered || !state.quizQuestion) return;
+      if (state.quizType === 'measures') return; // answered with buttons
       const pc = midi % 12;
       if (state.quizPlayed.has(pc)) return;
       state.quizPlayed.add(pc);
@@ -1427,13 +1457,9 @@ title: Music Theory
     }
 
     function checkQuizAnswer() {
-      state.quizAnswered = true;
-      state.quizScore.total++;
       const expected = state.quizQuestion.answerPcs;
       const played = state.quizPlayed;
       const correct = played.size === expected.size && [...expected].every(pc => played.has(pc));
-      if (correct) { state.quizScore.correct++; state.quizStreak++; }
-      else { state.quizStreak = 0; }
 
       // Track mastery of each major key — it unlocks the other scales.
       if (correct && state.quizType === 'scales' && state.quizQuestion.scaleType === 'Major') {
@@ -1458,6 +1484,17 @@ title: Music Theory
       document.getElementById('quiz-label').textContent = state.quizQuestion.answerName;
       document.getElementById('quiz-options').textContent = '';
 
+      recordQuizResult(correct);
+    }
+
+    // Shared by every quiz type: update the score, streak and level, and
+    // reveal the Next button.
+    function recordQuizResult(correct) {
+      state.quizAnswered = true;
+      state.quizScore.total++;
+      if (correct) { state.quizScore.correct++; state.quizStreak++; }
+      else { state.quizStreak = 0; }
+
       const { correct: c, total: t } = state.quizScore;
       document.getElementById('quiz-score').textContent = `${c} / ${t}`;
 
@@ -1472,6 +1509,317 @@ title: Music Theory
       }
 
       document.getElementById('quiz-next-btn').style.visibility = 'visible';
+    }
+
+    // ── Measures quiz ─────────────────────────────────────────────────────────
+    // Rhythm/meter exercises answered with multiple-choice buttons instead of
+    // the keyboard. All durations are counted in eighth notes.
+
+    const NOTE_VALUES = {
+      'whole':          { dur: 8, name: 'Whole' },
+      'dotted-half':    { dur: 6, name: 'Dotted half' },
+      'half':           { dur: 4, name: 'Half' },
+      'dotted-quarter': { dur: 3, name: 'Dotted quarter' },
+      'quarter':        { dur: 2, name: 'Quarter' },
+      'eighth':         { dur: 1, name: 'Eighth' },
+    };
+
+    // `accents` has one entry per counted pulse (quarter for x/4, eighth for
+    // x/8): 2 = downbeat, 1 = secondary accent, 0 = weak beat.
+    const METERS = {
+      '2/4':  { beats: 2,  unit: 4, accents: [2,0] },
+      '3/4':  { beats: 3,  unit: 4, accents: [2,0,0] },
+      '4/4':  { beats: 4,  unit: 4, accents: [2,0,1,0] },
+      '6/8':  { beats: 6,  unit: 8, accents: [2,0,0,1,0,0] },
+      '5/4':  { beats: 5,  unit: 4, accents: [2,0,0,1,0] },
+      '7/8':  { beats: 7,  unit: 8, accents: [2,0,1,0,1,0,0] },
+      '9/8':  { beats: 9,  unit: 8, accents: [2,0,0,1,0,0,1,0,0] },
+      '12/8': { beats: 12, unit: 8, accents: [2,0,0,1,0,0,1,0,0,1,0,0] },
+    };
+    const meterTotal = (m) => METERS[m].beats * (METERS[m].unit === 4 ? 2 : 1);
+
+    const MEASURE_LEVELS = {
+      1: { meters: ['2/4','3/4','4/4'],
+           notes: ['whole','half','quarter','eighth'],
+           kinds: ['complete','meter-ear'],
+           countMax: 4 },
+      2: { meters: ['2/4','3/4','4/4','6/8'],
+           notes: Object.keys(NOTE_VALUES),
+           kinds: ['complete','meter-ear','which-meter','count'],
+           countMax: 5 },
+      3: { meters: Object.keys(METERS),
+           notes: Object.keys(NOTE_VALUES),
+           kinds: ['complete','meter-ear','which-meter','count'],
+           countMax: 6 },
+    };
+
+    const EIGHTH_SECS = 0.28;
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    // Random rhythm that exactly fills `total` eighths. Longer values are
+    // slightly favoured so a 12/8 bar doesn't turn into 12 eighth notes.
+    function fillRhythm(total, pool) {
+      const out = [];
+      let rem = total;
+      while (rem > 0) {
+        const fits = pool.filter(k => NOTE_VALUES[k].dur <= rem);
+        const weights = fits.map(k => Math.sqrt(NOTE_VALUES[k].dur));
+        let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+        let i = 0;
+        while (r > weights[i]) { r -= weights[i]; i++; }
+        out.push(fits[i]);
+        rem -= NOTE_VALUES[fits[i]].dur;
+      }
+      return out;
+    }
+
+    // x/4 counts quarter-note beats ("½ beat", "1½ beats"); x/8 counts
+    // eighth notes, since its beat (a dotted quarter) would read awkwardly.
+    function beatsText(dur, meter) {
+      if (METERS[meter].unit === 8) return `${dur} eighth note${dur === 1 ? '' : 's'}`;
+      const n = dur / 2;
+      const str = Number.isInteger(n) ? String(n) : `${Math.floor(n) || ''}½`;
+      return `${str} beat${n === 1 || n === 0.5 ? '' : 's'}`;
+    }
+
+    function generateMeasureQuestion() {
+      const lvl = MEASURE_LEVELS[state.quizLevel];
+      const kind = pick(lvl.kinds);
+      const meter = pick(lvl.meters);
+      const total = meterTotal(meter);
+
+      if (kind === 'complete') {
+        const candidates = lvl.notes.filter(k => NOTE_VALUES[k].dur < total);
+        const missing = pick(candidates);
+        const rhythm = fillRhythm(total - NOTE_VALUES[missing].dur, lvl.notes);
+        const gapIdx = Math.floor(Math.random() * (rhythm.length + 1));
+        rhythm.splice(gapIdx, 0, missing);
+        return {
+          kind, meter, rhythm, gapIdx,
+          prompt: 'Which note completes the measure?',
+          choices: lvl.notes.map(k => ({ id: k, label: NOTE_VALUES[k].name, glyph: k })),
+          answer: missing,
+          explain: `${meter} holds ${beatsText(total, meter)} — the gap is a ` +
+                   `${NOTE_VALUES[missing].name.toLowerCase()} note (${beatsText(NOTE_VALUES[missing].dur, meter)}).`,
+        };
+      }
+
+      if (kind === 'which-meter') {
+        // Distractors must hold a different number of eighths, otherwise
+        // (e.g. 3/4 vs 6/8) a single bar can't tell them apart.
+        const others = shuffle(Object.keys(METERS).filter(m => meterTotal(m) !== total));
+        const preferred = others.filter(m => lvl.meters.includes(m));
+        const distractors = [...preferred, ...others.filter(m => !preferred.includes(m))]
+          .filter((m, i, a) => a.findIndex(o => meterTotal(o) === meterTotal(m)) === i)
+          .slice(0, 3);
+        return {
+          kind, meter, rhythm: fillRhythm(total, lvl.notes), hideMeter: true,
+          prompt: 'Which time signature fits this measure?',
+          choices: shuffle([meter, ...distractors]).map(m => ({ id: m, label: m })),
+          answer: meter,
+          explain: `The notes add up to ${beatsText(total, meter)}: ${meter}.`,
+        };
+      }
+
+      if (kind === 'count') {
+        const count = 2 + Math.floor(Math.random() * (lvl.countMax - 1));
+        const opts = [];
+        for (let n = 2; n <= lvl.countMax; n++) opts.push(n);
+        return {
+          kind, meter, count,
+          prompt: `How many measures of ${meter} do you hear?`,
+          choices: opts.map(n => ({ id: String(n), label: String(n) })),
+          answer: String(count),
+          explain: `${count} measures — count the low accented downbeats.`,
+        };
+      }
+
+      // meter-ear: identify the time signature from accented clicks.
+      const choices = shuffle([meter, ...shuffle(lvl.meters.filter(m => m !== meter)).slice(0, 3)]);
+      return {
+        kind, meter,
+        prompt: 'Listen — what is the time signature?',
+        choices: choices.map(m => ({ id: m, label: m })),
+        answer: meter,
+        explain: `${meter}: ${METERS[meter].beats} ${METERS[meter].unit === 4 ? 'quarter' : 'eighth'}-note ` +
+                 `pulses per measure, accent on the low downbeat.`,
+      };
+    }
+
+    // ── Measures: audio ──
+
+    // Metronome clicks for `measures` bars of `meter`, starting at `startEighth`.
+    function meterClicks(meter, measures, startEighth = 0) {
+      const m = METERS[meter];
+      const step = m.unit === 4 ? 2 : 1;
+      const events = [];
+      for (let bar = 0; bar < measures; bar++) {
+        m.accents.forEach((acc, i) => {
+          const t = (startEighth + bar * meterTotal(meter) + i * step) * EIGHTH_SECS;
+          if (acc === 2)      events.push({ t, notes: ['C3','C4'], vel: 0.95, dur: 0.2 });
+          else if (acc === 1) events.push({ t, notes: ['G4'], vel: 0.7,  dur: 0.12 });
+          else                events.push({ t, notes: ['G4'], vel: 0.35, dur: 0.12 });
+        });
+      }
+      return events;
+    }
+
+    // Plays a rhythm on a single pitch; the gap (if any) stays silent.
+    function rhythmEvents(rhythm, gapIdx, startEighth = 0) {
+      const events = [];
+      let pos = startEighth;
+      rhythm.forEach((k, i) => {
+        const dur = NOTE_VALUES[k].dur;
+        if (i !== gapIdx) {
+          events.push({ t: pos * EIGHTH_SECS, notes: ['E4'], vel: pos === startEighth ? 0.9 : 0.6,
+                        dur: dur * EIGHTH_SECS * 0.9 });
+        }
+        pos += dur;
+      });
+      return events;
+    }
+
+    let measurePlayingUntil = 0;
+
+    async function playEvents(events) {
+      if (!samplerReady || performance.now() < measurePlayingUntil) return;
+      if (!(await ensureAudioStarted())) return;
+      const now = Tone.now() + 0.05;
+      let end = 0;
+      events.forEach(e => {
+        e.notes.forEach(n => sampler.triggerAttackRelease(n, e.dur, now + e.t, e.vel));
+        end = Math.max(end, e.t + e.dur);
+      });
+      measurePlayingUntil = performance.now() + end * 1000;
+    }
+
+    function playMeasurePrompt(q) {
+      const total = meterTotal(q.meter);
+      if (q.kind === 'meter-ear') {
+        playEvents(meterClicks(q.meter, total <= 4 ? 4 : total >= 9 ? 2 : 3));
+      } else if (q.kind === 'count') {
+        playEvents(meterClicks(q.meter, q.count));
+      } else if (q.kind === 'complete') {
+        // One bar of count-in, then the rhythm with its gap.
+        playEvents([...meterClicks(q.meter, 1), ...rhythmEvents(q.rhythm, q.gapIdx, total)]);
+      } else {
+        // No count-in here — it would give the meter away. Play it twice.
+        playEvents([...rhythmEvents(q.rhythm, -1), ...rhythmEvents(q.rhythm, -1, total)]);
+      }
+    }
+
+    // ── Measures: notation ──
+
+    // One note on a single-line rhythm staff, head centred at (x, y).
+    function noteSvg(key, x, y) {
+      const { dur } = NOTE_VALUES[key];
+      const filled = key === 'quarter' || key === 'eighth' || key === 'dotted-quarter';
+      let s = key === 'whole'
+        ? `<ellipse cx="${x}" cy="${y}" rx="7.5" ry="5" fill="none" stroke="currentColor" stroke-width="2.2"/>`
+        : `<ellipse cx="${x}" cy="${y}" rx="6.5" ry="4.6" transform="rotate(-20 ${x} ${y})" ` +
+          `fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8"/>`;
+      if (key !== 'whole') {
+        const sx = x + 5.6, top = y - 30;
+        s += `<line x1="${sx}" y1="${y - 1.5}" x2="${sx}" y2="${top}" stroke="currentColor" stroke-width="1.6"/>`;
+        if (key === 'eighth') {
+          s += `<path d="M${sx} ${top} c1 7 9 8 7 18" fill="none" stroke="currentColor" stroke-width="1.8"/>`;
+        }
+      }
+      if (dur === 3 || dur === 6) s += `<circle cx="${x + 12}" cy="${y - 3}" r="2" fill="currentColor"/>`;
+      return s;
+    }
+
+    const noteAdvance = (key) => 30 + NOTE_VALUES[key].dur * 6;
+
+    function renderMeasureSvg(q, reveal) {
+      const Y = 48;
+      let x = 44;
+      let body = '';
+      q.rhythm.forEach((k, i) => {
+        const adv = noteAdvance(k);
+        const cx = x + 8;
+        if (i === q.gapIdx && !reveal) {
+          body += `<rect x="${x - 2}" y="${Y - 26}" width="${adv - 8}" height="36" rx="5" fill="none" ` +
+                  `stroke="var(--accent)" stroke-width="1.6" stroke-dasharray="4 3"/>` +
+                  `<text x="${x - 2 + (adv - 8) / 2}" y="${Y - 1}" text-anchor="middle" font-size="18" ` +
+                  `font-weight="800" fill="var(--accent)">?</text>`;
+        } else {
+          const g = noteSvg(k, cx, Y);
+          body += i === q.gapIdx ? `<g style="color:var(--green)">${g}</g>` : g;
+        }
+        x += adv;
+      });
+      const end = x;
+      const [top, bottom] = q.meter.split('/');
+      const sig = q.hideMeter && !reveal
+        ? `<text x="18" y="${Y + 8}" text-anchor="middle" font-size="26" font-weight="800" fill="var(--accent)">?</text>`
+        : `<text x="18" y="${Y - 2}" text-anchor="middle" font-size="21" font-weight="800" font-family="Georgia, serif" fill="currentColor">${top}</text>` +
+          `<text x="18" y="${Y + 19}" text-anchor="middle" font-size="21" font-weight="800" font-family="Georgia, serif" fill="currentColor">${bottom}</text>`;
+      return `<svg viewBox="0 0 ${end + 8} 76" xmlns="http://www.w3.org/2000/svg" role="img">` +
+        sig +
+        `<line x1="34" y1="${Y}" x2="${end}" y2="${Y}" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>` +
+        `<line x1="${end}" y1="${Y - 16}" x2="${end}" y2="${Y + 16}" stroke="currentColor" stroke-width="1.6"/>` +
+        body + `</svg>`;
+    }
+
+    function glyphSvg(key) {
+      return `<svg viewBox="0 0 22 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${noteSvg(key, 7, key === 'whole' ? 22 : 33)}</svg>`;
+    }
+
+    // ── Measures: round flow ──
+
+    function startMeasureRound() {
+      state.quizAnswered = false;
+      state.quizPlayed = new Set();
+      const q = state.quizQuestion = generateMeasureQuestion();
+      clearHighlight();
+
+      document.getElementById('quiz-label').textContent = q.prompt;
+      const staff = document.getElementById('quiz-staff');
+      const hasStaff = q.kind === 'complete' || q.kind === 'which-meter';
+      staff.classList.toggle('visible', hasStaff);
+      staff.innerHTML = hasStaff ? renderMeasureSvg(q, false) : '';
+
+      const opts = document.getElementById('quiz-options');
+      opts.textContent = '';
+      const grid = document.createElement('div');
+      grid.className = 'quiz-choices';
+      q.choices.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-opt-btn';
+        btn.dataset.id = c.id;
+        btn.innerHTML = (c.glyph ? glyphSvg(c.glyph) : '') + `<span>${c.label}</span>`;
+        btn.addEventListener('click', () => answerMeasure(c.id));
+        grid.appendChild(btn);
+      });
+      opts.appendChild(grid);
+
+      const fb = document.getElementById('quiz-feedback');
+      fb.textContent = '';
+      fb.className = 'quiz-feedback';
+      document.getElementById('quiz-next-btn').style.visibility = 'hidden';
+
+      measurePlayingUntil = 0;
+      if (q.kind === 'meter-ear' || q.kind === 'count') playMeasurePrompt(q);
+    }
+
+    function answerMeasure(id) {
+      if (state.quizAnswered) return;
+      const q = state.quizQuestion;
+      const correct = id === q.answer;
+      document.querySelectorAll('#quiz-options .quiz-opt-btn').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.id === q.answer) b.classList.add('correct');
+        else if (b.dataset.id === id)  b.classList.add('wrong');
+      });
+      const staff = document.getElementById('quiz-staff');
+      if (staff.classList.contains('visible')) staff.innerHTML = renderMeasureSvg(q, true);
+
+      const fb = document.getElementById('quiz-feedback');
+      fb.textContent = (correct ? '✓ Correct! ' : '✗ ') + q.explain;
+      fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
+
+      recordQuizResult(correct);
     }
 
     const QUIZ_LEVEL_NAMES = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' };
@@ -1589,7 +1937,7 @@ title: Music Theory
       updateHighlight();
       updateScaleDisplay();
       updateChordDisplay();
-      requestAnimationFrame(() => scrollToRoot(0)); // C — lands on C4 area
+      requestAnimationFrame(() => scrollToRoot(0, false)); // open on middle C (C4)
 
       // Install prompt
       let installPrompt = null;
@@ -1610,7 +1958,7 @@ title: Music Theory
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2607300229';
+        const SW_VERSION = '2609290003';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
