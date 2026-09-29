@@ -946,10 +946,20 @@ const MIDDLE_C   = 60;  // C4
       return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
     }
 
+    // Browsers suspend (or on iOS "interrupt") the audio context when the app
+    // is backgrounded, and resume() can hang forever on an interrupted context,
+    // so never wait on it unbounded. Called from a tap, which is the user
+    // gesture the browser needs to allow the resume.
+    let audioWasRunning = false;
+
     async function ensureAudioStarted() {
       try {
-        await Tone.start();
-        return true;
+        const ctx = Tone.getContext().rawContext;
+        if (ctx.state !== 'running') {
+          await Promise.race([Tone.start(), new Promise(r => setTimeout(r, 750))]);
+        }
+        if (ctx.state === 'running') audioWasRunning = true;
+        return ctx.state === 'running';
       } catch (e) {
         return false;
       }
@@ -970,6 +980,13 @@ const MIDDLE_C   = 60;  // C4
         heldNotes.add(midi);
         sampler.triggerAttack(midiToNoteName(midi));
       }
+    }
+
+    // Let go of everything: used when the page is backgrounded, because the
+    // matching pointerup/keyup never arrives and the note would hang on.
+    function releaseAllNotes() {
+      [...heldNotes].forEach(stopNote);
+      document.querySelectorAll('.key.pressed').forEach(k => k.classList.remove('pressed'));
     }
 
     function stopNote(midi) {
@@ -1101,8 +1118,28 @@ const MIDDLE_C   = 60;  // C4
         activeEl = null; activeMidi = null;
       }
 
+      // Forget any in-flight touch. Switching apps mid-press means no
+      // pointerup/pointercancel is ever delivered; without this the stale
+      // pointerId makes the keyboard ignore every later touch.
+      function resetInteraction() {
+        endActive();
+        releaseAllNotes();
+        wrap.classList.remove('dragging');
+        try { if (pointerId !== null) wrap.releasePointerCapture(pointerId); } catch (_) {}
+        pointerId = null;
+        dragging  = false;
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') resetInteraction();
+        else if (audioWasRunning) ensureAudioStarted();   // best effort; a tap retries
+      });
+      window.addEventListener('pagehide', resetInteraction);
+      window.addEventListener('blur', resetInteraction);
+
       wrap.addEventListener('pointerdown', (e) => {
-        if (pointerId !== null) return;       // ignore extra fingers
+        if (!e.isPrimary) return;             // ignore extra fingers
+        if (pointerId !== null) resetInteraction();   // stale press that never ended
         pointerId  = e.pointerId;
         startX     = e.clientX;
         startScroll = wrap.scrollLeft;
@@ -1958,7 +1995,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2609291333';
+        const SW_VERSION = '2609291400';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
