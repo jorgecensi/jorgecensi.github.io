@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'dev';
+const CACHE_VERSION = '2609290828';
 const CACHE_NAME = `ding-${CACHE_VERSION}`;
 const OFFLINE_URL = '/ding/';
 const PRECACHE_URLS = [
