@@ -15,7 +15,7 @@ title: Music Theory
   <link rel="manifest" href="/music-theory/manifest.json">
   <link rel="apple-touch-icon" href="/img/music-theory-icon-192.png">
   <link rel="icon" href="/img/music-theory-icon-192.png" type="image/png">
-  <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+  <script src="/music-theory/lib/Tone.js"></script> <!-- Tone.js 14.8.49, self-hosted so the app works offline -->
   <title>Music Theory</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1949,7 +1949,7 @@ title: Music Theory
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2609290001';
+        const SW_VERSION = '2609290002';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
