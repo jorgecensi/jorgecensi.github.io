@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2609290002';
+const CACHE_VERSION = '2609290003';
 const CACHE_NAME = `music-theory-${CACHE_VERSION}`;
 const OFFLINE_URL = '/music-theory/';
 // Piano samples (Salamander) live on another origin and are large, so they get

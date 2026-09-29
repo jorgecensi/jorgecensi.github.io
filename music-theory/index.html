@@ -450,11 +450,21 @@ title: Music Theory
     .key-white.in-scale .key-note, .key-white.is-root .key-note { color: rgba(0,0,0,0.65); }
     .key-black.in-scale .key-note, .key-black.is-root .key-note { color: rgba(0,0,0,0.7); }
 
-    .key-octave {
+    /* C keys carry their octave ("C4") so you always know where you are */
+    .key-white.key-c .key-note { font-size: 11px; color: rgba(0,0,0,0.6); }
+    .key-white.key-c { border-left: 2px solid #8a8070; }
+    .key-middle {
       font-size: 8px;
-      color: rgba(0,0,0,0.25);
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      color: var(--bg);
+      background: var(--accent);
+      border-radius: 4px;
+      padding: 2px 4px;
       pointer-events: none;
       line-height: 1;
+      margin-bottom: 3px;
     }
 
     /* ── Landscape / short viewport: compact the chrome so the white keys
@@ -878,6 +888,7 @@ title: Music Theory
     const WHITE_PCS = [0,2,4,5,7,9,11];
     const MIDI_START = 36;  // C2
     const MIDI_END   = 108; // C8
+const MIDDLE_C   = 60;  // C4
     const WHITE_W    = 61; // px per white key (width + 1px gap)
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -1016,14 +1027,16 @@ title: Music Theory
           el.setAttribute('aria-label', `${NOTE_NAMES[pc]}${octave}`);
 
           if (pc === 0) {
-            const octLabel = document.createElement('span');
-            octLabel.className = 'key-octave';
-            octLabel.textContent = octave;
-            el.appendChild(noteLabel);
-            el.appendChild(octLabel);
-          } else {
-            el.appendChild(noteLabel);
+            el.classList.add('key-c');
+            noteLabel.textContent = `C${octave}`;
+            if (midi === MIDDLE_C) {
+              const tag = document.createElement('span');
+              tag.className = 'key-middle';
+              tag.textContent = 'Middle C';
+              el.appendChild(tag);
+            }
           }
+          el.appendChild(noteLabel);
           whiteCount++;
         } else {
           el.className = 'key key-black';
@@ -1261,17 +1274,13 @@ title: Music Theory
         diff === 0 ? 'Same note' : `${diff} semitone${diff !== 1 ? 's' : ''}`;
     }
 
-    function scrollToRoot(rootPc) {
-      // Find first key with this pitch class
-      const keys = document.querySelectorAll('.key-white');
-      for (const k of keys) {
-        if (parseInt(k.dataset.pc) === rootPc) {
-          const wrap = document.getElementById('keyboard-wrap');
-          const target = k.offsetLeft - wrap.clientWidth / 2 + 20;
-          wrap.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
-          break;
-        }
-      }
+    // Centre the keyboard on this pitch class in the middle octave (C4–B4).
+    function scrollToRoot(rootPc, smooth = true) {
+      const k = document.querySelector(`.key[data-midi="${MIDDLE_C + rootPc}"]`);
+      if (!k) return;
+      const wrap = document.getElementById('keyboard-wrap');
+      const target = k.offsetLeft + k.offsetWidth / 2 - wrap.clientWidth / 2;
+      wrap.scrollTo({ left: Math.max(0, target), behavior: smooth ? 'smooth' : 'auto' });
     }
 
     // ── Pickers ───────────────────────────────────────────────────────────────
@@ -1928,7 +1937,7 @@ title: Music Theory
       updateHighlight();
       updateScaleDisplay();
       updateChordDisplay();
-      requestAnimationFrame(() => scrollToRoot(0)); // C — lands on C4 area
+      requestAnimationFrame(() => scrollToRoot(0, false)); // open on middle C (C4)
 
       // Install prompt
       let installPrompt = null;
@@ -1949,7 +1958,7 @@ title: Music Theory
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2609290002';
+        const SW_VERSION = '2609290003';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
