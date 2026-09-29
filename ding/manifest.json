@@ -1,0 +1,31 @@
+{
+  "id": "/ding/",
+  "name": "Ding",
+  "short_name": "Ding",
+  "description": "A tap bell for answering questions: ring once for yes, twice for no.",
+  "start_url": "/ding/",
+  "scope": "/ding/",
+  "display": "standalone",
+  "background_color": "#1a1410",
+  "theme_color": "#1a1410",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/img/ding-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/ding-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities"],
+  "lang": "en-US",
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
