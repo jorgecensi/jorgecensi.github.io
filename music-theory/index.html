@@ -488,7 +488,7 @@ title: Music Theory
     }
 
     /* ── Quiz ── */
-    .quiz-type-btns { display: flex; gap: 6px; }
+    .quiz-type-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 
     .quiz-type-btn {
       padding: 4px 12px;
@@ -729,6 +729,7 @@ title: Music Theory
           <button class="quiz-type-btn" data-type="scales">Scales</button>
           <button class="quiz-type-btn" data-type="notes">Notes</button>
           <button class="quiz-type-btn" data-type="measures">Measures</button>
+          <button class="quiz-type-btn" data-type="intervals">Intervals</button>
         </div>
         <button class="quiz-level-btn" id="quiz-level-btn" title="Tap to change difficulty"></button>
         <div class="quiz-score" id="quiz-score">— / —</div>
@@ -1313,7 +1314,11 @@ const MIDDLE_C   = 60;  // C4
 
     // Centre the keyboard on this pitch class in the middle octave (C4–B4).
     function scrollToRoot(rootPc, smooth = true) {
-      const k = document.querySelector(`.key[data-midi="${MIDDLE_C + rootPc}"]`);
+      scrollToMidi(MIDDLE_C + rootPc, smooth);
+    }
+
+    function scrollToMidi(midi, smooth = true) {
+      const k = document.querySelector(`.key[data-midi="${midi}"]`);
       if (!k) return;
       const wrap = document.getElementById('keyboard-wrap');
       const target = k.offsetLeft + k.offsetWidth / 2 - wrap.clientWidth / 2;
@@ -1438,6 +1443,7 @@ const MIDDLE_C   = 60;  // C4
       const q = state.quizQuestion;
       if (!q) return;
       if (state.quizType === 'measures')    playMeasurePrompt(q);
+      else if (state.quizType === 'intervals') playIntervalPrompt(q);
       else if (state.quizType === 'chords') playChord(q.midis);
       else if (state.quizType === 'scales') playScaleSequence(q.midis);
       else                                  playNote(q.midis[0]);
@@ -1454,7 +1460,8 @@ const MIDDLE_C   = 60;  // C4
     }
 
     function startQuizRound() {
-      if (state.quizType === 'measures') { startMeasureRound(); return; }
+      if (state.quizType === 'measures')  { startMeasureRound();  return; }
+      if (state.quizType === 'intervals') { startIntervalRound(); return; }
       document.getElementById('quiz-staff').classList.remove('visible');
       state.quizAnswered = false;
       state.quizPlayed = new Set();
@@ -1484,7 +1491,7 @@ const MIDDLE_C   = 60;  // C4
     // player struck and auto-check once enough distinct notes are down.
     function registerQuizKey(midi) {
       if (state.quizAnswered || !state.quizQuestion) return;
-      if (state.quizType === 'measures') return; // answered with buttons
+      if (state.quizType === 'measures' || state.quizType === 'intervals') return; // answered with buttons
       const pc = midi % 12;
       if (state.quizPlayed.has(pc)) return;
       state.quizPlayed.add(pc);
@@ -1805,6 +1812,23 @@ const MIDDLE_C   = 60;  // C4
 
     // ── Measures: round flow ──
 
+    // Multiple-choice answer buttons, shared by the Measures and Intervals quizzes.
+    function renderQuizChoices(q) {
+      const opts = document.getElementById('quiz-options');
+      opts.textContent = '';
+      const grid = document.createElement('div');
+      grid.className = 'quiz-choices';
+      q.choices.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-opt-btn';
+        btn.dataset.id = c.id;
+        btn.innerHTML = (c.glyph ? glyphSvg(c.glyph) : '') + `<span>${c.label}</span>`;
+        btn.addEventListener('click', () => answerChoice(c.id));
+        grid.appendChild(btn);
+      });
+      opts.appendChild(grid);
+    }
+
     function startMeasureRound() {
       state.quizAnswered = false;
       state.quizPlayed = new Set();
@@ -1817,19 +1841,7 @@ const MIDDLE_C   = 60;  // C4
       staff.classList.toggle('visible', hasStaff);
       staff.innerHTML = hasStaff ? renderMeasureSvg(q, false) : '';
 
-      const opts = document.getElementById('quiz-options');
-      opts.textContent = '';
-      const grid = document.createElement('div');
-      grid.className = 'quiz-choices';
-      q.choices.forEach(c => {
-        const btn = document.createElement('button');
-        btn.className = 'quiz-opt-btn';
-        btn.dataset.id = c.id;
-        btn.innerHTML = (c.glyph ? glyphSvg(c.glyph) : '') + `<span>${c.label}</span>`;
-        btn.addEventListener('click', () => answerMeasure(c.id));
-        grid.appendChild(btn);
-      });
-      opts.appendChild(grid);
+      renderQuizChoices(q);
 
       const fb = document.getElementById('quiz-feedback');
       fb.textContent = '';
@@ -1840,7 +1852,7 @@ const MIDDLE_C   = 60;  // C4
       if (q.kind === 'meter-ear' || q.kind === 'count') playMeasurePrompt(q);
     }
 
-    function answerMeasure(id) {
+    function answerChoice(id) {
       if (state.quizAnswered) return;
       const q = state.quizQuestion;
       const correct = id === q.answer;
@@ -1851,12 +1863,93 @@ const MIDDLE_C   = 60;  // C4
       });
       const staff = document.getElementById('quiz-staff');
       if (staff.classList.contains('visible')) staff.innerHTML = renderMeasureSvg(q, true);
+      if (q.kind === 'interval') revealIntervalKeys(q);
 
       const fb = document.getElementById('quiz-feedback');
       fb.textContent = (correct ? '✓ Correct! ' : '✗ ') + q.explain;
       fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
 
       recordQuizResult(correct);
+    }
+
+    // ── Intervals quiz ────────────────────────────────────────────────────────
+    // Ear training for the distance between two notes. Answered with buttons
+    // (like Measures); afterwards both notes light up on the keyboard.
+
+    // Famous tunes that begin with the interval going UP — a hook for memory.
+    const INTERVAL_SONGS = {
+      1: 'Jaws theme', 2: 'Frère Jacques', 3: 'Greensleeves', 4: 'When the Saints Go Marching In',
+      5: 'Here Comes the Bride', 6: 'The Simpsons theme', 7: 'Star Wars theme',
+      8: 'The Entertainer', 9: 'My Bonnie Lies Over the Ocean', 10: 'Somewhere (West Side Story)',
+      12: 'Somewhere Over the Rainbow',
+    };
+
+    const INTERVAL_LEVELS = {
+      1: { semis: [3,4,5,7,12],                      modes: ['ascending'],                            lowMin: 55, lowMax: 65 },
+      2: { semis: [1,2,3,4,5,6,7,8,9,10,11,12],      modes: ['ascending','descending'],              lowMin: 48, lowMax: 66 },
+      3: { semis: [1,2,3,4,5,6,7,8,9,10,11,12],      modes: ['ascending','descending','harmonic'],   lowMin: 40, lowMax: 72 },
+    };
+
+    const INTERVAL_MODE_TEXT = {
+      ascending:  '↑ Second note is higher',
+      descending: '↓ Second note is lower',
+      harmonic:   '⇅ Both notes together',
+    };
+
+    function generateIntervalQuestion() {
+      const lvl = INTERVAL_LEVELS[state.quizLevel];
+      const semis = pick(lvl.semis);
+      const mode = pick(lvl.modes);
+      const low = lvl.lowMin + Math.floor(Math.random() * (lvl.lowMax - lvl.lowMin + 1));
+      const high = low + semis;
+      const name = INTERVAL_NAMES[semis];
+      const song = INTERVAL_SONGS[semis];
+      return {
+        kind: 'interval', mode, semis, low, high,
+        // Notes in the order they are heard.
+        midis: mode === 'descending' ? [high, low] : [low, high],
+        prompt: `What is the distance? ${INTERVAL_MODE_TEXT[mode]}`,
+        choices: lvl.semis.map(n => ({ id: String(n), label: INTERVAL_NAMES[n] })),
+        answer: String(semis),
+        explain: `${name} — ${semis} semitone${semis === 1 ? '' : 's'}` +
+                 (song && mode !== 'harmonic' ? ` · like the start of “${song}” (going up)` : ''),
+      };
+    }
+
+    function playIntervalPrompt(q) {
+      const [a, b] = q.midis.map(midiToNoteName);
+      playEvents(q.mode === 'harmonic'
+        ? [{ t: 0, notes: [a, b], vel: 0.85, dur: 1.8 }]
+        : [{ t: 0,   notes: [a], vel: 0.85, dur: 0.9 },
+           { t: 0.8, notes: [b], vel: 0.85, dur: 1.4 }]);
+    }
+
+    // Light up both notes on the keyboard (green = first heard, amber = second).
+    function revealIntervalKeys(q) {
+      const [first, second] = q.midis;
+      [[first, 'iv-a'], [second, 'iv-b']].forEach(([m, cls]) => {
+        const el = document.querySelector(`.key[data-midi="${m}"]`);
+        if (el) el.classList.add(cls);
+      });
+      scrollToMidi(Math.round((first + second) / 2));
+    }
+
+    function startIntervalRound() {
+      state.quizAnswered = false;
+      state.quizPlayed = new Set();
+      const q = state.quizQuestion = generateIntervalQuestion();
+      clearHighlight();
+      document.getElementById('quiz-staff').classList.remove('visible');
+      document.getElementById('quiz-label').textContent = q.prompt;
+      renderQuizChoices(q);
+
+      const fb = document.getElementById('quiz-feedback');
+      fb.textContent = '';
+      fb.className = 'quiz-feedback';
+      document.getElementById('quiz-next-btn').style.visibility = 'hidden';
+
+      measurePlayingUntil = 0;
+      playIntervalPrompt(q);
     }
 
     const QUIZ_LEVEL_NAMES = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' };
@@ -1995,7 +2088,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2609291355';
+        const SW_VERSION = '2609291430';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
