@@ -11,7 +11,7 @@ title: Music Theory
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Music Theory">
-  <meta name="description" content="Learn music theory interactively — scales, chords, and intervals on a piano keyboard.">
+  <meta name="description" content="Learn music theory interactively — a guided ear-first path (hear it, play it, then learn why) plus scales, chords, intervals and quizzes on a piano keyboard.">
   <link rel="manifest" href="/music-theory/manifest.json">
   <link rel="apple-touch-icon" href="/img/music-theory-icon-192.png">
   <link rel="icon" href="/img/music-theory-icon-192.png" type="image/png">
@@ -585,6 +585,130 @@ title: Music Theory
     .quiz-feedback.correct { color: #10b981; }
     .quiz-feedback.wrong   { color: #ef4444; }
 
+    /* ── Learn ── */
+    /* The guided path sits above the piano: it scrolls on its own so the
+       keyboard always stays on screen, even on short viewports. */
+    #panel-learn {
+      max-height: 46vh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    #panel-learn [hidden] { display: none !important; }
+
+    .learn-units {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin: 0 -16px 10px;
+      padding: 0 16px 2px;
+    }
+    .learn-units::-webkit-scrollbar { display: none; }
+    .learn-unit {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--panel2);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .learn-unit.is-done    { color: var(--green); border-color: rgba(16,185,129,0.45); }
+    .learn-unit.is-current { border-color: var(--accent); color: var(--accent); }
+    .learn-unit.is-viewing { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .learn-unit:disabled   { color: var(--text-dim); opacity: 0.6; cursor: default; }
+
+    .learn-head { margin-bottom: 8px; }
+    .learn-title { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
+    .learn-goal  { font-size: 12px; color: var(--text-dim); margin-top: 2px; line-height: 1.35; }
+
+    .learn-steps { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+    .learn-step-arrow { color: var(--text-dim); font-size: 11px; }
+    .learn-step {
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--text-dim);
+      cursor: pointer;
+    }
+    .learn-step.is-done    { color: var(--green); border-color: rgba(16,185,129,0.45); }
+    .learn-step.is-viewing { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+    .learn-step:disabled   { opacity: 0.5; cursor: default; }
+
+    .learn-meter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .learn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--panel2); border: 1px solid var(--border2); }
+    .learn-dot.hit  { background: var(--green); border-color: var(--green); }
+    .learn-dot.miss { background: #ef4444; border-color: #ef4444; }
+    .learn-meter-text { margin-left: 6px; }
+
+    #learn-round { gap: 8px; }
+    #learn-label { font-size: 16px; }
+    #learn-options .quiz-choices { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); }
+    #learn-options .quiz-choices .quiz-opt-btn { padding: 7px 4px; font-size: 12px; }
+
+    .learn-why-text p {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .learn-songs { margin: 4px 0 10px; }
+    .learn-songs-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .learn-songs .song-chord-chip { font-size: 12px; padding: 4px 12px; }
+
+    .learn-reset {
+      display: block;
+      margin: 14px auto 0;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 11px;
+      text-decoration: underline;
+      cursor: pointer;
+      opacity: 0.7;
+    }
+    .learn-reset:hover { opacity: 1; color: var(--text); }
+
+    /* Landscape phones: keep the path compact (declared after the base
+       Learn rules so it wins the cascade). */
+    @media (orientation: landscape) and (max-height: 520px) {
+      /* Take the height the compact header, tabs and 150px keyboard leave
+         (~216px), so a round's answer buttons fit without scrolling. */
+      #panel-learn { max-height: max(36vh, calc(100dvh - 216px - var(--safe-top) - var(--safe-bottom))); }
+      .learn-units { margin: 0 -14px 6px; padding: 0 14px 2px; }
+      /* Title and step indicator share one line. */
+      .learn-head { float: left; margin: 0 12px 6px 0; }
+      .learn-goal { display: none; }
+      .learn-steps { margin-bottom: 6px; }
+      #learn-round, #learn-why { clear: both; }
+      #learn-round { gap: 5px; }
+      #learn-label { font-size: 14px; min-height: 0; }
+    }
+
     /* ── Level-up banner ── */
     .levelup-banner {
       position: fixed;
@@ -653,7 +777,8 @@ title: Music Theory
 
   <!-- Mode Tabs -->
   <nav class="mode-tabs" role="tablist" aria-label="Learning mode">
-    <button class="tab active" data-mode="scales" role="tab" aria-selected="true">Scales</button>
+    <button class="tab active" data-mode="learn" role="tab" aria-selected="true">Learn</button>
+    <button class="tab" data-mode="scales" role="tab" aria-selected="false">Scales</button>
     <button class="tab" data-mode="chords" role="tab" aria-selected="false">Chords</button>
     <button class="tab" data-mode="intervals" role="tab" aria-selected="false">Intervals</button>
     <button class="tab" data-mode="quiz" role="tab" aria-selected="false">Quiz</button>
@@ -662,8 +787,41 @@ title: Music Theory
   <!-- Controls -->
   <section id="controls-panel" aria-live="polite">
 
+    <!-- LEARN: guided ear-first path (hear → play → why) -->
+    <div id="panel-learn" class="panel active" role="tabpanel">
+      <div class="learn-units" id="learn-units" role="group" aria-label="Units"></div>
+      <div class="learn-head">
+        <div class="learn-title" id="learn-title"></div>
+        <div class="learn-goal" id="learn-goal"></div>
+      </div>
+      <div class="learn-steps" id="learn-steps"></div>
+
+      <div class="quiz-card" id="learn-round">
+        <div class="quiz-label" id="learn-label"></div>
+        <div class="quiz-top-row">
+          <button class="play-btn" id="learn-play-btn">🔊 Play</button>
+          <button class="play-btn secondary" id="learn-next-btn" style="visibility:hidden">Next →</button>
+          <div class="learn-meter" id="learn-meter" style="margin-left:auto"></div>
+        </div>
+        <div class="quiz-staff" id="learn-staff" aria-hidden="true"></div>
+        <div class="quiz-options" id="learn-options"></div>
+        <div class="quiz-feedback" id="learn-feedback"></div>
+      </div>
+
+      <div class="learn-why" id="learn-why" hidden>
+        <div class="learn-why-text" id="learn-why-text"></div>
+        <div class="learn-songs" id="learn-songs" hidden></div>
+        <div class="btn-row">
+          <button class="play-btn secondary" id="learn-show-me">🎹 Show me on the keyboard</button>
+          <button class="play-btn" id="learn-got-it">Got it ✓</button>
+        </div>
+      </div>
+
+      <button class="learn-reset" id="learn-reset">Reset progress</button>
+    </div>
+
     <!-- SCALES -->
-    <div id="panel-scales" class="panel active" role="tabpanel">
+    <div id="panel-scales" class="panel" role="tabpanel">
       <div class="ctrl-row">
         <span class="ctrl-label">Root</span>
         <div class="note-picker" id="scale-root-picker"></div>
@@ -892,10 +1050,152 @@ title: Music Theory
 const MIDDLE_C   = 60;  // C4
     const WHITE_W    = 61; // px per white key (width + 1px gap)
 
+    // ── Learn path data ───────────────────────────────────────────────────────
+    // Ear-first ("sound before symbol"): in every unit the learner first HEARS
+    // and identifies the sound (buttons), then PLAYS it on the keyboard, then
+    // reads WHY it sounds that way. Unit ids are stable — saved progress and
+    // the e2e specs key off them.
+
+    const LEARN_UNITS = [
+      {
+        id: 'pulse',
+        title: 'Feel the pulse',
+        goal: 'Hear where the strong beat falls — every 2, 3 or 4 beats.',
+        hear: { type: 'meter', meters: ['2/4','3/4','4/4'] },
+        play: null,
+        why: [
+          'Almost all music rides on a steady pulse, and your ear groups those pulses into bars by listening for the strong beat — the low click you just heard.',
+          'In 2/4 the accent comes every 2 beats (a march: LEFT-right), in 3/4 every 3 (a waltz: ONE-two-three), and in 4/4 every 4, with a lighter lift on beat 3.',
+          'The top number of a time signature is how many beats fill one bar; the bottom number says which note gets one beat (4 means a quarter note).',
+          'Counting “1” on every strong beat is the single most useful habit for playing along with anyone else.',
+        ],
+        show: null,
+      },
+      {
+        id: 'perfect-intervals',
+        title: 'Perfect intervals',
+        goal: 'Tell the open, hollow sounds apart: 4th, 5th and octave.',
+        hear: { type: 'interval', semis: [5,7,12], modes: ['ascending'] },
+        play: { type: 'interval', semis: [5,7,12] },
+        why: [
+          'An interval is the distance between two notes, counted in semitones — one semitone is the step from a key to the very next key, black or white.',
+          'The perfect 4th (5 semitones), perfect 5th (7) and octave (12) are called “perfect” because their sound waves line up in very simple ratios (4:3, 3:2 and 2:1), so they sound open and stable rather than happy or sad.',
+          'The octave lines up so well that it sounds like the same note, which is why keys 12 apart share a name.',
+          'The 5th is the backbone of nearly every chord — a rock “power chord” is just a root plus its 5th.',
+        ],
+        show: { mode: 'intervals', semis: 7 },
+      },
+      {
+        id: 'thirds',
+        title: 'Major & minor 3rds',
+        goal: 'Hear the bright 3rd and the dark 3rd.',
+        hear: { type: 'interval', semis: [3,4], modes: ['ascending'] },
+        play: { type: 'interval', semis: [3,4] },
+        why: [
+          'Thirds give music its emotional colour. A major 3rd spans 4 semitones and sounds bright and open.',
+          'A minor 3rd is just one semitone narrower — 3 semitones — and that small squeeze makes it sound darker, softer or sadder.',
+          'There is no law of nature saying minor = sad: the minor 3rd’s frequency ratio (6:5) is a little more complex than the major 3rd’s (5:4), and centuries of songs have used it for tender, melancholy moments, so our ears learned the link.',
+          'Every major and minor chord you meet next is built on one of these two thirds.',
+        ],
+        show: { mode: 'intervals', semis: 4 },
+      },
+      {
+        id: 'major-minor-chords',
+        title: 'Major & minor chords',
+        goal: 'Hear whether a chord is major (bright) or minor (dark).',
+        hear: { type: 'chord', types: ['Major','Minor'] },
+        play: { type: 'chord', types: ['Major','Minor'] },
+        songs: true,
+        why: [
+          'A chord is three or more notes sounding together, and the basic one — a triad — is two thirds stacked on top of each other: root, 3rd and 5th.',
+          'A major chord puts the major 3rd (4 semitones) on the bottom and a minor 3rd on top: C–E–G.',
+          'A minor chord swaps them, minor 3rd first: C–E♭–G. Only the middle note moves, by a single semitone — that is the whole bright-versus-dark difference you have been hearing.',
+          'With just major and minor triads you can already play a huge number of pop songs, like the ones below.',
+        ],
+        show: { mode: 'chords', type: 'Major', fromLast: true },
+      },
+      {
+        id: 'all-intervals',
+        title: 'Every interval',
+        goal: 'Name all twelve distances, going up and going down.',
+        hear: { type: 'interval', semis: [1,2,3,4,5,6,7,8,9,10,11,12], modes: ['ascending','descending'] },
+        play: { type: 'interval', semis: [1,2,3,4,5,6,7,8,9,10,11,12] },
+        why: [
+          'There are twelve intervals inside an octave, one per semitone, and each has its own flavour.',
+          '2nds are the small steps melodies walk on; 2nds and 7ths rub against each other (dissonant), 3rds and 6ths sound sweet, and 4ths, 5ths and octaves sound open.',
+          'The tritone (6 semitones) splits the octave exactly in half and sounds restless, as if it needs to go somewhere.',
+          'A falling interval covers the same distance as a rising one, so the fastest way to learn them is to tie each to the first two notes of a song you already know — the feedback after each answer gives you one.',
+        ],
+        show: { mode: 'intervals', semis: 7 },
+      },
+      {
+        id: 'major-scale',
+        title: 'The major scale',
+        goal: 'Hear major vs. natural minor, then play major scales.',
+        hear: { type: 'scale', types: ['Major','Natural Minor'] },
+        play: { type: 'scale', types: ['Major'], roots: [0,2,5,7,9] },
+        why: [
+          'A scale is a ladder of notes from a root up to its octave. The major scale always uses the same pattern of steps: W–W–H–W–W–W–H, where W (whole step) is 2 semitones and H (half step) is 1.',
+          'Start on C and that pattern lands only on white keys — C D E F G A B C — because the two half steps fall exactly on E–F and B–C, where there is no black key in between.',
+          'Start on any other note and you need black keys to keep the same spacing, which is why every key has its own sharps or flats.',
+          'Natural minor (W–H–W–W–H–W–W) lowers the 3rd, 6th and 7th by a semitone each, and that is where its darker sound comes from.',
+        ],
+        show: { mode: 'scales', type: 'Major' },
+      },
+      {
+        id: 'dominant-7th',
+        title: 'The dominant 7th',
+        goal: 'Hear the tense chord that wants to go home.',
+        hear: { type: 'chord', types: ['Major','Minor','Dominant 7th'] },
+        play: { type: 'chord', types: ['Major','Minor','Dominant 7th'] },
+        songs: true,
+        why: [
+          'Stack one more third on a major chord and you get a seventh chord. The dominant 7th is a major triad plus a minor 7th: G–B–D–F.',
+          'Its 3rd and 7th (B and F) form a tritone — the restless interval from earlier — and that tension wants to resolve: B rises a semitone to C, F falls a semitone to E, and you land on C major.',
+          'That pull from the chord on the 5th note of a key (the “dominant”) back to the home chord is the strongest move in Western harmony, which is why a 7 chord sounds like a question waiting for its answer.',
+          'Blues uses dominant 7ths everywhere, just for their gritty colour.',
+        ],
+        show: { mode: 'chords', type: 'Dominant 7th' },
+      },
+      {
+        id: 'minor-and-modes',
+        title: 'Minor & modes',
+        goal: 'Tell apart major, minor, Dorian, Mixolydian and minor pentatonic.',
+        hear: { type: 'scale', types: ['Major','Natural Minor','Dorian','Mixolydian','Pentatonic Minor'] },
+        play: { type: 'scale', types: ['Major','Natural Minor','Dorian','Mixolydian','Pentatonic Minor'] },
+        why: [
+          'Modes keep the major scale’s notes but treat a different one as home, which shifts where the half steps fall.',
+          'Dorian is minor with a raised 6th (W–H–W–W–W–H–W): darker than major, but brighter and jazzier than natural minor. Mixolydian is major with a lowered 7th (W–W–H–W–W–H–W): the relaxed, bluesy sound of a lot of rock and folk, and the scale that fits a dominant 7th chord.',
+          'Minor pentatonic keeps just five notes (root, ♭3, 4, 5, ♭7) and drops every half step, so almost nothing clashes — that is why it is the first scale most guitarists solo with.',
+          'To tell them apart by ear, listen for the 3rd first (major or minor?), then the 6th and 7th.',
+        ],
+        show: { mode: 'scales', type: 'Dorian', fromLast: true },
+      },
+    ];
+
+    const LEARN_PASS_WINDOW = 10;   // judge a step on the last 10 answers…
+    const LEARN_PASS_MIN    = 8;    // …and pass it with 8 of them right
+    const LEARN_NAME_ROUNDS = 5;    // play rounds that show the name before going blind
+    const LEARN_ROOTS = [0,2,4,5,7,9,11];
+    const LEARN_RANGE = { midiMin: 55, midiMax: 79 };  // G3 up: easy to hear, easy to find
+
+    const CHORD_FEEL = {
+      'Major': 'bright and settled',
+      'Minor': 'darker, softer',
+      'Dominant 7th': 'tense — it wants to resolve',
+    };
+    const SCALE_FEEL = {
+      'Major': 'bright',
+      'Natural Minor': 'dark',
+      'Dorian': 'minor with a hopeful raised 6th',
+      'Mixolydian': 'major with a bluesy flat 7th',
+      'Pentatonic Minor': 'five notes, no half steps',
+    };
+
     // ── State ─────────────────────────────────────────────────────────────────
 
     const state = {
-      mode: 'scales',
+      mode: 'learn',
       scaleRoot: 0,
       scaleType: 'Major',
       chordRoot: 0,
@@ -906,13 +1206,106 @@ const MIDDLE_C   = 60;  // C4
       quizType:     'chords',
       quizQuestion: null,
       quizPlayed:   new Set(),  // pitch classes the player has struck this round
+      quizPlayedMidi: null,     // the last key struck (interval-play is judged on it)
       quizRequired: 0,          // distinct notes needed to complete the answer
       quizAnswered: false,
       quizScore:    { correct: 0, total: 0 },
       quizLevel:    1,
       quizStreak:   0,
       majorScaleRootsDone: new Set(),  // major keys answered correctly — gates other scales
+      // Learn path: which unit/step is on screen (saved progress lives in `progress`).
+      learnUnitIdx:    0,
+      learnStep:       'hear',
+      learnJustPassed: false,   // the step was passed on the last answer; Next moves on
+      learnLastQ:      null,    // last Learn question, for "Show me on the keyboard"
+      get learnUnitId() { return LEARN_UNITS[this.learnUnitIdx].id; },
     };
+
+    // ── Persistence ───────────────────────────────────────────────────────────
+    // Quiz level/streak and the Learn path survive reloads. Storage can be
+    // missing or throw (private mode, blocked site data), so every access is
+    // guarded and bad data simply falls back to the defaults.
+
+    const PROGRESS_KEY = 'music-theory-progress-v1';
+    const LEARN_STEP_NAMES = ['hear','play','why','done'];
+
+    const emptyStats = () => ({ correct: 0, total: 0, recent: [] });
+
+    function defaultProgress() {
+      const units = {};
+      LEARN_UNITS.forEach(u => { units[u.id] = { step: 'hear', hear: emptyStats(), play: emptyStats() }; });
+      return {
+        v: 1,
+        quiz:  { level: 1, streak: 0, majorScaleRootsDone: [] },
+        learn: { unitIdx: 0, units },
+      };
+    }
+
+    const toInt = (v, min, max, dflt) =>
+      Number.isInteger(v) && v >= min && v <= max ? v : dflt;
+
+    function cleanStats(s) {
+      const out = emptyStats();
+      if (!s || typeof s !== 'object') return out;
+      out.total   = toInt(s.total, 0, 1e9, 0);
+      out.correct = toInt(s.correct, 0, out.total, 0);
+      if (Array.isArray(s.recent)) {
+        out.recent = s.recent.slice(-LEARN_PASS_WINDOW).map(x => (x ? 1 : 0));
+      }
+      return out;
+    }
+
+    function loadProgress() {
+      const p = defaultProgress();
+      try {
+        const d = JSON.parse(localStorage.getItem(PROGRESS_KEY));
+        if (!d || d.v !== 1) return p;
+        if (d.quiz) {
+          p.quiz.level  = toInt(d.quiz.level, 1, 3, 1);
+          p.quiz.streak = toInt(d.quiz.streak, 0, 1e9, 0);
+          if (Array.isArray(d.quiz.majorScaleRootsDone)) {
+            p.quiz.majorScaleRootsDone = [...new Set(d.quiz.majorScaleRootsDone
+              .filter(pc => Number.isInteger(pc) && pc >= 0 && pc < 12))];
+          }
+        }
+        if (d.learn) {
+          // Past the last unit (e.g. a unit was removed): keep the furthest one.
+          const ui = d.learn.unitIdx;
+          p.learn.unitIdx = Number.isInteger(ui) && ui > 0 ? Math.min(ui, LEARN_UNITS.length - 1) : 0;
+          const saved = d.learn.units || {};
+          LEARN_UNITS.forEach(u => {
+            const su = saved[u.id];
+            if (!su || typeof su !== 'object') return;
+            let step = LEARN_STEP_NAMES.includes(su.step) ? su.step : 'hear';
+            if (step === 'play' && !u.play) step = 'why';
+            p.learn.units[u.id] = { step, hear: cleanStats(su.hear), play: cleanStats(su.play) };
+          });
+        }
+      } catch (_) { /* corrupt or unavailable: start fresh */ }
+      return p;
+    }
+
+    let progress = loadProgress();
+
+    function saveProgress() {
+      progress.quiz = {
+        level: state.quizLevel,
+        streak: state.quizStreak,
+        majorScaleRootsDone: [...state.majorScaleRootsDone],
+      };
+      try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch (_) {}
+    }
+
+    // Copy saved progress into the live state (on load and after a reset).
+    function applyProgress() {
+      state.quizLevel  = progress.quiz.level;
+      state.quizStreak = progress.quiz.streak;
+      state.majorScaleRootsDone = new Set(progress.quiz.majorScaleRootsDone);
+      state.learnUnitIdx = progress.learn.unitIdx;
+      state.learnStep = defaultLearnStep(LEARN_UNITS[state.learnUnitIdx]);
+      state.learnJustPassed = false;
+      state.learnLastQ = null;
+    }
 
     // ── Audio (Tone.js Salamander piano) ──────────────────────────────────────
 
@@ -1090,7 +1483,7 @@ const MIDDLE_C   = 60;  // C4
 
     // Runs only on a genuine tap (not a drag).
     function keySelect(midi) {
-      if (state.mode === 'quiz') {
+      if (state.mode === 'quiz' || state.mode === 'learn') {
         registerQuizKey(midi);
         return;
       }
@@ -1374,24 +1767,60 @@ const MIDDLE_C   = 60;  // C4
       return arr;
     }
 
-    // Each quiz question is answered by PLAYING the notes on the piano.
-    // A question carries the set of pitch classes the player must produce
-    // (`answerPcs`), the human-readable name, and the reference midis to play.
+    // Keyboard questions are answered by PLAYING the notes on the piano. Such
+    // a question carries the pitch classes of the answer (`answerPcs`), the
+    // ones the player still has to strike (`needPcs`, default: all of them),
+    // keys that are already sounded for them (`givenMidis`, e.g. the root of
+    // an interval), the human-readable name and the reference midis to play.
+    // Button questions instead carry `choices` + `answer` (see renderQuizChoices).
+    //
+    // The builders below take explicit pools/ranges so the free-play Quiz
+    // (pools from QUIZ_LEVELS) and the Learn path (pools per unit) share them.
 
-    function generateChordQuestion() {
-      const lvl = QUIZ_LEVELS[state.quizLevel];
-      const rootPool = state.quizLevel === 1 ? [0,2,4,5,7,9,11] : [...Array(12).keys()];
-      const root = rootPool[Math.floor(Math.random() * rootPool.length)];
-      const type = lvl.chordPool[Math.floor(Math.random() * lvl.chordPool.length)];
-      let rootMidi = lvl.midiMin + ((root - (lvl.midiMin % 12) + 12) % 12);
-      if (rootMidi > lvl.midiMax - 11) rootMidi -= 12;
+    // Root midi for `root` inside [midiMin, midiMax - span].
+    function rootMidiIn(root, range, span) {
+      let rootMidi = range.midiMin + ((root - (range.midiMin % 12) + 12) % 12);
+      if (rootMidi + span > range.midiMax) rootMidi -= 12;
+      return rootMidi;
+    }
+
+    function makeChordQuestion(root, type, range) {
+      const rootMidi = rootMidiIn(root, range, 11);
       const midis = CHORDS[type].intervals.map(i => rootMidi + i);
       return {
+        kind: 'chord',
         midis,
         answerPcs: new Set(midis.map(m => m % 12)),
         answerName: `${NOTE_NAMES[root]} ${type}`,
         rootPc: root,
+        chordType: type,
       };
+    }
+
+    // `withOctave` adds the top root so the scale is heard resolving home.
+    function makeScaleQuestion(root, type, range, withOctave = false) {
+      const ivs = SCALES[type].intervals;
+      const rootMidi = rootMidiIn(root, range, withOctave ? 12 : ivs[ivs.length - 1]);
+      const midis = ivs.map(i => rootMidi + i);
+      if (withOctave) midis.push(rootMidi + 12);
+      return {
+        kind: 'scale',
+        midis,
+        answerPcs: new Set(midis.map(m => m % 12)),
+        answerName: `${NOTE_NAMES[root]} ${type} scale`,
+        rootPc: root,
+        scaleType: type,
+      };
+    }
+
+    function generateChordQuestion() {
+      const lvl = QUIZ_LEVELS[state.quizLevel];
+      const rootPool = state.quizLevel === 1 ? [0,2,4,5,7,9,11] : [...Array(12).keys()];
+      const q = makeChordQuestion(pick(rootPool), pick(lvl.chordPool), lvl);
+      // Beyond Beginner the chord is also arpeggiated, so the individual
+      // notes can be picked out before reproducing them.
+      q.arpeggiate = state.quizLevel >= 2;
+      return q;
     }
 
     function generateScaleQuestion() {
@@ -1403,26 +1832,10 @@ const MIDDLE_C   = 60;  // C4
       // majors, prefer keys that haven't been gotten right yet.
       const majorsMastered = rootPool.every(r => state.majorScaleRootsDone.has(r));
       const pool = majorsMastered ? lvl.scalePool : ['Major'];
-      let root;
-      if (majorsMastered) {
-        root = rootPool[Math.floor(Math.random() * rootPool.length)];
-      } else {
-        const untested = rootPool.filter(r => !state.majorScaleRootsDone.has(r));
-        root = untested[Math.floor(Math.random() * untested.length)];
-      }
-      const type = pool[Math.floor(Math.random() * pool.length)];
-
-      let rootMidi = lvl.midiMin + ((root - (lvl.midiMin % 12) + 12) % 12);
-      const span = SCALES[type].intervals[SCALES[type].intervals.length - 1];
-      if (rootMidi + span > lvl.midiMax) rootMidi -= 12;
-      const midis = SCALES[type].intervals.map(i => rootMidi + i);
-      return {
-        midis,
-        answerPcs: new Set(midis.map(m => m % 12)),
-        answerName: `${NOTE_NAMES[root]} ${type} scale`,
-        rootPc: root,
-        scaleType: type,
-      };
+      const root = majorsMastered
+        ? pick(rootPool)
+        : pick(rootPool.filter(r => !state.majorScaleRootsDone.has(r)));
+      return makeScaleQuestion(root, pick(pool), lvl);
     }
 
     function generateNoteQuestion() {
@@ -1432,6 +1845,7 @@ const MIDDLE_C   = 60;  // C4
         midi = lvl.midiMin + Math.floor(Math.random() * (lvl.midiMax - lvl.midiMin + 1));
       } while (!lvl.notePool.includes(NOTE_NAMES[midi % 12]));
       return {
+        kind: 'note',
         midis: [midi],
         answerPcs: new Set([midi % 12]),
         answerName: NOTE_NAMES[midi % 12],
@@ -1439,18 +1853,38 @@ const MIDDLE_C   = 60;  // C4
       };
     }
 
-    function playQuizPrompt() {
-      const q = state.quizQuestion;
+    // Block chord, then the same notes one at a time.
+    function chordThenArpEvents(midis) {
+      const names = midis.map(midiToNoteName);
+      return [
+        { t: 0, notes: names, vel: 0.8, dur: 1.1 },
+        ...names.map((n, i) => ({ t: 1.25 + i * 0.32, notes: [n], vel: 0.75, dur: 0.6 })),
+      ];
+    }
+
+    // Play any question's prompt, whichever quiz or Learn step it came from.
+    function playQuestion(q) {
       if (!q) return;
-      if (state.quizType === 'measures')    playMeasurePrompt(q);
-      else if (state.quizType === 'intervals') playIntervalPrompt(q);
-      else if (state.quizType === 'chords') playChord(q.midis);
-      else if (state.quizType === 'scales') playScaleSequence(q.midis);
-      else                                  playNote(q.midis[0]);
+      if (q.kind === 'interval')           playIntervalPrompt(q);
+      else if (q.kind === 'interval-play') playNote(q.rootMidi);
+      else if (q.kind === 'chord')         q.arpeggiate ? playEvents(chordThenArpEvents(q.midis)) : playChord(q.midis);
+      else if (q.kind === 'scale')         playScaleSequence(q.midis);
+      else if (q.kind === 'note')          playNote(q.midis[0]);
+      else                                 playMeasurePrompt(q);
+    }
+
+    function playQuizPrompt() {
+      playQuestion(state.quizQuestion);
+    }
+
+    // The Quiz and Learn panels each have their own copy of the round UI
+    // (label, options, feedback, Next…); this picks the visible one.
+    function qEl(name) {
+      return document.getElementById(`${state.mode === 'learn' ? 'learn' : 'quiz'}-${name}`);
     }
 
     function updateQuizProgress() {
-      const el = document.getElementById('quiz-options');
+      const el = qEl('options');
       if (!state.quizQuestion || state.quizAnswered) { el.textContent = ''; return; }
       const need = state.quizRequired;
       const played = [...state.quizPlayed].map(pc => NOTE_NAMES[pc]);
@@ -1459,100 +1893,151 @@ const MIDDLE_C   = 60;  // C4
         : `${played.join(' – ')}  (${played.length} / ${need})`;
     }
 
-    function startQuizRound() {
-      if (state.quizType === 'measures')  { startMeasureRound();  return; }
-      if (state.quizType === 'intervals') { startIntervalRound(); return; }
-      document.getElementById('quiz-staff').classList.remove('visible');
+    // Show a question in the active panel and play it. Shared by every quiz
+    // type and every Learn step.
+    function beginRound(q) {
+      state.quizQuestion = q;
       state.quizAnswered = false;
       state.quizPlayed = new Set();
-      state.quizQuestion =
-          state.quizType === 'chords' ? generateChordQuestion()
-        : state.quizType === 'scales' ? generateScaleQuestion()
-        : generateNoteQuestion();
-      state.quizRequired = state.quizQuestion.answerPcs.size;
-
-      // Level 1 reveals the name (build it on the keyboard); higher levels
-      // play it blind and ask the player to reproduce what they hear.
-      const showName = state.quizLevel === 1;
-      document.getElementById('quiz-label').textContent =
-        showName ? `Play: ${state.quizQuestion.answerName}` : 'Play what you hear';
-
+      state.quizRequired = q.choices ? 0 : (q.needPcs || q.answerPcs).size;
       clearHighlight();
-      updateQuizProgress();
-      const fb = document.getElementById('quiz-feedback');
+
+      qEl('label').textContent = q.prompt;
+      const staff = qEl('staff');
+      const hasStaff = !!q.rhythm;   // Measures "complete" / "which-meter"
+      staff.classList.toggle('visible', hasStaff);
+      staff.innerHTML = hasStaff ? renderMeasureSvg(q, false) : '';
+
+      if (q.choices) renderQuizChoices(q);
+      else updateQuizProgress();
+
+      // Given notes (already sounded) and hint keys light up as the root.
+      [...(q.givenMidis || []), ...(q.hintMidis || [])].forEach(m => {
+        const el = document.querySelector(`.key[data-midi="${m}"]`);
+        if (el) el.classList.add('is-root');
+      });
+      if (q.focusMidi != null) scrollToMidi(q.focusMidi);
+
+      const fb = qEl('feedback');
       fb.textContent = '';
       fb.className = 'quiz-feedback';
-      document.getElementById('quiz-next-btn').style.visibility = 'hidden';
+      qEl('next-btn').style.visibility = 'hidden';
 
-      playQuizPrompt();
+      measurePlayingUntil = 0;
+      // Notated measures are read first; everything else plays straight away.
+      if (!hasStaff) playQuestion(q);
     }
 
-    // Called from keySelect while in quiz mode: record the pitch class the
+    function startQuizRound() {
+      if (state.mode === 'learn') { startLearnRound(); return; }
+      let q;
+      if (state.quizType === 'measures')       q = generateMeasureQuestion();
+      else if (state.quizType === 'intervals') q = generateIntervalQuestion();
+      else {
+        q = state.quizType === 'chords' ? generateChordQuestion()
+          : state.quizType === 'scales' ? generateScaleQuestion()
+          : generateNoteQuestion();
+        // Level 1 reveals the name (build it on the keyboard); higher levels
+        // play it blind and ask the player to reproduce what they hear.
+        q.prompt = state.quizLevel === 1 ? `Play: ${q.answerName}` : 'Play what you hear';
+      }
+      beginRound(q);
+    }
+
+    // Called from keySelect in quiz/learn mode: record the pitch class the
     // player struck and auto-check once enough distinct notes are down.
     function registerQuizKey(midi) {
-      if (state.quizAnswered || !state.quizQuestion) return;
-      if (state.quizType === 'measures' || state.quizType === 'intervals') return; // answered with buttons
+      const q = state.quizQuestion;
+      if (state.quizAnswered || !q || q.choices) return;   // button rounds ignore the keys
+      if (q.givenMidis && q.givenMidis.includes(midi)) return;  // already sounded for them
       const pc = midi % 12;
       if (state.quizPlayed.has(pc)) return;
       state.quizPlayed.add(pc);
+      state.quizPlayedMidi = midi;
       document.querySelectorAll(`.key[data-pc="${pc}"]`).forEach(k => k.classList.add('quiz-sel'));
       updateQuizProgress();
       if (state.quizPlayed.size >= state.quizRequired) checkQuizAnswer();
     }
 
     function checkQuizAnswer() {
-      const expected = state.quizQuestion.answerPcs;
+      const q = state.quizQuestion;
+      const expected = q.needPcs || q.answerPcs;
       const played = state.quizPlayed;
-      const correct = played.size === expected.size && [...expected].every(pc => played.has(pc));
+      const correct = played.size === expected.size && [...expected].every(pc => played.has(pc)) &&
+        (q.exactMidi == null || state.quizPlayedMidi === q.exactMidi);
 
-      // Track mastery of each major key — it unlocks the other scales.
-      if (correct && state.quizType === 'scales' && state.quizQuestion.scaleType === 'Major') {
-        state.majorScaleRootsDone.add(state.quizQuestion.rootPc);
+      // Track mastery of each major key — it unlocks the other free-play scales.
+      if (correct && state.mode === 'quiz' && q.kind === 'scale' && q.scaleType === 'Major') {
+        state.majorScaleRootsDone.add(q.rootPc);
       }
 
-      // Recolour the keys: green = right note played, red = wrong note played,
-      // amber = a correct note the player missed.
-      document.querySelectorAll('.key').forEach(k => {
-        const pc = parseInt(k.dataset.pc);
-        k.classList.remove('quiz-sel');
-        if (expected.has(pc) && played.has(pc)) k.classList.add('quiz-correct');
-        else if (played.has(pc))                k.classList.add('quiz-wrong');
-        else if (expected.has(pc))              k.classList.add('in-scale');
-      });
+      if (q.kind === 'interval-play') {
+        // Mark the key they struck if it was wrong, then the exact two keys,
+        // and let them hear the interval.
+        document.querySelectorAll('.key.quiz-sel').forEach(k => k.classList.remove('quiz-sel'));
+        const struck = document.querySelector(`.key[data-midi="${state.quizPlayedMidi}"]`);
+        if (struck && !correct) struck.classList.add('quiz-wrong');
+        revealIntervalKeys(q);
+        measurePlayingUntil = 0;
+        playIntervalPrompt(q);
+      } else {
+        // Recolour the keys: green = right note played, red = wrong note played,
+        // amber = a correct note the player missed.
+        document.querySelectorAll('.key').forEach(k => {
+          const pc = parseInt(k.dataset.pc);
+          k.classList.remove('quiz-sel');
+          if (expected.has(pc) && played.has(pc)) k.classList.add('quiz-correct');
+          else if (played.has(pc))                k.classList.add('quiz-wrong');
+          else if (expected.has(pc))              k.classList.add('in-scale');
+        });
+      }
 
-      const fb = document.getElementById('quiz-feedback');
-      fb.textContent = correct ? '✓ Correct!' : `✗ It was ${state.quizQuestion.answerName}`;
+      const wrongOctave = !correct && q.exactMidi != null && played.has(q.exactMidi % 12);
+      const fb = qEl('feedback');
+      fb.textContent = correct ? '✓ Correct!'
+        : `✗ ${wrongOctave ? 'Right note, wrong octave — ' : ''}It was ${q.answerName}`;
       fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
 
       // Always reveal the name once answered.
-      document.getElementById('quiz-label').textContent = state.quizQuestion.answerName;
-      document.getElementById('quiz-options').textContent = '';
+      qEl('label').textContent = q.answerName;
+      qEl('options').textContent = '';
 
       recordQuizResult(correct);
     }
 
-    // Shared by every quiz type: update the score, streak and level, and
-    // reveal the Next button.
+    function showBanner(text) {
+      const el = document.getElementById('quiz-levelup');
+      el.textContent = text;
+      el.classList.add('visible');
+      clearTimeout(showBanner.timer);
+      showBanner.timer = setTimeout(() => el.classList.remove('visible'), 2500);
+    }
+
+    // Shared by every quiz type and Learn step: update the score (free-play
+    // streak/level, or the Learn step's stats) and reveal the Next button.
     function recordQuizResult(correct) {
       state.quizAnswered = true;
-      state.quizScore.total++;
-      if (correct) { state.quizScore.correct++; state.quizStreak++; }
-      else { state.quizStreak = 0; }
 
-      const { correct: c, total: t } = state.quizScore;
-      document.getElementById('quiz-score').textContent = `${c} / ${t}`;
+      if (state.mode === 'learn') {
+        recordLearnResult(correct);
+      } else {
+        state.quizScore.total++;
+        if (correct) { state.quizScore.correct++; state.quizStreak++; }
+        else { state.quizStreak = 0; }
 
-      if (state.quizStreak >= 10 && state.quizLevel < 3) {
-        state.quizLevel++;
-        state.quizStreak = 0;
-        updateQuizLevelBtn();
-        const el = document.getElementById('quiz-levelup');
-        el.textContent = `Level ${state.quizLevel} unlocked! 🎉`;
-        el.classList.add('visible');
-        setTimeout(() => el.classList.remove('visible'), 2500);
+        const { correct: c, total: t } = state.quizScore;
+        document.getElementById('quiz-score').textContent = `${c} / ${t}`;
+
+        if (state.quizStreak >= 10 && state.quizLevel < 3) {
+          state.quizLevel++;
+          state.quizStreak = 0;
+          updateQuizLevelBtn();
+          showBanner(`Level ${state.quizLevel} unlocked! 🎉`);
+        }
+        saveProgress();
       }
 
-      document.getElementById('quiz-next-btn').style.visibility = 'visible';
+      qEl('next-btn').style.visibility = 'visible';
     }
 
     // ── Measures quiz ─────────────────────────────────────────────────────────
@@ -1678,10 +2163,14 @@ const MIDDLE_C   = 60;  // C4
         };
       }
 
-      // meter-ear: identify the time signature from accented clicks.
-      const choices = shuffle([meter, ...shuffle(lvl.meters.filter(m => m !== meter)).slice(0, 3)]);
+      return makeMeterEarQuestion(lvl.meters, meter);
+    }
+
+    // Identify the time signature from accented clicks (also Learn unit 1).
+    function makeMeterEarQuestion(meters, meter = pick(meters)) {
+      const choices = shuffle([meter, ...shuffle(meters.filter(m => m !== meter)).slice(0, 3)]);
       return {
-        kind, meter,
+        kind: 'meter-ear', meter,
         prompt: 'Listen — what is the time signature?',
         choices: choices.map(m => ({ id: m, label: m })),
         answer: meter,
@@ -1812,9 +2301,10 @@ const MIDDLE_C   = 60;  // C4
 
     // ── Measures: round flow ──
 
-    // Multiple-choice answer buttons, shared by the Measures and Intervals quizzes.
+    // Multiple-choice answer buttons, shared by the Measures and Intervals
+    // quizzes and the Learn "hear" steps.
     function renderQuizChoices(q) {
-      const opts = document.getElementById('quiz-options');
+      const opts = qEl('options');
       opts.textContent = '';
       const grid = document.createElement('div');
       grid.className = 'quiz-choices';
@@ -1829,43 +2319,21 @@ const MIDDLE_C   = 60;  // C4
       opts.appendChild(grid);
     }
 
-    function startMeasureRound() {
-      state.quizAnswered = false;
-      state.quizPlayed = new Set();
-      const q = state.quizQuestion = generateMeasureQuestion();
-      clearHighlight();
-
-      document.getElementById('quiz-label').textContent = q.prompt;
-      const staff = document.getElementById('quiz-staff');
-      const hasStaff = q.kind === 'complete' || q.kind === 'which-meter';
-      staff.classList.toggle('visible', hasStaff);
-      staff.innerHTML = hasStaff ? renderMeasureSvg(q, false) : '';
-
-      renderQuizChoices(q);
-
-      const fb = document.getElementById('quiz-feedback');
-      fb.textContent = '';
-      fb.className = 'quiz-feedback';
-      document.getElementById('quiz-next-btn').style.visibility = 'hidden';
-
-      measurePlayingUntil = 0;
-      if (q.kind === 'meter-ear' || q.kind === 'count') playMeasurePrompt(q);
-    }
-
     function answerChoice(id) {
       if (state.quizAnswered) return;
       const q = state.quizQuestion;
       const correct = id === q.answer;
-      document.querySelectorAll('#quiz-options .quiz-opt-btn').forEach(b => {
+      qEl('options').querySelectorAll('.quiz-opt-btn').forEach(b => {
         b.disabled = true;
         if (b.dataset.id === q.answer) b.classList.add('correct');
         else if (b.dataset.id === id)  b.classList.add('wrong');
       });
-      const staff = document.getElementById('quiz-staff');
+      const staff = qEl('staff');
       if (staff.classList.contains('visible')) staff.innerHTML = renderMeasureSvg(q, true);
       if (q.kind === 'interval') revealIntervalKeys(q);
+      else if (q.kind === 'chord' || q.kind === 'scale') revealNoteKeys(q);
 
-      const fb = document.getElementById('quiz-feedback');
+      const fb = qEl('feedback');
       fb.textContent = (correct ? '✓ Correct! ' : '✗ ') + q.explain;
       fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
 
@@ -1884,8 +2352,14 @@ const MIDDLE_C   = 60;  // C4
       12: 'Somewhere Over the Rainbow',
     };
 
+    // …and ones that begin with it going DOWN.
+    const INTERVAL_SONGS_DOWN = {
+      1: 'Für Elise', 2: 'Mary Had a Little Lamb', 3: 'Hey Jude', 4: 'Beethoven’s 5th Symphony',
+      5: 'Eine kleine Nachtmusik', 7: 'The Flintstones theme', 9: 'Nobody Knows the Trouble I’ve Seen',
+    };
+
     const INTERVAL_LEVELS = {
-      1: { semis: [3,4,5,7,12],                      modes: ['ascending'],                            lowMin: 55, lowMax: 65 },
+      1: { semis: [1,2,3,4,5,7,12],                  modes: ['ascending'],                            lowMin: 55, lowMax: 65 },
       2: { semis: [1,2,3,4,5,6,7,8,9,10,11,12],      modes: ['ascending','descending'],              lowMin: 48, lowMax: 66 },
       3: { semis: [1,2,3,4,5,6,7,8,9,10,11,12],      modes: ['ascending','descending','harmonic'],   lowMin: 40, lowMax: 72 },
     };
@@ -1897,22 +2371,27 @@ const MIDDLE_C   = 60;  // C4
     };
 
     function generateIntervalQuestion() {
-      const lvl = INTERVAL_LEVELS[state.quizLevel];
-      const semis = pick(lvl.semis);
-      const mode = pick(lvl.modes);
-      const low = lvl.lowMin + Math.floor(Math.random() * (lvl.lowMax - lvl.lowMin + 1));
+      return makeIntervalQuestion(INTERVAL_LEVELS[state.quizLevel]);
+    }
+
+    // `pool`: { semis, modes, lowMin, lowMax } — a quiz level or a Learn unit.
+    function makeIntervalQuestion(pool) {
+      const semis = pick(pool.semis);
+      const mode = pick(pool.modes);
+      const low = pool.lowMin + Math.floor(Math.random() * (pool.lowMax - pool.lowMin + 1));
       const high = low + semis;
       const name = INTERVAL_NAMES[semis];
-      const song = INTERVAL_SONGS[semis];
+      const down = mode === 'descending';
+      const song = (down ? INTERVAL_SONGS_DOWN : INTERVAL_SONGS)[semis];
       return {
         kind: 'interval', mode, semis, low, high,
         // Notes in the order they are heard.
         midis: mode === 'descending' ? [high, low] : [low, high],
         prompt: `What is the distance? ${INTERVAL_MODE_TEXT[mode]}`,
-        choices: lvl.semis.map(n => ({ id: String(n), label: INTERVAL_NAMES[n] })),
+        choices: pool.semis.map(n => ({ id: String(n), label: INTERVAL_NAMES[n] })),
         answer: String(semis),
         explain: `${name} — ${semis} semitone${semis === 1 ? '' : 's'}` +
-                 (song && mode !== 'harmonic' ? ` · like the start of “${song}” (going up)` : ''),
+                 (song && mode !== 'harmonic' ? ` · like the start of “${song}” (going ${down ? 'down' : 'up'})` : ''),
       };
     }
 
@@ -1934,22 +2413,13 @@ const MIDDLE_C   = 60;  // C4
       scrollToMidi(Math.round((first + second) / 2));
     }
 
-    function startIntervalRound() {
-      state.quizAnswered = false;
-      state.quizPlayed = new Set();
-      const q = state.quizQuestion = generateIntervalQuestion();
-      clearHighlight();
-      document.getElementById('quiz-staff').classList.remove('visible');
-      document.getElementById('quiz-label').textContent = q.prompt;
-      renderQuizChoices(q);
-
-      const fb = document.getElementById('quiz-feedback');
-      fb.textContent = '';
-      fb.className = 'quiz-feedback';
-      document.getElementById('quiz-next-btn').style.visibility = 'hidden';
-
-      measurePlayingUntil = 0;
-      playIntervalPrompt(q);
+    // Light up the notes of an identified chord/scale (root in full amber).
+    function revealNoteKeys(q) {
+      q.midis.forEach((m, i) => {
+        const el = document.querySelector(`.key[data-midi="${m}"]`);
+        if (el) el.classList.add(i === 0 ? 'is-root' : 'in-scale');
+      });
+      scrollToMidi(q.midis[0] + 6);
     }
 
     const QUIZ_LEVEL_NAMES = { 1: 'Beginner', 2: 'Intermediate', 3: 'Advanced' };
@@ -1965,7 +2435,412 @@ const MIDDLE_C   = 60;  // C4
       state.quizScore = { correct: 0, total: 0 };
       document.getElementById('quiz-score').textContent = '— / —';
       updateQuizLevelBtn();
+      saveProgress();
       if (state.mode === 'quiz') startQuizRound();
+    }
+
+    // ── Learn ─────────────────────────────────────────────────────────────────
+    // The guided path: units unlock in order, and inside a unit the steps run
+    // hear → play → why. A hear/play step passes once it has at least
+    // LEARN_PASS_WINDOW answers and LEARN_PASS_MIN of the last
+    // LEARN_PASS_WINDOW are right. Rounds reuse the quiz machinery above
+    // (beginRound / answerChoice / registerQuizKey), rendered into the Learn
+    // panel via qEl().
+
+    const LEARN_STEP_LABELS = { hear: 'Hear', play: 'Play', why: 'Why' };
+
+    const unitSteps = (u) => (u.play ? ['hear','play','why'] : ['hear','why']);
+
+    function unitProgress(id) {
+      if (!progress.learn.units[id]) {
+        progress.learn.units[id] = { step: 'hear', hear: emptyStats(), play: emptyStats() };
+      }
+      return progress.learn.units[id];
+    }
+
+    // Position of a step in the unit ('done' sits after the last step).
+    function stepIndex(u, step) {
+      return step === 'done' ? unitSteps(u).length : unitSteps(u).indexOf(step);
+    }
+
+    function defaultLearnStep(u) {
+      const step = unitProgress(u.id).step;
+      return step === 'done' ? 'why' : step;
+    }
+
+    function stepPassed(stats) {
+      return stats.total >= LEARN_PASS_WINDOW &&
+        stats.recent.slice(-LEARN_PASS_WINDOW).filter(Boolean).length >= LEARN_PASS_MIN;
+    }
+
+    // Keyboard round: the root is lit and already sounding; play the note
+    // that completes the interval above it.
+    function makeIntervalPlayQuestion(semisPool) {
+      const semis = pick(semisPool);
+      const root = 55 + Math.floor(Math.random() * 11);   // G3–F4
+      const target = root + semis;
+      const name = INTERVAL_NAMES[semis];
+      const a = /^[AEIOU]/.test(name) ? 'an' : 'a';
+      return {
+        kind: 'interval-play', mode: 'ascending', semis,
+        low: root, high: target, rootMidi: root, targetMidi: target,
+        midis: [root, target],
+        answerPcs: new Set([root % 12, target % 12]),
+        needPcs: new Set([target % 12]),     // the root counts as already played
+        givenMidis: [root],
+        // Judged on the exact key: the same note name an octave lower is the
+        // inverted interval (a 5th below C is F, the 4th above), not this one.
+        exactMidi: target,
+        focusMidi: root + Math.round(semis / 2),
+        prompt: `Play ${a} ${name} above the lit ${NOTE_NAMES[root % 12]}`,
+        answerName: `${NOTE_NAMES[target % 12]} — ${a} ${name} above ${NOTE_NAMES[root % 12]}`,
+      };
+    }
+
+    function makeLearnQuestion(u, step) {
+      const spec = u[step];
+      const isChord = spec.type === 'chord';
+
+      if (step === 'hear') {
+        if (spec.type === 'meter')    return makeMeterEarQuestion(spec.meters);
+        if (spec.type === 'interval') return makeIntervalQuestion({ ...spec, lowMin: 55, lowMax: 65 });
+        const type = pick(spec.types);
+        const q = isChord
+          ? makeChordQuestion(pick(LEARN_ROOTS), type, LEARN_RANGE)
+          : makeScaleQuestion(pick(LEARN_ROOTS), type, LEARN_RANGE, true);
+        const feel = (isChord ? CHORD_FEEL : SCALE_FEEL)[type];
+        return Object.assign(q, {
+          arpeggiate: true,   // block chord, then its notes one by one
+          prompt: isChord ? 'Listen — which chord is it?' : 'Listen — which scale is it?',
+          choices: spec.types.map(t => ({ id: t, label: t })),
+          answer: type,
+          explain: `${q.answerName} — ${(isChord ? CHORDS : SCALES)[type].formula}` + (feel ? ` · ${feel}` : ''),
+        });
+      }
+
+      if (spec.type === 'interval') return makeIntervalPlayQuestion(spec.semis);
+      const root = pick(spec.roots || LEARN_ROOTS);
+      const type = pick(spec.types);
+      const q = isChord
+        ? makeChordQuestion(root, type, LEARN_RANGE)
+        : makeScaleQuestion(root, type, LEARN_RANGE, true);
+      q.arpeggiate = true;
+      q.focusMidi = q.midis[0] + 5;
+      // Name it for the first few rounds, then play it blind from a lit root.
+      if (unitProgress(u.id).play.total < LEARN_NAME_ROUNDS) {
+        q.prompt = `Play: ${q.answerName}`;
+      } else {
+        q.prompt = `Play what you hear — it starts on the lit ${NOTE_NAMES[root]}`;
+        q.hintMidis = [q.midis[0]];
+      }
+      return q;
+    }
+
+    function startLearnRound() {
+      const step = state.learnStep;
+      if (state.mode !== 'learn' || (step !== 'hear' && step !== 'play')) return;
+      state.learnJustPassed = false;
+      document.getElementById('learn-next-btn').textContent = 'Next →';
+      beginRound(makeLearnQuestion(LEARN_UNITS[state.learnUnitIdx], step));
+      renderLearnMeter();
+    }
+
+    function recordLearnResult(correct) {
+      const u = LEARN_UNITS[state.learnUnitIdx];
+      const step = state.learnStep;
+      const up = unitProgress(u.id);
+      const stats = up[step];
+      stats.total++;
+      if (correct) stats.correct++;
+      stats.recent.push(correct ? 1 : 0);
+      if (stats.recent.length > LEARN_PASS_WINDOW) stats.recent.shift();
+      state.learnLastQ = { unitId: u.id, q: state.quizQuestion };
+
+      // Only the unit's frontier step can advance; replaying an earlier
+      // step (or a finished unit) is practice.
+      if (up.step === step && stepPassed(stats)) {
+        const steps = unitSteps(u);
+        up.step = steps[steps.indexOf(step) + 1];
+        state.learnJustPassed = true;
+        const fb = qEl('feedback');
+        fb.textContent += up.step === 'play' ? '  Your ear has it — now play it!' : '  Step complete!';
+        document.getElementById('learn-next-btn').textContent = 'Continue →';
+        showBanner(`${LEARN_STEP_LABELS[step]} ✓ — next: ${LEARN_STEP_LABELS[up.step]}`);
+      }
+      saveProgress();
+      renderLearnMeter();
+      renderLearnSteps();
+    }
+
+    // Next / Continue: move on to the next step if this one just passed,
+    // otherwise another round of the same step.
+    function learnNext() {
+      if (state.learnJustPassed) {
+        state.learnJustPassed = false;
+        state.learnStep = defaultLearnStep(LEARN_UNITS[state.learnUnitIdx]);
+        renderLearn();
+      } else {
+        startLearnRound();
+      }
+    }
+
+    // "Got it" on the why step: finish the unit and unlock the next one.
+    function learnGotIt() {
+      if (state.learnStep !== 'why') return false;
+      const idx = state.learnUnitIdx;
+      const up = unitProgress(LEARN_UNITS[idx].id);
+      if (up.step === 'why') {
+        up.step = 'done';
+        const last = LEARN_UNITS.length - 1;
+        if (idx < last && progress.learn.unitIdx === idx) {
+          progress.learn.unitIdx = idx + 1;
+          showBanner(`Unit ${idx + 2} unlocked: ${LEARN_UNITS[idx + 1].title} 🎉`);
+        } else if (idx === last) {
+          showBanner('Path complete — great ears! 🎉');
+        }
+        saveProgress();
+      }
+      viewLearnUnit(progress.learn.unitIdx);
+      return true;
+    }
+
+    function viewLearnUnit(idx) {
+      if (idx < 0 || idx > progress.learn.unitIdx) return;   // locked
+      state.learnUnitIdx = idx;
+      state.learnStep = defaultLearnStep(LEARN_UNITS[idx]);
+      state.learnJustPassed = false;
+      renderLearn();
+    }
+
+    function viewLearnStep(step) {
+      const u = LEARN_UNITS[state.learnUnitIdx];
+      if (stepIndex(u, step) > stepIndex(u, unitProgress(u.id).step)) return;  // no skipping ahead
+      state.learnStep = step;
+      state.learnJustPassed = false;
+      renderLearn();
+    }
+
+    function renderLearn() {
+      const u = LEARN_UNITS[state.learnUnitIdx];
+      // Left the tab before pressing Continue: resume at the step just unlocked.
+      if (state.learnJustPassed) {
+        state.learnJustPassed = false;
+        state.learnStep = defaultLearnStep(u);
+      }
+      renderLearnUnits();
+      document.getElementById('learn-title').textContent = `${state.learnUnitIdx + 1}. ${u.title}`;
+      document.getElementById('learn-goal').textContent = u.goal;
+      renderLearnSteps();
+
+      const inRound = state.learnStep === 'hear' || state.learnStep === 'play';
+      document.getElementById('learn-round').hidden = !inRound;
+      document.getElementById('learn-why').hidden = inRound;
+      if (state.mode !== 'learn') return;
+      if (inRound) {
+        startLearnRound();
+      } else {
+        state.quizQuestion = null;
+        state.quizAnswered = false;
+        clearHighlight();
+        renderLearnWhy(u);
+      }
+    }
+
+    function renderLearnUnits() {
+      const row = document.getElementById('learn-units');
+      row.innerHTML = '';
+      LEARN_UNITS.forEach((u, i) => {
+        const done = unitProgress(u.id).step === 'done';
+        const locked = i > progress.learn.unitIdx;
+        const b = document.createElement('button');
+        b.className = 'learn-unit' +
+          (done ? ' is-done' : '') +
+          (locked ? ' is-locked' : '') +
+          (i === progress.learn.unitIdx && !done ? ' is-current' : '') +
+          (i === state.learnUnitIdx ? ' is-viewing' : '');
+        b.dataset.unit = u.id;
+        b.disabled = locked;
+        b.textContent = `${locked ? '🔒 ' : ''}${i + 1}. ${u.title}${done ? ' ✓' : ''}`;
+        b.addEventListener('click', () => viewLearnUnit(i));
+        row.appendChild(b);
+      });
+      const cur = row.children[state.learnUnitIdx];
+      if (cur) row.scrollLeft = Math.max(0, cur.offsetLeft - row.offsetLeft - 24);
+    }
+
+    function renderLearnSteps() {
+      const u = LEARN_UNITS[state.learnUnitIdx];
+      const frontier = stepIndex(u, unitProgress(u.id).step);
+      const box = document.getElementById('learn-steps');
+      box.innerHTML = '';
+      unitSteps(u).forEach((s, i) => {
+        if (i) {
+          const arrow = document.createElement('span');
+          arrow.className = 'learn-step-arrow';
+          arrow.textContent = '→';
+          box.appendChild(arrow);
+        }
+        const b = document.createElement('button');
+        b.className = 'learn-step' +
+          (i < frontier ? ' is-done' : '') +
+          (s === state.learnStep ? ' is-viewing' : '');
+        b.dataset.step = s;
+        b.disabled = i > frontier;
+        b.textContent = LEARN_STEP_LABELS[s] + (i < frontier ? ' ✓' : '');
+        b.addEventListener('click', () => viewLearnStep(s));
+        box.appendChild(b);
+      });
+    }
+
+    // Last-10 answers as dots, plus how many are right.
+    function renderLearnMeter() {
+      const el = document.getElementById('learn-meter');
+      const step = state.learnStep;
+      if (step !== 'hear' && step !== 'play') { el.innerHTML = ''; return; }
+      const stats = unitProgress(LEARN_UNITS[state.learnUnitIdx].id)[step];
+      const recent = stats.recent.slice(-LEARN_PASS_WINDOW);
+      let html = '';
+      for (let i = 0; i < LEARN_PASS_WINDOW; i++) {
+        const r = recent[i];
+        html += `<span class="learn-dot${r === 1 ? ' hit' : r === 0 ? ' miss' : ''}"></span>`;
+      }
+      const hits = recent.filter(Boolean).length;
+      html += `<span class="learn-meter-text">${hits}/${LEARN_PASS_WINDOW}</span>`;
+      el.innerHTML = html;
+      el.title = `Get ${LEARN_PASS_MIN} of your last ${LEARN_PASS_WINDOW} right to move on`;
+    }
+
+    // Songs whose chords are all among the chord types learned so far.
+    function learnSongs(unitIdx) {
+      const known = new Set();
+      LEARN_UNITS.slice(0, unitIdx + 1).forEach(u => {
+        if (u.hear.type === 'chord') u.hear.types.forEach(t => known.add(t));
+      });
+      return Object.keys(SONGS).filter(name => SONGS[name].every(c => known.has(c.type)));
+    }
+
+    function renderLearnWhy(u) {
+      document.getElementById('learn-why-text').innerHTML = u.why.map(p => `<p>${p}</p>`).join('');
+      document.getElementById('learn-show-me').hidden = !u.show;
+
+      const songsBox = document.getElementById('learn-songs');
+      songsBox.innerHTML = '';
+      songsBox.hidden = !u.songs;
+      if (!u.songs) return;
+      const title = document.createElement('div');
+      title.className = 'learn-songs-title';
+      title.textContent = 'Songs you can play now';
+      const chips = document.createElement('div');
+      chips.className = 'song-chord-chips';
+      learnSongs(state.learnUnitIdx).forEach(name => {
+        const b = document.createElement('button');
+        b.className = 'song-chord-chip';
+        b.dataset.song = name;
+        b.textContent = name;
+        b.addEventListener('click', () => openSong(name));
+        chips.appendChild(b);
+      });
+      songsBox.append(title, chips);
+    }
+
+    // Jump to the Chords tab with a song picked and its first chord shown.
+    function openSong(name) {
+      state.songName = name;
+      state.activeSongChord = -1;
+      document.getElementById('song-select').value = name;
+      switchMode('chords');
+      renderSongChordChips();
+      const first = document.querySelector('#song-chord-chips .song-chord-chip');
+      if (first) first.click();
+    }
+
+    // "Show me on the keyboard": open the explore tab for this unit, set to
+    // what was just practised where possible.
+    function learnShowMe() {
+      const u = LEARN_UNITS[state.learnUnitIdx];
+      const s = u.show;
+      if (!s) return;
+      const last = state.learnLastQ && state.learnLastQ.unitId === u.id ? state.learnLastQ.q : null;
+      measurePlayingUntil = 0;
+
+      if (s.mode === 'intervals') {
+        const semis = last && last.semis ? last.semis : s.semis;
+        const low = last && last.low != null ? last.low : MIDDLE_C;
+        switchMode('intervals');
+        state.ivNotes = [low, low + semis];
+        updateHighlight();
+        updateIntervalDisplay();
+        scrollToMidi(low + Math.round(semis / 2));
+        playIntervalPrompt({ mode: 'ascending', midis: state.ivNotes });
+        return;
+      }
+
+      const isChord = s.mode === 'chords';
+      const sameKind = last && last.kind === (isChord ? 'chord' : 'scale');
+      const root = sameKind ? last.rootPc : 0;
+      const type = sameKind && s.fromLast ? (isChord ? last.chordType : last.scaleType) : s.type;
+      if (isChord) {
+        state.chordRoot = root;
+        state.chordType = type;
+        setPickerValue('chord-root-picker', root);
+        document.getElementById('chord-type-select').value = type;
+        switchMode('chords');
+        updateChordDisplay();
+        playEvents(chordThenArpEvents(getChordMidis(root, CHORDS[type].intervals)));
+      } else {
+        state.scaleRoot = root;
+        state.scaleType = type;
+        setPickerValue('scale-root-picker', root);
+        document.getElementById('scale-type-select').value = type;
+        switchMode('scales');
+        updateScaleDisplay();
+        playScaleSequence(getScaleMidis(root, [...SCALES[type].intervals, 12]));
+      }
+      scrollToRoot(root);
+    }
+
+    // Wipe saved progress (Learn path and free-play quiz level/streak).
+    function resetProgress() {
+      try { localStorage.removeItem(PROGRESS_KEY); } catch (_) {}
+      progress = defaultProgress();
+      applyProgress();
+      state.quizScore = { correct: 0, total: 0 };
+      document.getElementById('quiz-score').textContent = '— / —';
+      updateQuizLevelBtn();
+      renderLearn();
+    }
+
+    // Debug hook (?debug=1): answer the current round right or wrong through
+    // the same paths a tap would take, then press Next.
+    function debugAnswer(correct) {
+      const q = state.quizQuestion;
+      if (!q || state.quizAnswered) return false;
+      if (q.choices) {
+        const wrong = q.choices.find(c => c.id !== q.answer);
+        answerChoice(correct || !wrong ? q.answer : wrong.id);
+      } else {
+        const need = [...(q.needPcs || q.answerPcs)];
+        // A key for `pc` in the middle octave that isn't an already-given key.
+        const midiFor = (pc) => {
+          const m = MIDDLE_C + pc;
+          return q.givenMidis && q.givenMidis.includes(m) ? m + 12 : m;
+        };
+        if (correct && q.exactMidi != null) {
+          registerQuizKey(q.exactMidi);
+        } else if (correct) {
+          need.forEach(pc => registerQuizKey(midiFor(pc)));
+        } else {
+          let bad = 0;
+          while (q.answerPcs.has(bad)) bad++;
+          [bad, ...need.slice(1)].forEach(pc => registerQuizKey(midiFor(pc)));
+        }
+      }
+      setTimeout(() => {
+        if (!state.quizAnswered) return;
+        if (state.mode === 'learn') learnNext();
+        else if (state.mode === 'quiz') startQuizRound();
+      }, 0);
+      return true;
     }
 
     // ── Mode Switching ────────────────────────────────────────────────────────
@@ -1985,11 +2860,13 @@ const MIDDLE_C   = 60;  // C4
       updateHighlight();
       if (mode === 'intervals') updateIntervalDisplay();
       if (mode === 'quiz') { clearHighlight(); startQuizRound(); }
+      if (mode === 'learn') renderLearn();
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────
 
     function init() {
+      applyProgress();
       buildKeyboard();
       setupKeyboardInteraction();
 
@@ -2063,11 +2940,42 @@ const MIDDLE_C   = 60;  // C4
       });
       document.getElementById('quiz-next-btn').addEventListener('click', startQuizRound);
 
-      // Initial display — scroll to middle C (C4)
-      updateHighlight();
+      // Learn path controls
+      document.getElementById('learn-play-btn').addEventListener('click', () => {
+        if (!state.quizQuestion) { startLearnRound(); return; }
+        playQuizPrompt();
+      });
+      document.getElementById('learn-next-btn').addEventListener('click', learnNext);
+      document.getElementById('learn-got-it').addEventListener('click', learnGotIt);
+      document.getElementById('learn-show-me').addEventListener('click', learnShowMe);
+      document.getElementById('learn-reset').addEventListener('click', () => {
+        if (confirm('Reset all progress? This clears the Learn path and your Quiz level.')) resetProgress();
+      });
+
+      // Initial display — the app opens on the Learn path
       updateScaleDisplay();
       updateChordDisplay();
-      requestAnimationFrame(() => scrollToRoot(0, false)); // open on middle C (C4)
+      switchMode('learn');
+      // Centre the keyboard on the current round's keys, or middle C (C4).
+      requestAnimationFrame(() => {
+        const q = state.quizQuestion;
+        scrollToMidi(q && q.focusMidi != null ? q.focusMidi : MIDDLE_C, false);
+      });
+
+      // Test hooks, only with ?debug=1
+      if (new URLSearchParams(location.search).get('debug') === '1') {
+        window.__musicTheory = {
+          get state()    { return state; },
+          get progress() { return loadProgress(); },
+          units: LEARN_UNITS.map(u => ({ id: u.id, title: u.title, steps: unitSteps(u) })),
+          currentQuestion: () => state.quizQuestion,
+          answerCorrect:   () => debugAnswer(true),
+          answerWrong:     () => debugAnswer(false),
+          gotIt:           () => learnGotIt(),
+          switchMode:      (mode) => switchMode(mode),
+          resetProgress:   () => resetProgress(),
+        };
+      }
 
       // Install prompt
       let installPrompt = null;
@@ -2088,7 +2996,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2609291410';
+        const SW_VERSION = '2609300001';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }

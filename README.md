@@ -18,7 +18,7 @@ a PWA).
 - `synth/` — Web audio synthesizer (PWA)
 - `tuner/` — Instrument tuner (PWA)
 - `ding/` — Tap bell for yes/no answers (PWA)
-- `music-theory/` — Music theory trainer (PWA)
+- `music-theory/` — Music theory trainer (PWA): a guided ear-first Learn path (hear it, play it, then learn why) plus free-play scales, chords, intervals and quizzes
 - `binary/` — Binary number trainer (PWA, also available in `pt-BR/binary/`)
 - `tennis-planner.html` — Tennis match/availability planner (PWA)
 - `squeak-the-geek.html` — Browser game (PWA)
