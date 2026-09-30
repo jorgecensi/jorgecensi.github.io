@@ -29,6 +29,13 @@ run(async () => {
   assert(parsed.v === 1, 'stored progress has v === 1, got ' + parsed.v);
   assert(parsed.quiz && parsed.quiz.level === 2, 'stored progress quiz.level === 2, got ' + JSON.stringify(parsed.quiz));
 
+  // A saved unitIdx past the last unit keeps the furthest unit unlocked
+  // rather than dropping back to unit 1.
+  await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ v: 1, learn: { unitIdx: 99, units: {} } })), PROGRESS_KEY);
+  const lastIdx = await mt(() => window.__musicTheory.units.length - 1);
+  const clamped = await mt(() => window.__musicTheory.progress.learn.unitIdx);
+  assert(clamped === lastIdx, 'unitIdx 99 loads as the last unit (' + lastIdx + '), got ' + clamped);
+
   if (errors.length) throw new Error('console/page errors: ' + errors.join(' | '));
 
   console.log('ALL CHECKS PASSED');

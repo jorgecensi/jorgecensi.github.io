@@ -696,11 +696,16 @@ title: Music Theory
     /* Landscape phones: keep the path compact (declared after the base
        Learn rules so it wins the cascade). */
     @media (orientation: landscape) and (max-height: 520px) {
-      #panel-learn { max-height: 36vh; }
+      /* Take the height the compact header, tabs and 150px keyboard leave
+         (~216px), so a round's answer buttons fit without scrolling. */
+      #panel-learn { max-height: max(36vh, calc(100dvh - 216px - var(--safe-top) - var(--safe-bottom))); }
       .learn-units { margin: 0 -14px 6px; padding: 0 14px 2px; }
-      .learn-head { margin-bottom: 5px; }
+      /* Title and step indicator share one line. */
+      .learn-head { float: left; margin: 0 12px 6px 0; }
       .learn-goal { display: none; }
       .learn-steps { margin-bottom: 6px; }
+      #learn-round, #learn-why { clear: both; }
+      #learn-round { gap: 5px; }
       #learn-label { font-size: 14px; min-height: 0; }
     }
 
@@ -1201,6 +1206,7 @@ const MIDDLE_C   = 60;  // C4
       quizType:     'chords',
       quizQuestion: null,
       quizPlayed:   new Set(),  // pitch classes the player has struck this round
+      quizPlayedMidi: null,     // the last key struck (interval-play is judged on it)
       quizRequired: 0,          // distinct notes needed to complete the answer
       quizAnswered: false,
       quizScore:    { correct: 0, total: 0 },
@@ -1263,7 +1269,9 @@ const MIDDLE_C   = 60;  // C4
           }
         }
         if (d.learn) {
-          p.learn.unitIdx = toInt(d.learn.unitIdx, 0, LEARN_UNITS.length - 1, 0);
+          // Past the last unit (e.g. a unit was removed): keep the furthest one.
+          const ui = d.learn.unitIdx;
+          p.learn.unitIdx = Number.isInteger(ui) && ui > 0 ? Math.min(ui, LEARN_UNITS.length - 1) : 0;
           const saved = d.learn.units || {};
           LEARN_UNITS.forEach(u => {
             const su = saved[u.id];
@@ -1945,6 +1953,7 @@ const MIDDLE_C   = 60;  // C4
       const pc = midi % 12;
       if (state.quizPlayed.has(pc)) return;
       state.quizPlayed.add(pc);
+      state.quizPlayedMidi = midi;
       document.querySelectorAll(`.key[data-pc="${pc}"]`).forEach(k => k.classList.add('quiz-sel'));
       updateQuizProgress();
       if (state.quizPlayed.size >= state.quizRequired) checkQuizAnswer();
@@ -1954,31 +1963,39 @@ const MIDDLE_C   = 60;  // C4
       const q = state.quizQuestion;
       const expected = q.needPcs || q.answerPcs;
       const played = state.quizPlayed;
-      const correct = played.size === expected.size && [...expected].every(pc => played.has(pc));
+      const correct = played.size === expected.size && [...expected].every(pc => played.has(pc)) &&
+        (q.exactMidi == null || state.quizPlayedMidi === q.exactMidi);
 
       // Track mastery of each major key — it unlocks the other free-play scales.
       if (correct && state.mode === 'quiz' && q.kind === 'scale' && q.scaleType === 'Major') {
         state.majorScaleRootsDone.add(q.rootPc);
       }
 
-      // Recolour the keys: green = right note played, red = wrong note played,
-      // amber = a correct note the player missed.
-      document.querySelectorAll('.key').forEach(k => {
-        const pc = parseInt(k.dataset.pc);
-        k.classList.remove('quiz-sel');
-        if (expected.has(pc) && played.has(pc)) k.classList.add('quiz-correct');
-        else if (played.has(pc))                k.classList.add('quiz-wrong');
-        else if (expected.has(pc))              k.classList.add('in-scale');
-      });
       if (q.kind === 'interval-play') {
-        // Mark the exact two keys and let them hear the interval.
+        // Mark the key they struck if it was wrong, then the exact two keys,
+        // and let them hear the interval.
+        document.querySelectorAll('.key.quiz-sel').forEach(k => k.classList.remove('quiz-sel'));
+        const struck = document.querySelector(`.key[data-midi="${state.quizPlayedMidi}"]`);
+        if (struck && !correct) struck.classList.add('quiz-wrong');
         revealIntervalKeys(q);
         measurePlayingUntil = 0;
         playIntervalPrompt(q);
+      } else {
+        // Recolour the keys: green = right note played, red = wrong note played,
+        // amber = a correct note the player missed.
+        document.querySelectorAll('.key').forEach(k => {
+          const pc = parseInt(k.dataset.pc);
+          k.classList.remove('quiz-sel');
+          if (expected.has(pc) && played.has(pc)) k.classList.add('quiz-correct');
+          else if (played.has(pc))                k.classList.add('quiz-wrong');
+          else if (expected.has(pc))              k.classList.add('in-scale');
+        });
       }
 
+      const wrongOctave = !correct && q.exactMidi != null && played.has(q.exactMidi % 12);
       const fb = qEl('feedback');
-      fb.textContent = correct ? '✓ Correct!' : `✗ It was ${q.answerName}`;
+      fb.textContent = correct ? '✓ Correct!'
+        : `✗ ${wrongOctave ? 'Right note, wrong octave — ' : ''}It was ${q.answerName}`;
       fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
 
       // Always reveal the name once answered.
@@ -2463,6 +2480,7 @@ const MIDDLE_C   = 60;  // C4
       const root = 55 + Math.floor(Math.random() * 11);   // G3–F4
       const target = root + semis;
       const name = INTERVAL_NAMES[semis];
+      const a = /^[AEIOU]/.test(name) ? 'an' : 'a';
       return {
         kind: 'interval-play', mode: 'ascending', semis,
         low: root, high: target, rootMidi: root, targetMidi: target,
@@ -2470,9 +2488,12 @@ const MIDDLE_C   = 60;  // C4
         answerPcs: new Set([root % 12, target % 12]),
         needPcs: new Set([target % 12]),     // the root counts as already played
         givenMidis: [root],
+        // Judged on the exact key: the same note name an octave lower is the
+        // inverted interval (a 5th below C is F, the 4th above), not this one.
+        exactMidi: target,
         focusMidi: root + Math.round(semis / 2),
-        prompt: `Play a ${name} above the lit ${NOTE_NAMES[root % 12]}`,
-        answerName: `${NOTE_NAMES[target % 12]} — a ${name} above ${NOTE_NAMES[root % 12]}`,
+        prompt: `Play ${a} ${name} above the lit ${NOTE_NAMES[root % 12]}`,
+        answerName: `${NOTE_NAMES[target % 12]} — ${a} ${name} above ${NOTE_NAMES[root % 12]}`,
       };
     }
 
@@ -2601,6 +2622,11 @@ const MIDDLE_C   = 60;  // C4
 
     function renderLearn() {
       const u = LEARN_UNITS[state.learnUnitIdx];
+      // Left the tab before pressing Continue: resume at the step just unlocked.
+      if (state.learnJustPassed) {
+        state.learnJustPassed = false;
+        state.learnStep = defaultLearnStep(u);
+      }
       renderLearnUnits();
       document.getElementById('learn-title').textContent = `${state.learnUnitIdx + 1}. ${u.title}`;
       document.getElementById('learn-goal').textContent = u.goal;
@@ -2799,7 +2825,9 @@ const MIDDLE_C   = 60;  // C4
           const m = MIDDLE_C + pc;
           return q.givenMidis && q.givenMidis.includes(m) ? m + 12 : m;
         };
-        if (correct) {
+        if (correct && q.exactMidi != null) {
+          registerQuizKey(q.exactMidi);
+        } else if (correct) {
           need.forEach(pc => registerQuizKey(midiFor(pc)));
         } else {
           let bad = 0;

@@ -113,6 +113,45 @@ run(async () => {
   const stored = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), PROGRESS_KEY);
   assert(stored && stored.v === 1 && stored.learn.unitIdx === 2, 'stored progress has v=1 and learn.unitIdx=2');
 
+  // ── Interval play is judged on the exact key, not the note name ──
+  // The same letter an octave down is the inverted interval (the F a 5th
+  // below C is not the 4th above it), so it must count as wrong.
+  const tap = (midi) => page.evaluate((m) => {
+    const k = document.querySelector(`.key[data-midi="${m}"]`);
+    const o = { bubbles: true, isPrimary: true, pointerId: 7 };
+    k.dispatchEvent(new PointerEvent('pointerdown', o));
+    k.dispatchEvent(new PointerEvent('pointerup', o));
+  }, midi);
+  await page.click('[data-unit="perfect-intervals"]');
+  await page.click('#learn-steps [data-step="play"]');
+  const pq = await mt(() => {
+    const q = window.__musicTheory.currentQuestion();
+    return { kind: q.kind, semis: q.semis, high: q.high };
+  });
+  assert(pq.kind === 'interval-play', 'unit 2 play step serves an interval-play round, got ' + pq.kind);
+  await tap(pq.high - (pq.semis === 12 ? 24 : 12));   // same name, wrong octave (never the lit root)
+  const fbText = await page.textContent('#learn-feedback');
+  assert(await mt(() => window.__musicTheory.state.quizAnswered), 'a tap on the target note an octave down answers the round');
+  assert(/wrong octave/i.test(fbText), 'target note in the wrong octave is marked wrong, feedback: "' + fbText + '"');
+  s = await unitState(U2);
+  assert(s.play.recent[s.play.recent.length - 1] === 0, 'wrong-octave answer recorded as a miss');
+  assert(s.step === 'done', 'practising a finished unit leaves it done, got "' + s.step + '"');
+
+  // ── Leaving the tab right after passing a step resumes at the next step ──
+  await page.click('[data-unit="thirds"]');
+  for (let i = 0; i < 9; i++) {
+    await mt(() => window.__musicTheory.answerCorrect());
+    await page.waitForTimeout(30);
+  }
+  const ans = await mt(() => window.__musicTheory.currentQuestion().answer);
+  await page.click(`#learn-options .quiz-opt-btn[data-id="${ans}"]`);   // 10th right: passes, no auto-Next
+  assert((await unitState('thirds')).step === 'play', 'thirds hear passes on the 10th correct answer');
+  await mt(() => window.__musicTheory.switchMode('scales'));
+  await mt(() => window.__musicTheory.switchMode('learn'));
+  const back = await mt(() => ({ step: window.__musicTheory.state.learnStep, kind: window.__musicTheory.currentQuestion().kind }));
+  assert(back.step === 'play' && back.kind === 'interval-play',
+    'returning to Learn after passing hear lands on the play step, got ' + JSON.stringify(back));
+
   if (errors.length) throw new Error('console/page errors: ' + errors.join(' | '));
 
   console.log('ALL CHECKS PASSED');
