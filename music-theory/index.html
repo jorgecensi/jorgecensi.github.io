@@ -964,10 +964,10 @@ title: Music Theory
 
     const SONGS = {
       'The Scientist – Coldplay': [
-        { root: 2,  type: 'Minor 7th',   label: 'Dm7'  },
-        { root: 0,  type: 'Sus4',        label: 'Csus4' },
-        { root: 10, type: 'Major',       label: 'B♭/D'  },
-        { root: 5,  type: 'Major',       label: 'F/C'   },
+        { root: 2,  type: 'Minor 7th', label: 'Dm7'   },
+        { root: 10, type: 'Major',     label: 'B♭'    },
+        { root: 5,  type: 'Major',     label: 'F'     },
+        { root: 5,  type: 'Sus2',      label: 'Fsus2' },
       ],
       'Hey Jude – The Beatles': [
         { root: 5,  type: 'Major',        label: 'F'   },
@@ -976,10 +976,10 @@ title: Music Theory
         { root: 10, type: 'Major',        label: 'B♭'  },
       ],
       'Yellow – Coldplay': [
-        { root: 10, type: 'Major', label: 'B♭' },
-        { root: 5,  type: 'Major', label: 'F'  },
-        { root: 7,  type: 'Minor', label: 'Gm' },
-        { root: 3,  type: 'Major', label: 'E♭' },
+        { root: 11, type: 'Major', label: 'B'   },
+        { root: 6,  type: 'Major', label: 'F#'  },
+        { root: 4,  type: 'Major', label: 'E'   },
+        { root: 8,  type: 'Minor', label: 'G#m' },
       ],
       'Let It Be – The Beatles': [
         { root: 0, type: 'Major', label: 'C'  },
@@ -993,11 +993,13 @@ title: Music Theory
         { root: 6, type: 'Minor', label: 'F#m' },
         { root: 2, type: 'Major', label: 'D'   },
       ],
+      // Concert pitch (the record has a capo on fret 2, so the familiar
+      // Em7–G–Dsus4–A7sus4 shapes sound a whole tone higher).
       'Wonderwall – Oasis': [
-        { root: 4, type: 'Minor 7th', label: 'Em7'   },
-        { root: 7, type: 'Major',     label: 'G'      },
-        { root: 2, type: 'Sus4',      label: 'Dsus4'  },
-        { root: 9, type: 'Sus4',      label: 'Asus4'  },
+        { root: 6,  type: 'Minor 7th', label: 'F#m7'  },
+        { root: 9,  type: 'Major',     label: 'A'     },
+        { root: 4,  type: 'Sus4',      label: 'Esus4' },
+        { root: 11, type: 'Sus4',      label: 'Bsus4' },
       ],
       'House of the Rising Sun – The Animals': [
         { root: 9, type: 'Minor', label: 'Am' },
@@ -2996,7 +2998,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2609300525';
+        const SW_VERSION = '2610010001';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
