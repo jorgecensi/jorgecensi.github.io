@@ -1032,6 +1032,16 @@ title: Music Theory
         { root: 9, type: 'Minor', label: 'Am' },
         { root: 5, type: 'Major', label: 'F'  },
       ],
+      // Roots are the prime-numbered harmonics of C in descending order
+      // (11th ≈ F#, 7th ≈ B♭, 5th = E, 3rd = G), then home. Every voice
+      // moves by a tone or less between chords.
+      'Claude Progression': [
+        { root: 0,  type: 'Major 7th', label: 'Cmaj7'  },
+        { root: 6,  type: 'Minor 7th', label: 'F#m7'   },
+        { root: 10, type: 'Major 7th', label: 'B♭maj7' },
+        { root: 4,  type: 'Minor 7th', label: 'Em7'    },
+        { root: 7,  type: 'Sus4',      label: 'Gsus4'  },
+      ],
     };
 
     const INTERVAL_NAMES = [
@@ -2998,7 +3008,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610010815';
+        const SW_VERSION = '2610010901';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
