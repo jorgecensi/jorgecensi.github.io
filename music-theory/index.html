@@ -1181,15 +1181,56 @@ const MIDDLE_C   = 60;  // C4
         show: { mode: 'chords', type: 'Major', fromLast: true },
       },
       {
+        id: 'seconds',
+        title: 'Steps: 2nds',
+        goal: 'Hear the half step and the whole step that melodies walk on.',
+        hear: { type: 'interval', semis: [1,2], modes: ['ascending'] },
+        play: { type: 'interval', semis: [1,2] },
+        why: [
+          'A minor 2nd is a single semitone: the very next key, black or white. A major 2nd is two semitones, also called a whole step.',
+          'These are the steps most melodies walk on. Sing any tune slowly and you will find it moves mostly by 2nds, with the odd leap.',
+          'The half step sounds tight and tense, as if the two notes rub against each other. The whole step sounds like an ordinary, comfortable step.',
+          'Every scale is built from these two sizes. The major scale, coming up later, is just a fixed pattern of whole and half steps.',
+        ],
+        show: { mode: 'intervals', semis: 2 },
+      },
+      {
+        id: 'sixths',
+        title: 'Major & minor 6ths',
+        goal: 'Hear the wide, sweet leap of the 6th.',
+        hear: { type: 'interval', semis: [8,9], modes: ['ascending'] },
+        play: { type: 'interval', semis: [8,9] },
+        why: [
+          'A 6th is a big, warm leap. The minor 6th spans 8 semitones and the major 6th spans 9.',
+          'A 6th is a 3rd turned upside down. C up to A is a major 6th, and A up to the next C is a minor 3rd: flip an interval and the two always add up to an octave (12 semitones).',
+          'So the major 6th sounds bright and open, while the minor 6th has a darker, bittersweet colour, the same way the two 3rds differ.',
+          'Like 3rds, 6ths are consonant: they sound sweet together, which is why so many vocal harmonies move in 3rds and 6ths.',
+        ],
+        show: { mode: 'intervals', semis: 9 },
+      },
+      {
+        id: 'sevenths',
+        title: '7ths & the tritone',
+        goal: 'Hear the restless intervals: the tritone and the two 7ths.',
+        hear: { type: 'interval', semis: [6,10,11], modes: ['ascending'] },
+        play: { type: 'interval', semis: [6,10,11] },
+        why: [
+          'The tritone is 6 semitones, exactly half an octave. It sounds unstable and restless, as if it needs to move somewhere.',
+          'A minor 7th is 10 semitones, a whole step short of the octave. It sounds bluesy and open-ended, and it is the note that turns a major chord into a 7 chord.',
+          'A major 7th is 11 semitones, just a half step short of the octave. It sounds sharp and yearning, and it pulls hard up to the octave.',
+          'To tell the 7ths apart, imagine the octave above the first note: a whole step under it is a minor 7th, a half step under it is a major 7th.',
+        ],
+        show: { mode: 'intervals', semis: 10 },
+      },
+      {
         id: 'all-intervals',
         title: 'Every interval',
-        goal: 'Name all twelve distances, going up and going down.',
+        goal: 'Mix all twelve, going up and going down.',
         hear: { type: 'interval', semis: [1,2,3,4,5,6,7,8,9,10,11,12], modes: ['ascending','descending'] },
         play: { type: 'interval', semis: [1,2,3,4,5,6,7,8,9,10,11,12] },
         why: [
-          'There are twelve intervals inside an octave, one per semitone, and each has its own flavour.',
-          '2nds are the small steps melodies walk on; 2nds and 7ths rub against each other (dissonant), 3rds and 6ths sound sweet, and 4ths, 5ths and octaves sound open.',
-          'The tritone (6 semitones) splits the octave exactly in half and sounds restless, as if it needs to go somewhere.',
+          'You have now met all twelve intervals inside an octave, one per semitone. This unit mixes them, and adds falling intervals too.',
+          'In short: 2nds and 7ths rub against each other (dissonant), 3rds and 6ths sound sweet, 4ths, 5ths and octaves sound open, and the tritone sounds restless.',
           'A falling interval covers the same distance as a rising one, so a quick way in is to tie each to the opening of a song you already know. Tap Hint to hear one, or watch the recordings shown after each answer.',
           'Songs are a bridge, not the goal: hinted rounds don’t count towards passing, so lean on them less as the sounds become familiar.',
           'Turn on “Play the key first” to hear a short I–IV–V–I before each interval. Hearing the notes as steps of a key, rather than two notes floating on their own, is how most musicians end up recognising intervals.',
@@ -1295,6 +1336,12 @@ const MIDDLE_C   = 60;  // C4
     // guarded and bad data simply falls back to the defaults.
 
     const PROGRESS_KEY = 'music-theory-progress-v1';
+    // learn.unitIdx is a position in LEARN_UNITS. `layout` records which
+    // order it was saved against, so inserting units can't shift a learner
+    // onto the wrong one. Layout 1 (no field) is the original 8 units.
+    const LEARN_LAYOUT = 2;
+    const LEARN_LAYOUT_1 = ['pulse','perfect-intervals','thirds','major-minor-chords',
+                            'all-intervals','major-scale','dominant-7th','minor-and-modes'];
     const LEARN_STEP_NAMES = ['hear','play','why','done'];
 
     const emptyStats = () => ({ correct: 0, total: 0, recent: [] });
@@ -1305,7 +1352,7 @@ const MIDDLE_C   = 60;  // C4
       return {
         v: 1,
         quiz:  { level: 1, streak: 0, majorScaleRootsDone: [] },
-        learn: { unitIdx: 0, units },
+        learn: { unitIdx: 0, layout: LEARN_LAYOUT, units },
         settings: { keyContext: false },   // play a I–IV–V–I before each interval
       };
     }
@@ -1341,9 +1388,6 @@ const MIDDLE_C   = 60;  // C4
           }
         }
         if (d.learn) {
-          // Past the last unit (e.g. a unit was removed): keep the furthest one.
-          const ui = d.learn.unitIdx;
-          p.learn.unitIdx = Number.isInteger(ui) && ui > 0 ? Math.min(ui, LEARN_UNITS.length - 1) : 0;
           const saved = d.learn.units || {};
           LEARN_UNITS.forEach(u => {
             const su = saved[u.id];
@@ -1352,6 +1396,18 @@ const MIDDLE_C   = 60;  // C4
             if (step === 'play' && !u.play) step = 'why';
             p.learn.units[u.id] = { step, hear: cleanStats(su.hear), play: cleanStats(su.play) };
           });
+          let ui = d.learn.unitIdx;
+          if (d.learn.layout !== LEARN_LAYOUT && Number.isInteger(ui)) {
+            // Saved against the original order: find the same unit by id,
+            // then step back to the first unfinished unit before it, so
+            // units added earlier in the path get learned first.
+            const id = LEARN_LAYOUT_1[Math.max(0, Math.min(ui, LEARN_LAYOUT_1.length - 1))];
+            ui = Math.max(0, LEARN_UNITS.findIndex(u => u.id === id));
+            const open = LEARN_UNITS.findIndex((u, i) => i <= ui && p.learn.units[u.id].step !== 'done');
+            if (open >= 0) ui = open;
+          }
+          // Past the last unit (e.g. a unit was removed): keep the furthest one.
+          p.learn.unitIdx = Number.isInteger(ui) && ui > 0 ? Math.min(ui, LEARN_UNITS.length - 1) : 0;
         }
       } catch (_) { /* corrupt or unavailable: start fresh */ }
       return p;
@@ -2764,6 +2820,11 @@ const MIDDLE_C   = 60;  // C4
       return step === 'done' ? 'why' : step;
     }
 
+    // A unit is open once it is the frontier, before it, or already done.
+    function unitLocked(i) {
+      return i > progress.learn.unitIdx && unitProgress(LEARN_UNITS[i].id).step !== 'done';
+    }
+
     function stepPassed(stats) {
       return stats.total >= LEARN_PASS_WINDOW &&
         stats.recent.slice(-LEARN_PASS_WINDOW).filter(Boolean).length >= LEARN_PASS_MIN;
@@ -2892,11 +2953,13 @@ const MIDDLE_C   = 60;  // C4
       const up = unitProgress(LEARN_UNITS[idx].id);
       if (up.step === 'why') {
         up.step = 'done';
-        const last = LEARN_UNITS.length - 1;
-        if (idx < last && progress.learn.unitIdx === idx) {
-          progress.learn.unitIdx = idx + 1;
-          showBanner(`Unit ${idx + 2} unlocked: ${LEARN_UNITS[idx + 1].title} 🎉`);
-        } else if (idx === last) {
+        // The next unfinished unit becomes the frontier (later units may
+        // already be done, e.g. after new units were added to the path).
+        const next = LEARN_UNITS.findIndex((u, i) => i > idx && unitProgress(u.id).step !== 'done');
+        if (next >= 0 && progress.learn.unitIdx === idx) {
+          progress.learn.unitIdx = next;
+          showBanner(`Unit ${next + 1} unlocked: ${LEARN_UNITS[next].title} 🎉`);
+        } else if (LEARN_UNITS.every(u => unitProgress(u.id).step === 'done')) {
           showBanner('Path complete — great ears! 🎉');
         }
         saveProgress();
@@ -2906,7 +2969,7 @@ const MIDDLE_C   = 60;  // C4
     }
 
     function viewLearnUnit(idx) {
-      if (idx < 0 || idx > progress.learn.unitIdx) return;   // locked
+      if (idx < 0 || idx >= LEARN_UNITS.length || unitLocked(idx)) return;
       state.learnUnitIdx = idx;
       state.learnStep = defaultLearnStep(LEARN_UNITS[idx]);
       state.learnJustPassed = false;
@@ -2952,7 +3015,7 @@ const MIDDLE_C   = 60;  // C4
       row.innerHTML = '';
       LEARN_UNITS.forEach((u, i) => {
         const done = unitProgress(u.id).step === 'done';
-        const locked = i > progress.learn.unitIdx;
+        const locked = unitLocked(i);
         const b = document.createElement('button');
         b.className = 'learn-unit' +
           (done ? ' is-done' : '') +
@@ -3318,7 +3381,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610040001';
+        const SW_VERSION = '2610040002';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
