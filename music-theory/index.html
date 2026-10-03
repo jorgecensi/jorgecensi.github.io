@@ -538,7 +538,8 @@ title: Music Theory
       min-height: 24px;
     }
 
-    .quiz-top-row { display: flex; gap: 8px; align-items: center; }
+    .quiz-top-row { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+    .quiz-top-row .play-btn { white-space: nowrap; }
 
     .quiz-options {
       text-align: center;
@@ -588,13 +589,13 @@ title: Music Theory
     /* ── Learn ── */
     /* The guided path sits above the piano: it scrolls on its own so the
        keyboard always stays on screen, even on short viewports. */
-    #panel-learn {
+    #panel-learn, #panel-quiz {
       max-height: 46vh;
       overflow-y: auto;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
     }
-    #panel-learn [hidden] { display: none !important; }
+    #panel-learn [hidden], #panel-quiz [hidden] { display: none !important; }
 
     .learn-units {
       display: flex;
@@ -693,12 +694,55 @@ title: Music Theory
     }
     .learn-reset:hover { opacity: 1; color: var(--text); }
 
+    /* Interval references: a playable public-domain tune plus well-known
+       recordings, embedded from YouTube only when the learner asks. */
+    .iv-refs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 10px;
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      background: var(--panel2);
+    }
+    .iv-refs-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+    }
+    .iv-ref { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+    .iv-ref-text { flex: 1; min-width: 140px; }
+    .iv-ref-cue { color: var(--text-dim); }
+    .iv-ref .play-btn { padding: 4px 10px; font-size: 11px; }
+    .iv-ref a { color: var(--accent); font-size: 11px; }
+    .iv-video {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      aspect-ratio: 16 / 9;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+    }
+    .iv-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .key-context {
+      display: flex;
+      white-space: nowrap;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+    }
+
     /* Landscape phones: keep the path compact (declared after the base
        Learn rules so it wins the cascade). */
     @media (orientation: landscape) and (max-height: 520px) {
       /* Take the height the compact header, tabs and 150px keyboard leave
          (~216px), so a round's answer buttons fit without scrolling. */
-      #panel-learn { max-height: max(36vh, calc(100dvh - 216px - var(--safe-top) - var(--safe-bottom))); }
+      #panel-learn, #panel-quiz { max-height: max(36vh, calc(100dvh - 216px - var(--safe-top) - var(--safe-bottom))); }
       .learn-units { margin: 0 -14px 6px; padding: 0 14px 2px; }
       /* Title and step indicator share one line. */
       .learn-head { float: left; margin: 0 12px 6px 0; }
@@ -707,6 +751,7 @@ title: Music Theory
       #learn-round, #learn-why { clear: both; }
       #learn-round { gap: 5px; }
       #learn-label { font-size: 14px; min-height: 0; }
+      .iv-video { max-width: 280px; }   /* fits the short panel without scrolling */
     }
 
     /* ── Level-up banner ── */
@@ -800,12 +845,17 @@ title: Music Theory
         <div class="quiz-label" id="learn-label"></div>
         <div class="quiz-top-row">
           <button class="play-btn" id="learn-play-btn">🔊 Play</button>
+          <button class="play-btn secondary" id="learn-hint-btn" hidden>💡 Hint</button>
           <button class="play-btn secondary" id="learn-next-btn" style="visibility:hidden">Next →</button>
+          <label class="key-context" id="learn-keyctx-row" title="Plays I–IV–V–I in the key before each interval" hidden>
+            <input type="checkbox" class="keyctx-toggle" id="learn-keyctx"> Play the key first
+          </label>
           <div class="learn-meter" id="learn-meter" style="margin-left:auto"></div>
         </div>
         <div class="quiz-staff" id="learn-staff" aria-hidden="true"></div>
         <div class="quiz-options" id="learn-options"></div>
         <div class="quiz-feedback" id="learn-feedback"></div>
+        <div class="iv-refs" id="learn-refs" hidden></div>
       </div>
 
       <div class="learn-why" id="learn-why" hidden>
@@ -897,10 +947,14 @@ title: Music Theory
         <div class="quiz-top-row">
           <button class="play-btn" id="quiz-play-btn">🔊 Play</button>
           <button class="play-btn secondary" id="quiz-next-btn" style="visibility:hidden">Next →</button>
+          <label class="key-context" id="quiz-keyctx-row" title="Plays I–IV–V–I in the key before each interval" hidden>
+            <input type="checkbox" class="keyctx-toggle" id="quiz-keyctx"> Play the key first
+          </label>
         </div>
         <div class="quiz-staff" id="quiz-staff" aria-hidden="true"></div>
         <div class="quiz-options" id="quiz-options"></div>
         <div class="quiz-feedback" id="quiz-feedback"></div>
+        <div class="iv-refs" id="quiz-refs" hidden></div>
       </div>
     </div>
 
@@ -1136,7 +1190,9 @@ const MIDDLE_C   = 60;  // C4
           'There are twelve intervals inside an octave, one per semitone, and each has its own flavour.',
           '2nds are the small steps melodies walk on; 2nds and 7ths rub against each other (dissonant), 3rds and 6ths sound sweet, and 4ths, 5ths and octaves sound open.',
           'The tritone (6 semitones) splits the octave exactly in half and sounds restless, as if it needs to go somewhere.',
-          'A falling interval covers the same distance as a rising one, so the fastest way to learn them is to tie each to the first two notes of a song you already know — the feedback after each answer gives you one.',
+          'A falling interval covers the same distance as a rising one, so a quick way in is to tie each to the opening of a song you already know. Tap Hint to hear one, or watch the recordings shown after each answer.',
+          'Songs are a bridge, not the goal: hinted rounds don’t count towards passing, so lean on them less as the sounds become familiar.',
+          'Turn on “Play the key first” to hear a short I–IV–V–I before each interval. Hearing the notes as steps of a key, rather than two notes floating on their own, is how most musicians end up recognising intervals.',
         ],
         show: { mode: 'intervals', semis: 7 },
       },
@@ -1250,6 +1306,7 @@ const MIDDLE_C   = 60;  // C4
         v: 1,
         quiz:  { level: 1, streak: 0, majorScaleRootsDone: [] },
         learn: { unitIdx: 0, units },
+        settings: { keyContext: false },   // play a I–IV–V–I before each interval
       };
     }
 
@@ -1272,6 +1329,9 @@ const MIDDLE_C   = 60;  // C4
       try {
         const d = JSON.parse(localStorage.getItem(PROGRESS_KEY));
         if (!d || d.v !== 1) return p;
+        if (d.settings && typeof d.settings === 'object') {
+          p.settings.keyContext = d.settings.keyContext === true;
+        }
         if (d.quiz) {
           p.quiz.level  = toInt(d.quiz.level, 1, 3, 1);
           p.quiz.streak = toInt(d.quiz.streak, 0, 1e9, 0);
@@ -1877,7 +1937,7 @@ const MIDDLE_C   = 60;  // C4
     // Play any question's prompt, whichever quiz or Learn step it came from.
     function playQuestion(q) {
       if (!q) return;
-      if (q.kind === 'interval')           playIntervalPrompt(q);
+      if (q.kind === 'interval')           playIntervalPrompt(q, progress.settings.keyContext);
       else if (q.kind === 'interval-play') playNote(q.rootMidi);
       else if (q.kind === 'chord')         q.arpeggiate ? playEvents(chordThenArpEvents(q.midis)) : playChord(q.midis);
       else if (q.kind === 'scale')         playScaleSequence(q.midis);
@@ -1922,6 +1982,12 @@ const MIDDLE_C   = 60;  // C4
 
       if (q.choices) renderQuizChoices(q);
       else updateQuizProgress();
+
+      const refs = qEl('refs');
+      refs.hidden = true;
+      refs.innerHTML = '';
+      qEl('keyctx-row').hidden = q.kind !== 'interval';
+      if (state.mode === 'learn') document.getElementById('learn-hint-btn').hidden = !intervalRef(q);
 
       // Given notes (already sounded) and hint keys light up as the root.
       [...(q.givenMidis || []), ...(q.hintMidis || [])].forEach(m => {
@@ -2342,8 +2408,11 @@ const MIDDLE_C   = 60;  // C4
       });
       const staff = qEl('staff');
       if (staff.classList.contains('visible')) staff.innerHTML = renderMeasureSvg(q, true);
-      if (q.kind === 'interval') revealIntervalKeys(q);
-      else if (q.kind === 'chord' || q.kind === 'scale') revealNoteKeys(q);
+      if (q.kind === 'interval') {
+        revealIntervalKeys(q);
+        renderIntervalRefs(q, qEl('refs'));
+        if (state.mode === 'learn') document.getElementById('learn-hint-btn').hidden = true;
+      } else if (q.kind === 'chord' || q.kind === 'scale') revealNoteKeys(q);
 
       const fb = qEl('feedback');
       fb.textContent = (correct ? '✓ Correct! ' : '✗ ') + q.explain;
@@ -2368,6 +2437,53 @@ const MIDDLE_C   = 60;  // C4
     const INTERVAL_SONGS_DOWN = {
       1: 'Für Elise', 2: 'Mary Had a Little Lamb', 3: 'Hey Jude', 4: 'Beethoven’s 5th Symphony',
       5: 'Eine kleine Nachtmusik', 7: 'The Flintstones theme', 9: 'Nobody Knows the Trouble I’ve Seen',
+    };
+
+    // Playable references for the interval Hint and the after-answer card.
+    // `tune.notes` are [semitones from the interval's first note, beats]
+    // pairs, so the hint is transposed onto the question's own two notes.
+    // Songs are public-domain melodies; where no well-known one exists the
+    // tune is a short teaching figure (`figure: true`) instead. `pop` lists
+    // well-known recordings, embedded from YouTube only when tapped.
+    const INTERVAL_REFS = {
+      up: {
+        1:  { tune: { name: 'The Entertainer', cue: 'the first two notes', notes: [[0,.5],[1,.5],[2,1],[10,2]] },
+              pop: [{ title: 'Isn’t She Lovely', artist: 'Stevie Wonder', cue: '“Isn’t she”', id: 'kHInwkOJm24' }] },
+        2:  { tune: { name: 'Frère Jacques', cue: '“Frè-re”', notes: [[0,1],[2,1],[4,1],[0,1],[0,1],[2,1],[4,1],[0,1]] } },
+        3:  { tune: { name: 'Greensleeves', cue: '“A-las”', notes: [[0,1],[3,2],[5,1],[7,1.5],[8,.5],[7,1],[5,2]] },
+              pop: [{ title: 'Seven Nation Army', artist: 'The White Stripes', cue: 'the riff’s 2nd and 3rd notes', id: '0J2QdDbelmY' }] },
+        4:  { tune: { name: 'When the Saints Go Marching In', cue: '“Oh when”', notes: [[0,1],[4,1],[5,1],[7,3]] },
+              pop: [{ title: 'Morning Has Broken', artist: 'Cat Stevens', cue: '“Morn-ing”', id: 'qARB7XPfYjo' }] },
+        5:  { tune: { name: 'Here Comes the Bride', cue: '“Here comes”', notes: [[0,1],[5,.75],[5,.25],[5,2]] } },
+        6:  { tune: { name: 'A tritone that rises into a perfect 5th', figure: true, notes: [[0,1],[6,1.5],[7,2]] },
+              pop: [{ title: 'The Simpsons Theme', artist: 'Danny Elfman', cue: '“The Simp-”', id: 'Fttst9dG6Ko' }] },
+        7:  { tune: { name: 'Twinkle, Twinkle, Little Star', cue: 'the 2nd to the 3rd note', notes: [[0,1],[0,1],[7,1],[7,1],[9,1],[9,1],[7,2]] },
+              pop: [{ title: 'Can’t Help Falling in Love', artist: 'Elvis Presley', cue: '“Wise men”', id: 'vGJTaP6anOU' }] },
+        8:  { tune: { name: 'The Entertainer', cue: 'the 3rd to the 4th note', notes: [[-2,.5],[-1,.5],[0,1],[8,2]] } },
+        9:  { tune: { name: 'My Bonnie Lies Over the Ocean', cue: '“My Bon-”', notes: [[0,1],[9,1.5],[7,.5],[5,1],[7,1],[5,1],[2,1],[0,1],[-3,2]] } },
+        10: { tune: { name: 'A whole step short of the octave, then up to it', figure: true, notes: [[0,1],[10,1.5],[12,2]] } },
+        11: { tune: { name: 'A half step below the octave, rising into it', figure: true, notes: [[0,1],[11,1.5],[12,2]] },
+              pop: [{ title: 'Don’t Know Why', artist: 'Norah Jones', cue: '“I wai-”', id: 'tO4dxvguQDk' }] },
+        12: { tune: { name: 'The same note, higher', figure: true, notes: [[0,1],[12,1],[0,1],[12,2]] },
+              pop: [{ title: 'Over the Rainbow', artist: 'Judy Garland', cue: '“Some-where”', id: 'areSgU0fGp8' }] },
+      },
+      down: {
+        1:  { tune: { name: 'Für Elise', cue: 'the first two notes', notes: [[0,.5],[-1,.5],[0,.5],[-1,.5],[0,.5],[-5,.5],[-2,.5],[-4,.5],[-7,1.5]] } },
+        2:  { tune: { name: 'Mary Had a Little Lamb', cue: '“Ma-ry”', notes: [[0,1],[-2,1],[-4,1],[-2,1],[0,1],[0,1],[0,2]] },
+              pop: [{ title: 'Yesterday', artist: 'The Beatles', cue: '“Yes-ter-”', id: 'NrgmdOz227I' }] },
+        3:  { tune: { name: 'This Old Man', cue: '“This old”', notes: [[0,1],[-3,1],[0,2],[0,1],[-3,1],[0,2]] },
+              pop: [{ title: 'Hey Jude', artist: 'The Beatles', cue: '“Hey Jude”', id: 'A_MjCqQoLLA' }] },
+        4:  { tune: { name: 'Beethoven’s 5th Symphony', cue: 'the 3rd to the 4th note', notes: [[0,.5],[0,.5],[0,.5],[-4,3]] },
+              pop: [{ title: 'Summertime', artist: 'Ella Fitzgerald & Louis Armstrong', cue: '“Sum-mer”', id: '2HJCN3upMHE' }] },
+        5:  { tune: { name: 'Eine kleine Nachtmusik', cue: 'the first two notes', notes: [[0,1],[-5,.5],[0,1],[-5,.5],[0,.5],[-5,.5],[0,.5],[4,.5],[7,2]] } },
+        6:  { tune: { name: 'A falling tritone that steps up into a perfect 4th', figure: true, notes: [[0,1],[-6,1.5],[-5,2]] } },
+        7:  { tune: { name: 'From the 5th down to the root, then back up the major chord', figure: true, notes: [[0,1],[-7,1],[-3,1],[0,2]] } },
+        8:  { tune: { name: 'From the root down to the 3rd, then back up the major chord', figure: true, notes: [[0,1],[-8,1],[-5,1],[0,2]] } },
+        9:  { tune: { name: 'From the 3rd down to the 5th, then back up the major chord', figure: true, notes: [[0,1],[-9,1],[-4,1],[0,2]] } },
+        10: { tune: { name: 'A whole step short of an octave', figure: true, notes: [[0,1],[-10,1],[2,2]] } },
+        11: { tune: { name: 'A half step short of an octave', figure: true, notes: [[0,1],[-11,1],[1,2]] } },
+        12: { tune: { name: 'The same note, lower', figure: true, notes: [[0,1],[-12,1],[0,1],[-12,2]] } },
+      },
     };
 
     const INTERVAL_LEVELS = {
@@ -2407,12 +2523,170 @@ const MIDDLE_C   = 60;  // C4
       };
     }
 
-    function playIntervalPrompt(q) {
+    // I–IV–V–I in the key of the interval's lower note, an octave below it,
+    // so the interval is heard as steps of a key rather than in isolation.
+    const CADENCE_STEP = 0.55;
+    const CADENCE_SECS = 4 * CADENCE_STEP + 0.45;
+    function cadenceEvents(tonicMidi) {
+      const r = tonicMidi - 12;
+      return [[0,4,7], [0,5,9], [-1,2,7], [0,4,7]].map((c, i) => ({
+        t: i * CADENCE_STEP, notes: c.map(x => midiToNoteName(r + x)), vel: 0.6, dur: 0.5,
+      }));
+    }
+
+    function intervalPromptEvents(q, withKey) {
       const [a, b] = q.midis.map(midiToNoteName);
-      playEvents(q.mode === 'harmonic'
+      const iv = q.mode === 'harmonic'
         ? [{ t: 0, notes: [a, b], vel: 0.85, dur: 1.8 }]
         : [{ t: 0,   notes: [a], vel: 0.85, dur: 0.9 },
-           { t: 0.8, notes: [b], vel: 0.85, dur: 1.4 }]);
+           { t: 0.8, notes: [b], vel: 0.85, dur: 1.4 }];
+      if (!withKey) return iv;
+      const tonic = Math.min(...q.midis);
+      return [...cadenceEvents(tonic), ...iv.map(e => ({ ...e, t: e.t + CADENCE_SECS }))];
+    }
+
+    function playIntervalPrompt(q, withKey = false) {
+      playEvents(intervalPromptEvents(q, withKey));
+    }
+
+    // ── Interval hints and song references ──
+
+    const HINT_BEAT = 0.4;   // seconds per beat for the reference tunes
+
+    function intervalRef(q) {
+      if (!q || q.kind !== 'interval' || q.mode === 'harmonic') return null;
+      return INTERVAL_REFS[q.mode === 'descending' ? 'down' : 'up'][q.semis] || null;
+    }
+
+    // The tune, transposed so its interval starts on `startMidi`.
+    function tuneEvents(tune, startMidi) {
+      let t = 0;
+      return tune.notes.map(([off, beats]) => {
+        const e = { t, notes: [midiToNoteName(startMidi + off)], vel: 0.8, dur: beats * HINT_BEAT * 0.95 };
+        t += beats * HINT_BEAT;
+        return e;
+      });
+    }
+
+    // Queue after whatever is sounding now instead of being dropped by the
+    // playback lockout (a hint is often tapped while the prompt still rings).
+    function playAfterCurrent(events) {
+      const wait = Math.max(0, measurePlayingUntil - performance.now()) / 1000;
+      measurePlayingUntil = 0;
+      playEvents(events.map(e => ({ ...e, t: e.t + wait })));
+    }
+
+    function playIntervalTune(q) {
+      const ref = intervalRef(q);
+      if (ref) playAfterCurrent(tuneEvents(ref.tune, q.midis[0]));
+    }
+
+    function refText(main, cue) {
+      const span = document.createElement('span');
+      span.className = 'iv-ref-text';
+      span.textContent = main;
+      if (cue) {
+        const c = document.createElement('span');
+        c.className = 'iv-ref-cue';
+        c.textContent = ` · ${cue}`;
+        span.appendChild(c);
+      }
+      return span;
+    }
+
+    // Fill `box` with the playable tune and the recordings for this interval.
+    function renderIntervalRefs(q, box) {
+      box.innerHTML = '';
+      const ref = intervalRef(q);
+      if (!ref) { box.hidden = true; return; }
+
+      const title = document.createElement('div');
+      title.className = 'iv-refs-title';
+      title.textContent = `${INTERVAL_NAMES[q.semis]} going ${q.mode === 'descending' ? 'down' : 'up'}: hear it in a song`;
+      box.appendChild(title);
+
+      const t = ref.tune;
+      const row = document.createElement('div');
+      row.className = 'iv-ref';
+      const play = document.createElement('button');
+      play.className = 'play-btn';
+      play.dataset.ref = 'tune';
+      play.textContent = '🔊 Play';
+      play.addEventListener('click', () => playIntervalTune(q));
+      row.append(play, refText(t.figure ? t.name : `“${t.name}”`, t.cue));
+      box.appendChild(row);
+
+      (ref.pop || []).forEach(p => {
+        const r = document.createElement('div');
+        r.className = 'iv-ref';
+        const watch = document.createElement('button');
+        watch.className = 'play-btn secondary';
+        watch.dataset.video = p.id;
+        watch.textContent = '▶ Watch';
+        const link = document.createElement('a');
+        link.href = `https://www.youtube.com/watch?v=${p.id}`;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.textContent = 'YouTube ↗';
+        const holder = document.createElement('div');
+        watch.addEventListener('click', () => toggleVideo(box, holder, p));
+        r.append(watch, refText(`${p.title} — ${p.artist}`, `listen for ${p.cue}`), link);
+        box.append(r, holder);
+      });
+      box.hidden = false;
+    }
+
+    // Scroll the panel (not the page) just enough to show `el`.
+    function revealInPanel(el) {
+      const panel = el.closest('.panel');
+      if (!panel) return;
+      const pr = panel.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      const below = er.bottom - pr.bottom;
+      if (below > 0) panel.scrollTop += Math.min(below + 8, er.top - pr.top);
+    }
+
+    // One embedded video at a time; tapping Watch again closes it. The
+    // iframe is only created on demand, so nothing loads from YouTube until
+    // the learner asks (and the app stays usable offline).
+    function toggleVideo(box, holder, p) {
+      const open = holder.querySelector('iframe');
+      box.querySelectorAll('.iv-video').forEach(v => v.remove());
+      if (open) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'iv-video';
+      const f = document.createElement('iframe');
+      f.src = `https://www.youtube-nocookie.com/embed/${p.id}?rel=0&playsinline=1&autoplay=1`;
+      f.title = `${p.title} — ${p.artist}`;
+      f.allow = 'autoplay; encrypted-media; picture-in-picture';
+      f.referrerPolicy = 'strict-origin-when-cross-origin';
+      f.allowFullscreen = true;
+      wrap.appendChild(f);
+      holder.appendChild(wrap);
+      revealInPanel(wrap);
+    }
+
+    // Learn hear rounds only: play the reference tune and show the songs.
+    // The round still plays out, but it no longer counts towards passing.
+    function learnHint() {
+      const q = state.quizQuestion;
+      if (state.mode !== 'learn' || state.quizAnswered || !intervalRef(q)) return false;
+      q.hinted = true;
+      document.getElementById('learn-hint-btn').hidden = true;
+      const refs = document.getElementById('learn-refs');
+      renderIntervalRefs(q, refs);
+      revealInPanel(refs);
+      playIntervalTune(q);
+      const fb = qEl('feedback');
+      fb.textContent = 'Hinted rounds are practice: they don’t count towards passing.';
+      fb.className = 'quiz-feedback';
+      return true;
+    }
+
+    function setKeyContext(on) {
+      progress.settings.keyContext = !!on;
+      document.querySelectorAll('.keyctx-toggle').forEach(cb => { cb.checked = !!on; });
+      saveProgress();
     }
 
     // Light up both notes on the keyboard (green = first heard, amber = second).
@@ -2559,6 +2833,11 @@ const MIDDLE_C   = 60;  // C4
 
     function recordLearnResult(correct) {
       const u = LEARN_UNITS[state.learnUnitIdx];
+      if (state.quizQuestion && state.quizQuestion.hinted) {
+        state.learnLastQ = { unitId: u.id, q: state.quizQuestion };
+        qEl('feedback').textContent += '  (Hinted: practice only, not counted.)';
+        return;
+      }
       const step = state.learnStep;
       const up = unitProgress(u.id);
       const stats = up[step];
@@ -2813,8 +3092,11 @@ const MIDDLE_C   = 60;  // C4
 
     // Wipe saved progress (Learn path and free-play quiz level/streak).
     function resetProgress() {
+      const settings = progress.settings;   // a preference, not progress: keep it
       try { localStorage.removeItem(PROGRESS_KEY); } catch (_) {}
       progress = defaultProgress();
+      progress.settings = settings;
+      if (settings.keyContext) saveProgress();
       applyProgress();
       state.quizScore = { correct: 0, total: 0 };
       document.getElementById('quiz-score').textContent = '— / —';
@@ -2958,6 +3240,11 @@ const MIDDLE_C   = 60;  // C4
         playQuizPrompt();
       });
       document.getElementById('learn-next-btn').addEventListener('click', learnNext);
+      document.getElementById('learn-hint-btn').addEventListener('click', learnHint);
+      document.querySelectorAll('.keyctx-toggle').forEach(cb => {
+        cb.checked = progress.settings.keyContext;
+        cb.addEventListener('change', () => setKeyContext(cb.checked));
+      });
       document.getElementById('learn-got-it').addEventListener('click', learnGotIt);
       document.getElementById('learn-show-me').addEventListener('click', learnShowMe);
       document.getElementById('learn-reset').addEventListener('click', () => {
@@ -2986,6 +3273,12 @@ const MIDDLE_C   = 60;  // C4
           gotIt:           () => learnGotIt(),
           switchMode:      (mode) => switchMode(mode),
           resetProgress:   () => resetProgress(),
+          useHint:         () => learnHint(),
+          setKeyContext:   (on) => setKeyContext(on),
+          intervalRefs:    INTERVAL_REFS,
+          // What the current interval question's prompt plays (null otherwise).
+          promptEvents:    () => (state.quizQuestion && state.quizQuestion.kind === 'interval'
+            ? intervalPromptEvents(state.quizQuestion, progress.settings.keyContext) : null),
         };
       }
 
@@ -3008,7 +3301,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610010822';
+        const SW_VERSION = '2610030001';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }

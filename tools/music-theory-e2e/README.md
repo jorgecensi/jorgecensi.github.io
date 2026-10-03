@@ -58,12 +58,21 @@ Only when the URL has `?debug=1`, `music-theory/index.html` exposes
 - `gotIt()` - completes the current `why` step.
 - `switchMode(mode)` - same as tapping a tab (`learn`, `scales`, `chords`,
   `intervals`, `quiz`).
-- `resetProgress()` - clears storage and state (no `confirm()`).
+- `resetProgress()` - clears storage and state (no `confirm()`). The
+  `settings` object is kept, since it is a preference rather than progress.
+- `useHint()` - the Learn Hint button: marks the current interval hear round
+  as hinted (it then does not count towards passing) and shows the song card.
+  Returns `false` outside an unanswered interval round.
+- `setKeyContext(on)` - the "Play the key first" setting.
+- `promptEvents()` - what the current interval question's prompt plays:
+  2 events normally, 6 (four I–IV–V–I triads, then the two notes) with key
+  context on. `null` for other question kinds.
+- `intervalRefs` - the `INTERVAL_REFS` table (`up`/`down` by semitones).
 
 Persistence blob (`music-theory-progress-v1`):
 `{ v: 1, quiz: { level, streak, majorScaleRootsDone }, learn: { unitIdx,
 units: { [id]: { step: 'hear'|'play'|'why'|'done', hear: { correct, total,
-recent }, play: { ... } } } } }`.
+recent }, play: { ... } } } }, settings: { keyContext } }`.
 
 Step rule: a hear/play step passes when `total >= 10` and the last 10 answers
 (`recent`) contain >= 8 correct. Passing `why` (`gotIt()`) marks the unit
@@ -81,3 +90,10 @@ done and increments `unitIdx`.
   `[data-unit="thirds"]` active.
 - **persistence.spec.js** - the free-play Quiz level (`#quiz-level-btn`)
   survives a reload; the stored progress blob parses and has `v === 1`.
+- **interval-hints.spec.js** - every `INTERVAL_REFS` tune contains its own
+  interval as a 0 -> ±n step and every video id is well formed; the Learn
+  Hint button shows the song card and makes the round not count; the song
+  card appears after answering, and Watch embeds the video only on demand
+  (YouTube is stubbed with `page.route`); the key-context setting changes the
+  prompt, survives a reload and a progress reset; the free-play Intervals quiz
+  shows the toggle and the song card.
