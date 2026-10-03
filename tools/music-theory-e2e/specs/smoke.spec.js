@@ -1,10 +1,11 @@
 // App loads with ?debug=1, exposes window.__musicTheory, opens on the Learn
-// tab with the 8 units in contract order, and tab switching works.
+// tab with the 11 units in order, and tab switching works.
 const { launch, run, assert } = require('./_helpers');
 
 const UNIT_IDS = [
   'pulse', 'perfect-intervals', 'thirds', 'major-minor-chords',
-  'all-intervals', 'major-scale', 'dominant-7th', 'minor-and-modes',
+  'seconds', 'sixths', 'sevenths', 'all-intervals',
+  'major-scale', 'dominant-7th', 'minor-and-modes',
 ];
 
 run(async () => {

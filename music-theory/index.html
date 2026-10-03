@@ -1181,15 +1181,56 @@ const MIDDLE_C   = 60;  // C4
         show: { mode: 'chords', type: 'Major', fromLast: true },
       },
       {
+        id: 'seconds',
+        title: 'Steps: 2nds',
+        goal: 'Hear the half step and the whole step that melodies walk on.',
+        hear: { type: 'interval', semis: [1,2], modes: ['ascending'] },
+        play: { type: 'interval', semis: [1,2] },
+        why: [
+          'A minor 2nd is a single semitone: the very next key, black or white. A major 2nd is two semitones, also called a whole step.',
+          'These are the steps most melodies walk on. Sing any tune slowly and you will find it moves mostly by 2nds, with the odd leap.',
+          'The half step sounds tight and tense, as if the two notes rub against each other. The whole step sounds like an ordinary, comfortable step.',
+          'Every scale is built from these two sizes. The major scale, coming up later, is just a fixed pattern of whole and half steps.',
+        ],
+        show: { mode: 'intervals', semis: 2 },
+      },
+      {
+        id: 'sixths',
+        title: 'Major & minor 6ths',
+        goal: 'Hear the wide, sweet leap of the 6th.',
+        hear: { type: 'interval', semis: [8,9], modes: ['ascending'] },
+        play: { type: 'interval', semis: [8,9] },
+        why: [
+          'A 6th is a big, warm leap. The minor 6th spans 8 semitones and the major 6th spans 9.',
+          'A 6th is a 3rd turned upside down. C up to A is a major 6th, and A up to the next C is a minor 3rd: flip an interval and the two always add up to an octave (12 semitones).',
+          'So the major 6th sounds bright and open, while the minor 6th has a darker, bittersweet colour, the same way the two 3rds differ.',
+          'Like 3rds, 6ths are consonant: they sound sweet together, which is why so many vocal harmonies move in 3rds and 6ths.',
+        ],
+        show: { mode: 'intervals', semis: 9 },
+      },
+      {
+        id: 'sevenths',
+        title: '7ths & the tritone',
+        goal: 'Hear the restless intervals: the tritone and the two 7ths.',
+        hear: { type: 'interval', semis: [6,10,11], modes: ['ascending'] },
+        play: { type: 'interval', semis: [6,10,11] },
+        why: [
+          'The tritone is 6 semitones, exactly half an octave. It sounds unstable and restless, as if it needs to move somewhere.',
+          'A minor 7th is 10 semitones, a whole step short of the octave. It sounds bluesy and open-ended, and it is the note that turns a major chord into a 7 chord.',
+          'A major 7th is 11 semitones, just a half step short of the octave. It sounds sharp and yearning, and it pulls hard up to the octave.',
+          'To tell the 7ths apart, imagine the octave above the first note: a whole step under it is a minor 7th, a half step under it is a major 7th.',
+        ],
+        show: { mode: 'intervals', semis: 10 },
+      },
+      {
         id: 'all-intervals',
         title: 'Every interval',
-        goal: 'Name all twelve distances, going up and going down.',
+        goal: 'Mix all twelve, going up and going down.',
         hear: { type: 'interval', semis: [1,2,3,4,5,6,7,8,9,10,11,12], modes: ['ascending','descending'] },
         play: { type: 'interval', semis: [1,2,3,4,5,6,7,8,9,10,11,12] },
         why: [
-          'There are twelve intervals inside an octave, one per semitone, and each has its own flavour.',
-          '2nds are the small steps melodies walk on; 2nds and 7ths rub against each other (dissonant), 3rds and 6ths sound sweet, and 4ths, 5ths and octaves sound open.',
-          'The tritone (6 semitones) splits the octave exactly in half and sounds restless, as if it needs to go somewhere.',
+          'You have now met all twelve intervals inside an octave, one per semitone. This unit mixes them, and adds falling intervals too.',
+          'In short: 2nds and 7ths rub against each other (dissonant), 3rds and 6ths sound sweet, 4ths, 5ths and octaves sound open, and the tritone sounds restless.',
           'A falling interval covers the same distance as a rising one, so a quick way in is to tie each to the opening of a song you already know. Tap Hint to hear one, or watch the recordings shown after each answer.',
           'Songs are a bridge, not the goal: hinted rounds don’t count towards passing, so lean on them less as the sounds become familiar.',
           'Turn on “Play the key first” to hear a short I–IV–V–I before each interval. Hearing the notes as steps of a key, rather than two notes floating on their own, is how most musicians end up recognising intervals.',
@@ -1295,6 +1336,12 @@ const MIDDLE_C   = 60;  // C4
     // guarded and bad data simply falls back to the defaults.
 
     const PROGRESS_KEY = 'music-theory-progress-v1';
+    // learn.unitIdx is a position in LEARN_UNITS. `layout` records which
+    // order it was saved against, so inserting units can't shift a learner
+    // onto the wrong one. Layout 1 (no field) is the original 8 units.
+    const LEARN_LAYOUT = 2;
+    const LEARN_LAYOUT_1 = ['pulse','perfect-intervals','thirds','major-minor-chords',
+                            'all-intervals','major-scale','dominant-7th','minor-and-modes'];
     const LEARN_STEP_NAMES = ['hear','play','why','done'];
 
     const emptyStats = () => ({ correct: 0, total: 0, recent: [] });
@@ -1305,7 +1352,7 @@ const MIDDLE_C   = 60;  // C4
       return {
         v: 1,
         quiz:  { level: 1, streak: 0, majorScaleRootsDone: [] },
-        learn: { unitIdx: 0, units },
+        learn: { unitIdx: 0, layout: LEARN_LAYOUT, units },
         settings: { keyContext: false },   // play a I–IV–V–I before each interval
       };
     }
@@ -1341,9 +1388,6 @@ const MIDDLE_C   = 60;  // C4
           }
         }
         if (d.learn) {
-          // Past the last unit (e.g. a unit was removed): keep the furthest one.
-          const ui = d.learn.unitIdx;
-          p.learn.unitIdx = Number.isInteger(ui) && ui > 0 ? Math.min(ui, LEARN_UNITS.length - 1) : 0;
           const saved = d.learn.units || {};
           LEARN_UNITS.forEach(u => {
             const su = saved[u.id];
@@ -1352,6 +1396,18 @@ const MIDDLE_C   = 60;  // C4
             if (step === 'play' && !u.play) step = 'why';
             p.learn.units[u.id] = { step, hear: cleanStats(su.hear), play: cleanStats(su.play) };
           });
+          let ui = d.learn.unitIdx;
+          if (d.learn.layout !== LEARN_LAYOUT && Number.isInteger(ui)) {
+            // Saved against the original order: find the same unit by id,
+            // then step back to the first unfinished unit before it, so
+            // units added earlier in the path get learned first.
+            const id = LEARN_LAYOUT_1[Math.max(0, Math.min(ui, LEARN_LAYOUT_1.length - 1))];
+            ui = Math.max(0, LEARN_UNITS.findIndex(u => u.id === id));
+            const open = LEARN_UNITS.findIndex((u, i) => i <= ui && p.learn.units[u.id].step !== 'done');
+            if (open >= 0) ui = open;
+          }
+          // Past the last unit (e.g. a unit was removed): keep the furthest one.
+          p.learn.unitIdx = Number.isInteger(ui) && ui > 0 ? Math.min(ui, LEARN_UNITS.length - 1) : 0;
         }
       } catch (_) { /* corrupt or unavailable: start fresh */ }
       return p;
@@ -2444,39 +2500,48 @@ const MIDDLE_C   = 60;  // C4
     // pairs, so the hint is transposed onto the question's own two notes.
     // Songs are public-domain melodies; where no well-known one exists the
     // tune is a short teaching figure (`figure: true`) instead. `pop` lists
-    // well-known recordings, embedded from YouTube only when tapped.
+    // well-known recordings, embedded from YouTube only when tapped; prefer
+    // songs from 2000 on, and keep an older one only where no well-sourced
+    // modern song exists for that interval. `start` (seconds) opens the video
+    // near the interval when it isn't at the very beginning.
     const INTERVAL_REFS = {
       up: {
         1:  { tune: { name: 'The Entertainer', cue: 'the first two notes', notes: [[0,.5],[1,.5],[2,1],[10,2]] },
-              pop: [{ title: 'Isn’t She Lovely', artist: 'Stevie Wonder', cue: '“Isn’t she”', id: 'kHInwkOJm24' }] },
-        2:  { tune: { name: 'Frère Jacques', cue: '“Frè-re”', notes: [[0,1],[2,1],[4,1],[0,1],[0,1],[2,1],[4,1],[0,1]] } },
+              pop: [{ title: 'She Will Be Loved', artist: 'Maroon 5', year: 2004, cue: '“I don’t mind spending every day”', id: 'nIjVuRTm-dc' }] },
+        2:  { tune: { name: 'Frère Jacques', cue: '“Frè-re”', notes: [[0,1],[2,1],[4,1],[0,1],[0,1],[2,1],[4,1],[0,1]] },
+              pop: [{ title: 'Today Was a Fairytale', artist: 'Taylor Swift', year: 2010, cue: '“Time slows”', id: '4dZxZDdAOQU' }] },
         3:  { tune: { name: 'Greensleeves', cue: '“A-las”', notes: [[0,1],[3,2],[5,1],[7,1.5],[8,.5],[7,1],[5,2]] },
-              pop: [{ title: 'Seven Nation Army', artist: 'The White Stripes', cue: 'the riff’s 2nd and 3rd notes', id: '0J2QdDbelmY' }] },
+              pop: [{ title: 'Seven Nation Army', artist: 'The White Stripes', year: 2003, cue: 'the riff’s 2nd and 3rd notes', id: '0J2QdDbelmY' },
+                    { title: 'Firework', artist: 'Katy Perry', year: 2010, cue: '“Do you”', id: 'QGJuMBdaqIw' }] },
         4:  { tune: { name: 'When the Saints Go Marching In', cue: '“Oh when”', notes: [[0,1],[4,1],[5,1],[7,3]] },
-              pop: [{ title: 'Morning Has Broken', artist: 'Cat Stevens', cue: '“Morn-ing”', id: 'qARB7XPfYjo' }] },
-        5:  { tune: { name: 'Here Comes the Bride', cue: '“Here comes”', notes: [[0,1],[5,.75],[5,.25],[5,2]] } },
+              pop: [{ title: 'Today Was a Fairytale', artist: 'Taylor Swift', year: 2010, cue: '“To-day”', id: '4dZxZDdAOQU' }] },
+        5:  { tune: { name: 'Here Comes the Bride', cue: '“Here comes”', notes: [[0,1],[5,.75],[5,.25],[5,2]] },
+              pop: [{ title: 'Rolling in the Deep', artist: 'Adele', year: 2010, cue: 'the chorus line “We could have had it all”', id: 'rYEDA3JcQqw' }] },
         6:  { tune: { name: 'A tritone that rises into a perfect 5th', figure: true, notes: [[0,1],[6,1.5],[7,2]] },
-              pop: [{ title: 'The Simpsons Theme', artist: 'Danny Elfman', cue: '“The Simp-”', id: 'Fttst9dG6Ko' }] },
+              pop: [{ title: 'The Simpsons Theme', artist: 'Danny Elfman', year: 1989, cue: '“The Simp-”', id: 'Fttst9dG6Ko' }] },
         7:  { tune: { name: 'Twinkle, Twinkle, Little Star', cue: 'the 2nd to the 3rd note', notes: [[0,1],[0,1],[7,1],[7,1],[9,1],[9,1],[7,2]] },
-              pop: [{ title: 'Can’t Help Falling in Love', artist: 'Elvis Presley', cue: '“Wise men”', id: 'vGJTaP6anOU' }] },
+              pop: [{ title: 'Can’t Help Falling in Love', artist: 'Elvis Presley', year: 1961, cue: '“Wise men”', id: 'vGJTaP6anOU' }] },
         8:  { tune: { name: 'The Entertainer', cue: 'the 3rd to the 4th note', notes: [[-2,.5],[-1,.5],[0,1],[8,2]] } },
         9:  { tune: { name: 'My Bonnie Lies Over the Ocean', cue: '“My Bon-”', notes: [[0,1],[9,1.5],[7,.5],[5,1],[7,1],[5,1],[2,1],[0,1],[-3,2]] } },
         10: { tune: { name: 'A whole step short of the octave, then up to it', figure: true, notes: [[0,1],[10,1.5],[12,2]] } },
         11: { tune: { name: 'A half step below the octave, rising into it', figure: true, notes: [[0,1],[11,1.5],[12,2]] },
-              pop: [{ title: 'Don’t Know Why', artist: 'Norah Jones', cue: '“I wai-”', id: 'tO4dxvguQDk' }] },
+              pop: [{ title: 'Don’t Know Why', artist: 'Norah Jones', year: 2002, cue: '“I wai-”', id: 'tO4dxvguQDk' }] },
         12: { tune: { name: 'The same note, higher', figure: true, notes: [[0,1],[12,1],[0,1],[12,2]] },
-              pop: [{ title: 'Over the Rainbow', artist: 'Judy Garland', cue: '“Some-where”', id: 'areSgU0fGp8' }] },
+              pop: [{ title: 'Over the Rainbow', artist: 'Judy Garland', year: 1939, cue: '“Some-where”', id: 'areSgU0fGp8' }] },
       },
       down: {
         1:  { tune: { name: 'Für Elise', cue: 'the first two notes', notes: [[0,.5],[-1,.5],[0,.5],[-1,.5],[0,.5],[-5,.5],[-2,.5],[-4,.5],[-7,1.5]] } },
         2:  { tune: { name: 'Mary Had a Little Lamb', cue: '“Ma-ry”', notes: [[0,1],[-2,1],[-4,1],[-2,1],[0,1],[0,1],[0,2]] },
-              pop: [{ title: 'Yesterday', artist: 'The Beatles', cue: '“Yes-ter-”', id: 'NrgmdOz227I' }] },
+              pop: [{ title: 'Yesterday', artist: 'The Beatles', year: 1965, cue: '“Yes-ter-”', id: 'NrgmdOz227I' }] },
         3:  { tune: { name: 'This Old Man', cue: '“This old”', notes: [[0,1],[-3,1],[0,2],[0,1],[-3,1],[0,2]] },
-              pop: [{ title: 'Hey Jude', artist: 'The Beatles', cue: '“Hey Jude”', id: 'A_MjCqQoLLA' }] },
+              pop: [{ title: 'Firework', artist: 'Katy Perry', year: 2010, cue: '“ev-er” in “Do you ever feel”', id: 'QGJuMBdaqIw' },
+                    { title: 'Poker Face', artist: 'Lady Gaga', year: 2008, cue: '“Can’t read my”', id: 'bESGLojNYSo' }] },
         4:  { tune: { name: 'Beethoven’s 5th Symphony', cue: 'the 3rd to the 4th note', notes: [[0,.5],[0,.5],[0,.5],[-4,3]] },
-              pop: [{ title: 'Summertime', artist: 'Ella Fitzgerald & Louis Armstrong', cue: '“Sum-mer”', id: '2HJCN3upMHE' }] },
+              pop: [{ title: 'Summertime', artist: 'Ella Fitzgerald & Louis Armstrong', year: 1957, cue: '“Sum-mer”', id: '2HJCN3upMHE' }] },
         5:  { tune: { name: 'Eine kleine Nachtmusik', cue: 'the first two notes', notes: [[0,1],[-5,.5],[0,1],[-5,.5],[0,.5],[-5,.5],[0,.5],[4,.5],[7,2]] } },
-        6:  { tune: { name: 'A falling tritone that steps up into a perfect 4th', figure: true, notes: [[0,1],[-6,1.5],[-5,2]] } },
+        6:  { tune: { name: 'A falling tritone that steps up into a perfect 4th', figure: true, notes: [[0,1],[-6,1.5],[-5,2]] },
+              // G down to C♯ (The Mix Review); the video starts just before it.
+              pop: [{ title: 'Diamonds', artist: 'Rihanna', year: 2012, cue: '“you and I” (about 0:56)', id: 'kOGBIbqXwYE', start: 50 }] },
         7:  { tune: { name: 'From the 5th down to the root, then back up the major chord', figure: true, notes: [[0,1],[-7,1],[-3,1],[0,2]] } },
         8:  { tune: { name: 'From the root down to the 3rd, then back up the major chord', figure: true, notes: [[0,1],[-8,1],[-5,1],[0,2]] } },
         9:  { tune: { name: 'From the 3rd down to the 5th, then back up the major chord', figure: true, notes: [[0,1],[-9,1],[-4,1],[0,2]] } },
@@ -2624,13 +2689,13 @@ const MIDDLE_C   = 60;  // C4
         watch.dataset.video = p.id;
         watch.textContent = '▶ Watch';
         const link = document.createElement('a');
-        link.href = `https://www.youtube.com/watch?v=${p.id}`;
+        link.href = `https://www.youtube.com/watch?v=${p.id}` + (p.start ? `&t=${p.start}s` : '');
         link.target = '_blank';
         link.rel = 'noopener';
         link.textContent = 'YouTube ↗';
         const holder = document.createElement('div');
         watch.addEventListener('click', () => toggleVideo(box, holder, p));
-        r.append(watch, refText(`${p.title} — ${p.artist}`, `listen for ${p.cue}`), link);
+        r.append(watch, refText(`${p.title} — ${p.artist}${p.year ? ` (${p.year})` : ''}`, `listen for ${p.cue}`), link);
         box.append(r, holder);
       });
       box.hidden = false;
@@ -2656,7 +2721,8 @@ const MIDDLE_C   = 60;  // C4
       const wrap = document.createElement('div');
       wrap.className = 'iv-video';
       const f = document.createElement('iframe');
-      f.src = `https://www.youtube-nocookie.com/embed/${p.id}?rel=0&playsinline=1&autoplay=1`;
+      f.src = `https://www.youtube-nocookie.com/embed/${p.id}?rel=0&playsinline=1&autoplay=1` +
+        (p.start ? `&start=${p.start}` : '');
       f.title = `${p.title} — ${p.artist}`;
       f.allow = 'autoplay; encrypted-media; picture-in-picture';
       f.referrerPolicy = 'strict-origin-when-cross-origin';
@@ -2752,6 +2818,11 @@ const MIDDLE_C   = 60;  // C4
     function defaultLearnStep(u) {
       const step = unitProgress(u.id).step;
       return step === 'done' ? 'why' : step;
+    }
+
+    // A unit is open once it is the frontier, before it, or already done.
+    function unitLocked(i) {
+      return i > progress.learn.unitIdx && unitProgress(LEARN_UNITS[i].id).step !== 'done';
     }
 
     function stepPassed(stats) {
@@ -2882,11 +2953,13 @@ const MIDDLE_C   = 60;  // C4
       const up = unitProgress(LEARN_UNITS[idx].id);
       if (up.step === 'why') {
         up.step = 'done';
-        const last = LEARN_UNITS.length - 1;
-        if (idx < last && progress.learn.unitIdx === idx) {
-          progress.learn.unitIdx = idx + 1;
-          showBanner(`Unit ${idx + 2} unlocked: ${LEARN_UNITS[idx + 1].title} 🎉`);
-        } else if (idx === last) {
+        // The next unfinished unit becomes the frontier (later units may
+        // already be done, e.g. after new units were added to the path).
+        const next = LEARN_UNITS.findIndex((u, i) => i > idx && unitProgress(u.id).step !== 'done');
+        if (next >= 0 && progress.learn.unitIdx === idx) {
+          progress.learn.unitIdx = next;
+          showBanner(`Unit ${next + 1} unlocked: ${LEARN_UNITS[next].title} 🎉`);
+        } else if (LEARN_UNITS.every(u => unitProgress(u.id).step === 'done')) {
           showBanner('Path complete — great ears! 🎉');
         }
         saveProgress();
@@ -2896,7 +2969,7 @@ const MIDDLE_C   = 60;  // C4
     }
 
     function viewLearnUnit(idx) {
-      if (idx < 0 || idx > progress.learn.unitIdx) return;   // locked
+      if (idx < 0 || idx >= LEARN_UNITS.length || unitLocked(idx)) return;
       state.learnUnitIdx = idx;
       state.learnStep = defaultLearnStep(LEARN_UNITS[idx]);
       state.learnJustPassed = false;
@@ -2942,7 +3015,7 @@ const MIDDLE_C   = 60;  // C4
       row.innerHTML = '';
       LEARN_UNITS.forEach((u, i) => {
         const done = unitProgress(u.id).step === 'done';
-        const locked = i > progress.learn.unitIdx;
+        const locked = unitLocked(i);
         const b = document.createElement('button');
         b.className = 'learn-unit' +
           (done ? ' is-done' : '') +
@@ -3276,6 +3349,13 @@ const MIDDLE_C   = 60;  // C4
           useHint:         () => learnHint(),
           setKeyContext:   (on) => setKeyContext(on),
           intervalRefs:    INTERVAL_REFS,
+          // Render the song card for an interval into the visible panel.
+          showRefs: (dir, semis) => {
+            const low = 60, down = dir === 'down';
+            const q = { kind: 'interval', mode: down ? 'descending' : 'ascending', semis,
+                        low, high: low + semis, midis: down ? [low + semis, low] : [low, low + semis] };
+            renderIntervalRefs(q, qEl('refs'));
+          },
           // What the current interval question's prompt plays (null otherwise).
           promptEvents:    () => (state.quizQuestion && state.quizQuestion.kind === 'interval'
             ? intervalPromptEvents(state.quizQuestion, progress.settings.keyContext) : null),
@@ -3301,7 +3381,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610030628';
+        const SW_VERSION = '2610040002';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
