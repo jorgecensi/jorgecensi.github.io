@@ -68,6 +68,8 @@ Only when the URL has `?debug=1`, `music-theory/index.html` exposes
   2 events normally, 6 (four I–IV–V–I triads, then the two notes) with key
   context on. `null` for other question kinds.
 - `intervalRefs` - the `INTERVAL_REFS` table (`up`/`down` by semitones).
+- `showRefs(dir, semis)` - render the song card for that interval into the
+  visible panel (used to test entries the random rounds rarely reach).
 
 Persistence blob (`music-theory-progress-v1`):
 `{ v: 1, quiz: { level, streak, majorScaleRootsDone }, learn: { unitIdx,

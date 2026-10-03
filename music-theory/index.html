@@ -2444,39 +2444,48 @@ const MIDDLE_C   = 60;  // C4
     // pairs, so the hint is transposed onto the question's own two notes.
     // Songs are public-domain melodies; where no well-known one exists the
     // tune is a short teaching figure (`figure: true`) instead. `pop` lists
-    // well-known recordings, embedded from YouTube only when tapped.
+    // well-known recordings, embedded from YouTube only when tapped; prefer
+    // songs from 2000 on, and keep an older one only where no well-sourced
+    // modern song exists for that interval. `start` (seconds) opens the video
+    // near the interval when it isn't at the very beginning.
     const INTERVAL_REFS = {
       up: {
         1:  { tune: { name: 'The Entertainer', cue: 'the first two notes', notes: [[0,.5],[1,.5],[2,1],[10,2]] },
-              pop: [{ title: 'Isn’t She Lovely', artist: 'Stevie Wonder', cue: '“Isn’t she”', id: 'kHInwkOJm24' }] },
-        2:  { tune: { name: 'Frère Jacques', cue: '“Frè-re”', notes: [[0,1],[2,1],[4,1],[0,1],[0,1],[2,1],[4,1],[0,1]] } },
+              pop: [{ title: 'She Will Be Loved', artist: 'Maroon 5', year: 2004, cue: '“I don’t mind spending every day”', id: 'nIjVuRTm-dc' }] },
+        2:  { tune: { name: 'Frère Jacques', cue: '“Frè-re”', notes: [[0,1],[2,1],[4,1],[0,1],[0,1],[2,1],[4,1],[0,1]] },
+              pop: [{ title: 'Today Was a Fairytale', artist: 'Taylor Swift', year: 2010, cue: '“Time slows”', id: '4dZxZDdAOQU' }] },
         3:  { tune: { name: 'Greensleeves', cue: '“A-las”', notes: [[0,1],[3,2],[5,1],[7,1.5],[8,.5],[7,1],[5,2]] },
-              pop: [{ title: 'Seven Nation Army', artist: 'The White Stripes', cue: 'the riff’s 2nd and 3rd notes', id: '0J2QdDbelmY' }] },
+              pop: [{ title: 'Seven Nation Army', artist: 'The White Stripes', year: 2003, cue: 'the riff’s 2nd and 3rd notes', id: '0J2QdDbelmY' },
+                    { title: 'Firework', artist: 'Katy Perry', year: 2010, cue: '“Do you”', id: 'QGJuMBdaqIw' }] },
         4:  { tune: { name: 'When the Saints Go Marching In', cue: '“Oh when”', notes: [[0,1],[4,1],[5,1],[7,3]] },
-              pop: [{ title: 'Morning Has Broken', artist: 'Cat Stevens', cue: '“Morn-ing”', id: 'qARB7XPfYjo' }] },
-        5:  { tune: { name: 'Here Comes the Bride', cue: '“Here comes”', notes: [[0,1],[5,.75],[5,.25],[5,2]] } },
+              pop: [{ title: 'Today Was a Fairytale', artist: 'Taylor Swift', year: 2010, cue: '“To-day”', id: '4dZxZDdAOQU' }] },
+        5:  { tune: { name: 'Here Comes the Bride', cue: '“Here comes”', notes: [[0,1],[5,.75],[5,.25],[5,2]] },
+              pop: [{ title: 'Rolling in the Deep', artist: 'Adele', year: 2010, cue: 'the chorus line “We could have had it all”', id: 'rYEDA3JcQqw' }] },
         6:  { tune: { name: 'A tritone that rises into a perfect 5th', figure: true, notes: [[0,1],[6,1.5],[7,2]] },
-              pop: [{ title: 'The Simpsons Theme', artist: 'Danny Elfman', cue: '“The Simp-”', id: 'Fttst9dG6Ko' }] },
+              pop: [{ title: 'The Simpsons Theme', artist: 'Danny Elfman', year: 1989, cue: '“The Simp-”', id: 'Fttst9dG6Ko' }] },
         7:  { tune: { name: 'Twinkle, Twinkle, Little Star', cue: 'the 2nd to the 3rd note', notes: [[0,1],[0,1],[7,1],[7,1],[9,1],[9,1],[7,2]] },
-              pop: [{ title: 'Can’t Help Falling in Love', artist: 'Elvis Presley', cue: '“Wise men”', id: 'vGJTaP6anOU' }] },
+              pop: [{ title: 'Can’t Help Falling in Love', artist: 'Elvis Presley', year: 1961, cue: '“Wise men”', id: 'vGJTaP6anOU' }] },
         8:  { tune: { name: 'The Entertainer', cue: 'the 3rd to the 4th note', notes: [[-2,.5],[-1,.5],[0,1],[8,2]] } },
         9:  { tune: { name: 'My Bonnie Lies Over the Ocean', cue: '“My Bon-”', notes: [[0,1],[9,1.5],[7,.5],[5,1],[7,1],[5,1],[2,1],[0,1],[-3,2]] } },
         10: { tune: { name: 'A whole step short of the octave, then up to it', figure: true, notes: [[0,1],[10,1.5],[12,2]] } },
         11: { tune: { name: 'A half step below the octave, rising into it', figure: true, notes: [[0,1],[11,1.5],[12,2]] },
-              pop: [{ title: 'Don’t Know Why', artist: 'Norah Jones', cue: '“I wai-”', id: 'tO4dxvguQDk' }] },
+              pop: [{ title: 'Don’t Know Why', artist: 'Norah Jones', year: 2002, cue: '“I wai-”', id: 'tO4dxvguQDk' }] },
         12: { tune: { name: 'The same note, higher', figure: true, notes: [[0,1],[12,1],[0,1],[12,2]] },
-              pop: [{ title: 'Over the Rainbow', artist: 'Judy Garland', cue: '“Some-where”', id: 'areSgU0fGp8' }] },
+              pop: [{ title: 'Over the Rainbow', artist: 'Judy Garland', year: 1939, cue: '“Some-where”', id: 'areSgU0fGp8' }] },
       },
       down: {
         1:  { tune: { name: 'Für Elise', cue: 'the first two notes', notes: [[0,.5],[-1,.5],[0,.5],[-1,.5],[0,.5],[-5,.5],[-2,.5],[-4,.5],[-7,1.5]] } },
         2:  { tune: { name: 'Mary Had a Little Lamb', cue: '“Ma-ry”', notes: [[0,1],[-2,1],[-4,1],[-2,1],[0,1],[0,1],[0,2]] },
-              pop: [{ title: 'Yesterday', artist: 'The Beatles', cue: '“Yes-ter-”', id: 'NrgmdOz227I' }] },
+              pop: [{ title: 'Yesterday', artist: 'The Beatles', year: 1965, cue: '“Yes-ter-”', id: 'NrgmdOz227I' }] },
         3:  { tune: { name: 'This Old Man', cue: '“This old”', notes: [[0,1],[-3,1],[0,2],[0,1],[-3,1],[0,2]] },
-              pop: [{ title: 'Hey Jude', artist: 'The Beatles', cue: '“Hey Jude”', id: 'A_MjCqQoLLA' }] },
+              pop: [{ title: 'Firework', artist: 'Katy Perry', year: 2010, cue: '“ev-er” in “Do you ever feel”', id: 'QGJuMBdaqIw' },
+                    { title: 'Poker Face', artist: 'Lady Gaga', year: 2008, cue: '“Can’t read my”', id: 'bESGLojNYSo' }] },
         4:  { tune: { name: 'Beethoven’s 5th Symphony', cue: 'the 3rd to the 4th note', notes: [[0,.5],[0,.5],[0,.5],[-4,3]] },
-              pop: [{ title: 'Summertime', artist: 'Ella Fitzgerald & Louis Armstrong', cue: '“Sum-mer”', id: '2HJCN3upMHE' }] },
+              pop: [{ title: 'Summertime', artist: 'Ella Fitzgerald & Louis Armstrong', year: 1957, cue: '“Sum-mer”', id: '2HJCN3upMHE' }] },
         5:  { tune: { name: 'Eine kleine Nachtmusik', cue: 'the first two notes', notes: [[0,1],[-5,.5],[0,1],[-5,.5],[0,.5],[-5,.5],[0,.5],[4,.5],[7,2]] } },
-        6:  { tune: { name: 'A falling tritone that steps up into a perfect 4th', figure: true, notes: [[0,1],[-6,1.5],[-5,2]] } },
+        6:  { tune: { name: 'A falling tritone that steps up into a perfect 4th', figure: true, notes: [[0,1],[-6,1.5],[-5,2]] },
+              // G down to C♯ (The Mix Review); the video starts just before it.
+              pop: [{ title: 'Diamonds', artist: 'Rihanna', year: 2012, cue: '“you and I” (about 0:56)', id: 'kOGBIbqXwYE', start: 50 }] },
         7:  { tune: { name: 'From the 5th down to the root, then back up the major chord', figure: true, notes: [[0,1],[-7,1],[-3,1],[0,2]] } },
         8:  { tune: { name: 'From the root down to the 3rd, then back up the major chord', figure: true, notes: [[0,1],[-8,1],[-5,1],[0,2]] } },
         9:  { tune: { name: 'From the 3rd down to the 5th, then back up the major chord', figure: true, notes: [[0,1],[-9,1],[-4,1],[0,2]] } },
@@ -2624,13 +2633,13 @@ const MIDDLE_C   = 60;  // C4
         watch.dataset.video = p.id;
         watch.textContent = '▶ Watch';
         const link = document.createElement('a');
-        link.href = `https://www.youtube.com/watch?v=${p.id}`;
+        link.href = `https://www.youtube.com/watch?v=${p.id}` + (p.start ? `&t=${p.start}s` : '');
         link.target = '_blank';
         link.rel = 'noopener';
         link.textContent = 'YouTube ↗';
         const holder = document.createElement('div');
         watch.addEventListener('click', () => toggleVideo(box, holder, p));
-        r.append(watch, refText(`${p.title} — ${p.artist}`, `listen for ${p.cue}`), link);
+        r.append(watch, refText(`${p.title} — ${p.artist}${p.year ? ` (${p.year})` : ''}`, `listen for ${p.cue}`), link);
         box.append(r, holder);
       });
       box.hidden = false;
@@ -2656,7 +2665,8 @@ const MIDDLE_C   = 60;  // C4
       const wrap = document.createElement('div');
       wrap.className = 'iv-video';
       const f = document.createElement('iframe');
-      f.src = `https://www.youtube-nocookie.com/embed/${p.id}?rel=0&playsinline=1&autoplay=1`;
+      f.src = `https://www.youtube-nocookie.com/embed/${p.id}?rel=0&playsinline=1&autoplay=1` +
+        (p.start ? `&start=${p.start}` : '');
       f.title = `${p.title} — ${p.artist}`;
       f.allow = 'autoplay; encrypted-media; picture-in-picture';
       f.referrerPolicy = 'strict-origin-when-cross-origin';
@@ -3276,6 +3286,13 @@ const MIDDLE_C   = 60;  // C4
           useHint:         () => learnHint(),
           setKeyContext:   (on) => setKeyContext(on),
           intervalRefs:    INTERVAL_REFS,
+          // Render the song card for an interval into the visible panel.
+          showRefs: (dir, semis) => {
+            const low = 60, down = dir === 'down';
+            const q = { kind: 'interval', mode: down ? 'descending' : 'ascending', semis,
+                        low, high: low + semis, midis: down ? [low + semis, low] : [low, low + semis] };
+            renderIntervalRefs(q, qEl('refs'));
+          },
           // What the current interval question's prompt plays (null otherwise).
           promptEvents:    () => (state.quizQuestion && state.quizQuestion.kind === 'interval'
             ? intervalPromptEvents(state.quizQuestion, progress.settings.keyContext) : null),
@@ -3301,7 +3318,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610030628';
+        const SW_VERSION = '2610040001';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }

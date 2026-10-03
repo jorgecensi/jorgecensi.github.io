@@ -27,7 +27,11 @@ run(async () => {
         const want = dir === 'up' ? n : -n;
         const ok = offs.some((o, i) => o === 0 && offs[i + 1] === want);
         if (!ok) out.push(`${dir} ${n}: no 0 -> ${want} step in ${JSON.stringify(offs)}`);
-        (r.pop || []).forEach(p => { if (!/^[\w-]{11}$/.test(p.id)) out.push(`${dir} ${n}: bad video id ${p.id}`); });
+        (r.pop || []).forEach(p => {
+          if (!/^[\w-]{11}$/.test(p.id)) out.push(`${dir} ${n}: bad video id ${p.id}`);
+          if (p.start != null && !(Number.isInteger(p.start) && p.start > 0)) out.push(`${dir} ${n}: bad start ${p.start}`);
+          if (!Number.isInteger(p.year)) out.push(`${dir} ${n}: ${p.title} has no year`);
+        });
       }
     }
     return out;
@@ -89,6 +93,25 @@ run(async () => {
     await page.locator('#learn-next-btn').click();
   }
   assert(watched, 'within 20 rounds of unit 2 a song with a video came up (5th or octave)');
+
+  // A recording with a start time opens there, in the embed and the link.
+  const startRef = await mt(() => {
+    const refs = window.__musicTheory.intervalRefs;
+    for (const dir of ['up', 'down']) for (const n in refs[dir]) {
+      const p = (refs[dir][n].pop || []).find(x => x.start);
+      if (p) return { dir, n: +n, id: p.id, start: p.start };
+    }
+    return null;
+  });
+  assert(startRef, 'at least one recording has a start time');
+  await mt((r) => window.__musicTheory.showRefs(r.dir, r.n), startRef);
+  const startBtn = page.locator(`#learn-refs [data-video="${startRef.id}"]`);
+  const startLink = await startBtn.locator('xpath=..').locator('a').getAttribute('href');
+  assert(startLink.endsWith(`&t=${startRef.start}s`), 'the YouTube link opens at the start time, got ' + startLink);
+  await startBtn.click();
+  const startSrc = await page.locator('#learn-refs iframe').getAttribute('src');
+  assert(startSrc.includes(`&start=${startRef.start}`), 'the embed opens at the start time, got ' + startSrc);
+  await startBtn.click();
 
   // ── Key context: off plays two notes, on plays I–IV–V–I first ──
   let ev = await mt(() => window.__musicTheory.promptEvents());
