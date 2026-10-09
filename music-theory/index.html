@@ -96,6 +96,7 @@ title: Music Theory
       cursor: pointer;
       transition: background 0.15s;
     }
+    .instrument-select { min-width: 0; margin-left: auto; padding: 5px 26px 5px 10px; }
     #install-btn.visible { display: flex; }
     #install-btn:hover { background: var(--accent-glow); }
 
@@ -727,6 +728,12 @@ title: Music Theory
       background: #000;
     }
     .iv-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .round-instrument {
+      font-size: 12px;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .round-instrument:not(:empty)::before { content: '🎵 '; }
     .key-context {
       display: flex;
       white-space: nowrap;
@@ -814,6 +821,7 @@ title: Music Theory
       <span class="header-icon">🎹</span>
       Music Theory
     </div>
+    <select id="instrument-select" class="instrument-select" aria-label="Instrument sound"></select>
     <button id="install-btn" aria-label="Install app">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
       Install
@@ -850,6 +858,10 @@ title: Music Theory
           <label class="key-context" id="learn-keyctx-row" title="Plays I–IV–V–I in the key before each interval" hidden>
             <input type="checkbox" class="keyctx-toggle" id="learn-keyctx"> Play the key first
           </label>
+          <label class="key-context" title="Each question plays on a random instrument">
+            <input type="checkbox" id="learn-mix"> Mix instruments
+          </label>
+          <span class="round-instrument" id="learn-instrument" aria-live="polite"></span>
           <div class="learn-meter" id="learn-meter" style="margin-left:auto"></div>
         </div>
         <div class="quiz-staff" id="learn-staff" aria-hidden="true"></div>
@@ -950,6 +962,7 @@ title: Music Theory
           <label class="key-context" id="quiz-keyctx-row" title="Plays I–IV–V–I in the key before each interval" hidden>
             <input type="checkbox" class="keyctx-toggle" id="quiz-keyctx"> Play the key first
           </label>
+          <span class="round-instrument" id="quiz-instrument" aria-live="polite"></span>
         </div>
         <div class="quiz-staff" id="quiz-staff" aria-hidden="true"></div>
         <div class="quiz-options" id="quiz-options"></div>
@@ -1344,6 +1357,56 @@ const MIDDLE_C   = 60;  // C4
                             'all-intervals','major-scale','dominant-7th','minor-and-modes'];
     const LEARN_STEP_NAMES = ['hear','play','why','done'];
 
+    // Sounds for the keyboard and every Play button. Piano is the Salamander
+    // samples and Electric piano a Tone.js synth; the rest are recordings from
+    // tonejs-instruments, self-hosted under /music-theory/samples/<id>/ and built
+    // by tools/music-theory-samples/. `notes` are the sampled pitches ("As1" is
+    // A#1); Tone.Sampler repitches the notes in between.
+    const INSTRUMENTS = [
+      { id: 'piano',           label: 'Piano',           group: 'Keys' },
+      { id: 'epiano',          label: 'Electric piano',  group: 'Keys' },
+      { id: 'organ',           label: 'Organ',           group: 'Keys',
+        notes: ['C1','Ds1','Fs1','A1','C2','Ds2','Fs2','A2','C3','Ds3','Fs3','A3','C4','Ds4','Fs4','A4','C5','Ds5','Fs5','A5','C6'] },
+      { id: 'harmonium',       label: 'Harmonium',       group: 'Keys',
+        notes: ['C2','Ds2','Fs2','A2','C3','Ds3','Fs3','A3','C4','Ds4','G4','As4','Cs5'] },
+      { id: 'violin',          label: 'Violin',          group: 'Strings',
+        notes: ['G3','C4','E4','G4','C5','E5','G5','C6','E6','G6','C7'] },
+      { id: 'cello',           label: 'Cello',           group: 'Strings',
+        notes: ['C2','Ds2','G2','As2','Cs3','E3','G3','As3','Cs4','E4','G4','B4'] },
+      { id: 'contrabass',      label: 'Double bass',     group: 'Strings',
+        notes: ['Fs1','As1','D2','Fs2','A2','Cs3','E3','Gs3','B3'] },
+      { id: 'harp',            label: 'Harp',            group: 'Strings',
+        notes: ['E1','G1','B1','D2','F2','A2','C3','E3','G3','B3','D4','F4','A4','C5','E5','G5','B5','D6','F6','A6','D7','F7'] },
+      { id: 'guitar-acoustic', label: 'Acoustic guitar', group: 'Guitars',
+        notes: ['D2','F2','Gs2','B2','D3','F3','Gs3','B3','D4','F4','Gs4','B4','D5'] },
+      { id: 'guitar-nylon',    label: 'Nylon guitar',    group: 'Guitars',
+        notes: ['B1','D2','Fs2','A2','Cs3','E3','G3','B3','Ds4','Fs4','A4','Cs5','E5','G5','As5'] },
+      { id: 'guitar-electric', label: 'Electric guitar', group: 'Guitars',
+        notes: ['Cs2','E2','A2','C3','Ds3','Fs3','A3','C4','Ds4','Fs4','A4','C5','Ds5','Fs5','A5','C6'] },
+      { id: 'bass-electric',   label: 'Electric bass',   group: 'Guitars',
+        notes: ['Cs1','E1','G1','As1','Cs2','E2','G2','As2','Cs3','E3','G3','As3','Cs4','E4','G4','As4','Cs5'] },
+      { id: 'flute',           label: 'Flute',           group: 'Woodwinds',
+        notes: ['C4','E4','A4','C5','E5','A5','C6','E6','A6','C7'] },
+      { id: 'clarinet',        label: 'Clarinet',        group: 'Woodwinds',
+        notes: ['D3','F3','As3','D4','F4','As4','D5','F5','As5','D6','F6'] },
+      { id: 'saxophone',       label: 'Saxophone',       group: 'Woodwinds',
+        notes: ['Cs3','E3','G3','As3','Cs4','E4','G4','As4','Cs5','E5','G5'] },
+      { id: 'bassoon',         label: 'Bassoon',         group: 'Woodwinds',
+        notes: ['G2','C3','G3','C4','E4','G4','C5'] },
+      { id: 'trumpet',         label: 'Trumpet',         group: 'Brass',
+        notes: ['F3','A3','C4','Ds4','G4','As4','D5','F5','A5','C6'] },
+      { id: 'french-horn',     label: 'French horn',     group: 'Brass',
+        notes: ['A1','C2','Ds2','G2','D3','F3','A3','C4','D5','F5'] },
+      { id: 'trombone',        label: 'Trombone',        group: 'Brass',
+        notes: ['As1','Cs2','F2','Gs2','C3','Ds3','Gs3','C4','Ds4'] },
+      { id: 'tuba',            label: 'Tuba',            group: 'Brass',
+        notes: ['F1','As1','Ds2','As2','D3','F3','As3','D4'] },
+      { id: 'xylophone',       label: 'Xylophone',       group: 'Percussion',
+        notes: ['G4','C5','G5','C6','G6','C7','G7','C8'] },
+    ];
+    const INSTRUMENT_IDS = INSTRUMENTS.map(i => i.id);
+    const RANDOM_INSTRUMENT = 'random';   // picker value: a new sound every question
+
     const emptyStats = () => ({ correct: 0, total: 0, recent: [] });
 
     function defaultProgress() {
@@ -1353,7 +1416,9 @@ const MIDDLE_C   = 60;  // C4
         v: 1,
         quiz:  { level: 1, streak: 0, majorScaleRootsDone: [] },
         learn: { unitIdx: 0, layout: LEARN_LAYOUT, units },
-        settings: { keyContext: false },   // play a I–IV–V–I before each interval
+        settings: { keyContext: false,     // play a I–IV–V–I before each interval
+                    instrument: 'piano',   // an INSTRUMENTS id, or RANDOM_INSTRUMENT
+                    learnMix: true },      // Learn rounds use a random instrument
       };
     }
 
@@ -1378,6 +1443,9 @@ const MIDDLE_C   = 60;  // C4
         if (!d || d.v !== 1) return p;
         if (d.settings && typeof d.settings === 'object') {
           p.settings.keyContext = d.settings.keyContext === true;
+          const inst = d.settings.instrument;
+          if (inst === RANDOM_INSTRUMENT || INSTRUMENT_IDS.includes(inst)) p.settings.instrument = inst;
+          p.settings.learnMix = d.settings.learnMix !== false;
         }
         if (d.quiz) {
           p.quiz.level  = toInt(d.quiz.level, 1, 3, 1);
@@ -1435,37 +1503,185 @@ const MIDDLE_C   = 60;  // C4
       state.learnLastQ = null;
     }
 
-    // ── Audio (Tone.js Salamander piano) ──────────────────────────────────────
+    // ── Audio (instruments) ───────────────────────────────────────────────────
+    // Each instrument is a { voice, out, ready, failed, loaded } record built on
+    // first use. `voice` takes triggerAttack / triggerRelease /
+    // triggerAttackRelease, `out` is the node that reaches the speakers (only the
+    // active instrument stays connected), and `loaded` settles once its samples
+    // have loaded or failed.
 
-    let samplerReady = false;
+    const SALAMANDER_URLS = {
+      'A0':'A0.mp3',  'C1':'C1.mp3',  'D#1':'Ds1.mp3', 'F#1':'Fs1.mp3',
+      'A1':'A1.mp3',  'C2':'C2.mp3',  'D#2':'Ds2.mp3', 'F#2':'Fs2.mp3',
+      'A2':'A2.mp3',  'C3':'C3.mp3',  'D#3':'Ds3.mp3', 'F#3':'Fs3.mp3',
+      'A3':'A3.mp3',  'C4':'C4.mp3',  'D#4':'Ds4.mp3', 'F#4':'Fs4.mp3',
+      'A4':'A4.mp3',  'C5':'C5.mp3',  'D#5':'Ds5.mp3', 'F#5':'Fs5.mp3',
+      'A5':'A5.mp3',  'C6':'C6.mp3',  'D#6':'Ds6.mp3', 'F#6':'Fs6.mp3',
+      'A6':'A6.mp3',  'C7':'C7.mp3',  'D#7':'Ds7.mp3', 'F#7':'Fs7.mp3',
+      'A7':'A7.mp3',  'C8':'C8.mp3',
+    };
 
-    const sampler = new Tone.Sampler({
-      urls: {
-        'A0':'A0.mp3',  'C1':'C1.mp3',  'D#1':'Ds1.mp3', 'F#1':'Fs1.mp3',
-        'A1':'A1.mp3',  'C2':'C2.mp3',  'D#2':'Ds2.mp3', 'F#2':'Fs2.mp3',
-        'A2':'A2.mp3',  'C3':'C3.mp3',  'D#3':'Ds3.mp3', 'F#3':'Fs3.mp3',
-        'A3':'A3.mp3',  'C4':'C4.mp3',  'D#4':'Ds4.mp3', 'F#4':'Fs4.mp3',
-        'A4':'A4.mp3',  'C5':'C5.mp3',  'D#5':'Ds5.mp3', 'F#5':'Fs5.mp3',
-        'A5':'A5.mp3',  'C6':'C6.mp3',  'D#6':'Ds6.mp3', 'F#6':'Fs6.mp3',
-        'A6':'A6.mp3',  'C7':'C7.mp3',  'D#7':'Ds7.mp3', 'F#7':'Fs7.mp3',
-        'A7':'A7.mp3',  'C8':'C8.mp3',
-      },
-      release: 1.2,
-      baseUrl: 'https://tonejs.github.io/audio/salamander/',
-      onload: () => {
-        samplerReady = true;
-        document.getElementById('keyboard-loading').classList.add('hidden');
-      },
-      onerror: (err) => {
-        console.error('Failed to load piano samples', err);
-        const loading = document.getElementById('keyboard-loading');
-        const label = loading && loading.querySelector('span');
-        if (label) label.textContent = 'Could not load piano sounds. Check your connection and reload.';
-      },
-    }).toDestination();
+    // How far past its lowest / highest sample an instrument may be stretched
+    // before a random pick skips it for a question.
+    const SAMPLE_STRETCH = 5;
 
     function midiToNoteName(midi) {
       return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
+    }
+
+    // "As1" -> 34 (A#1)
+    function sampleMidi(stem) {
+      const [, letter, sharp, octave] = stem.match(/^([A-G])(s?)(\d)$/);
+      return (+octave + 1) * 12 + 'C D EF G A B'.indexOf(letter) + (sharp ? 1 : 0);
+    }
+
+    const instrumentDef = (id) => INSTRUMENTS.find(i => i.id === id);
+
+    // The lowest and highest MIDI note the instrument can play convincingly.
+    function instrumentRange(id) {
+      const def = instrumentDef(id);
+      if (!def.notes) return [21, 108];
+      const ms = def.notes.map(sampleMidi);
+      return [Math.min(...ms) - SAMPLE_STRETCH, Math.max(...ms) + SAMPLE_STRETCH];
+    }
+
+    function buildInstrument(id) {
+      const def = instrumentDef(id);
+      const rec = { ready: false, failed: false };
+      if (id === 'epiano') {
+        const poly = new Tone.PolySynth(Tone.FMSynth, {
+          harmonicity: 3, modulationIndex: 5, oscillator: { type: 'sine' },
+          envelope: { attack: 0.003, decay: 1.4, sustain: 0.1, release: 1.2 },
+          modulation: { type: 'sine' },
+          modulationEnvelope: { attack: 0.002, decay: 0.6, sustain: 0, release: 0.6 },
+        });
+        poly.volume.value = -6;
+        Object.assign(rec, { voice: poly, out: poly, ready: true, loaded: Promise.resolve() });
+        return rec;
+      }
+      const piano = id === 'piano';
+      rec.loaded = new Promise(resolve => {
+        const sampler = new Tone.Sampler({
+          urls: piano ? SALAMANDER_URLS
+                      : Object.fromEntries(def.notes.map(n => [n.replace('s', '#'), n + '.mp3'])),
+          release: piano ? 1.2 : 0.8,
+          baseUrl: piano ? 'https://tonejs.github.io/audio/salamander/' : `/music-theory/samples/${id}/`,
+          onload: () => {
+            rec.ready = true;
+            if (id === instrumentId) updateLoadingOverlay();
+            resolve();
+          },
+          onerror: (err) => {
+            rec.failed = true;
+            console.error(`Failed to load ${def.label} samples`, err);
+            if (id === instrumentId) updateLoadingOverlay();
+            resolve();
+          },
+        });
+        rec.voice = rec.out = sampler;
+      });
+      return rec;
+    }
+
+    const instruments = {};      // id -> record, built on first use
+    let instrumentId = 'piano';  // the instrument sounding now
+
+    function instrument(id = instrumentId) {
+      return instruments[id] || (instruments[id] = buildInstrument(id));
+    }
+
+    const voice = () => instrument().voice;
+    const instrumentReady = () => instrument().ready;
+
+    function updateLoadingOverlay() {
+      const rec = instrument();
+      const loading = document.getElementById('keyboard-loading');
+      loading.classList.toggle('hidden', rec.ready);
+      const name = instrumentDef(instrumentId).label.toLowerCase();
+      loading.querySelector('span').textContent = rec.failed
+        ? `Could not load ${name} sounds. Check your connection and reload.`
+        : `Loading ${name} sounds…`;
+    }
+
+    // Switch what's sounding (not the saved choice: see chooseInstrument).
+    function useInstrument(id) {
+      if (!INSTRUMENT_IDS.includes(id)) id = 'piano';
+      if (id !== instrumentId || !instruments[id]) {
+        releaseAllNotes();
+        instrumentId = id;
+        Object.values(instruments).forEach(i => i.out.disconnect());
+        instrument(id).out.toDestination();
+      }
+      updateLoadingOverlay();
+      document.querySelectorAll('.round-instrument').forEach(el => {
+        el.textContent = instrumentDef(id).label;
+      });
+    }
+
+    // Load every instrument, one after another, so random picks have more to
+    // choose from. A sample set that never reports back is skipped after 20s.
+    let preloadStarted = false;
+    function preloadInstruments() {
+      if (preloadStarted) return;
+      preloadStarted = true;
+      const queue = INSTRUMENT_IDS.filter(id => !instruments[id] || !instruments[id].ready);
+      const next = () => {
+        const id = queue.shift();
+        if (!id) return;
+        Promise.race([instrument(id).loaded, new Promise(r => setTimeout(r, 20000))]).then(next);
+      };
+      next();
+    }
+
+    // Every note a question will sound, including the key-context cadence.
+    function questionMidis(q) {
+      const ms = [...(q.midis || []), ...(q.givenMidis || []), ...(q.hintMidis || [])];
+      if (q.rootMidi != null) ms.push(q.rootMidi);
+      if (q.kind === 'interval' && progress.settings.keyContext && ms.length) {
+        ms.push(Math.min(...ms) - 13);
+      }
+      return ms.length ? ms : [64];   // rhythm prompts play E4
+    }
+
+    // A loaded instrument that can reach every note, preferring a change of
+    // sound from the last question.
+    function pickRandomInstrument(midis) {
+      preloadInstruments();
+      instrument('epiano');   // a synth: always ready, so the pool is never empty
+      const fits = INSTRUMENT_IDS.filter(id => {
+        if (!instruments[id] || !instruments[id].ready) return false;
+        const [lo, hi] = instrumentRange(id);
+        return midis.every(m => m >= lo && m <= hi);
+      });
+      const fresh = fits.filter(id => id !== instrumentId);
+      const pool = fresh.length ? fresh : fits;
+      return pool.length ? pool[Math.floor(Math.random() * pool.length)] : instrumentId;
+    }
+
+    const roundIsRandom = () => progress.settings.instrument === RANDOM_INSTRUMENT ||
+                                (state.mode === 'learn' && progress.settings.learnMix);
+
+    // The sound for a new round: a random one in mixed mode, else the picker's.
+    function chooseRoundInstrument(q) {
+      useInstrument(roundIsRandom() ? pickRandomInstrument(questionMidis(q)) : chosenInstrument());
+    }
+
+    const chosenInstrument = () => progress.settings.instrument === RANDOM_INSTRUMENT
+      ? instrumentId : progress.settings.instrument;
+
+    // The header picker: save the choice and switch to it.
+    function chooseInstrument(id) {
+      progress.settings.instrument = id === RANDOM_INSTRUMENT || INSTRUMENT_IDS.includes(id) ? id : 'piano';
+      saveProgress();
+      const sel = document.getElementById('instrument-select');
+      if (sel.value !== progress.settings.instrument) sel.value = progress.settings.instrument;
+      useInstrument(id === RANDOM_INSTRUMENT ? pickRandomInstrument([]) : chosenInstrument());
+    }
+
+    function setLearnMix(on) {
+      progress.settings.learnMix = !!on;
+      document.getElementById('learn-mix').checked = !!on;
+      saveProgress();
     }
 
     // Browsers suspend (or on iOS "interrupt") the audio context when the app
@@ -1487,20 +1703,26 @@ const MIDDLE_C   = 60;  // C4
       }
     }
 
+    // Start audio, then re-check the instrument: while waiting, a new round or
+    // tab may have switched to one whose samples are still loading.
+    async function readyToPlay() {
+      return (await ensureAudioStarted()) && instrumentReady();
+    }
+
     async function playNote(midi) {
-      if (!samplerReady) return;
-      if (!(await ensureAudioStarted())) return;
-      sampler.triggerAttackRelease(midiToNoteName(midi), '8n');
+      if (!instrumentReady()) return;
+      if (!(await readyToPlay())) return;
+      voice().triggerAttackRelease(midiToNoteName(midi), '8n');
     }
 
     const heldNotes = new Set();
 
     async function startNote(midi) {
-      if (!samplerReady) return;
-      if (!(await ensureAudioStarted())) return;
+      if (!instrumentReady()) return;
+      if (!(await readyToPlay())) return;
       if (!heldNotes.has(midi)) {
         heldNotes.add(midi);
-        sampler.triggerAttack(midiToNoteName(midi));
+        voice().triggerAttack(midiToNoteName(midi));
       }
     }
 
@@ -1512,33 +1734,33 @@ const MIDDLE_C   = 60;  // C4
     }
 
     function stopNote(midi) {
-      if (!samplerReady) return;
+      if (!instrumentReady()) return;
       if (heldNotes.has(midi)) {
         heldNotes.delete(midi);
-        sampler.triggerRelease(midiToNoteName(midi));
+        voice().triggerRelease(midiToNoteName(midi));
       }
     }
 
     async function playChord(midiNotes) {
-      if (!samplerReady) return;
-      if (!(await ensureAudioStarted())) return;
+      if (!instrumentReady()) return;
+      if (!(await readyToPlay())) return;
       const now = Tone.now();
-      midiNotes.forEach(m => sampler.triggerAttackRelease(midiToNoteName(m), '2n', now));
+      midiNotes.forEach(m => voice().triggerAttackRelease(midiToNoteName(m), '2n', now));
     }
 
     async function playArpeggiated(midiNotes, step = 0.13) {
-      if (!samplerReady) return;
-      if (!(await ensureAudioStarted())) return;
+      if (!instrumentReady()) return;
+      if (!(await readyToPlay())) return;
       const now = Tone.now();
-      midiNotes.forEach((m, i) => sampler.triggerAttackRelease(midiToNoteName(m), '4n', now + i * step));
+      midiNotes.forEach((m, i) => voice().triggerAttackRelease(midiToNoteName(m), '4n', now + i * step));
     }
 
     async function playScaleSequence(midiNotes) {
-      if (!samplerReady) return;
-      if (!(await ensureAudioStarted())) return;
+      if (!instrumentReady()) return;
+      if (!(await readyToPlay())) return;
       const now = Tone.now();
       const step = 0.22;
-      midiNotes.forEach((m, i) => sampler.triggerAttackRelease(midiToNoteName(m), '8n', now + i * step));
+      midiNotes.forEach((m, i) => voice().triggerAttackRelease(midiToNoteName(m), '8n', now + i * step));
     }
 
     // ── Keyboard ──────────────────────────────────────────────────────────────
@@ -2057,6 +2279,7 @@ const MIDDLE_C   = 60;  // C4
       fb.className = 'quiz-feedback';
       qEl('next-btn').style.visibility = 'hidden';
 
+      chooseRoundInstrument(q);
       measurePlayingUntil = 0;
       // Notated measures are read first; everything else plays straight away.
       if (!hasStaff) playQuestion(q);
@@ -2349,12 +2572,12 @@ const MIDDLE_C   = 60;  // C4
     let measurePlayingUntil = 0;
 
     async function playEvents(events) {
-      if (!samplerReady || performance.now() < measurePlayingUntil) return;
-      if (!(await ensureAudioStarted())) return;
+      if (!instrumentReady() || performance.now() < measurePlayingUntil) return;
+      if (!(await readyToPlay())) return;
       const now = Tone.now() + 0.05;
       let end = 0;
       events.forEach(e => {
-        e.notes.forEach(n => sampler.triggerAttackRelease(n, e.dur, now + e.t, e.vel));
+        e.notes.forEach(n => voice().triggerAttackRelease(n, e.dur, now + e.t, e.vel));
         end = Math.max(end, e.t + e.dur);
       });
       measurePlayingUntil = performance.now() + end * 1000;
@@ -3169,7 +3392,7 @@ const MIDDLE_C   = 60;  // C4
       try { localStorage.removeItem(PROGRESS_KEY); } catch (_) {}
       progress = defaultProgress();
       progress.settings = settings;
-      if (settings.keyContext) saveProgress();
+      if (JSON.stringify(settings) !== JSON.stringify(defaultProgress().settings)) saveProgress();
       applyProgress();
       state.quizScore = { correct: 0, total: 0 };
       document.getElementById('quiz-score').textContent = '— / —';
@@ -3224,6 +3447,8 @@ const MIDDLE_C   = 60;  // C4
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       document.getElementById(`panel-${mode}`).classList.add('active');
 
+      // Explore tabs play the picker's instrument, not the last round's.
+      if (mode !== 'learn' && mode !== 'quiz') useInstrument(chosenInstrument());
       updateHighlight();
       if (mode === 'intervals') updateIntervalDisplay();
       if (mode === 'quiz') { clearHighlight(); startQuizRound(); }
@@ -3324,6 +3549,20 @@ const MIDDLE_C   = 60;  // C4
         if (confirm('Reset all progress? This clears the Learn path and your Quiz level.')) resetProgress();
       });
 
+      // Instrument picker (grouped by family) and the Learn "Mix instruments" toggle
+      const instrumentSel = document.getElementById('instrument-select');
+      const groups = [...new Set(INSTRUMENTS.map(i => i.group))];
+      instrumentSel.innerHTML = `<option value="${RANDOM_INSTRUMENT}">🎲 Random</option>` +
+        groups.map(g => `<optgroup label="${g}">` + INSTRUMENTS.filter(i => i.group === g)
+          .map(i => `<option value="${i.id}">${i.label}</option>`).join('') + '</optgroup>').join('');
+      instrumentSel.value = progress.settings.instrument;
+      useInstrument(chosenInstrument());
+      if (progress.settings.instrument === RANDOM_INSTRUMENT) preloadInstruments();
+      instrumentSel.addEventListener('change', () => chooseInstrument(instrumentSel.value));
+      const mixCb = document.getElementById('learn-mix');
+      mixCb.checked = progress.settings.learnMix;
+      mixCb.addEventListener('change', () => setLearnMix(mixCb.checked));
+
       // Initial display — the app opens on the Learn path
       updateScaleDisplay();
       updateChordDisplay();
@@ -3349,6 +3588,15 @@ const MIDDLE_C   = 60;  // C4
           useHint:         () => learnHint(),
           setKeyContext:   (on) => setKeyContext(on),
           intervalRefs:    INTERVAL_REFS,
+          get instrument() { return instrumentId; },
+          instrumentIds:   INSTRUMENT_IDS,
+          chooseInstrument: (id) => chooseInstrument(id),
+          setLearnMix:     (on) => setLearnMix(on),
+          // Wait until one instrument's samples have loaded (true) or failed (false).
+          loadInstrument:  (id) => instrument(id).loaded.then(() => instruments[id].ready),
+          // [lo, hi] MIDI notes a random pick will use the instrument for.
+          instrumentRange: (id) => instrumentRange(id),
+          playChord:       (midis) => playChord(midis),
           // Render the song card for an interval into the visible panel.
           showRefs: (dir, semis) => {
             const low = 60, down = dir === 'down';
@@ -3381,7 +3629,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610031148';
+        const SW_VERSION = '2610090752';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }

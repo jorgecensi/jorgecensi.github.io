@@ -65,6 +65,15 @@ Only when the URL has `?debug=1`, `music-theory/index.html` exposes
   as hinted (it then does not count towards passing) and shows the song card.
   Returns `false` outside an unanswered interval round.
 - `setKeyContext(on)` - the "Play the key first" setting.
+- `instrument` (getter) - the instrument sounding now (a Learn round's random
+  pick, or the picker's choice). `instrumentIds` lists every id.
+- `chooseInstrument(id)` - same as the header picker (an id or `'random'`).
+- `setLearnMix(on)` - the Learn "Mix instruments" toggle.
+- `loadInstrument(id)` - resolves `true` once that instrument's samples have
+  loaded, `false` if they failed.
+- `instrumentRange(id)` - `[lo, hi]` MIDI notes a random pick will use it for.
+- `playChord(midis)` - plays through the active instrument, so specs can
+  exercise each sound without the keyboard.
 - `promptEvents()` - what the current interval question's prompt plays:
   2 events normally, 6 (four I–IV–V–I triads, then the two notes) with key
   context on. `null` for other question kinds.
@@ -75,7 +84,8 @@ Only when the URL has `?debug=1`, `music-theory/index.html` exposes
 Persistence blob (`music-theory-progress-v1`):
 `{ v: 1, quiz: { level, streak, majorScaleRootsDone }, learn: { unitIdx, layout,
 units: { [id]: { step: 'hear'|'play'|'why'|'done', hear: { correct, total,
-recent }, play: { ... } } } }, settings: { keyContext } }`.
+recent }, play: { ... } } } }, settings: { keyContext, instrument, learnMix } }`.
+`instrument` is an instrument id or `'random'`; `learnMix` defaults to `true`.
 
 Step rule: a hear/play step passes when `total >= 10` and the last 10 answers
 (`recent`) contain >= 8 correct. Passing `why` (`gotIt()`) marks the unit
@@ -83,6 +93,12 @@ done and increments `unitIdx`.
 
 ## What each spec covers
 
+- **instruments.spec.js** - every self-hosted sample set loads and plays a
+  chord; Learn with "Mix instruments" varies the sound across rounds and only
+  picks instruments whose range covers the question's notes; explore tabs and
+  Quiz follow the picker, and its Random option varies Quiz rounds; with mixing
+  off Learn uses the picker; both settings persist across reload and reset; an
+  unknown saved instrument falls back to piano.
 - **smoke.spec.js** - loads with `?debug=1`, no page errors, debug API
   present, Learn is the active tab with `#panel-learn` visible, the 11 unit ids
   in order, `switchMode('scales')` shows `#panel-scales`.
