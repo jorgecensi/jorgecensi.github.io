@@ -96,6 +96,7 @@ title: Music Theory
       cursor: pointer;
       transition: background 0.15s;
     }
+    .instrument-select { min-width: 0; margin-left: auto; padding: 5px 26px 5px 10px; }
     #install-btn.visible { display: flex; }
     #install-btn:hover { background: var(--accent-glow); }
 
@@ -814,6 +815,7 @@ title: Music Theory
       <span class="header-icon">🎹</span>
       Music Theory
     </div>
+    <select id="instrument-select" class="instrument-select" aria-label="Instrument sound"></select>
     <button id="install-btn" aria-label="Install app">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
       Install
@@ -1344,6 +1346,19 @@ const MIDDLE_C   = 60;  // C4
                             'all-intervals','major-scale','dominant-7th','minor-and-modes'];
     const LEARN_STEP_NAMES = ['hear','play','why','done'];
 
+    // Sounds for the keyboard and every Play button. Piano is the Salamander
+    // samples; the rest are Tone.js synths built in the Audio section.
+    const INSTRUMENTS = [
+      { id: 'piano',   label: 'Piano' },
+      { id: 'epiano',  label: 'Electric piano' },
+      { id: 'guitar',  label: 'Guitar' },
+      { id: 'marimba', label: 'Marimba' },
+      { id: 'organ',   label: 'Organ' },
+      { id: 'strings', label: 'Strings' },
+      { id: 'flute',   label: 'Flute' },
+    ];
+    const INSTRUMENT_IDS = INSTRUMENTS.map(i => i.id);
+
     const emptyStats = () => ({ correct: 0, total: 0, recent: [] });
 
     function defaultProgress() {
@@ -1353,7 +1368,8 @@ const MIDDLE_C   = 60;  // C4
         v: 1,
         quiz:  { level: 1, streak: 0, majorScaleRootsDone: [] },
         learn: { unitIdx: 0, layout: LEARN_LAYOUT, units },
-        settings: { keyContext: false },   // play a I–IV–V–I before each interval
+        settings: { keyContext: false,     // play a I–IV–V–I before each interval
+                    instrument: 'piano' },
       };
     }
 
@@ -1378,6 +1394,7 @@ const MIDDLE_C   = 60;  // C4
         if (!d || d.v !== 1) return p;
         if (d.settings && typeof d.settings === 'object') {
           p.settings.keyContext = d.settings.keyContext === true;
+          if (INSTRUMENT_IDS.includes(d.settings.instrument)) p.settings.instrument = d.settings.instrument;
         }
         if (d.quiz) {
           p.quiz.level  = toInt(d.quiz.level, 1, 3, 1);
@@ -1468,6 +1485,99 @@ const MIDDLE_C   = 60;  // C4
       return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
     }
 
+    // ── Instruments ───────────────────────────────────────────────────────────
+    // Every instrument is a { voice, out } pair. `voice` takes the sampler's
+    // triggerAttack / triggerRelease / triggerAttackRelease calls, and `out` is
+    // the node that reaches the speakers. Synths are built on first use; only
+    // the chosen one stays connected.
+
+    const synthVoice = (Voice, opts, volume) => {
+      const poly = new Tone.PolySynth(Voice, opts);
+      poly.volume.value = volume;
+      return { voice: poly, out: poly };
+    };
+
+    // A plucked string can't be held or re-struck, so use a small round-robin
+    // pool: each new note takes the next string.
+    const pluckedVoice = (count) => {
+      const out = new Tone.Gain(1);
+      const strings = Array.from({ length: count }, () =>
+        new Tone.PluckSynth({ attackNoise: 1, dampening: 3500, resonance: 0.9 }).connect(out));
+      let next = 0;
+      const pluck = (note, time) => {
+        strings[next].triggerAttack(note, time);
+        next = (next + 1) % count;
+      };
+      return {
+        voice: {
+          triggerAttack: (note, time) => pluck(note, time),
+          triggerAttackRelease: (note, dur, time) => pluck(note, time),
+          triggerRelease: () => {},
+        },
+        out,
+      };
+    };
+
+    const stringsVoice = () => {
+      const filter = new Tone.Filter(1600, 'lowpass');
+      const poly = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'fatsawtooth', count: 3, spread: 14 },
+        envelope: { attack: 0.35, decay: 0.2, sustain: 0.85, release: 1.2 },
+      });
+      poly.volume.value = -16;
+      poly.connect(filter);
+      return { voice: poly, out: filter };
+    };
+
+    const instrumentBuilders = {
+      epiano:  () => synthVoice(Tone.FMSynth, {
+        harmonicity: 3, modulationIndex: 5, oscillator: { type: 'sine' },
+        envelope: { attack: 0.003, decay: 1.4, sustain: 0.1, release: 1.2 },
+        modulation: { type: 'sine' },
+        modulationEnvelope: { attack: 0.002, decay: 0.6, sustain: 0, release: 0.6 },
+      }, -6),
+      guitar:  () => pluckedVoice(6),
+      marimba: () => synthVoice(Tone.Synth, {
+        oscillator: { type: 'custom', partials: [1, 0, 0, 0.3] },
+        envelope: { attack: 0.001, decay: 0.9, sustain: 0, release: 0.5 },
+      }, -8),
+      organ:   () => synthVoice(Tone.Synth, {
+        oscillator: { type: 'custom', partials: [1, 0.5, 0.25, 0.2] },
+        envelope: { attack: 0.02, decay: 0.05, sustain: 0.9, release: 0.15 },
+      }, -14),
+      strings: stringsVoice,
+      flute:   () => synthVoice(Tone.Synth, {
+        oscillator: { type: 'sine' },
+        envelope: { attack: 0.08, decay: 0.1, sustain: 0.8, release: 0.3 },
+      }, -6),
+    };
+
+    let instrumentId = 'piano';
+    const instrumentCache = { piano: { voice: sampler, out: sampler } };
+
+    function instrument(id = instrumentId) {
+      if (!instrumentCache[id]) instrumentCache[id] = instrumentBuilders[id]();
+      return instrumentCache[id];
+    }
+
+    const voice = () => instrument().voice;
+
+    // Piano can't play until its samples load; synths are ready at once.
+    const instrumentReady = () => instrumentId !== 'piano' || samplerReady;
+
+    function setInstrument(id) {
+      if (!INSTRUMENT_IDS.includes(id)) id = 'piano';
+      releaseAllNotes();
+      instrumentId = id;
+      Object.values(instrumentCache).forEach(i => i.out.disconnect());
+      instrument(id).out.toDestination();
+      const loading = document.getElementById('keyboard-loading');
+      if (id !== 'piano') loading.classList.add('hidden');
+      else if (!samplerReady) loading.classList.remove('hidden');
+      const sel = document.getElementById('instrument-select');
+      if (sel && sel.value !== id) sel.value = id;
+    }
+
     // Browsers suspend (or on iOS "interrupt") the audio context when the app
     // is backgrounded, and resume() can hang forever on an interrupted context,
     // so never wait on it unbounded. Called from a tap, which is the user
@@ -1488,19 +1598,19 @@ const MIDDLE_C   = 60;  // C4
     }
 
     async function playNote(midi) {
-      if (!samplerReady) return;
+      if (!instrumentReady()) return;
       if (!(await ensureAudioStarted())) return;
-      sampler.triggerAttackRelease(midiToNoteName(midi), '8n');
+      voice().triggerAttackRelease(midiToNoteName(midi), '8n');
     }
 
     const heldNotes = new Set();
 
     async function startNote(midi) {
-      if (!samplerReady) return;
+      if (!instrumentReady()) return;
       if (!(await ensureAudioStarted())) return;
       if (!heldNotes.has(midi)) {
         heldNotes.add(midi);
-        sampler.triggerAttack(midiToNoteName(midi));
+        voice().triggerAttack(midiToNoteName(midi));
       }
     }
 
@@ -1512,33 +1622,33 @@ const MIDDLE_C   = 60;  // C4
     }
 
     function stopNote(midi) {
-      if (!samplerReady) return;
+      if (!instrumentReady()) return;
       if (heldNotes.has(midi)) {
         heldNotes.delete(midi);
-        sampler.triggerRelease(midiToNoteName(midi));
+        voice().triggerRelease(midiToNoteName(midi));
       }
     }
 
     async function playChord(midiNotes) {
-      if (!samplerReady) return;
+      if (!instrumentReady()) return;
       if (!(await ensureAudioStarted())) return;
       const now = Tone.now();
-      midiNotes.forEach(m => sampler.triggerAttackRelease(midiToNoteName(m), '2n', now));
+      midiNotes.forEach(m => voice().triggerAttackRelease(midiToNoteName(m), '2n', now));
     }
 
     async function playArpeggiated(midiNotes, step = 0.13) {
-      if (!samplerReady) return;
+      if (!instrumentReady()) return;
       if (!(await ensureAudioStarted())) return;
       const now = Tone.now();
-      midiNotes.forEach((m, i) => sampler.triggerAttackRelease(midiToNoteName(m), '4n', now + i * step));
+      midiNotes.forEach((m, i) => voice().triggerAttackRelease(midiToNoteName(m), '4n', now + i * step));
     }
 
     async function playScaleSequence(midiNotes) {
-      if (!samplerReady) return;
+      if (!instrumentReady()) return;
       if (!(await ensureAudioStarted())) return;
       const now = Tone.now();
       const step = 0.22;
-      midiNotes.forEach((m, i) => sampler.triggerAttackRelease(midiToNoteName(m), '8n', now + i * step));
+      midiNotes.forEach((m, i) => voice().triggerAttackRelease(midiToNoteName(m), '8n', now + i * step));
     }
 
     // ── Keyboard ──────────────────────────────────────────────────────────────
@@ -2349,12 +2459,12 @@ const MIDDLE_C   = 60;  // C4
     let measurePlayingUntil = 0;
 
     async function playEvents(events) {
-      if (!samplerReady || performance.now() < measurePlayingUntil) return;
+      if (!instrumentReady() || performance.now() < measurePlayingUntil) return;
       if (!(await ensureAudioStarted())) return;
       const now = Tone.now() + 0.05;
       let end = 0;
       events.forEach(e => {
-        e.notes.forEach(n => sampler.triggerAttackRelease(n, e.dur, now + e.t, e.vel));
+        e.notes.forEach(n => voice().triggerAttackRelease(n, e.dur, now + e.t, e.vel));
         end = Math.max(end, e.t + e.dur);
       });
       measurePlayingUntil = performance.now() + end * 1000;
@@ -3169,7 +3279,7 @@ const MIDDLE_C   = 60;  // C4
       try { localStorage.removeItem(PROGRESS_KEY); } catch (_) {}
       progress = defaultProgress();
       progress.settings = settings;
-      if (settings.keyContext) saveProgress();
+      if (settings.keyContext || settings.instrument !== 'piano') saveProgress();
       applyProgress();
       state.quizScore = { correct: 0, total: 0 };
       document.getElementById('quiz-score').textContent = '— / —';
@@ -3324,6 +3434,16 @@ const MIDDLE_C   = 60;  // C4
         if (confirm('Reset all progress? This clears the Learn path and your Quiz level.')) resetProgress();
       });
 
+      // Instrument picker: the saved choice, then persisted on each change
+      const instrumentSel = document.getElementById('instrument-select');
+      instrumentSel.innerHTML = INSTRUMENTS.map(i => `<option value="${i.id}">${i.label}</option>`).join('');
+      setInstrument(progress.settings.instrument);
+      instrumentSel.addEventListener('change', () => {
+        setInstrument(instrumentSel.value);
+        progress.settings.instrument = instrumentId;
+        saveProgress();
+      });
+
       // Initial display — the app opens on the Learn path
       updateScaleDisplay();
       updateChordDisplay();
@@ -3349,6 +3469,9 @@ const MIDDLE_C   = 60;  // C4
           useHint:         () => learnHint(),
           setKeyContext:   (on) => setKeyContext(on),
           intervalRefs:    INTERVAL_REFS,
+          get instrument() { return instrumentId; },
+          setInstrument:   (id) => { setInstrument(id); },
+          playChord:       (midis) => playChord(midis),
           // Render the song card for an interval into the visible panel.
           showRefs: (dir, semis) => {
             const low = 60, down = dir === 'down';
@@ -3381,7 +3504,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610031148';
+        const SW_VERSION = '2610090209';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
