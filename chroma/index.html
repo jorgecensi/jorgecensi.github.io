@@ -1,0 +1,1564 @@
+---
+layout: null
+permalink: /chroma/
+---
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Chroma">
+    <meta name="theme-color" content="#0b0b14">
+    <meta name="description" content="Chroma listens through the microphone and turns music into colour, so deaf and hard-of-hearing people can enjoy music visually.">
+    <title>Chroma — See the Music</title>
+    <link rel="manifest" href="/chroma/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/chroma-icon-192.png">
+    <link rel="apple-touch-icon" href="/img/chroma-icon-192.png">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #0b0b14;
+            --panel:     rgba(16, 16, 30, 0.92);
+            --glass:     rgba(8, 8, 18, 0.45);
+            --border:    rgba(255, 255, 255, 0.10);
+            --text:      #f1f1fb;
+            --text-dim:  #a6a6c4;
+            --accent:    #ff8f6b;
+            --safe-top:    env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left:   env(safe-area-inset-left, 0px);
+            --safe-right:  env(safe-area-inset-right, 0px);
+        }
+
+        html, body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #stage {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        button { font: inherit; color: inherit; cursor: pointer; }
+
+        /* ── HUD (what is playing, in words) ─────────────────────────── */
+        #hud {
+            position: fixed;
+            top: calc(12px + var(--safe-top));
+            left: calc(12px + var(--safe-left));
+            right: calc(12px + var(--safe-right));
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            pointer-events: none;
+            transition: opacity 0.4s;
+        }
+        #hud.off { opacity: 0; }
+        .pill {
+            background: var(--glass);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 10px 14px;
+            min-width: 0;
+        }
+        #chord-name {
+            font-size: clamp(30px, 9vw, 52px);
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+        }
+        #chord-long { font-size: 13px; color: var(--text-dim); margin-top: 4px; white-space: nowrap; }
+        .hud-right { text-align: right; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+        .hud-line { font-size: 14px; font-weight: 600; white-space: nowrap; }
+        .hud-line small { color: var(--text-dim); font-weight: 500; }
+        .meter { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); }
+        .meter .bar { width: 64px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
+        .meter .bar i { display: block; height: 100%; width: 0%; border-radius: 3px; background: #fff; transition: width 0.12s linear; }
+
+        /* ── Bottom: colour key + controls ───────────────────────────── */
+        #bottom {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 0 calc(12px + var(--safe-right)) calc(14px + var(--safe-bottom)) calc(12px + var(--safe-left));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+        }
+        #controls {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+            transition: opacity 0.4s, transform 0.4s;
+        }
+        #controls.hidden { opacity: 0; transform: translateY(8px); pointer-events: none; }
+        .ctl {
+            min-width: 48px;
+            height: 48px;
+            padding: 0 14px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            font-size: 15px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .ctl:active { transform: scale(0.96); }
+        .ctl.primary { background: rgba(255,255,255,0.92); color: #111; border-color: transparent; }
+
+        #legend {
+            display: flex;
+            gap: 4px;
+            pointer-events: none;
+            transition: opacity 0.4s;
+        }
+        #legend.off { display: none; }
+        .sw {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            transition: transform 0.12s, box-shadow 0.12s;
+        }
+
+        /* ── Overlays (start / settings / about) ─────────────────────── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: calc(20px + var(--safe-top)) calc(16px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(16px + var(--safe-left));
+            background: rgba(5, 5, 12, 0.55);
+            overflow-y: auto;
+        }
+        .overlay.show { display: flex; }
+        .card {
+            width: 100%;
+            max-width: 460px;
+            margin: auto;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 22px 20px;
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+        }
+        .card h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+        .card h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+        .card h3 { font-size: 15px; font-weight: 700; margin: 18px 0 6px; }
+        .card p, .card li { font-size: 15px; line-height: 1.5; color: var(--text-dim); }
+        .card p + p { margin-top: 8px; }
+        .card ul { padding-left: 18px; }
+        .card strong { color: var(--text); }
+        .tagline { margin: 6px 0 16px; font-size: 17px !important; }
+        .big-btn {
+            width: 100%;
+            height: 54px;
+            margin-top: 18px;
+            border: none;
+            border-radius: 27px;
+            background: linear-gradient(90deg, #ff6b6b, #ffb36b, #e7e06b, #6be08c, #6bc8e0, #8d7bff, #e06bd2);
+            color: #111;
+            font-size: 17px;
+            font-weight: 800;
+        }
+        .ghost-btn {
+            width: 100%;
+            height: 46px;
+            margin-top: 10px;
+            border-radius: 23px;
+            border: 1px solid var(--border);
+            background: transparent;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .fineprint { font-size: 13px !important; margin-top: 14px; }
+        .error { color: #ffb4a6 !important; margin-top: 12px; display: none; }
+        .error.show { display: block; }
+
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .row:last-of-type { border-bottom: none; }
+        .row label { font-size: 15px; font-weight: 600; }
+        .row .hint { display: block; font-size: 12px; color: var(--text-dim); font-weight: 400; margin-top: 2px; }
+        .seg { display: flex; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 3px; }
+        .seg button { border: none; background: none; padding: 8px 12px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--text-dim); }
+        .seg button.on { background: rgba(255,255,255,0.92); color: #111; }
+        input[type="range"] { width: 140px; accent-color: var(--accent); }
+        .toggle { position: relative; width: 50px; height: 30px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle span { position: absolute; inset: 0; border-radius: 15px; background: rgba(255,255,255,0.15); transition: background 0.2s; }
+        .toggle span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+        .toggle input:checked + span { background: #5ad17d; }
+        .toggle input:checked + span::after { transform: translateX(20px); }
+
+        .map-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+        .map-table td { font-size: 14px; line-height: 1.4; color: var(--text-dim); padding: 7px 0; vertical-align: top; border-bottom: 1px solid var(--border); }
+        .map-table td:first-child { color: var(--text); font-weight: 600; padding-right: 12px; white-space: nowrap; }
+        .wheel-key { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+        .chip-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .chip { border-radius: 10px; padding: 6px 10px; font-size: 13px; font-weight: 700; color: #111; }
+
+        #update-banner {
+            position: fixed;
+            top: calc(10px + var(--safe-top));
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 10px;
+            align-items: center;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 8px 12px;
+            font-size: 14px;
+            z-index: 10;
+        }
+        #update-banner.show { display: flex; }
+        #update-banner button { border: none; background: #fff; color: #111; border-radius: 9px; padding: 6px 10px; font-weight: 700; }
+    </style>
+</head>
+
+<body>
+    <canvas id="stage" aria-hidden="true"></canvas>
+
+    <div id="hud" class="off">
+        <div class="pill">
+            <div id="chord-name">—</div>
+            <div id="chord-long">waiting for sound</div>
+        </div>
+        <div class="pill hud-right">
+            <div class="hud-line"><small>Key</small> <span id="key-name">…</span></div>
+            <div class="hud-line"><small>Note</small> <span id="note-name">—</span></div>
+            <div class="meter">loud <span class="bar"><i id="m-loud"></i></span></div>
+            <div class="meter">tense <span class="bar"><i id="m-tense"></i></span></div>
+            <div class="meter" id="beat-meter">beat <span class="bar"><i id="m-beat"></i></span></div>
+        </div>
+    </div>
+
+    <div id="bottom">
+        <div id="legend" aria-hidden="true"></div>
+        <div id="controls" class="hidden">
+            <button class="ctl primary" id="btn-listen" aria-label="Stop listening">■ Stop</button>
+            <button class="ctl" id="btn-mode" aria-label="Change visual mode">Aurora</button>
+            <button class="ctl" id="btn-settings" aria-label="Settings">⚙︎</button>
+            <button class="ctl" id="btn-about" aria-label="How it works">?</button>
+            <button class="ctl" id="btn-full" aria-label="Full screen">⛶</button>
+        </div>
+    </div>
+
+    <!-- Start -->
+    <div class="overlay show" id="start">
+        <div class="card">
+            <h1>Chroma</h1>
+            <p class="tagline">See the music. Chroma listens and paints what it hears: every note, chord and beat becomes colour, light and movement.</p>
+            <p>Put your phone near the music: a speaker, a band, a friend singing. Each note has its own colour. Happy chords glow bright, sad chords go deep, tense chords clash, and every beat sends out a ripple.</p>
+            <button class="big-btn" id="btn-start">Start listening</button>
+            <button class="ghost-btn" id="btn-demo">Watch a demo song</button>
+            <p class="error" id="mic-error"></p>
+            <p class="fineprint">🔒 Sound is analysed on your device. Nothing is recorded or sent anywhere.<br>
+            ⚡ Flashes are limited to 3 per second. Turn on <strong>Calm mode</strong> in settings for gentler light.</p>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="overlay" id="settings">
+        <div class="card">
+            <h2>Settings</h2>
+            <div class="row">
+                <label>Visual</label>
+                <div class="seg" id="mode-seg">
+                    <button data-mode="aurora">Aurora</button>
+                    <button data-mode="wheel">Wheel</button>
+                    <button data-mode="wash">Wash</button>
+                </div>
+            </div>
+            <div class="row">
+                <label for="sens">Sensitivity<span class="hint">Raise it for quiet music</span></label>
+                <input type="range" id="sens" min="0.5" max="3" step="0.1">
+            </div>
+            <div class="row">
+                <label for="opt-calm">Calm mode<span class="hint">Softer beats, no bright pulses</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-calm"><span></span></label>
+            </div>
+            <div class="row" id="row-vibrate">
+                <label for="opt-vibrate">Feel the beat<span class="hint">Vibrates on drum hits (Android)</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-vibrate"><span></span></label>
+            </div>
+            <div class="row">
+                <label for="opt-labels">Show words<span class="hint">Chord, key, note and meters</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-labels"><span></span></label>
+            </div>
+            <div class="row">
+                <label for="opt-legend">Colour key<span class="hint">The 12 note colours along the bottom</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-legend"><span></span></label>
+            </div>
+            <button class="big-btn" data-close>Done</button>
+        </div>
+    </div>
+
+    <!-- About -->
+    <div class="overlay" id="about">
+        <div class="card">
+            <h2>How sound becomes colour</h2>
+            <p>Chroma follows musical rules, so the same music always gives the same colours. With practice you can learn to <em>read</em> a song from its colours.</p>
+
+            <h3>Every note has a colour</h3>
+            <p>The 12 notes go round the colour wheel in the order of the <strong>circle of fifths</strong>, the order musicians use to show which notes sound good together. C is red, G is orange, D is yellow, and so on. This is close to the colours the composer Alexander Scriabin gave to keys.</p>
+            <div class="wheel-key" id="about-wheel"></div>
+            <p style="margin-top:8px">Notes that sound good together (a fifth apart) are neighbouring colours. The clashing tritone sits opposite, on the complementary colour.</p>
+
+            <h3>Chords set the mood</h3>
+            <table class="map-table">
+                <tr><td>Major</td><td>Bright and warm. Happy, open sound.</td></tr>
+                <tr><td>Minor</td><td>Deeper and darker. Sad or serious sound.</td></tr>
+                <tr><td>Seventh</td><td>Rich, with a clashing edge. Wants to move on.</td></tr>
+                <tr><td>Major 7th</td><td>Soft pastel. Dreamy.</td></tr>
+                <tr><td>Diminished</td><td>Murky and grey. Tense, spooky.</td></tr>
+                <tr><td>Augmented</td><td>Over-bright and unstable. Floating, strange.</td></tr>
+                <tr><td>Sus</td><td>Airy and pale. Waiting to resolve.</td></tr>
+            </table>
+            <div class="chip-row" id="about-chords"></div>
+            <p style="margin-top:8px">A major chord's notes lean towards the warm side of its root colour. A minor chord's notes lean towards the cool side.</p>
+
+            <h3>The rest of the music</h3>
+            <table class="map-table">
+                <tr><td>Key</td><td>The background colour. It is the song's home note and changes slowly.</td></tr>
+                <tr><td>Loudness</td><td>Brightness and size. Quiet music glows softly; loud music fills the screen.</td></tr>
+                <tr><td>Beat</td><td>A ripple spreads out from the music. Drum hits pulse from the bottom (and vibrate, if you turn that on).</td></tr>
+                <tr><td>Melody</td><td>A glowing ribbon. High notes are higher on the screen and lighter in colour.</td></tr>
+                <tr><td>Tension</td><td>Clashing notes add the opposite colour and make the shapes shake. When the music resolves, it calms down.</td></tr>
+                <tr><td>Bright sounds</td><td>Cymbals, hi-hats and high instruments make sparkles.</td></tr>
+            </table>
+
+            <h3>Visuals</h3>
+            <ul>
+                <li><strong>Aurora</strong>: soft, moving light. Each note has its own place, so calm chords bunch together and clashing chords spread apart.</li>
+                <li><strong>Wheel</strong>: the circle of fifths, with chord shapes drawn on it. Good for learning.</li>
+                <li><strong>Wash</strong>: the whole screen in one colour. Calm and easy to follow from the corner of your eye.</li>
+            </ul>
+
+            <h3>Tips</h3>
+            <ul>
+                <li>Put the phone close to the speaker or instrument.</li>
+                <li>If the colours hardly move, raise <strong>Sensitivity</strong>.</li>
+                <li>Install Chroma on your home screen. It works offline.</li>
+            </ul>
+            <button class="big-btn" data-close>Got it</button>
+        </div>
+    </div>
+
+    <div id="update-banner">A new version of Chroma is ready <button id="update-btn">Update</button></div>
+
+    <script>
+    (() => {
+        'use strict';
+
+        const DEBUG = new URLSearchParams(location.search).has('debug');
+
+        // ─── Music theory ────────────────────────────────────────────────
+        const NOTE_NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+
+        // Position of a pitch class on the circle of fifths (C=0, G=1, D=2, …).
+        // A perfect fifth is 7 semitones, and 7 is its own inverse mod 12.
+        const fifthsPos = (pc) => (pc * 7) % 12;
+        const pcFromFifths = (j) => (j * 7) % 12;
+
+        // Each fifth is one 30° step on the OKLCH hue wheel, starting from
+        // OKLCH red (≈29°): C red, G orange, D amber, A lime, E green, …
+        // OKLCH is perceptually uniform, so every step looks like the same
+        // amount of change.
+        const HUE_C = 29;
+        const pcHue = (pc) => (HUE_C + fifthsPos(pc) * 30) % 360;
+
+        // Chord qualities. Lightness (L) and chroma (C) carry the "mood";
+        // the hue always comes from the root.
+        const QUALITIES = [
+            { id: 'maj',  suffix: '',     long: 'major',            iv: [0, 4, 7],     L: 0.80, C: 0.17, tension: 0.05, bias: 1.00 },
+            { id: 'min',  suffix: 'm',    long: 'minor',            iv: [0, 3, 7],     L: 0.60, C: 0.15, tension: 0.18, bias: 1.00 },
+            { id: '7',    suffix: '7',    long: 'dominant 7th',     iv: [0, 4, 7, 10], L: 0.72, C: 0.18, tension: 0.55, bias: 0.985 },
+            { id: 'maj7', suffix: 'maj7', long: 'major 7th',        iv: [0, 4, 7, 11], L: 0.86, C: 0.11, tension: 0.28, bias: 0.985 },
+            { id: 'm7',   suffix: 'm7',   long: 'minor 7th',        iv: [0, 3, 7, 10], L: 0.64, C: 0.12, tension: 0.30, bias: 0.985 },
+            { id: 'dim',  suffix: '°',    long: 'diminished',       iv: [0, 3, 6],     L: 0.48, C: 0.07, tension: 0.80, bias: 0.97 },
+            { id: 'aug',  suffix: '+',    long: 'augmented',        iv: [0, 4, 8],     L: 0.86, C: 0.20, tension: 0.70, bias: 0.97 },
+            { id: 'sus4', suffix: 'sus4', long: 'suspended 4th',    iv: [0, 5, 7],     L: 0.76, C: 0.09, tension: 0.35, bias: 0.97 },
+        ];
+        const NOTE_LOOK = { L: 0.72, C: 0.16 };
+
+        // Dissonance by interval class (unison … tritone), roughly following
+        // the usual consonance ranking: m2/M7 worst, tritone next, M2/m7, then
+        // thirds/sixths, with fourths/fifths the smoothest.
+        const IC_DISS = [0, 1.0, 0.55, 0.2, 0.15, 0.05, 0.85];
+
+        // Krumhansl–Kessler key profiles.
+        const KK_MAJOR = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+        const KK_MINOR = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+
+        function chordTemplates() {
+            const list = [];
+            for (let root = 0; root < 12; root++) {
+                for (const q of QUALITIES) {
+                    const v = new Array(12).fill(0);
+                    for (const i of q.iv) v[(root + i) % 12] = 1;
+                    const n = Math.sqrt(q.iv.length);
+                    list.push({ root, q, v: v.map((x) => x / n), pcs: q.iv.map((i) => (root + i) % 12) });
+                }
+            }
+            return list;
+        }
+        const TEMPLATES = chordTemplates();
+
+        // Cosine similarity against every template; a matching bass note
+        // breaks ties between inversions / relative chords (C6 vs Am7).
+        function detectChord(chroma, bassPc = -1) {
+            let norm = 0;
+            for (let i = 0; i < 12; i++) norm += chroma[i] * chroma[i];
+            norm = Math.sqrt(norm);
+            if (norm < 1e-9) return null;
+            let best = null, bestScore = -1;
+            for (const t of TEMPLATES) {
+                let dot = 0;
+                for (let i = 0; i < 12; i++) dot += chroma[i] * t.v[i];
+                let score = (dot / norm) * t.q.bias;
+                if (t.root === bassPc) score *= 1.05;
+                if (score > bestScore) { bestScore = score; best = t; }
+            }
+            return { root: best.root, q: best.q, pcs: best.pcs, score: bestScore };
+        }
+
+        function pearson(a, b) {
+            let ma = 0, mb = 0;
+            for (let i = 0; i < 12; i++) { ma += a[i]; mb += b[i]; }
+            ma /= 12; mb /= 12;
+            let num = 0, da = 0, db = 0;
+            for (let i = 0; i < 12; i++) {
+                const x = a[i] - ma, y = b[i] - mb;
+                num += x * y; da += x * x; db += y * y;
+            }
+            return da && db ? num / Math.sqrt(da * db) : 0;
+        }
+
+        function detectKey(chroma) {
+            let best = null;
+            for (let tonic = 0; tonic < 12; tonic++) {
+                for (const [mode, prof] of [['major', KK_MAJOR], ['minor', KK_MINOR]]) {
+                    const rot = new Array(12);
+                    for (let i = 0; i < 12; i++) rot[(tonic + i) % 12] = prof[i];
+                    const r = pearson(chroma, rot);
+                    if (!best || r > best.r) best = { tonic, mode, r };
+                }
+            }
+            return best;
+        }
+
+        function roughness(chroma) {
+            let num = 0, den = 0;
+            for (let i = 0; i < 12; i++) {
+                for (let j = i + 1; j < 12; j++) {
+                    const w = chroma[i] * chroma[j];
+                    if (w <= 0) continue;
+                    let ic = j - i; if (ic > 6) ic = 12 - ic;
+                    num += w * IC_DISS[ic];
+                    den += w;
+                }
+            }
+            return den > 0 ? num / den : 0;
+        }
+
+        // ─── Colour (OKLCH → sRGB with gamut mapping) ────────────────────
+        function oklchLinear(L, C, h) {
+            const hr = h * Math.PI / 180;
+            const a = C * Math.cos(hr), b = C * Math.sin(hr);
+            const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+            const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+            const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+            const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+            return [
+                 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+                -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+                -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+            ];
+        }
+        const inGamut = (c) => c[0] >= -1e-4 && c[0] <= 1.0001 && c[1] >= -1e-4 && c[1] <= 1.0001 && c[2] >= -1e-4 && c[2] <= 1.0001;
+        const encode = (x) => {
+            x = Math.min(1, Math.max(0, x));
+            return Math.round(255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055));
+        };
+        const rgbCache = new Map();
+        // Reduce chroma (keeping lightness and hue) until the colour fits sRGB.
+        function oklchToRgb(L, C, h) {
+            L = Math.min(1, Math.max(0, L));
+            h = ((h % 360) + 360) % 360;
+            const key = ((L * 200) | 0) * 1e6 + ((C * 400) | 0) * 1e3 + (h | 0);
+            const hit = rgbCache.get(key);
+            if (hit) return hit;
+            let lin = oklchLinear(L, C, h);
+            if (!inGamut(lin)) {
+                let lo = 0, hi = C;
+                for (let i = 0; i < 10; i++) {
+                    const mid = (lo + hi) / 2;
+                    if (inGamut(oklchLinear(L, mid, h))) lo = mid; else hi = mid;
+                }
+                lin = oklchLinear(L, lo, h);
+            }
+            const rgb = [encode(lin[0]), encode(lin[1]), encode(lin[2])];
+            if (rgbCache.size > 20000) rgbCache.clear();
+            rgbCache.set(key, rgb);
+            return rgb;
+        }
+        const col = (L, C, h, a = 1) => {
+            const [r, g, b] = oklchToRgb(L, C, h);
+            return `rgba(${r},${g},${b},${a})`;
+        };
+        const hueLerp = (a, b, t) => {
+            const d = ((b - a + 540) % 360) - 180;
+            return (a + d * t + 360) % 360;
+        };
+        const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+        const ease = (dt, tau) => 1 - Math.exp(-dt / tau);
+
+        // ─── Settings ────────────────────────────────────────────────────
+        const SETTINGS_KEY = 'chroma-settings-v1';
+        const settings = { mode: 'aurora', sensitivity: 1, calm: false, vibrate: true, labels: true, legend: true };
+        try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (_) {}
+        const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {} };
+        const canVibrate = typeof navigator.vibrate === 'function';
+
+        // ─── Audio ───────────────────────────────────────────────────────
+        const A = {
+            ctx: null, input: null, big: null, small: null,
+            source: null,       // 'mic' | 'demo' | 'tones'
+            stream: null, stopSource: null,
+        };
+
+        function ensureContext() {
+            if (A.ctx) return A.ctx;
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            const ctx = new Ctx();
+            A.ctx = ctx;
+            A.input = ctx.createGain();
+            // Long window for pitch (≈ 3 Hz bins), short window for beats.
+            A.big = ctx.createAnalyser();
+            A.big.fftSize = 16384;
+            A.big.smoothingTimeConstant = 0;
+            A.big.minDecibels = -120;
+            A.big.maxDecibels = 0;
+            A.small = ctx.createAnalyser();
+            A.small.fftSize = 2048;
+            A.small.smoothingTimeConstant = 0;
+            A.input.connect(A.big);
+            A.input.connect(A.small);
+            // Some browsers only pull analysers that reach the destination.
+            const mute = ctx.createGain();
+            mute.gain.value = 0;
+            A.big.connect(mute);
+            A.small.connect(mute);
+            mute.connect(ctx.destination);
+            initBuffers();
+            return ctx;
+        }
+
+        function stopSource() {
+            if (A.stopSource) { try { A.stopSource(); } catch (_) {} }
+            A.stopSource = null;
+            A.source = null;
+        }
+
+        async function startMic() {
+            const ctx = ensureContext();
+            await ctx.resume();
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+            });
+            stopSource();
+            const node = ctx.createMediaStreamSource(stream);
+            node.connect(A.input);
+            A.source = 'mic';
+            A.stopSource = () => {
+                node.disconnect();
+                stream.getTracks().forEach((t) => t.stop());
+            };
+        }
+
+        // A short song (I–V–vi–IV, then a ii–V–I with a secondary dominant)
+        // so people can see what Chroma does without any music around.
+        const DEMO_BARS = [
+            [0, 'maj'], [7, 'maj'], [9, 'min'], [5, 'maj'],
+            [2, 'm7'], [7, '7'], [0, 'maj7'], [4, '7'],
+            [9, 'min'], [5, 'maj'], [11, 'dim'], [7, 'sus4'],
+            [7, '7'], [0, 'maj'], [8, 'aug'], [0, 'maj'],
+        ];
+        async function startDemo() {
+            const ctx = ensureContext();
+            await ctx.resume();
+            stopSource();
+            const master = ctx.createGain();
+            master.gain.value = 0.8;
+            master.connect(A.input);
+            const out = ctx.createGain();
+            out.gain.value = 0.35;
+            master.connect(out);
+            out.connect(ctx.destination);
+
+            const noise = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
+            const nd = noise.getChannelData(0);
+            for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+            const beat = 0.5;                       // 120 bpm
+            const bar = beat * 4;
+            const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+            const qById = Object.fromEntries(QUALITIES.map((q) => [q.id, q]));
+            const t0 = ctx.currentTime + 0.1;
+            let nextBar = 0;
+
+            const tone = (type, freq, start, dur, gain) => {
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.type = type; o.frequency.value = freq;
+                g.gain.setValueAtTime(0, start);
+                g.gain.linearRampToValueAtTime(gain, start + 0.02);
+                g.gain.setValueAtTime(gain, start + dur * 0.7);
+                g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+                o.connect(g); g.connect(master);
+                o.start(start); o.stop(start + dur + 0.05);
+            };
+            const kick = (t) => {
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.frequency.setValueAtTime(150, t);
+                o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
+                g.gain.setValueAtTime(1.0, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                o.connect(g); g.connect(master);
+                o.start(t); o.stop(t + 0.32);
+            };
+            const hat = (t) => {
+                const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+                s.buffer = noise; f.type = 'highpass'; f.frequency.value = 7000;
+                g.gain.setValueAtTime(0.18, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+                s.connect(f); f.connect(g); g.connect(master);
+                s.start(t); s.stop(t + 0.08);
+            };
+
+            const scheduleBar = (n) => {
+                const [root, qid] = DEMO_BARS[n % DEMO_BARS.length];
+                const q = qById[qid];
+                const t = t0 + n * bar;
+                // Pad: chord tones voiced between G3 and F#4.
+                for (const iv of q.iv) {
+                    let m = 60 + ((root + iv) % 12);
+                    if (m > 66) m -= 12;
+                    tone('triangle', mtof(m), t, bar - 0.02, 0.07);
+                }
+                tone('sine', mtof(36 + root), t, bar - 0.05, 0.28);
+                for (let b = 0; b < 4; b++) {
+                    kick(t + b * beat);
+                    hat(t + b * beat + beat / 2);
+                }
+                // Melody: chord tones in octave 5, a little rise and fall.
+                const pattern = [0, 1, 2, 1, 2, 3, 2, 1];
+                for (let k = 0; k < 8; k++) {
+                    const iv = q.iv[pattern[k] % q.iv.length];
+                    const up = pattern[k] >= q.iv.length ? 12 : 0;
+                    tone('sine', mtof(72 + ((root + iv) % 12) + up), t + k * beat / 2, beat / 2 - 0.03, 0.09);
+                }
+            };
+            const timer = setInterval(() => {
+                while (t0 + nextBar * bar < ctx.currentTime + 0.6) scheduleBar(nextBar++);
+            }, 100);
+            while (t0 + nextBar * bar < ctx.currentTime + 0.6) scheduleBar(nextBar++);
+
+            A.source = 'demo';
+            A.demo = { t0, bar };
+            A.stopSource = () => {
+                A.demo = null;
+                clearInterval(timer);
+                out.gain.setValueAtTime(0, ctx.currentTime);
+                master.disconnect();
+            };
+        }
+
+        // Debug/test helper: steady tones straight into the analysers (silent).
+        async function playTones(freqs, type = 'triangle') {
+            const ctx = ensureContext();
+            await ctx.resume();
+            stopSource();
+            const g = ctx.createGain();
+            g.gain.value = 0.25;
+            g.connect(A.input);
+            const oscs = freqs.map((f) => {
+                const o = ctx.createOscillator();
+                o.type = type; o.frequency.value = f;
+                o.connect(g); o.start();
+                return o;
+            });
+            A.source = 'tones';
+            A.stopSource = () => { oscs.forEach((o) => o.stop()); g.disconnect(); };
+        }
+
+        // ─── Analysis ────────────────────────────────────────────────────
+        let bigDb, smallDb, smallTime, prevLog, binHz, smallBinHz;
+        function initBuffers() {
+            bigDb = new Float32Array(A.big.frequencyBinCount);
+            smallDb = new Float32Array(A.small.frequencyBinCount);
+            smallTime = new Float32Array(A.small.fftSize);
+            prevLog = new Float32Array(A.small.frequencyBinCount);
+            binHz = A.ctx.sampleRate / A.big.fftSize;
+            smallBinHz = A.ctx.sampleRate / A.small.fftSize;
+        }
+
+        // Everything the visuals read. Smoothed values live here too.
+        const M = {
+            level: 0, db: -100, floor: -70, peak: -30,
+            chromaRaw: new Array(12).fill(0),
+            chroma: new Array(12).fill(0),       // fast-smoothed (visuals)
+            chordChroma: new Array(12).fill(0),  // for chord detection
+            keyChroma: new Array(12).fill(0),    // long-term, for the key
+            keyEnergy: 0,
+            bassPc: -1,
+            melody: null,                         // { midi, pc } or null
+            chord: null, chordCand: null, chordCandSince: 0, silentSince: 0,
+            key: null, keyCheckAt: 0,
+            tension: 0, rough: 0,
+            bass: 0, mid: 0, treble: 0, centroid: 0,
+            flux: [], bassFlux: [], lastOnset: 0, lastKick: 0, beatGlow: 0,
+            onsetCount: 0, kickCount: 0,
+        };
+
+        function analyse(now, dt) {
+            if (!A.ctx || !A.source) return;
+            A.big.getFloatFrequencyData(bigDb);
+            A.small.getFloatFrequencyData(smallDb);
+            A.small.getFloatTimeDomainData(smallTime);
+
+            // Loudness with an adaptive floor and ceiling, so a quiet room and
+            // a loud concert both use the whole brightness range.
+            let sum = 0;
+            for (let i = 0; i < smallTime.length; i++) sum += smallTime[i] * smallTime[i];
+            const db = 10 * Math.log10(sum / smallTime.length + 1e-12);
+            M.db = db;
+            if (db < M.floor) M.floor = db; else M.floor += Math.min(db - M.floor, 0.5 * dt);
+            if (db > M.peak) M.peak = db; else M.peak -= 2.5 * dt;
+            M.floor = Math.max(M.floor, -90);
+            M.floor = Math.min(M.floor, M.peak - 24);
+            M.peak = Math.max(M.peak, M.floor + 24);
+            const gate = M.floor + 5;
+            let level = clamp((db - gate) / (M.peak - gate)) * settings.sensitivity;
+            if (db < -80) level = 0;
+            level = clamp(level);
+            M.level += (level - M.level) * ease(dt, level > M.level ? 0.03 : 0.25);
+
+            // Chroma: spectral peaks between ~55 Hz and ~4.2 kHz, folded into
+            // 12 pitch classes, weighted by how close each peak is to a note.
+            const kLo = Math.max(2, Math.floor(55 / binHz));
+            const kHi = Math.min(bigDb.length - 2, Math.ceil(4200 / binHz));
+            let maxDb = -Infinity;
+            for (let k = kLo; k <= kHi; k++) if (bigDb[k] > maxDb) maxDb = bigDb[k];
+            const thr = Math.max(maxDb - 40, -100);
+            const raw = M.chromaRaw;
+            raw.fill(0);
+            const peaks = [];
+            for (let k = kLo; k <= kHi; k++) {
+                const b = bigDb[k];
+                if (b < thr || b < bigDb[k - 1] || b <= bigDb[k + 1]) continue;
+                const a = bigDb[k - 1], c = bigDb[k + 1];
+                const den = a - 2 * b + c;
+                const p = den ? 0.5 * (a - c) / den : 0;
+                const f = (k + p) * binHz;
+                const pdb = b - 0.25 * (a - c) * p;
+                peaks.push({ f, db: pdb, mag: Math.pow(10, pdb / 20), midi: 69 + 12 * Math.log2(f / 440) });
+            }
+            for (let i = 0; i < peaks.length; i++) {
+                const pk = peaks[i];
+                // Overtones that aren't octaves (3rd harmonic = a fifth, 5th =
+                // a major third) would add notes nobody played: damp any peak
+                // sitting on a harmonic of a stronger, lower peak.
+                let hw = 1;
+                for (let j = 0; j < i && hw === 1; j++) {
+                    const lo = peaks[j];
+                    if (lo.mag < 0.5 * pk.mag) continue;
+                    const ratio = pk.f / lo.f, h = Math.round(ratio);
+                    if (h >= 3 && h <= 8 && (h & (h - 1)) !== 0 && Math.abs(ratio - h) < 0.025 * h) hw = 0.2;
+                }
+                const nearest = Math.round(pk.midi);
+                const w = Math.cos((pk.midi - nearest) * Math.PI);
+                const fw = pk.f > 1000 ? Math.sqrt(1000 / pk.f) : 1;
+                // Log (dB) compression keeps a loud bass from drowning the
+                // chord tones above it.
+                raw[((nearest % 12) + 12) % 12] += clamp((pk.db - thr) / 40) * w * fw * hw;
+            }
+            let rmax = 0;
+            for (let i = 0; i < 12; i++) rmax = Math.max(rmax, raw[i]);
+            if (rmax > 0) for (let i = 0; i < 12; i++) raw[i] /= rmax;
+            const audible = M.level > 0.04 && rmax > 0;
+
+            for (let i = 0; i < 12; i++) {
+                const target = audible ? raw[i] : 0;
+                M.chroma[i] += (target - M.chroma[i]) * ease(dt, target > M.chroma[i] ? 0.05 : 0.3);
+                if (audible) M.chordChroma[i] += (raw[i] - M.chordChroma[i]) * ease(dt, 0.12);
+            }
+
+            // Bass note: the lowest strong peak.
+            const peakMax = peaks.reduce((m, p) => Math.max(m, p.mag), 0);
+            M.bassPc = -1;
+            for (const p of peaks) {
+                if (p.f > 300) break;
+                if (p.mag > 0.25 * peakMax) { M.bassPc = ((Math.round(p.midi) % 12) + 12) % 12; break; }
+            }
+
+            // Melody: the peak whose harmonics explain the most energy.
+            M.melody = null;
+            if (audible && peaks.length) {
+                // Melody sits above the bass line.
+                const cands = peaks.filter((p) => p.f > 160 && p.f < 2000)
+                    .sort((x, y) => y.mag - x.mag).slice(0, 8);
+                const magNear = (freq) => {
+                    let m = 0;
+                    for (const p of peaks) if (Math.abs(p.f - freq) < freq * 0.03 && p.mag > m) m = p.mag;
+                    return m;
+                };
+                let best = null, bestS = 0, total = 0;
+                for (const p of peaks) total += p.mag;
+                for (const c of cands) {
+                    let s = 0;
+                    for (let h = 1; h <= 5; h++) s += magNear(c.f * h) / Math.sqrt(h);
+                    if (s > bestS) { bestS = s; best = c; }
+                }
+                if (best && bestS / total > 0.3) {
+                    M.melody = { midi: best.midi, pc: ((Math.round(best.midi) % 12) + 12) % 12 };
+                }
+            }
+
+            // Chord (with a short hold so it doesn't flicker).
+            if (audible) {
+                M.silentSince = now;
+                const sorted = [...M.chordChroma].sort((a, b) => b - a);
+                let cand;
+                if (sorted[1] < 0.4 * sorted[0]) {
+                    const pc = M.chordChroma.indexOf(sorted[0]);
+                    cand = { kind: 'note', root: pc, pcs: [pc], q: null, score: 1 };
+                } else {
+                    const c = detectChord(M.chordChroma, M.bassPc);
+                    cand = c && c.score > 0.72 ? { kind: 'chord', ...c } : null;
+                }
+                const same = (x, y) => x && y && x.root === y.root && x.kind === y.kind && x.q === y.q;
+                if (cand && !same(cand, M.chord)) {
+                    if (!same(cand, M.chordCand)) { M.chordCand = cand; M.chordCandSince = now; }
+                    else if (now - M.chordCandSince > 0.15 || !M.chord) M.chord = cand;
+                } else {
+                    M.chordCand = null;
+                }
+
+                // Key: a slow average of what's been heard.
+                const k = ease(dt, 8);
+                for (let i = 0; i < 12; i++) M.keyChroma[i] += (M.chordChroma[i] * M.level - M.keyChroma[i]) * k;
+                M.keyEnergy += (M.level - M.keyEnergy) * k;
+            } else if (now - M.silentSince > 2.5) {
+                M.chord = null;
+                M.chordCand = null;
+            }
+            if (now > M.keyCheckAt && M.keyEnergy > 0.03) {
+                M.keyCheckAt = now + 0.3;
+                const k = detectKey(M.keyChroma);
+                if (k && k.r > 0.45) {
+                    if (!M.key) M.key = k;
+                    else if (k.tonic !== M.key.tonic || k.mode !== M.key.mode) {
+                        const cur = detectKeyScore(M.keyChroma, M.key);
+                        if (k.r > cur + 0.04) M.key = k;
+                    } else M.key = k;
+                }
+            }
+
+            // Tension: interval roughness plus the chord type's own tension.
+            M.rough += (roughness(M.chroma) - M.rough) * ease(dt, 0.2);
+            const qT = M.chord && M.chord.q ? M.chord.q.tension : 0;
+            const tTarget = M.level > 0.04 ? clamp(0.45 * qT + 0.55 * clamp((M.rough - 0.12) / 0.45)) : 0;
+            M.tension += (tTarget - M.tension) * ease(dt, 0.3);
+
+            // Bands, brightness (spectral centroid) and onsets.
+            let bass = 0, mid = 0, treble = 0, cNum = 0, cDen = 0, flux = 0, bFlux = 0;
+            for (let k = 1; k < smallDb.length; k++) {
+                const f = k * smallBinHz;
+                if (f > 10000) break;
+                const mag = Math.pow(10, smallDb[k] / 20);
+                const p = mag * mag;
+                if (f < 250) bass += p; else if (f < 2000) mid += p; else treble += p;
+                cNum += f * mag; cDen += mag;
+                const lg = Math.log1p(1000 * mag);
+                const d = lg - prevLog[k];
+                if (d > 0) { flux += d; if (f < 180) bFlux += d; }
+                prevLog[k] = lg;
+            }
+            const tot = bass + mid + treble + 1e-12;
+            const sm = ease(dt, 0.08);
+            M.bass += (bass / tot * M.level - M.bass) * sm;
+            M.mid += (mid / tot * M.level - M.mid) * sm;
+            M.treble += (clamp(Math.sqrt(treble / tot) * 1.5) * M.level - M.treble) * sm;
+            M.centroid += ((cDen ? cNum / cDen : 0) - M.centroid) * sm;
+
+            const onset = detectOnset(M.flux, flux, now, 0.11, M.lastOnset);
+            if (onset > 0 && M.level > 0.06) {
+                M.lastOnset = now;
+                M.onsetCount++;
+                M.beatGlow = 1;
+                emitRipple(onset);
+            }
+            const kickOn = detectOnset(M.bassFlux, bFlux, now, 0.2, M.lastKick);
+            if (kickOn > 0 && M.level > 0.08 && bass / tot > 0.25) {
+                M.lastKick = now;
+                M.kickCount++;
+                emitKick(kickOn);
+            }
+            M.beatGlow = Math.max(0, M.beatGlow - dt * 4);
+        }
+
+        function detectKeyScore(chroma, key) {
+            const prof = key.mode === 'major' ? KK_MAJOR : KK_MINOR;
+            const rot = new Array(12);
+            for (let i = 0; i < 12; i++) rot[(key.tonic + i) % 12] = prof[i];
+            return pearson(chroma, rot);
+        }
+
+        // Adaptive threshold on a short history: mean + 1.5·σ.
+        function detectOnset(hist, value, now, refractory, last) {
+            hist.push(value);
+            if (hist.length > 45) hist.shift();
+            if (hist.length < 10) return 0;
+            let mean = 0;
+            for (const v of hist) mean += v;
+            mean /= hist.length;
+            let v2 = 0;
+            for (const v of hist) v2 += (v - mean) * (v - mean);
+            const sd = Math.sqrt(v2 / hist.length);
+            const thr = mean + 1.5 * sd + 1;
+            if (value > thr && now - last > refractory) return clamp((value - thr) / (thr + 1e-6) + 0.3);
+            return 0;
+        }
+
+        // ─── Visual state ────────────────────────────────────────────────
+        const canvas = document.getElementById('stage');
+        const g = canvas.getContext('2d');
+        let W = 0, H = 0, DPR = 1;
+        function resize() {
+            DPR = Math.min(2, window.devicePixelRatio || 1);
+            W = window.innerWidth; H = window.innerHeight;
+            canvas.width = Math.round(W * DPR);
+            canvas.height = Math.round(H * DPR);
+            g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Smoothed colours.
+        const V = {
+            chordHue: HUE_C, chordL: 0.6, chordC: 0.1,
+            keyHue: 280, keyL: 0.16, keyC: 0.02,
+            rot: 0, time: 0,
+            flash: 0, lastFlash: -10,
+            ripples: [], sparks: [], trail: [],
+            idle: true,
+        };
+
+        function chordLook() {
+            const c = M.chord;
+            if (!c) return null;
+            if (c.kind === 'note') return { hue: pcHue(c.root), L: NOTE_LOOK.L, C: NOTE_LOOK.C };
+            return { hue: pcHue(c.root), L: c.q.L, C: c.q.C };
+        }
+
+        function emitRipple(strength) {
+            const look = chordLook() || { hue: V.chordHue, L: 0.8, C: 0.12 };
+            const maxR = Math.hypot(W, H) * (settings.calm ? 0.4 : 0.6);
+            V.ripples.push({ t: 0, life: 1.3, hue: look.hue, L: look.L, C: look.C, s: strength, x: W / 2, y: H / 2, maxR, kick: false });
+            if (V.ripples.length > 24) V.ripples.shift();
+        }
+
+        function emitKick(strength) {
+            const look = chordLook() || { hue: V.chordHue, L: 0.7, C: 0.12 };
+            V.ripples.push({ t: 0, life: 0.9, hue: M.bassPc >= 0 ? pcHue(M.bassPc) : look.hue, L: 0.6, C: 0.16, s: strength, x: W / 2, y: H + 20, maxR: H * 0.9, kick: true });
+            // Full-screen pulses are capped at 3 per second (WCAG 2.3.1).
+            if (V.time - V.lastFlash >= 0.34) {
+                V.lastFlash = V.time;
+                V.flash = (settings.calm ? 0.08 : 0.22) * (0.5 + 0.5 * strength);
+            }
+            if (settings.vibrate && canVibrate && A.source) {
+                try { navigator.vibrate(Math.round(25 + 35 * strength)); } catch (_) {}
+            }
+        }
+
+        function updateVisualState(dt) {
+            V.time += dt;
+            const look = chordLook();
+            if (look) {
+                const k = ease(dt, 0.25);
+                V.chordHue = hueLerp(V.chordHue, look.hue, k);
+                V.chordL += (look.L - V.chordL) * k;
+                V.chordC += (look.C - V.chordC) * k;
+            }
+            const key = M.key;
+            const kk = ease(dt, 1.5);
+            if (key) {
+                V.keyHue = hueLerp(V.keyHue, pcHue(key.tonic), kk);
+                V.keyL += ((key.mode === 'major' ? 0.24 : 0.17) - V.keyL) * kk;
+                V.keyC += ((key.mode === 'major' ? 0.07 : 0.06) - V.keyC) * kk;
+            } else {
+                V.keyL += (0.16 - V.keyL) * kk;
+                V.keyC += (0.03 - V.keyC) * kk;
+            }
+            V.rot += dt * (0.03 + 0.25 * M.tension * M.level);
+            V.flash = Math.max(0, V.flash - dt * 1.2);
+
+            for (const r of V.ripples) r.t += dt;
+            V.ripples = V.ripples.filter((r) => r.t < r.life);
+
+            // Sparkles for bright, high sounds.
+            const rate = 70 * M.treble * (0.4 + clamp(M.centroid / 4000));
+            let n = rate * dt;
+            while (n > 0) {
+                if (Math.random() < n) spawnSpark();
+                n -= 1;
+            }
+            for (const s of V.sparks) { s.t += dt; s.y -= s.vy * dt; s.x += s.vx * dt; }
+            V.sparks = V.sparks.filter((s) => s.t < s.life);
+
+            if (M.melody && M.level > 0.08) {
+                V.trail.push({ t: V.time, midi: M.melody.midi, pc: M.melody.pc, lvl: M.level });
+            }
+            V.trail = V.trail.filter((p) => V.time - p.t < 2.6);
+        }
+
+        function activePcs(min = 0.2) {
+            const out = [];
+            for (let pc = 0; pc < 12; pc++) if (M.chroma[pc] > min) out.push(pc);
+            return out;
+        }
+
+        function spawnSpark() {
+            if (V.sparks.length > 220) return;
+            const pcs = activePcs(0.3);
+            const pc = pcs.length ? pcs[(Math.random() * pcs.length) | 0] : -1;
+            V.sparks.push({
+                x: Math.random() * W, y: H * (0.15 + 0.7 * Math.random()),
+                vx: (Math.random() - 0.5) * 20, vy: 10 + Math.random() * 30,
+                r: 1 + Math.random() * 2.4,
+                hue: pc >= 0 ? pcHue(pc) : V.chordHue,
+                t: 0, life: 0.5 + Math.random() * 0.8,
+            });
+        }
+
+        // Pitch height → screen height and lightness (higher = lighter).
+        const midiY = (midi) => H * (0.88 - 0.76 * clamp((midi - 36) / 60));
+        const midiL = (midi) => 0.55 + 0.35 * clamp((midi - 36) / 60);
+
+        // ─── Drawing ─────────────────────────────────────────────────────
+        function drawBackground() {
+            const cx = W / 2, cy = H / 2, R = Math.hypot(W, H) / 2;
+            const grad = g.createRadialGradient(cx, cy * 0.9, 0, cx, cy, R);
+            grad.addColorStop(0, col(V.keyL, V.keyC, V.keyHue));
+            grad.addColorStop(1, col(V.keyL * 0.45, V.keyC * 0.6, V.keyHue));
+            g.globalCompositeOperation = 'source-over';
+            g.fillStyle = grad;
+            g.fillRect(0, 0, W, H);
+        }
+
+        function glow(x, y, r, L, C, h, a) {
+            if (r <= 0 || a <= 0.003) return;
+            const grad = g.createRadialGradient(x, y, 0, x, y, r);
+            grad.addColorStop(0, col(L, C, h, a));
+            grad.addColorStop(0.45, col(L, C, h, a * 0.45));
+            grad.addColorStop(1, col(L, C, h, 0));
+            g.fillStyle = grad;
+            g.beginPath();
+            g.arc(x, y, r, 0, Math.PI * 2);
+            g.fill();
+        }
+
+        function drawTensionHalo() {
+            if (M.tension < 0.05) return;
+            const h = (V.chordHue + 180) % 360;   // complementary = clash
+            const a = 0.45 * M.tension * (0.3 + 0.7 * M.level);
+            const R = Math.hypot(W, H) / 2;
+            const grad = g.createRadialGradient(W / 2, H / 2, R * 0.45, W / 2, H / 2, R);
+            grad.addColorStop(0, col(0.6, 0.15, h, 0));
+            grad.addColorStop(1, col(0.6, 0.15, h, a));
+            g.fillStyle = grad;
+            g.fillRect(0, 0, W, H);
+        }
+
+        function drawBassGlow() {
+            if (M.bass < 0.02) return;
+            const h = M.bassPc >= 0 ? pcHue(M.bassPc) : V.chordHue;
+            const hh = H * (0.25 + 0.35 * M.bass);
+            const grad = g.createLinearGradient(0, H, 0, H - hh);
+            grad.addColorStop(0, col(0.55, 0.16, h, 0.7 * M.bass + 0.1));
+            grad.addColorStop(1, col(0.55, 0.16, h, 0));
+            g.fillStyle = grad;
+            g.fillRect(0, H - hh, W, hh);
+        }
+
+        function drawRipples() {
+            for (const r of V.ripples) {
+                const p = r.t / r.life;
+                const rad = r.maxR * (1 - Math.pow(1 - p, 2.2));
+                const a = (1 - p) * (settings.calm ? 0.35 : 0.7) * (0.4 + 0.6 * r.s);
+                g.lineWidth = (r.kick ? 18 : 8) * (1 - p) + 1;
+                g.strokeStyle = col(r.L + 0.08, r.C, r.hue, a);
+                g.beginPath();
+                g.arc(r.x, r.y, rad, 0, Math.PI * 2);
+                g.stroke();
+            }
+        }
+
+        function drawSparks() {
+            for (const s of V.sparks) {
+                const a = Math.sin(Math.PI * s.t / s.life);
+                g.fillStyle = col(0.93, 0.08, s.hue, a);
+                g.beginPath();
+                g.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                g.fill();
+            }
+        }
+
+        function drawTrail() {
+            const pts = V.trail;
+            if (pts.length < 2) return;
+            const headX = W * 0.85, speed = W * 0.3;
+            g.lineCap = 'round';
+            for (let i = 1; i < pts.length; i++) {
+                const p0 = pts[i - 1], p1 = pts[i];
+                // A gap (the melody stopped) or a big leap: start a new stroke.
+                if (p1.t - p0.t > 0.2 || Math.abs(p1.midi - p0.midi) > 9) continue;
+                const age = V.time - p1.t;
+                const a = clamp(1 - age / 2.6) * 0.9;
+                g.strokeStyle = col(midiL(p1.midi), 0.17, pcHue(p1.pc), a);
+                g.lineWidth = 3 + 14 * p1.lvl * (1 - age / 2.6);
+                g.beginPath();
+                g.moveTo(headX - (V.time - p0.t) * speed, midiY(p0.midi));
+                g.lineTo(headX - age * speed, midiY(p1.midi));
+                g.stroke();
+            }
+            const last = pts[pts.length - 1];
+            if (V.time - last.t < 0.15) {
+                glow(headX, midiY(last.midi), 22 + 40 * last.lvl, midiL(last.midi), 0.17, pcHue(last.pc), 0.9);
+            }
+        }
+
+        function drawAurora() {
+            const cx = W / 2, cy = H * 0.47, S = Math.min(W, H);
+            g.globalCompositeOperation = 'screen';
+            drawBassGlow();
+            // Central wash in the chord colour.
+            glow(cx, cy, S * (0.45 + 0.35 * M.level), V.chordL, V.chordC, V.chordHue, 0.25 + 0.45 * M.level);
+            // One orb per sounding note, at its own place on the circle of
+            // fifths: consonant chords cluster, dissonant ones spread out.
+            const R = S * 0.27;
+            const shake = M.tension * M.level * S * 0.035;
+            for (let pc = 0; pc < 12; pc++) {
+                const e = M.chroma[pc];
+                if (e < 0.06) continue;
+                const ang = -Math.PI / 2 + fifthsPos(pc) * Math.PI / 6 + V.rot;
+                const wob = V.time * (0.4 + pc * 0.03);
+                const x = cx + Math.cos(ang) * R + Math.sin(wob + pc) * S * 0.04 + (Math.random() - 0.5) * shake;
+                const y = cy + Math.sin(ang) * R + Math.cos(wob * 1.3 + pc) * S * 0.04 + (Math.random() - 0.5) * shake;
+                const r = S * (0.08 + 0.26 * e) * (0.45 + 0.75 * M.level);
+                glow(x, y, r, V.chordL, V.chordC + 0.02, pcHue(pc), clamp(0.9 * e * (0.35 + 0.65 * M.level)));
+            }
+            drawTensionHalo();
+            drawRipples();
+            drawTrail();
+            drawSparks();
+        }
+
+        function drawWheel() {
+            const cx = W / 2, cy = H * 0.5, S = Math.min(W, H * 0.8);
+            const R = S * 0.42, R0 = S * 0.17;
+            g.globalCompositeOperation = 'source-over';
+            const seg = Math.PI / 6;
+            for (let j = 0; j < 12; j++) {
+                const pc = pcFromFifths(j);
+                const e = M.chroma[pc];
+                const a0 = -Math.PI / 2 + (j - 0.5) * seg + 0.02, a1 = a0 + seg - 0.04;
+                const out = R * (0.84 + 0.16 * e * (0.5 + 0.5 * M.level));
+                g.fillStyle = col(0.32, 0.06, pcHue(pc), 0.9);
+                g.beginPath(); g.arc(cx, cy, out, a0, a1); g.arc(cx, cy, R0, a1, a0, true); g.closePath(); g.fill();
+                if (e > 0.02) {
+                    g.fillStyle = col(V.chordL, V.chordC + 0.03, pcHue(pc), clamp(e * (0.3 + 0.7 * M.level) * 1.1));
+                    g.beginPath(); g.arc(cx, cy, out, a0, a1); g.arc(cx, cy, R0, a1, a0, true); g.closePath(); g.fill();
+                }
+                const am = (a0 + a1) / 2, lr = (R0 + out) / 2 + R * 0.05;
+                g.fillStyle = e > 0.5 && V.chordL > 0.6 ? 'rgba(10,10,20,0.85)' : 'rgba(255,255,255,0.85)';
+                g.font = `700 ${Math.round(S * 0.042)}px -apple-system, Segoe UI, sans-serif`;
+                g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.fillText(NOTE_NAMES[pc], cx + Math.cos(am) * lr, cy + Math.sin(am) * lr);
+            }
+            // Chord shape: major and minor triads are mirror images.
+            const c = M.chord;
+            if (c && c.kind === 'chord' && M.level > 0.03) {
+                g.strokeStyle = col(0.95, 0.05, V.chordHue, 0.9);
+                g.fillStyle = col(V.chordL, V.chordC, V.chordHue, 0.35);
+                g.lineWidth = 3;
+                g.lineJoin = 'round';
+                g.beginPath();
+                const pts = [...c.pcs].sort((a, b) => fifthsPos(a) - fifthsPos(b));
+                pts.forEach((pc, i) => {
+                    const ang = -Math.PI / 2 + fifthsPos(pc) * seg;
+                    const x = cx + Math.cos(ang) * R0 * 0.92, y = cy + Math.sin(ang) * R0 * 0.92;
+                    if (i) g.lineTo(x, y); else g.moveTo(x, y);
+                });
+                g.closePath(); g.fill(); g.stroke();
+            }
+            g.globalCompositeOperation = 'screen';
+            glow(cx, cy, R0 * (0.8 + 0.6 * M.level), V.chordL, V.chordC, V.chordHue, 0.25 + 0.6 * M.level);
+            drawTensionHalo();
+            drawRipples();
+        }
+
+        function drawWash() {
+            // The strongest notes, blended as a slow-turning gradient.
+            const pcs = [];
+            for (let pc = 0; pc < 12; pc++) pcs.push([pc, M.chroma[pc]]);
+            pcs.sort((a, b) => b[1] - a[1]);
+            const top = pcs.filter((p) => p[1] > 0.15).slice(0, 4);
+            g.globalCompositeOperation = 'source-over';
+            const vis = 0.25 + 0.75 * M.level;
+            if (top.length) {
+                const ang = V.rot * 2;
+                const dx = Math.cos(ang) * W / 2, dy = Math.sin(ang) * H / 2;
+                const grad = g.createLinearGradient(W / 2 - dx, H / 2 - dy, W / 2 + dx, H / 2 + dy);
+                const order = top.sort((a, b) => fifthsPos(a[0]) - fifthsPos(b[0]));
+                order.forEach(([pc], i) => {
+                    grad.addColorStop(order.length === 1 ? 0.5 : i / (order.length - 1),
+                        col(V.chordL * (0.35 + 0.65 * vis), V.chordC * vis, pcHue(pc)));
+                });
+                g.fillStyle = grad;
+                g.globalAlpha = clamp(0.2 + 0.8 * M.level);
+                g.fillRect(0, 0, W, H);
+                g.globalAlpha = 1;
+            }
+            g.globalCompositeOperation = 'screen';
+            drawBassGlow();
+            drawTensionHalo();
+        }
+
+        function drawIdle() {
+            // Before listening: the colour wheel slowly breathing.
+            const cx = W / 2, cy = H / 2, S = Math.min(W, H);
+            g.globalCompositeOperation = 'screen';
+            for (let j = 0; j < 12; j++) {
+                const pc = pcFromFifths(j);
+                const ang = -Math.PI / 2 + j * Math.PI / 6 + V.time * 0.05;
+                const br = 0.5 + 0.5 * Math.sin(V.time * 0.8 - j * 0.5);
+                glow(cx + Math.cos(ang) * S * 0.32, cy + Math.sin(ang) * S * 0.32, S * (0.16 + 0.05 * br), 0.7, 0.15, pcHue(pc), 0.35 + 0.25 * br);
+            }
+        }
+
+        function drawFlash() {
+            if (V.flash <= 0.002) return;
+            g.globalCompositeOperation = 'screen';
+            g.fillStyle = col(0.85, 0.08, V.chordHue, V.flash);
+            g.fillRect(0, 0, W, H);
+        }
+
+        function draw() {
+            g.globalCompositeOperation = 'source-over';
+            drawBackground();
+            if (!A.source) drawIdle();
+            else if (settings.mode === 'wheel') drawWheel();
+            else if (settings.mode === 'wash') drawWash();
+            else drawAurora();
+            drawFlash();
+            g.globalCompositeOperation = 'source-over';
+        }
+
+        // ─── HUD ─────────────────────────────────────────────────────────
+        const $ = (id) => document.getElementById(id);
+        const hud = $('hud'), legend = $('legend');
+        const legendCells = [];
+        for (let j = 0; j < 12; j++) {
+            const pc = pcFromFifths(j);
+            const d = document.createElement('div');
+            d.className = 'sw';
+            d.textContent = NOTE_NAMES[pc];
+            const [r, gg, b] = oklchToRgb(0.74, 0.15, pcHue(pc));
+            d.style.background = `rgb(${r},${gg},${b})`;
+            d.style.color = '#111';
+            legend.appendChild(d);
+            legendCells[pc] = d;
+            const a = d.cloneNode(true);
+            $('about-wheel').appendChild(a);
+        }
+        // Example chords on C in the About page.
+        for (const q of QUALITIES) {
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.textContent = 'C' + q.suffix;
+            const [r, gg, b] = oklchToRgb(q.L, q.C, pcHue(0));
+            chip.style.background = `rgb(${r},${gg},${b})`;
+            chip.style.color = q.L > 0.6 ? '#111' : '#fff';
+            $('about-chords').appendChild(chip);
+        }
+
+        let hudAt = 0;
+        function updateHud(now) {
+            if (now - hudAt < 0.08) return;
+            hudAt = now;
+            const show = settings.labels && !!A.source;
+            hud.classList.toggle('off', !show);
+            legend.classList.toggle('off', !settings.legend || settings.mode === 'wheel' || !A.source);
+            for (let pc = 0; pc < 12; pc++) {
+                const e = M.chroma[pc] * (0.3 + 0.7 * M.level);
+                legendCells[pc].style.transform = `scale(${1 + 0.35 * e}) translateY(${-6 * e}px)`;
+                legendCells[pc].style.boxShadow = e > 0.2 ? `0 0 ${Math.round(16 * e)}px rgba(255,255,255,${(0.6 * e).toFixed(2)})` : 'none';
+            }
+            if (!show) return;
+            const c = M.chord;
+            if (c && c.kind === 'chord') {
+                $('chord-name').textContent = NOTE_NAMES[c.root] + c.q.suffix;
+                $('chord-long').textContent = `${NOTE_NAMES[c.root]} ${c.q.long} chord`;
+            } else if (c && c.kind === 'note') {
+                $('chord-name').textContent = NOTE_NAMES[c.root];
+                $('chord-long').textContent = 'single note';
+            } else {
+                $('chord-name').textContent = '—';
+                $('chord-long').textContent = M.level > 0.04 ? 'listening…' : 'quiet';
+            }
+            $('key-name').textContent = M.key ? `${NOTE_NAMES[M.key.tonic]} ${M.key.mode}` : '…';
+            const mel = M.melody;
+            $('note-name').textContent = mel ? NOTE_NAMES[mel.pc] + (Math.floor(Math.round(mel.midi) / 12) - 1) : '—';
+            $('m-loud').style.width = `${Math.round(M.level * 100)}%`;
+            $('m-tense').style.width = `${Math.round(M.tension * 100)}%`;
+            $('m-beat').style.width = `${Math.round(M.beatGlow * 100)}%`;
+            const [r, gg, b] = oklchToRgb(V.chordL, V.chordC, V.chordHue);
+            $('chord-name').style.color = `rgb(${r},${gg},${b})`;
+        }
+
+        // ─── Loop ────────────────────────────────────────────────────────
+        let last = performance.now();
+        let manual = false;
+        function frame(nowMs) {
+            const dt = Math.min(0.1, Math.max(0.001, (nowMs - last) / 1000));
+            last = nowMs;
+            step(nowMs / 1000, dt);
+            if (!manual) requestAnimationFrame(frame);
+        }
+        function step(now, dt) {
+            analyse(now, dt);
+            updateVisualState(dt);
+            draw();
+            updateHud(now);
+        }
+        requestAnimationFrame(frame);
+
+        // ─── UI ──────────────────────────────────────────────────────────
+        const MODES = ['aurora', 'wheel', 'wash'];
+        const MODE_LABEL = { aurora: 'Aurora', wheel: 'Wheel', wash: 'Wash' };
+        const controls = $('controls');
+        let hideTimer = 0;
+
+        function poke() {
+            controls.classList.remove('hidden');
+            clearTimeout(hideTimer);
+            const anyOpen = document.querySelector('.overlay.show');
+            if (A.source && !anyOpen) hideTimer = setTimeout(() => controls.classList.add('hidden'), 4000);
+        }
+        ['pointerdown', 'pointermove', 'keydown'].forEach((ev) => window.addEventListener(ev, poke, { passive: true }));
+
+        function open(id) {
+            document.querySelectorAll('.overlay').forEach((o) => o.classList.toggle('show', o.id === id));
+            poke();
+        }
+        function closeAll() {
+            document.querySelectorAll('.overlay').forEach((o) => o.classList.remove('show'));
+            if (!A.source) open('start');
+            poke();
+        }
+        document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeAll));
+        document.querySelectorAll('.overlay').forEach((o) => o.addEventListener('click', (e) => {
+            if (e.target === o && o.id !== 'start') closeAll();
+        }));
+
+        function syncUi() {
+            $('btn-mode').textContent = MODE_LABEL[settings.mode];
+            document.querySelectorAll('#mode-seg button').forEach((b) => b.classList.toggle('on', b.dataset.mode === settings.mode));
+            $('sens').value = settings.sensitivity;
+            $('opt-calm').checked = settings.calm;
+            $('opt-vibrate').checked = settings.vibrate;
+            $('opt-labels').checked = settings.labels;
+            $('opt-legend').checked = settings.legend;
+            $('row-vibrate').style.display = canVibrate ? '' : 'none';
+            $('btn-listen').textContent = A.source ? '■ Stop' : '● Listen';
+            $('btn-listen').setAttribute('aria-label', A.source ? 'Stop listening' : 'Start listening');
+        }
+        function setMode(m) { settings.mode = m; saveSettings(); syncUi(); }
+
+        $('btn-mode').addEventListener('click', () => setMode(MODES[(MODES.indexOf(settings.mode) + 1) % MODES.length]));
+        document.querySelectorAll('#mode-seg button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+        $('sens').addEventListener('input', (e) => { settings.sensitivity = parseFloat(e.target.value); saveSettings(); });
+        [['opt-calm', 'calm'], ['opt-vibrate', 'vibrate'], ['opt-labels', 'labels'], ['opt-legend', 'legend']].forEach(([id, k]) => {
+            $(id).addEventListener('change', (e) => { settings[k] = e.target.checked; saveSettings(); });
+        });
+        $('btn-settings').addEventListener('click', () => open('settings'));
+        $('btn-about').addEventListener('click', () => open('about'));
+        $('btn-full').addEventListener('click', () => {
+            const el = document.documentElement;
+            if (document.fullscreenElement) document.exitFullscreen?.();
+            else (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+        });
+
+        // Keep the screen on while listening.
+        let wakeLock = null;
+        async function lockScreen() {
+            try { if ('wakeLock' in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request('screen'); wakeLock?.addEventListener('release', () => { wakeLock = null; }); } catch (_) {}
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && A.source) lockScreen();
+        });
+
+        function resetMusic() {
+            M.chord = null; M.chordCand = null; M.key = null; M.keyEnergy = 0;
+            M.keyChroma.fill(0); M.chordChroma.fill(0);
+            M.floor = -70; M.peak = -30;
+        }
+
+        async function begin(kind) {
+            $('mic-error').classList.remove('show');
+            try {
+                resetMusic();
+                if (kind === 'mic') await startMic(); else await startDemo();
+                closeAll();
+                lockScreen();
+            } catch (err) {
+                const e = $('mic-error');
+                e.textContent = err && err.name === 'NotAllowedError'
+                    ? 'Chroma needs the microphone to hear the music. Allow it in your browser settings and try again.'
+                    : 'Could not start the microphone' + (err && err.message ? ': ' + err.message : '.');
+                e.classList.add('show');
+            }
+            syncUi();
+            poke();
+        }
+        $('btn-start').addEventListener('click', () => begin('mic'));
+        $('btn-demo').addEventListener('click', () => begin('demo'));
+        $('btn-listen').addEventListener('click', () => {
+            if (A.source) {
+                stopSource();
+                if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+                open('start');
+            } else open('start');
+            syncUi();
+        });
+
+        syncUi();
+
+        // ─── Debug API (?debug=1) ────────────────────────────────────────
+        if (DEBUG) {
+            window.__chroma = {
+                get state() {
+                    const c = M.chord;
+                    return {
+                        source: A.source,
+                        level: M.level,
+                        chord: c ? (c.kind === 'note' ? NOTE_NAMES[c.root] : NOTE_NAMES[c.root] + c.q.suffix) : null,
+                        chordKind: c ? c.kind : null,
+                        key: M.key ? `${NOTE_NAMES[M.key.tonic]} ${M.key.mode}` : null,
+                        melody: M.melody ? NOTE_NAMES[M.melody.pc] : null,
+                        tension: M.tension,
+                        chroma: [...M.chroma],
+                        onsets: M.onsetCount,
+                        kicks: M.kickCount,
+                        mode: settings.mode,
+                    };
+                },
+                settings,
+                NOTE_NAMES, pcHue, detectChord, detectKey, roughness, oklchToRgb,
+                playTones, startDemo, stop: () => { stopSource(); syncUi(); },
+                setMode,
+                // What the demo is playing right now: { chord, intoBar } (seconds into the bar).
+                demoNow: () => {
+                    if (!A.demo) return null;
+                    const t = A.ctx.currentTime - A.demo.t0;
+                    const [root, qid] = DEMO_BARS[Math.floor(t / A.demo.bar) % DEMO_BARS.length];
+                    const q = QUALITIES.find((x) => x.id === qid);
+                    return { chord: NOTE_NAMES[root] + q.suffix, intoBar: t % A.demo.bar };
+                },
+                // Drive frames by hand (disables the rAF loop for this page load).
+                step: (n = 1, dt = 1 / 60) => {
+                    manual = true;
+                    for (let i = 0; i < n; i++) step(performance.now() / 1000, dt);
+                },
+            };
+        }
+    })();
+
+    // ─── Service worker ──────────────────────────────────────────────────
+    const SW_VERSION = 'dev';
+
+    if ('serviceWorker' in navigator) {
+        // Only reload for an *update*, not when the first install claims the page.
+        const hadController = !!navigator.serviceWorker.controller;
+        navigator.serviceWorker.register(
+            `/chroma/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
+            { scope: '/chroma/' }
+        ).then((reg) => {
+            reg.addEventListener('updatefound', () => {
+                const w = reg.installing;
+                w.addEventListener('statechange', () => {
+                    if (w.state === 'installed' && navigator.serviceWorker.controller) {
+                        document.getElementById('update-banner').classList.add('show');
+                    }
+                });
+            });
+        }).catch(() => {});
+
+        document.getElementById('update-btn').addEventListener('click', () => {
+            navigator.serviceWorker.getRegistration('/chroma/').then((reg) => {
+                if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                else window.location.reload();
+            });
+        });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (hadController) window.location.reload();
+        });
+    }
+    </script>
+</body>
+
+</html>
