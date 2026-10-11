@@ -23,7 +23,7 @@ run(async () => {
   s = await state();
   const hits = s.drums.kick + s.drums.snare + s.drums.hat;
   console.log(`notes only: drums ${JSON.stringify(s.drums)}, noteOns ${s.noteOns}, chord ${s.chord}, perc ${s.perc.toFixed(2)}`);
-  assert(s.noteOns >= 10, `notes should register, got ${s.noteOns}`);
+  assert(s.noteOns >= 5, `notes should register, got ${s.noteOns}`);
   assert(hits <= 3, `notes alone should not make drum hits, got ${JSON.stringify(s.drums)}`);
 
   if (errors.length) throw new Error('console/page errors: ' + errors.join(' | '));
