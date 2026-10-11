@@ -36,6 +36,12 @@ bundle exec jekyll serve --host 0.0.0.0 --port 4000 --livereload
 
 - **Single file**: `chroma/index.html` listens to the mic and turns music into colour for deaf and hard-of-hearing users. It has no dependencies. The analysis (`analyse()`) reads two AnalyserNodes on one input bus: a 16384-point FFT for pitch (chroma, chord, key, melody, bass) and a 2048-point FFT for loudness, bands and onsets. The mic, the demo song and test tones all feed that same bus.
 - **Drums are kept apart from notes**: `separate()` splits the 2048-point FFT into harmonic and percussive parts by median filtering (HPSS). Drum hits (kick, snare, hat) come only from the percussive part and are drawn in neutral white, never in a note colour. While a hit lands, the note colours hold still. `trackNotes()` finds notes with octaves, gives each a hand (`'L'`/`'R'`) from the moving `M.split`, and feeds the **Hands** view. The thresholds are tuned against the demo; see the tuning notes in `tools/chroma-e2e/README.md` before changing them.
+- **Timbre and song shape**:
+  - `sampleTimbre()`/`judgeTimbre()` give each note `env` (fade/hold), `move` (vibrato or wobble) and `bright`, read from a third analyser of about 85 ms (`A.mid`).
+  - `structure()` sets `M.section` (build/drop/break) from 10 Hz history, and `M.pump` measures sidechain pumping.
+  - Visuals map these to shape and texture, never to colour. Colour stays reserved for pitch.
+  - Both demos (`startDemo({ song: 'band' | 'edm' })`) exist to exercise these.
+  - Read the timbre tuning notes in `tools/chroma-e2e/README.md` before changing any threshold. Most of them came from a real failure, such as a vibrato partial leaking into a neighbour or octave doubling.
 - **The mapping is the product, so keep it principled**:
   - Pitch class → OKLCH hue around the circle of fifths: `pcHue`, with C as red.
   - Chord quality → lightness and chroma: the `L`/`C` values in `QUALITIES`.
