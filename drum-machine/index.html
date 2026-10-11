@@ -23,10 +23,10 @@ permalink: /drum-machine/
             --bg: #0d0d0d;
             --surface: #181818;
             --surface2: #242424;
-            --surface3: #2e2e2e;
+            --surface3: #3a3a3a;
             --text: #f0f0f0;
-            --text-dim: #444;
-            --text-mid: #888;
+            --text-dim: #8c8c8c;
+            --text-mid: #b0b0b0;
             --kick:      #FF4757;
             --snare:     #FFA502;
             --hihat:     #2ED573;
@@ -64,6 +64,8 @@ permalink: /drum-machine/
             width: 100%;
             max-width: 540px;
             margin: 0 auto;
+            overflow-y: auto;
+            scrollbar-width: none;
             padding:
                 max(env(safe-area-inset-top, 0px), 15px)
                 max(env(safe-area-inset-right, 0px), 20px)
@@ -77,30 +79,40 @@ permalink: /drum-machine/
             align-items: center;
             justify-content: space-between;
             width: 100%;
-            padding-bottom: 5px;
+            gap: 6px;
+            padding-bottom: 6px;
             border-bottom: 1px solid var(--surface2);
         }
         #header h1 {
-            font-size: 0.65rem;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.7rem;
             font-weight: 900;
-            letter-spacing: 0.3em;
+            letter-spacing: 0.16em;
             text-transform: uppercase;
             color: var(--text-mid);
         }
         #tempo-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             font-family: var(--mono);
-            font-size: 0.75rem;
             color: var(--text);
-            letter-spacing: 0.02em;
             cursor: pointer;
-            padding: 6px 10px;
+            padding: 5px 12px;
             background: var(--surface);
-            border-radius: 6px;
+            border-radius: 8px;
             border: 1px solid var(--surface3);
             transition: all 0.1s;
             -webkit-tap-highlight-color: transparent;
         }
         #tempo-display:active { background: var(--surface2); transform: translateY(1px); }
+        .td-bpm { font-size: 1rem; font-weight: 700; line-height: 1.2; }
+        .td-bpm small { font-size: 0.68rem; font-weight: 600; color: var(--text-mid); margin-left: 3px; }
+        .td-hint { font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); }
 
         /* ── Sample selectors ────────────────────────────── */
         #sample-row {
@@ -114,7 +126,7 @@ permalink: /drum-machine/
             flex-direction: column;
             align-items: center;
             gap: 2px;
-            padding: 12px 6px;
+            padding: 12px 2px;
             background: var(--surface);
             border: 1.5px solid var(--surface3);
             border-radius: 12px;
@@ -123,17 +135,17 @@ permalink: /drum-machine/
             -webkit-tap-highlight-color: transparent;
         }
         .sample-btn:active { transform: scale(0.96); background: var(--surface2); }
-        .sample-btn[data-voice="0"] { border-color: var(--kick-dim); }
-        .sample-btn[data-voice="1"] { border-color: var(--snare-dim); }
-        .sample-btn[data-voice="2"] { border-color: var(--hihat-dim); }
-        .sample-btn[data-voice="3"] { border-color: var(--clap-dim); }
-        .sample-voice { font-family: var(--mono); font-size: 0.8rem; font-weight: 800; }
+        .sample-btn[data-voice="0"] { border-color: rgba(255,71,87,0.6); }
+        .sample-btn[data-voice="1"] { border-color: rgba(255,165,2,0.6); }
+        .sample-btn[data-voice="2"] { border-color: rgba(46,213,115,0.6); }
+        .sample-btn[data-voice="3"] { border-color: rgba(162,155,254,0.6); }
+        .sample-voice { font-family: var(--mono); font-size: 0.95rem; font-weight: 800; }
         .sample-btn[data-voice="0"] .sample-voice { color: var(--kick); }
         .sample-btn[data-voice="1"] .sample-voice { color: var(--snare); }
         .sample-btn[data-voice="2"] .sample-voice { color: var(--hihat); }
         .sample-btn[data-voice="3"] .sample-voice { color: var(--clap); }
-        .sample-name  { font-size: 0.7rem; font-weight: 700; color: var(--text); margin-top: 2px; }
-        .sample-hint  { font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+        .sample-name  { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+        .sample-hint  { font-size: 0.62rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.02em; }
 
         /* ── Sequencer ───────────────────────────────────── */
         #sequencer-wrap {
@@ -170,13 +182,13 @@ permalink: /drum-machine/
         }
         #roll-indicator.visible { display: flex; }
         .ri-hint {
-            font-size: 0.5rem;
+            font-size: 0.62rem;
             letter-spacing: 0.14em;
             text-transform: uppercase;
             color: var(--text-dim);
         }
         .ri-speed {
-            font-size: 0.62rem;
+            font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 0.06em;
             color: var(--text-dim);
@@ -207,13 +219,13 @@ permalink: /drum-machine/
         }
         #filter-indicator.visible { display: flex; }
         .fi-hint {
-            font-size: 0.5rem;
+            font-size: 0.62rem;
             letter-spacing: 0.14em;
             text-transform: uppercase;
             color: var(--text-dim);
         }
         .fi-level {
-            font-size: 0.62rem;
+            font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 0.06em;
             color: var(--text-dim);
@@ -230,22 +242,24 @@ permalink: /drum-machine/
         .slider-row {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             width: 100%;
             padding: 4px 0;
         }
         .slider-label {
             font-family: var(--mono);
-            font-size: 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 700;
             letter-spacing: 0.1em;
             text-transform: uppercase;
             color: var(--text-mid);
-            min-width: 44px;
+            min-width: 48px;
         }
         input[type=range] {
             -webkit-appearance: none;
             appearance: none;
             flex: 1;
+            min-width: 0;
             height: 4px;
             background: var(--surface2);
             border-radius: 2px;
@@ -254,25 +268,23 @@ permalink: /drum-machine/
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 14px; height: 26px;
-            border-radius: 3px;
-            background: #e0e0e0;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--text);
             cursor: pointer;
-            border: 1px solid #fff;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8);
-            position: relative;
+            border: none;
+            box-shadow: 0 0 8px rgba(0,0,0,0.6);
         }
-        input[type=range]::-webkit-slider-thumb::after {
-            content: '';
-            position: absolute;
-            top: 50%; left: 0; right: 0;
-            height: 2px; background: #333;
-            transform: translateY(-50%);
+        input[type=range]::-moz-range-thumb {
+            width: 22px; height: 22px;
+            border: none; border-radius: 50%;
+            background: var(--text);
+            box-shadow: 0 0 8px rgba(0,0,0,0.6);
         }
         .slider-value {
             font-family: var(--mono);
-            font-size: 0.85rem; font-weight: 700;
-            min-width: 42px; text-align: right;
+            font-size: 1rem; font-weight: 700;
+            min-width: 46px; text-align: right;
             color: var(--text);
         }
 
@@ -282,9 +294,9 @@ permalink: /drum-machine/
             border: 1px solid var(--surface3);
             border-radius: 6px;
             color: var(--text);
-            font-size: 1.1rem;
-            width: 32px;
-            height: 32px;
+            font-size: 1.25rem;
+            width: 40px;
+            height: 40px;
             cursor: pointer;
             flex-shrink: 0;
             display: flex;
@@ -303,19 +315,28 @@ permalink: /drum-machine/
             width: 100%;
         }
         #pitch-label {
-            font-size: 0.6rem;
-            letter-spacing: 0.14em;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: var(--text-dim);
-            min-width: 36px;
+            color: var(--text-mid);
+            min-width: 40px;
         }
         .pitch-group {
             display: flex; flex-direction: column;
-            align-items: center; flex: 1; gap: 3px;
+            align-items: stretch; flex: 1; gap: 5px;
+            min-width: 0;
+        }
+        .pitch-head {
+            display: flex; align-items: center; justify-content: center; gap: 5px;
         }
         .pitch-badge {
-            font-size: 0.55rem; font-weight: 800;
-            padding: 1px 5px; border-radius: 3px; color: #000;
+            font-size: 0.65rem; font-weight: 800;
+            padding: 1px 6px; border-radius: 3px; color: #000;
+        }
+        .pitch-val {
+            font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
+            min-width: 2.2em; text-align: left; color: var(--text);
         }
         .pitch-badge.kick  { background: var(--kick); }
         .pitch-badge.snare { background: var(--snare); }
@@ -323,21 +344,24 @@ permalink: /drum-machine/
         .pitch-badge.clap  { background: var(--clap); }
         .pitch-slider {
             -webkit-appearance: none; appearance: none;
-            width: 100%; height: 5px;
+            width: 100%; height: 5px; flex: none;
             border-radius: 2px; outline: none; cursor: pointer;
         }
+        .pitch-group .pitch-slider { flex: none; height: 5px; }
         .pitch-slider.kick  { background: linear-gradient(to right, var(--surface3), var(--kick)); }
         .pitch-slider.snare { background: linear-gradient(to right, var(--surface3), var(--snare)); }
         .pitch-slider.hihat { background: linear-gradient(to right, var(--surface3), var(--hihat)); }
         .pitch-slider.clap  { background: linear-gradient(to right, var(--surface3), var(--clap)); }
         .pitch-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 20px; height: 20px;
+            width: 22px; height: 22px;
             border-radius: 50%; background: var(--text); cursor: pointer;
+            box-shadow: 0 0 8px rgba(0,0,0,0.6);
         }
         .pitch-slider::-moz-range-thumb {
-            width: 20px; height: 20px;
+            width: 22px; height: 22px;
             border: none; border-radius: 50%; background: var(--text);
+            box-shadow: 0 0 8px rgba(0,0,0,0.6);
         }
 
         /* ── Update banner ───────────────────────────────── */
@@ -431,10 +455,13 @@ permalink: /drum-machine/
             background: none;
             border: 1px solid var(--surface3);
             border-radius: 8px;
-            color: var(--text-dim);
-            font-size: 1rem;
+            color: var(--text);
+            font-size: 1.2rem;
             line-height: 1;
-            padding: 5px 9px;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            flex-shrink: 0;
             cursor: pointer;
             transition: all 0.15s;
             -webkit-tap-highlight-color: transparent;
@@ -448,19 +475,23 @@ permalink: /drum-machine/
             gap: 6px;
             width: 100%;
             justify-content: center;
+            align-items: center;
         }
+        #redo-btn { margin-left: 0; }
+        #undo-btn { margin-left: 4px; }
         .slot-btn {
             flex: 1;
-            max-width: 64px;
+            min-width: 0;
+            max-width: 72px;
             background: var(--surface);
             border: 1.5px solid var(--surface3);
             border-radius: 8px;
             color: var(--text-mid);
             font-family: var(--mono);
-            font-size: 0.8rem;
+            font-size: 0.95rem;
             font-weight: 800;
             letter-spacing: 0.1em;
-            padding: 7px 0;
+            padding: 10px 0;
             cursor: pointer;
             transition: all 0.15s;
             -webkit-tap-highlight-color: transparent;
@@ -503,11 +534,13 @@ permalink: /drum-machine/
             background: none;
             border: 1px solid var(--surface3);
             border-radius: 10px;
-            color: var(--text-dim);
-            font-size: 0.82rem;
-            padding: 7px 16px;
+            color: var(--text-mid);
+            font-size: 0.72rem;
+            font-weight: 700;
+            height: 40px;
+            padding: 0 12px;
             cursor: pointer;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.06em;
             transition: all 0.15s;
             -webkit-tap-highlight-color: transparent;
         }
@@ -521,9 +554,12 @@ permalink: /drum-machine/
             background: none;
             border: 1px solid var(--surface3);
             border-radius: 10px;
-            color: var(--text-dim);
-            font-size: 0.9rem;
-            padding: 7px 14px;
+            color: var(--text);
+            font-size: 1rem;
+            min-width: 40px;
+            height: 40px;
+            padding: 0 8px;
+            white-space: nowrap;
             cursor: pointer;
             letter-spacing: 0.04em;
             transition: all 0.15s;
@@ -534,6 +570,63 @@ permalink: /drum-machine/
             border-color: #FF4757;
             color: #FF4757;
             animation: rec-pulse 0.8s ease-in-out infinite;
+        }
+
+        /* ── Help button + overlay ───────────────────────── */
+        #help-btn {
+            background: none;
+            border: 1px solid var(--surface3);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 800;
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #help-btn:active { background: var(--surface2); }
+        #help-btn.new { border-color: var(--text-mid); animation: help-pulse 1.6s ease-in-out infinite; }
+        @keyframes help-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.0); }
+            50%      { box-shadow: 0 0 0 5px rgba(255,255,255,0.14); }
+        }
+        #help-overlay {
+            position: fixed; inset: 0; z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            padding: max(env(safe-area-inset-top, 0px), 16px) 16px max(env(safe-area-inset-bottom, 0px), 16px);
+            background: rgba(5, 5, 5, 0.88);
+        }
+        #help-overlay[hidden] { display: none; }
+        #help-card {
+            width: 100%; max-width: 420px; max-height: 100%;
+            overflow-y: auto; touch-action: pan-y;
+            background: var(--surface);
+            border: 1px solid var(--surface3);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .help-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        #help-title { font-size: 1.05rem; font-weight: 800; }
+        #help-close {
+            background: none; border: 1px solid var(--surface3); border-radius: 10px;
+            color: var(--text); font-size: 1rem; width: 40px; height: 40px; cursor: pointer;
+        }
+        .help-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+        .help-list li { display: flex; gap: 12px; align-items: flex-start; }
+        .help-ico {
+            flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; font-weight: 800; color: var(--c);
+            border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 18%, transparent);
+        }
+        .help-list strong { display: block; font-size: 0.9rem; font-weight: 700; }
+        .help-list span.help-sub { display: block; font-size: 0.78rem; color: var(--text-mid); margin-top: 2px; line-height: 1.35; }
+        .help-keys {
+            margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--surface3);
+            font-size: 0.72rem; color: var(--text-dim); line-height: 1.5;
         }
 
         /* ── Beat dot ────────────────────────────────────── */
@@ -551,6 +644,12 @@ permalink: /drum-machine/
             background: #FF4757;
             box-shadow: 0 0 8px #FF4757;
             transition: none; /* instant on */
+        }
+
+        /* Narrow phones: drop the title so the controls keep their full size */
+        @media (max-width: 460px) {
+            #header h1 { display: none; }
+            #tempo-display { margin-right: auto; }
         }
 
         /* ── Landscape layout (phones rotated) ───────────── */
@@ -587,9 +686,8 @@ permalink: /drum-machine/
     <!-- Header -->
     <div id="header">
         <h1>Drum Machine</h1>
-        <span id="tempo-display" role="button" tabindex="0" aria-label="Tap tempo. Current tempo: 140 BPM, 15 percent swing">♩ 140 · swing 15%</span>
-        <button id="undo-btn" class="hist-btn" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
-        <button id="redo-btn" class="hist-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button>
+        <span id="tempo-display" role="button" tabindex="0" aria-label="Tap tempo. Current tempo: 140 BPM, 15 percent swing"><span class="td-bpm">140<small>BPM</small></span><span class="td-hint">tap to set</span></span>
+        <button id="help-btn" title="How to play" aria-label="How to play">?</button>
         <button id="sync-beat-btn" title="Tap on the downbeat to sync" aria-label="Sync to downbeat">SYNC</button>
         <button id="detect-bpm-btn" title="Detect BPM from mic" aria-label="Detect BPM from microphone">🎙</button>
         <span id="beat-dot" aria-hidden="true"></span>
@@ -601,6 +699,8 @@ permalink: /drum-machine/
         <button class="slot-btn empty" data-slot="B" aria-label="Pattern slot B (empty)" aria-pressed="false">B</button>
         <button class="slot-btn empty" data-slot="C" aria-label="Pattern slot C (empty)" aria-pressed="false">C</button>
         <button class="slot-btn empty" data-slot="D" aria-label="Pattern slot D (empty)" aria-pressed="false">D</button>
+        <button id="undo-btn" class="hist-btn" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+        <button id="redo-btn" class="hist-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button>
     </div>
 
     <!-- Sample selectors -->
@@ -629,7 +729,7 @@ permalink: /drum-machine/
 
     <!-- Clap recording row -->
     <div id="clap-record-row">
-        <button id="rec-btn"><span id="rec-dot"></span><span id="rec-label">● REC CLAP</span></button>
+        <button id="rec-btn"><span id="rec-dot"></span><span id="rec-label">REC CLAP</span></button>
         <button id="rec-clear-btn" style="display:none">✕ clear</button>
     </div>
 
@@ -653,55 +753,55 @@ permalink: /drum-machine/
             <g id="playhead-group"></g>
 
             <!-- Voice labels (inside the ring) -->
-            <text x="260" y="165" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="800" letter-spacing="0.1em" fill="rgba(255,71,87,0.4)">KICK</text>
-            <text x="325" y="221" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="800" letter-spacing="0.1em" fill="rgba(255,165,2,0.4)">SN</text>
-            <text x="260" y="276" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="800" letter-spacing="0.1em" fill="rgba(46,213,115,0.4)">HH</text>
-            <text x="195" y="221" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="800" letter-spacing="0.1em" fill="rgba(162,155,254,0.4)">CLAP</text>
+            <text x="260" y="165" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="800" letter-spacing="0.1em" fill="rgba(255,71,87,0.8)">KICK</text>
+            <text x="325" y="221" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="800" letter-spacing="0.1em" fill="rgba(255,165,2,0.8)">SN</text>
+            <text x="260" y="276" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="800" letter-spacing="0.1em" fill="rgba(46,213,115,0.8)">HH</text>
+            <text x="195" y="221" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="800" letter-spacing="0.1em" fill="rgba(162,155,254,0.8)">CLAP</text>
 
             <!-- ── Voice pads ── -->
             <g class="voice-pad" data-voice="0" role="button" tabindex="0" aria-label="Kick voice pad, hold to roll">
-                <circle cx="260" cy="95" r="32" fill="transparent"/>
-                <polygon points="260,78 278,95 260,112 242,95" fill="rgba(255,71,87,0.18)" stroke="#FF4757" stroke-width="1.5" id="pad-poly-0"/>
-                <text x="260" y="96" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="900" fill="#FF4757" pointer-events="none">K</text>
+                <circle cx="260" cy="95" r="40" fill="transparent"/>
+                <polygon points="260,70 284,95 260,120 236,95" fill="rgba(255,71,87,0.18)" stroke="#FF4757" stroke-width="1.5" id="pad-poly-0"/>
+                <text x="260" y="96" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="900" fill="#FF4757" pointer-events="none">K</text>
             </g>
             <g class="voice-pad" data-voice="1" role="button" tabindex="0" aria-label="Snare voice pad, hold to roll">
-                <circle cx="395" cy="220" r="32" fill="transparent"/>
-                <polygon points="395,203 413,220 395,237 377,220" fill="rgba(255,165,2,0.18)" stroke="#FFA502" stroke-width="1.5" id="pad-poly-1"/>
-                <text x="395" y="221" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="900" fill="#FFA502" pointer-events="none">S</text>
+                <circle cx="395" cy="220" r="40" fill="transparent"/>
+                <polygon points="395,195 419,220 395,245 371,220" fill="rgba(255,165,2,0.18)" stroke="#FFA502" stroke-width="1.5" id="pad-poly-1"/>
+                <text x="395" y="221" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="900" fill="#FFA502" pointer-events="none">S</text>
             </g>
             <g class="voice-pad" data-voice="2" role="button" tabindex="0" aria-label="Hi-hat voice pad, hold to roll">
-                <circle cx="260" cy="345" r="32" fill="transparent"/>
-                <polygon points="260,328 278,345 260,362 242,345" fill="rgba(46,213,115,0.18)" stroke="#2ED573" stroke-width="1.5" id="pad-poly-2"/>
-                <text x="260" y="346" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="900" fill="#2ED573" pointer-events="none">H</text>
+                <circle cx="260" cy="345" r="40" fill="transparent"/>
+                <polygon points="260,320 284,345 260,370 236,345" fill="rgba(46,213,115,0.18)" stroke="#2ED573" stroke-width="1.5" id="pad-poly-2"/>
+                <text x="260" y="346" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="900" fill="#2ED573" pointer-events="none">H</text>
             </g>
             <g class="voice-pad" data-voice="3" role="button" tabindex="0" aria-label="Clap voice pad, hold to roll">
-                <circle cx="125" cy="220" r="32" fill="transparent"/>
-                <polygon points="125,203 143,220 125,237 107,220" fill="rgba(162,155,254,0.18)" stroke="#A29BFE" stroke-width="1.5" id="pad-poly-3"/>
-                <text x="125" y="221" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="900" fill="#A29BFE" pointer-events="none">C</text>
+                <circle cx="125" cy="220" r="40" fill="transparent"/>
+                <polygon points="125,195 149,220 125,245 101,220" fill="rgba(162,155,254,0.18)" stroke="#A29BFE" stroke-width="1.5" id="pad-poly-3"/>
+                <text x="125" y="221" text-anchor="middle" dominant-baseline="middle" font-size="16" font-weight="900" fill="#A29BFE" pointer-events="none">C</text>
             </g>
 
             <!-- ── Effect buttons ── -->
             <g class="effect-btn" data-fx="repeat" role="button" tabindex="0" aria-label="Repeat effect, hold to activate" aria-pressed="false">
-                <circle cx="330" cy="155" r="26" fill="rgba(255,71,87,0.1)" stroke="#FF4757" stroke-width="1.5" id="fx-c-repeat"/>
-                <text x="330" y="156" text-anchor="middle" dominant-baseline="middle" font-size="7" font-weight="800" fill="#FF4757" pointer-events="none">REPEAT</text>
+                <circle cx="330" cy="155" r="32" fill="rgba(255,71,87,0.1)" stroke="#FF4757" stroke-width="1.5" id="fx-c-repeat"/>
+                <text x="330" y="156" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="800" fill="#FF4757" pointer-events="none">REPEAT</text>
             </g>
             <g class="effect-btn" data-fx="random" role="button" tabindex="0" aria-label="Random effect, hold to activate" aria-pressed="false">
-                <circle cx="330" cy="285" r="26" fill="rgba(255,165,2,0.1)" stroke="#FFA502" stroke-width="1.5" id="fx-c-random"/>
-                <text x="330" y="286" text-anchor="middle" dominant-baseline="middle" font-size="7" font-weight="800" fill="#FFA502" pointer-events="none">RANDOM</text>
+                <circle cx="330" cy="285" r="32" fill="rgba(255,165,2,0.1)" stroke="#FFA502" stroke-width="1.5" id="fx-c-random"/>
+                <text x="330" y="286" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="800" fill="#FFA502" pointer-events="none">RANDOM</text>
             </g>
             <g class="effect-btn" data-fx="filter" role="button" tabindex="0" aria-label="Filter effect, hold and drag to sweep" aria-pressed="false">
-                <circle cx="190" cy="285" r="26" fill="rgba(46,213,115,0.1)" stroke="#2ED573" stroke-width="1.5" id="fx-c-filter"/>
-                <text x="190" y="286" text-anchor="middle" dominant-baseline="middle" font-size="7" font-weight="800" fill="#2ED573" pointer-events="none">FILTER</text>
+                <circle cx="190" cy="285" r="32" fill="rgba(46,213,115,0.1)" stroke="#2ED573" stroke-width="1.5" id="fx-c-filter"/>
+                <text x="190" y="286" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="800" fill="#2ED573" pointer-events="none">FILTER</text>
             </g>
             <g class="effect-btn" data-fx="distortion" role="button" tabindex="0" aria-label="Distortion effect, hold to activate" aria-pressed="false">
-                <circle cx="190" cy="155" r="26" fill="rgba(91,138,255,0.1)" stroke="#5B8AFF" stroke-width="1.5" id="fx-c-distortion"/>
-                <text x="190" y="156" text-anchor="middle" dominant-baseline="middle" font-size="7" font-weight="800" fill="#5B8AFF" pointer-events="none">DISTORT</text>
+                <circle cx="190" cy="155" r="32" fill="rgba(91,138,255,0.1)" stroke="#5B8AFF" stroke-width="1.5" id="fx-c-distortion"/>
+                <text x="190" y="156" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="800" fill="#5B8AFF" pointer-events="none">DISTORT</text>
             </g>
 
             <!-- Center play button -->
-            <circle cx="260" cy="220" r="32" fill="#141414" stroke="#252525" stroke-width="1.5" id="play-bg"/>
-            <text id="play-icon" x="260" y="221" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="#f0f0f0" style="cursor:pointer" aria-hidden="true">▶</text>
-            <circle cx="260" cy="220" r="32" fill="transparent" id="play-hit" style="cursor:pointer" role="button" tabindex="0" aria-label="Play or stop"/>
+            <circle cx="260" cy="220" r="38" fill="#141414" stroke="#252525" stroke-width="1.5" id="play-bg"/>
+            <text id="play-icon" x="260" y="221" text-anchor="middle" dominant-baseline="middle" font-size="26" fill="#f0f0f0" style="cursor:pointer" aria-hidden="true">▶</text>
+            <circle cx="260" cy="220" r="38" fill="transparent" id="play-hit" style="cursor:pointer" role="button" tabindex="0" aria-label="Play or stop"/>
 
             <!-- DATO badge -->
             <text x="260" y="241" text-anchor="middle" font-size="5.5" fill="#282828" font-weight="900" letter-spacing="0.22em" font-family="monospace">DATO</text>
@@ -750,23 +850,41 @@ permalink: /drum-machine/
     <div id="pitch-row">
         <span id="pitch-label">TUNE</span>
         <div class="pitch-group">
-            <span class="pitch-badge kick">K</span>
-            <input type="range" class="pitch-slider kick" data-voice="0" min="-12" max="12" value="0" step="1">
+            <div class="pitch-head"><span class="pitch-badge kick">K</span><span class="pitch-val" id="pitch-val-0">0</span></div>
+            <input type="range" class="pitch-slider kick" data-voice="0" min="-12" max="12" value="0" step="1" aria-label="Kick tune in semitones">
         </div>
         <div class="pitch-group">
-            <span class="pitch-badge snare">S</span>
-            <input type="range" class="pitch-slider snare" data-voice="1" min="-12" max="12" value="0" step="1">
+            <div class="pitch-head"><span class="pitch-badge snare">S</span><span class="pitch-val" id="pitch-val-1">0</span></div>
+            <input type="range" class="pitch-slider snare" data-voice="1" min="-12" max="12" value="0" step="1" aria-label="Snare tune in semitones">
         </div>
         <div class="pitch-group">
-            <span class="pitch-badge hihat">H</span>
-            <input type="range" class="pitch-slider hihat" data-voice="2" min="-12" max="12" value="0" step="1">
+            <div class="pitch-head"><span class="pitch-badge hihat">H</span><span class="pitch-val" id="pitch-val-2">0</span></div>
+            <input type="range" class="pitch-slider hihat" data-voice="2" min="-12" max="12" value="0" step="1" aria-label="Hi-hat tune in semitones">
         </div>
         <div class="pitch-group">
-            <span class="pitch-badge clap">C</span>
-            <input type="range" class="pitch-slider clap" data-voice="3" min="-12" max="12" value="0" step="1">
+            <div class="pitch-head"><span class="pitch-badge clap">C</span><span class="pitch-val" id="pitch-val-3">0</span></div>
+            <input type="range" class="pitch-slider clap" data-voice="3" min="-12" max="12" value="0" step="1" aria-label="Clap tune in semitones">
         </div>
     </div>
 
+</div>
+
+<div id="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+    <div id="help-card">
+        <div class="help-head">
+            <h2 id="help-title">How to play</h2>
+            <button id="help-close" aria-label="Close help">✕</button>
+        </div>
+        <ul class="help-list">
+            <li><span class="help-ico" style="--c:var(--kick)">STEPS</span><div><strong>Tap dots to place beats</strong><span class="help-sub">Each arc is one voice. Drag across dots to paint several at once.</span></div></li>
+            <li><span class="help-ico" style="--c:var(--snare)">PADS</span><div><strong>Hold a pad to roll</strong><span class="help-sub">Tap to hear the voice. Hold and slide up for a faster roll, down for slower.</span></div></li>
+            <li><span class="help-ico" style="--c:var(--hihat)">FX</span><div><strong>Hold an effect while it plays</strong><span class="help-sub">REPEAT loops step 1, RANDOM plays random hits, DISTORT adds grit. Hold FILTER and drag up to darken, down to brighten.</span></div></li>
+            <li><span class="help-ico" style="--c:var(--clap)">SWAP</span><div><strong>Tap a sample card to change the sound</strong><span class="help-sub">Each voice has four sounds to cycle through.</span></div></li>
+            <li><span class="help-ico" style="--c:#b0b0b0">A–D</span><div><strong>Four pattern slots</strong><span class="help-sub">Tap to switch. Press and hold a slot to clear it.</span></div></li>
+            <li><span class="help-ico" style="--c:#b0b0b0">BPM</span><div><strong>Tap the tempo to tap in a beat</strong><span class="help-sub">SYNC restarts the loop from step 1. The mic button listens and detects the BPM.</span></div></li>
+        </ul>
+        <p class="help-keys">Keyboard: Space play · 1–4 pads · Q W A S effects · ← → tempo · Ctrl+Z undo</p>
+    </div>
 </div>
 
 <div id="fx-toast">Hold effect buttons to activate</div>
@@ -892,7 +1010,7 @@ function applySlotState(s) {
     if (s.grid)            grid = s.grid.map(row => row.map(c => typeof c === 'boolean' ? (c ? 1 : 0) : (c | 0)));
     if (s.bpm != null)     { bpm = s.bpm; bpmSlider.value = bpm; bpmValueEl.textContent = bpm; }
     if (s.swing != null)   { swing = s.swing; swingSlider.value = Math.round(swing * 100); swingValueEl.textContent = Math.round(swing * 100) + '%'; }
-    if (s.pitches)         { pitches = s.pitches.slice(); document.querySelectorAll('.pitch-slider').forEach(el => { el.value = pitches[+el.dataset.voice]; }); }
+    if (s.pitches)         { pitches = s.pitches.slice(); document.querySelectorAll('.pitch-slider').forEach(el => { el.value = pitches[+el.dataset.voice]; }); updatePitchLabels(); }
     if (s.selectedSamples) {
         selectedSamples = s.selectedSamples.slice();
         const voiceLabels = ['Kick', 'Snare', 'Hi-hat', 'Clap'];
@@ -1750,7 +1868,7 @@ const bpmValueEl   = document.getElementById('bpm-value');
 const tempoDisplay = document.getElementById('tempo-display');
 
 function updateTempoDisplay() {
-    tempoDisplay.textContent = `♩ ${bpm} · swing ${Math.round(swing * 100)}%`;
+    tempoDisplay.innerHTML = `<span class="td-bpm">${bpm}<small>BPM</small></span><span class="td-hint">tap to set</span>`;
     tempoDisplay.setAttribute('aria-label',
         `Tap tempo. Current tempo: ${bpm} BPM, ${Math.round(swing * 100)} percent swing`);
     announce(`${bpm} BPM`, 300);
@@ -1789,8 +1907,39 @@ swingSlider.addEventListener('input', () => {
 });
 
 document.querySelectorAll('.pitch-slider').forEach(el => {
-    el.addEventListener('input', () => { pitches[+el.dataset.voice] = +el.value; saveState(); });
+    el.addEventListener('input', () => { pitches[+el.dataset.voice] = +el.value; updatePitchLabels(); saveState(); });
 });
+
+function updatePitchLabels() {
+    document.querySelectorAll('.pitch-slider').forEach(el => {
+        const out = document.getElementById(`pitch-val-${el.dataset.voice}`);
+        const v = +el.value;
+        if (out) out.textContent = v > 0 ? `+${v}` : `${v}`;
+    });
+}
+
+// ─── Help overlay ─────────────────────────────────────────────────────────────
+const helpOverlay = document.getElementById('help-overlay');
+const helpBtn     = document.getElementById('help-btn');
+const helpClose   = document.getElementById('help-close');
+let helpOpen = false;
+
+function openHelp() {
+    helpOpen = true;
+    helpOverlay.hidden = false;
+    helpBtn.classList.remove('new');
+    try { localStorage.setItem('dm_help_seen', '1'); } catch (e) {}
+    helpClose.focus();
+}
+function closeHelp() {
+    helpOpen = false;
+    helpOverlay.hidden = true;
+    helpBtn.focus();
+}
+helpBtn.addEventListener('click', openHelp);
+helpClose.addEventListener('click', closeHelp);
+helpOverlay.addEventListener('click', e => { if (e.target === helpOverlay) closeHelp(); });
+try { if (!localStorage.getItem('dm_help_seen')) helpBtn.classList.add('new'); } catch (e) {}
 
 document.querySelectorAll('.sample-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1875,7 +2024,7 @@ function updateClapRecordUI() {
         recClearBtn.style.display = '';
     } else {
         recBtn.classList.remove('recording');
-        recLabelEl.textContent = '● REC CLAP';
+        recLabelEl.textContent = 'REC CLAP';
         recClearBtn.style.display = 'none';
     }
 }
@@ -2214,7 +2363,7 @@ document.getElementById('sync-beat-btn').addEventListener('click', () => {
 
 // ─── Service Worker ───────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-    const SW_VERSION = '2607300229';
+    const SW_VERSION = '2610090802';
     navigator.serviceWorker.register(
         `/drum-machine/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
         { scope: '/drum-machine/' }
@@ -2241,6 +2390,10 @@ if ('serviceWorker' in navigator) {
 
 // ─── Keyboard Support ─────────────────────────────────────────────────────────
 window.addEventListener('keydown', e => {
+    if (helpOpen) {
+        if (e.key === 'Escape') closeHelp();
+        return;
+    }
     if (e.target.matches('input, textarea, [contenteditable]')) return;
     const key = e.key.toLowerCase();
 
