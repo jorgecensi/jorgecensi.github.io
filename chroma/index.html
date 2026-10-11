@@ -220,7 +220,7 @@ permalink: /chroma/
         .row label { font-size: 15px; font-weight: 600; }
         .row .hint { display: block; font-size: 12px; color: var(--text-dim); font-weight: 400; margin-top: 2px; }
         .seg { display: flex; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 3px; }
-        .seg button { border: none; background: none; padding: 8px 12px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--text-dim); }
+        .seg button { border: none; background: none; padding: 8px 9px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--text-dim); }
         .seg button.on { background: rgba(255,255,255,0.92); color: #111; }
         input[type="range"] { width: 140px; accent-color: var(--accent); }
         .toggle { position: relative; width: 50px; height: 30px; flex-shrink: 0; }
@@ -309,6 +309,7 @@ permalink: /chroma/
                     <button data-mode="aurora">Aurora</button>
                     <button data-mode="wheel">Wheel</button>
                     <button data-mode="wash">Wash</button>
+                    <button data-mode="hands">Hands</button>
                 </div>
             </div>
             <div class="row">
@@ -319,8 +320,12 @@ permalink: /chroma/
                 <label for="opt-calm">Calm mode<span class="hint">Softer beats, no bright pulses</span></label>
                 <label class="toggle"><input type="checkbox" id="opt-calm"><span></span></label>
             </div>
+            <div class="row">
+                <label for="opt-drums">Show drums<span class="hint">Turn off to see only the notes</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-drums"><span></span></label>
+            </div>
             <div class="row" id="row-vibrate">
-                <label for="opt-vibrate">Feel the beat<span class="hint">Vibrates on drum hits (Android)</span></label>
+                <label for="opt-vibrate">Feel the beat<span class="hint">Vibrates on kick drums (Android)</span></label>
                 <label class="toggle"><input type="checkbox" id="opt-vibrate"><span></span></label>
             </div>
             <div class="row">
@@ -363,10 +368,10 @@ permalink: /chroma/
             <table class="map-table">
                 <tr><td>Key</td><td>The background colour. It is the song's home note and changes slowly.</td></tr>
                 <tr><td>Loudness</td><td>Brightness and size. Quiet music glows softly; loud music fills the screen.</td></tr>
-                <tr><td>Beat</td><td>A ripple spreads out from the music. Drum hits pulse from the bottom (and vibrate, if you turn that on).</td></tr>
+                <tr><td>Drums</td><td>Kept apart from the notes. Drums have no pitch, so they have no note colour: they show as white light. Kick drums pulse up from the bottom (and vibrate, if you turn that on), snares ring from the centre, and hi-hats give a few sparks. Drum hits don't change the note colours. To see only the notes, turn off <strong>Show drums</strong>.</td></tr>
                 <tr><td>Melody</td><td>A glowing ribbon. High notes are higher on the screen and lighter in colour.</td></tr>
                 <tr><td>Tension</td><td>Clashing notes add the opposite colour and make the shapes shake. When the music resolves, it calms down.</td></tr>
-                <tr><td>Bright sounds</td><td>Cymbals, hi-hats and high instruments make sparkles.</td></tr>
+                <tr><td>Bright sounds</td><td>High instruments make sparkles.</td></tr>
             </table>
 
             <h3>Visuals</h3>
@@ -374,6 +379,7 @@ permalink: /chroma/
                 <li><strong>Aurora</strong>: soft, moving light. Each note has its own place, so calm chords bunch together and clashing chords spread apart.</li>
                 <li><strong>Wheel</strong>: the circle of fifths, with chord shapes drawn on it. Good for learning.</li>
                 <li><strong>Wash</strong>: the whole screen in one colour. Calm and easy to follow from the corner of your eye.</li>
+                <li><strong>Hands</strong>: every note as a coloured bar with its name, moving from right to left. The high part (a pianist's right hand, or the melody) is on top. The low part (the left hand, or the bass) is below, and the drums run between them. The line between the two parts moves to the biggest gap between the notes.</li>
             </ul>
 
             <h3>Tips</h3>
@@ -557,7 +563,7 @@ permalink: /chroma/
 
         // ─── Settings ────────────────────────────────────────────────────
         const SETTINGS_KEY = 'chroma-settings-v1';
-        const settings = { mode: 'aurora', sensitivity: 1, calm: false, vibrate: true, labels: true, legend: true };
+        const settings = { mode: 'aurora', sensitivity: 1, calm: false, drums: true, vibrate: true, labels: true, legend: true };
         try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (_) {}
         const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {} };
         const canVibrate = typeof navigator.vibrate === 'function';
@@ -626,7 +632,9 @@ permalink: /chroma/
             [9, 'min'], [5, 'maj'], [11, 'dim'], [7, 'sus4'],
             [7, '7'], [0, 'maj'], [8, 'aug'], [0, 'maj'],
         ];
-        async function startDemo() {
+        // parts: which layers to play ({ harmony, drums }); tests use it to
+        // check that drums and notes are kept apart.
+        async function startDemo(parts = { harmony: true, drums: true }) {
             const ctx = ensureContext();
             await ctx.resume();
             stopSource();
@@ -677,10 +685,27 @@ permalink: /chroma/
                 s.start(t); s.stop(t + 0.08);
             };
 
+            const snare = (t) => {
+                const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+                s.buffer = noise; f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.7;
+                g.gain.setValueAtTime(0.5, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+                s.connect(f); f.connect(g); g.connect(master);
+                s.start(t); s.stop(t + 0.18);
+            };
+
             const scheduleBar = (n) => {
                 const [root, qid] = DEMO_BARS[n % DEMO_BARS.length];
                 const q = qById[qid];
                 const t = t0 + n * bar;
+                if (parts.drums) {
+                    for (let b = 0; b < 4; b++) {
+                        kick(t + b * beat);
+                        if (b % 2) snare(t + b * beat);
+                        hat(t + b * beat + beat / 2);
+                    }
+                }
+                if (!parts.harmony) return;
                 // Pad: chord tones voiced between G3 and F#4.
                 for (const iv of q.iv) {
                     let m = 60 + ((root + iv) % 12);
@@ -688,10 +713,6 @@ permalink: /chroma/
                     tone('triangle', mtof(m), t, bar - 0.02, 0.07);
                 }
                 tone('sine', mtof(36 + root), t, bar - 0.05, 0.28);
-                for (let b = 0; b < 4; b++) {
-                    kick(t + b * beat);
-                    hat(t + b * beat + beat / 2);
-                }
                 // Melody: chord tones in octave 5, a little rise and fall.
                 const pattern = [0, 1, 2, 1, 2, 3, 2, 1];
                 for (let k = 0; k < 8; k++) {
@@ -734,18 +755,40 @@ permalink: /chroma/
         }
 
         // ─── Analysis ────────────────────────────────────────────────────
-        let bigDb, smallDb, smallTime, prevLog, binHz, smallBinHz;
+        let bigDb, smallDb, smallTime, binHz, smallBinHz;
+        // Harmonic/percussive separation (median filtering, Fitzgerald 2010):
+        // steady tones are smooth along time, drum hits are smooth along
+        // frequency. HP_T frames of history, HP_F bins across.
+        const HP_T = 13, HP_F = 13;
+        const PROM_W = 16;                       // ±bins for a peak's local median
+        const promTmp = new Float32Array(2 * PROM_W + 1);
+        const HP = { K: 0, hist: [], pos: 0, filled: 0, cur: null, prevP: null, tmp: new Float32Array(Math.max(HP_T, HP_F)) };
         function initBuffers() {
             bigDb = new Float32Array(A.big.frequencyBinCount);
             smallDb = new Float32Array(A.small.frequencyBinCount);
             smallTime = new Float32Array(A.small.fftSize);
-            prevLog = new Float32Array(A.small.frequencyBinCount);
             binHz = A.ctx.sampleRate / A.big.fftSize;
             smallBinHz = A.ctx.sampleRate / A.small.fftSize;
+            HP.K = Math.min(smallDb.length - 1, Math.floor(10000 / smallBinHz));
+            HP.hist = Array.from({ length: HP_T }, () => new Float32Array(HP.K));
+            HP.pos = 0; HP.filled = 0;
+            HP.cur = new Float32Array(HP.K);
+            HP.prevP = new Float32Array(HP.K);
+        }
+
+        function median(a, n) {
+            for (let i = 1; i < n; i++) {
+                const v = a[i];
+                let j = i - 1;
+                while (j >= 0 && a[j] > v) { a[j + 1] = a[j]; j--; }
+                a[j + 1] = v;
+            }
+            return a[n >> 1];
         }
 
         // Everything the visuals read. Smoothed values live here too.
         const M = {
+            now: 0,
             level: 0, db: -100, floor: -70, peak: -30,
             chromaRaw: new Array(12).fill(0),
             chroma: new Array(12).fill(0),       // fast-smoothed (visuals)
@@ -758,12 +801,16 @@ permalink: /chroma/
             key: null, keyCheckAt: 0,
             tension: 0, rough: 0,
             bass: 0, mid: 0, treble: 0, centroid: 0,
-            flux: [], bassFlux: [], lastOnset: 0, lastKick: 0, beatGlow: 0,
-            onsetCount: 0, kickCount: 0,
+            perc: 0,                              // share of energy that is drums (smoothed)
+            // Notes with octaves, tracked over time, and the low/high split.
+            track: new Map(), segments: [], split: 60, noteOnCount: 0,
+            // Drum hits: { t, type: 'kick'|'snare'|'hat', s }.
+            pFlux: [], kFlux: [], lastDrum: 0, lastKick: 0, drums: [], drumCount: { kick: 0, snare: 0, hat: 0 }, beatGlow: 0,
         };
 
         function analyse(now, dt) {
             if (!A.ctx || !A.source) return;
+            M.now = now;
             A.big.getFloatFrequencyData(bigDb);
             A.small.getFloatFrequencyData(smallDb);
             A.small.getFloatTimeDomainData(smallTime);
@@ -785,10 +832,14 @@ permalink: /chroma/
             level = clamp(level);
             M.level += (level - M.level) * ease(dt, level > M.level ? 0.03 : 0.25);
 
-            // Chroma: spectral peaks between ~55 Hz and ~4.2 kHz, folded into
-            // 12 pitch classes, weighted by how close each peak is to a note.
-            const kLo = Math.max(2, Math.floor(55 / binHz));
-            const kHi = Math.min(bigDb.length - 2, Math.ceil(4200 / binHz));
+            const percNow = separate(now, dt);
+
+            // Spectral peaks between ~55 Hz and ~4.2 kHz. Only peaks standing
+            // well clear of their surroundings count: a held note is a narrow
+            // spike, while drum noise (randomly spiky) and pitch sweeps (a
+            // kick drum's broad hump) never rise 15 dB above the local median.
+            const kLo = Math.max(PROM_W, Math.floor(55 / binHz));
+            const kHi = Math.min(bigDb.length - PROM_W - 1, Math.ceil(4200 / binHz));
             let maxDb = -Infinity;
             for (let k = kLo; k <= kHi; k++) if (bigDb[k] > maxDb) maxDb = bigDb[k];
             const thr = Math.max(maxDb - 40, -100);
@@ -798,6 +849,8 @@ permalink: /chroma/
             for (let k = kLo; k <= kHi; k++) {
                 const b = bigDb[k];
                 if (b < thr || b < bigDb[k - 1] || b <= bigDb[k + 1]) continue;
+                for (let j = 0; j <= 2 * PROM_W; j++) promTmp[j] = bigDb[k - PROM_W + j];
+                if (b - median(promTmp, 2 * PROM_W + 1) < 15) continue;
                 const a = bigDb[k - 1], c = bigDb[k + 1];
                 const den = a - 2 * b + c;
                 const p = den ? 0.5 * (a - c) / den : 0;
@@ -829,11 +882,16 @@ permalink: /chroma/
             if (rmax > 0) for (let i = 0; i < 12; i++) raw[i] /= rmax;
             const audible = M.level > 0.04 && rmax > 0;
 
+            // While a drum hits, hold the note colours still instead of letting
+            // the hit smear into them.
+            const hold = clamp(1 - 1.6 * percNow);
             for (let i = 0; i < 12; i++) {
                 const target = audible ? raw[i] : 0;
-                M.chroma[i] += (target - M.chroma[i]) * ease(dt, target > M.chroma[i] ? 0.05 : 0.3);
-                if (audible) M.chordChroma[i] += (raw[i] - M.chordChroma[i]) * ease(dt, 0.12);
+                M.chroma[i] += (target - M.chroma[i]) * ease(dt, target > M.chroma[i] ? 0.05 : 0.3) * (audible ? hold : 1);
+                if (audible) M.chordChroma[i] += (raw[i] - M.chordChroma[i]) * ease(dt, 0.12) * hold;
             }
+
+            trackNotes(peaks, maxDb, audible, now, dt);
 
             // Bass note: the lowest strong peak.
             const peakMax = peaks.reduce((m, p) => Math.max(m, p.mag), 0);
@@ -911,42 +969,142 @@ permalink: /chroma/
             const qT = M.chord && M.chord.q ? M.chord.q.tension : 0;
             const tTarget = M.level > 0.04 ? clamp(0.45 * qT + 0.55 * clamp((M.rough - 0.12) / 0.45)) : 0;
             M.tension += (tTarget - M.tension) * ease(dt, 0.3);
+            M.beatGlow = Math.max(0, M.beatGlow - dt * 4);
+        }
 
-            // Bands, brightness (spectral centroid) and onsets.
-            let bass = 0, mid = 0, treble = 0, cNum = 0, cDen = 0, flux = 0, bFlux = 0;
-            for (let k = 1; k < smallDb.length; k++) {
+        // Splits the short-window spectrum into harmonic (notes) and
+        // percussive (drums) parts. Bands and brightness come from the
+        // harmonic part only; drum hits are detected on the percussive part
+        // and sorted into kick / snare / hi-hat by where their energy sits.
+        // Returns this frame's percussive share of the energy (0..1).
+        function separate(now, dt) {
+            const K = HP.K, cur = HP.cur, tmp = HP.tmp;
+            for (let k = 0; k < K; k++) cur[k] = Math.pow(10, smallDb[k] / 20);
+            HP.hist[HP.pos].set(cur);
+            HP.pos = (HP.pos + 1) % HP_T;
+            HP.filled = Math.min(HP.filled + 1, HP_T);
+            const half = HP_F >> 1;
+            let spread = 0, spreadN = 0;
+            let hE = 0, pE = 0, hLow = 0, pLow = 0, pMid = 0, pHigh = 0, pFlux = 0, lowFlux = 0;
+            let bass = 0, mid = 0, treble = 0, cNum = 0, cDen = 0;
+            for (let k = 1; k < K; k++) {
+                for (let t = 0; t < HP.filled; t++) tmp[t] = HP.hist[t][k];
+                const h = median(tmp, HP.filled);
+                let n = 0;
+                for (let j = Math.max(1, k - half); j <= Math.min(K - 1, k + half); j++) tmp[n++] = cur[j];
+                const p = median(tmp, n);
+                const h2 = h * h, p2 = p * p, den = h2 + p2 + 1e-20;
+                const hm = cur[k] * h2 / den, pm = cur[k] * p2 / den;   // soft (Wiener) masks
                 const f = k * smallBinHz;
-                if (f > 10000) break;
-                const mag = Math.pow(10, smallDb[k] / 20);
-                const p = mag * mag;
-                if (f < 250) bass += p; else if (f < 2000) mid += p; else treble += p;
-                cNum += f * mag; cDen += mag;
-                const lg = Math.log1p(1000 * mag);
-                const d = lg - prevLog[k];
-                if (d > 0) { flux += d; if (f < 180) bFlux += d; }
-                prevLog[k] = lg;
+                const hp = hm * hm, pp = pm * pm;
+                hE += hp; pE += pp;
+                if (f < 150) { pLow += pp; hLow += hp; } else if (f < 3000) pMid += pp; else pHigh += pp;
+                if (f < 250) bass += hp; else if (f < 2000) mid += hp; else treble += hp;
+                cNum += f * hm; cDen += hm;
+                const lp = Math.log1p(1000 * pm);
+                const d = lp - HP.prevP[k];
+                if (d > 0) { if (f < 150) lowFlux += d; else pFlux += d; }
+                // How much of 150 Hz–8 kHz changed at once.
+                if (f >= 150 && f < 8000) { spreadN++; if (d > 0.05) spread++; }
+                HP.prevP[k] = lp;
             }
-            const tot = bass + mid + treble + 1e-12;
+            const tot = hE + pE + 1e-12;
+            const percNow = pE / tot;
+            M.perc += (percNow - M.perc) * ease(dt, 0.3);
+            const hTot = bass + mid + treble + 1e-12;
+            const hLevel = M.level * (1 - percNow);
             const sm = ease(dt, 0.08);
-            M.bass += (bass / tot * M.level - M.bass) * sm;
-            M.mid += (mid / tot * M.level - M.mid) * sm;
-            M.treble += (clamp(Math.sqrt(treble / tot) * 1.5) * M.level - M.treble) * sm;
+            M.bass += (bass / hTot * hLevel - M.bass) * sm;
+            M.mid += (mid / hTot * hLevel - M.mid) * sm;
+            M.treble += (clamp(Math.sqrt(treble / hTot) * 1.5) * hLevel - M.treble) * sm;
             M.centroid += ((cDen ? cNum / cDen : 0) - M.centroid) * sm;
 
-            const onset = detectOnset(M.flux, flux, now, 0.11, M.lastOnset);
-            if (onset > 0 && M.level > 0.06) {
-                M.lastOnset = now;
-                M.onsetCount++;
-                M.beatGlow = 1;
-                emitRipple(onset);
-            }
-            const kickOn = detectOnset(M.bassFlux, bFlux, now, 0.2, M.lastKick);
-            if (kickOn > 0 && M.level > 0.08 && bass / tot > 0.25) {
+            // A kick lives in a few low bins, so it gets its own detector;
+            // otherwise the broadband snares and hats would drown it out.
+            // A drum's change is spread across the spectrum (noise); a chord
+            // starting at once changes only its notes' harmonics. In tests,
+            // drums spread over ≥ 21% of the bins and chord attacks ≤ 8%.
+            const spreadOk = spread / Math.max(1, spreadN) >= 0.15;
+            const drum = (type, s) => {
+                M.drumCount[type]++;
+                M.drums.push({ t: now, type, s });
+                emitDrum(type, s);
+            };
+            const kick = detectOnset(M.kFlux, lowFlux, now, 0.15, M.lastKick);
+            // A new bass note also brings low-end change; a kick is mostly percussive.
+            if (kick > 0 && M.level > 0.05 && pLow > hLow && spreadOk) {
                 M.lastKick = now;
-                M.kickCount++;
-                emitKick(kickOn);
+                drum('kick', kick);
             }
-            M.beatGlow = Math.max(0, M.beatGlow - dt * 4);
+            const hit = detectOnset(M.pFlux, pFlux, now, 0.09, M.lastDrum);
+            // Note attacks (a piano hammer) are a little percussive too; a drum is mostly so.
+            if (hit > 0 && M.level > 0.05 && percNow > 0.3 && spreadOk) {
+                M.lastDrum = now;
+                drum(pHigh > 1.5 * pMid ? 'hat' : 'snare', hit);
+            }
+            while (M.drums.length && now - M.drums[0].t > 8) M.drums.shift();
+            return percNow;
+        }
+
+        // Notes with octaves. Walk the sharp peaks from low to high; a peak
+        // on a whole-number multiple of a lower note (and no louder than it)
+        // is that note's overtone, not a new note. A note must last 70 ms
+        // before it shows and stays for 120 ms after it fades, so short
+        // flickers never reach the screen.
+        function trackNotes(peaks, maxDb, audible, now, dt) {
+            const found = [];
+            if (audible) {
+                const noteThr = maxDb - 30;
+                for (const pk of peaks) {
+                    if (pk.db < noteThr) continue;
+                    const near = Math.round(pk.midi);
+                    if (Math.abs(pk.midi - near) > 0.35) continue;
+                    let overtone = false;
+                    for (const n of found) {
+                        const r = pk.f / n.f, h = Math.round(r);
+                        // An octave may be as loud as its fundamental; higher
+                        // overtones must be clearly quieter, or it was played.
+                        const quieter = h === 2 ? pk.db <= n.db + 3 : pk.db <= n.db - 4;
+                        if (h >= 2 && h <= 10 && Math.abs(r - h) < 0.03 * h && quieter) { overtone = true; break; }
+                    }
+                    if (!overtone && !found.some((n) => n.midi === near)) {
+                        found.push({ midi: near, f: pk.f, db: pk.db, s: clamp((pk.db - noteThr) / 30) });
+                    }
+                }
+                found.sort((a, b) => b.db - a.db);
+                found.length = Math.min(found.length, 10);
+            }
+            const T = M.track;
+            for (const n of found) {
+                let t = T.get(n.midi);
+                if (!t) { t = { midi: n.midi, pc: ((n.midi % 12) + 12) % 12, first: now, on: false, seg: null }; T.set(n.midi, t); }
+                t.last = now;
+                t.s = n.s;
+            }
+            for (const t of [...T.values()]) {
+                if (!t.on && t.last === now && now - t.first >= 0.07) {
+                    t.on = true;
+                    t.seg = { midi: t.midi, pc: t.pc, t0: now, t1: 0, s: t.s, hand: t.midi < M.split ? 'L' : 'R' };
+                    M.segments.push(t.seg);
+                    M.noteOnCount++;
+                }
+                if (t.on) t.seg.s = Math.max(t.seg.s, t.s);
+                if (now - t.last > 0.12) {
+                    if (t.on) t.seg.t1 = now;
+                    T.delete(t.midi);
+                }
+            }
+            // The split follows the widest gap between sounding notes, slowly,
+            // so a hand's notes don't jump lanes.
+            const on = [...T.values()].filter((t) => t.on).map((t) => t.midi).sort((a, b) => a - b);
+            if (on.length >= 2) {
+                let gap = 0, at = -1;
+                for (let i = 0; i + 1 < on.length; i++) if (on[i + 1] - on[i] > gap) { gap = on[i + 1] - on[i]; at = i; }
+                if (gap >= 5) M.split += ((on[at] + on[at + 1]) / 2 - M.split) * ease(dt, 0.6);
+            }
+            M.split = clamp(M.split, 43, 77);
+            while (M.segments.length && M.segments[0].t1 && now - M.segments[0].t1 > 8) M.segments.shift();
+            if (M.segments.length > 400) M.segments.splice(0, M.segments.length - 400);
         }
 
         function detectKeyScore(chroma, key) {
@@ -1003,24 +1161,31 @@ permalink: /chroma/
             return { hue: pcHue(c.root), L: c.q.L, C: c.q.C };
         }
 
-        function emitRipple(strength) {
-            const look = chordLook() || { hue: V.chordHue, L: 0.8, C: 0.12 };
-            const maxR = Math.hypot(W, H) * (settings.calm ? 0.4 : 0.6);
-            V.ripples.push({ t: 0, life: 1.3, hue: look.hue, L: look.L, C: look.C, s: strength, x: W / 2, y: H / 2, maxR, kick: false });
+        // Drums have no pitch, so they get no note colour: they show as
+        // near-white light, tinted only by the key. Kicks rise from the
+        // bottom, snares ring from the centre, hi-hats are a few sparks.
+        function emitDrum(type, strength) {
+            M.beatGlow = Math.max(M.beatGlow, type === 'hat' ? 0.4 : 1);
+            if (!settings.drums) return;
+            if (type === 'hat') {
+                if (!settings.calm) for (let i = 0; i < 3; i++) spawnSpark(true);
+                return;
+            }
+            if (type === 'snare') {
+                const maxR = Math.min(W, H) * (settings.calm ? 0.3 : 0.45);
+                V.ripples.push({ t: 0, life: 0.8, hue: V.keyHue, L: 0.88, C: 0.03, s: strength, x: W / 2, y: H / 2, maxR, kick: false });
+            } else {
+                V.ripples.push({ t: 0, life: 0.9, hue: V.keyHue, L: 0.85, C: 0.04, s: strength, x: W / 2, y: H + 20, maxR: H * 0.9, kick: true });
+                // Full-screen pulses are capped at 3 per second (WCAG 2.3.1).
+                if (V.time - V.lastFlash >= 0.34) {
+                    V.lastFlash = V.time;
+                    V.flash = (settings.calm ? 0.06 : 0.18) * (0.5 + 0.5 * strength);
+                }
+                if (settings.vibrate && canVibrate && A.source) {
+                    try { navigator.vibrate(Math.round(25 + 35 * strength)); } catch (_) {}
+                }
+            }
             if (V.ripples.length > 24) V.ripples.shift();
-        }
-
-        function emitKick(strength) {
-            const look = chordLook() || { hue: V.chordHue, L: 0.7, C: 0.12 };
-            V.ripples.push({ t: 0, life: 0.9, hue: M.bassPc >= 0 ? pcHue(M.bassPc) : look.hue, L: 0.6, C: 0.16, s: strength, x: W / 2, y: H + 20, maxR: H * 0.9, kick: true });
-            // Full-screen pulses are capped at 3 per second (WCAG 2.3.1).
-            if (V.time - V.lastFlash >= 0.34) {
-                V.lastFlash = V.time;
-                V.flash = (settings.calm ? 0.08 : 0.22) * (0.5 + 0.5 * strength);
-            }
-            if (settings.vibrate && canVibrate && A.source) {
-                try { navigator.vibrate(Math.round(25 + 35 * strength)); } catch (_) {}
-            }
         }
 
         function updateVisualState(dt) {
@@ -1070,16 +1235,18 @@ permalink: /chroma/
             return out;
         }
 
-        function spawnSpark() {
+        // drum: a hi-hat spark (no pitch, so no note colour).
+        function spawnSpark(drum = false) {
             if (V.sparks.length > 220) return;
             const pcs = activePcs(0.3);
             const pc = pcs.length ? pcs[(Math.random() * pcs.length) | 0] : -1;
             V.sparks.push({
-                x: Math.random() * W, y: H * (0.15 + 0.7 * Math.random()),
+                x: Math.random() * W, y: H * (drum ? 0.1 + 0.25 * Math.random() : 0.15 + 0.7 * Math.random()),
                 vx: (Math.random() - 0.5) * 20, vy: 10 + Math.random() * 30,
                 r: 1 + Math.random() * 2.4,
-                hue: pc >= 0 ? pcHue(pc) : V.chordHue,
-                t: 0, life: 0.5 + Math.random() * 0.8,
+                hue: drum ? V.keyHue : pc >= 0 ? pcHue(pc) : V.chordHue,
+                C: drum ? 0.02 : 0.08,
+                t: 0, life: drum ? 0.35 : 0.5 + Math.random() * 0.8,
             });
         }
 
@@ -1149,7 +1316,7 @@ permalink: /chroma/
         function drawSparks() {
             for (const s of V.sparks) {
                 const a = Math.sin(Math.PI * s.t / s.life);
-                g.fillStyle = col(0.93, 0.08, s.hue, a);
+                g.fillStyle = col(0.93, s.C, s.hue, a);
                 g.beginPath();
                 g.arc(s.x, s.y, s.r, 0, Math.PI * 2);
                 g.fill();
@@ -1289,10 +1456,101 @@ permalink: /chroma/
             }
         }
 
+        // Two lanes, like a scrolling piano roll: the high part (right hand)
+        // on top, the low part (left hand) below, and the drums on their own
+        // strip between them. Time runs right to left; "now" is the line.
+        function drawHands() {
+            const now = M.now;
+            const top = H * 0.2, bottom = H * (settings.legend ? 0.84 : 0.9);
+            const strip = settings.drums ? Math.max(26, H * 0.045) : 8;
+            const midY = (top + bottom) / 2;
+            const lanes = [
+                // Fixed pitch ranges (they overlap), so bars never move when
+                // the split does: high C3–E8, low C1–C5.
+                { hand: 'R', y0: top, y1: midY - strip / 2, lo: 48, hi: 100, label: 'High · right hand' },
+                { hand: 'L', y0: midY + strip / 2, y1: bottom, lo: 24, hi: 72, label: 'Low · left hand' },
+            ];
+            const nowX = W * 0.8, pps = W / 4.5;
+            const xAt = (t) => nowX - (now - t) * pps;
+            g.globalCompositeOperation = 'source-over';
+
+            for (const ln of lanes) {
+                const h = ln.y1 - ln.y0;
+                g.fillStyle = 'rgba(0,0,0,0.22)';
+                roundRect(12, ln.y0, W - 24, h, 14); g.fill();
+                ln.yOf = (midi) => ln.y1 - 10 - (h - 20) * clamp((midi - ln.lo) / (ln.hi - ln.lo));
+                ln.barH = clamp((h - 20) / (ln.hi - ln.lo) * 2.6, 12, 20);
+            }
+
+            g.save();
+            g.beginPath(); g.rect(12, 0, W - 24, H); g.clip();
+            g.font = '700 11px -apple-system, Segoe UI, sans-serif';
+            g.textBaseline = 'middle';
+            for (const seg of M.segments) {
+                const x1 = seg.t1 ? xAt(seg.t1) : nowX;
+                if (x1 < 0) continue;
+                const x0 = xAt(seg.t0);
+                const ln = seg.hand === 'L' ? lanes[1] : lanes[0];
+                const y = ln.yOf(seg.midi), bh = ln.barH;
+                const L = midiL(seg.midi), a = 0.45 + 0.55 * seg.s;
+                g.fillStyle = col(L, 0.16, pcHue(seg.pc), a);
+                roundRect(x0, y - bh / 2, Math.max(bh, x1 - x0), bh, bh / 2); g.fill();
+                if (!seg.t1) glow(nowX, y, bh * 2.2, L, 0.16, pcHue(seg.pc), 0.6);
+                if (x1 - x0 > 30) {
+                    g.fillStyle = L > 0.65 ? 'rgba(10,10,20,0.85)' : 'rgba(255,255,255,0.9)';
+                    g.fillText(NOTE_NAMES[seg.pc] + (Math.floor(seg.midi / 12) - 1), x0 + 5, y + 0.5);
+                }
+            }
+
+            // Drums: kick = filled dot, snare = ring, hi-hat = small dot.
+            if (settings.drums) {
+                const r0 = strip / 2;
+                g.lineWidth = 2;
+                for (const d of M.drums) {
+                    const x = xAt(d.t);
+                    if (x < 24) continue;
+                    const age = now - d.t;
+                    const a = age < 0.15 ? 0.95 : 0.55;
+                    const c = col(0.92, 0.02, V.keyHue, a);
+                    g.beginPath();
+                    if (d.type === 'kick') { g.fillStyle = c; g.arc(x, midY, r0 * 0.55, 0, Math.PI * 2); g.fill(); }
+                    else if (d.type === 'snare') { g.strokeStyle = c; g.arc(x, midY, r0 * 0.45, 0, Math.PI * 2); g.stroke(); }
+                    else { g.fillStyle = c; g.arc(x, midY - r0 * 0.6, 2, 0, Math.PI * 2); g.fill(); }
+                    if (age < 0.25 && d.type === 'kick') glow(x, midY, r0 * 2, 0.9, 0.03, V.keyHue, 0.4 * (1 - age / 0.25));
+                }
+            }
+            g.restore();
+
+            // Lane labels on top of the bars.
+            g.font = '600 12px -apple-system, Segoe UI, sans-serif';
+            g.textAlign = 'left'; g.textBaseline = 'middle';
+            for (const ln of lanes) {
+                const tw = g.measureText(ln.label).width;
+                g.fillStyle = 'rgba(0,0,0,0.45)';
+                roundRect(20, ln.y0 + 6, tw + 16, 20, 10); g.fill();
+                g.fillStyle = 'rgba(255,255,255,0.75)';
+                g.fillText(ln.label, 28, ln.y0 + 16.5);
+            }
+
+            g.fillStyle = 'rgba(255,255,255,0.25)';
+            g.fillRect(nowX - 0.5, top, 1, bottom - top);
+        }
+
+        function roundRect(x, y, w, h, r) {
+            r = Math.min(r, w / 2, h / 2);
+            g.beginPath();
+            g.moveTo(x + r, y);
+            g.arcTo(x + w, y, x + w, y + h, r);
+            g.arcTo(x + w, y + h, x, y + h, r);
+            g.arcTo(x, y + h, x, y, r);
+            g.arcTo(x, y, x + w, y, r);
+            g.closePath();
+        }
+
         function drawFlash() {
             if (V.flash <= 0.002) return;
             g.globalCompositeOperation = 'screen';
-            g.fillStyle = col(0.85, 0.08, V.chordHue, V.flash);
+            g.fillStyle = col(0.9, 0.03, V.keyHue, V.flash);
             g.fillRect(0, 0, W, H);
         }
 
@@ -1302,8 +1560,9 @@ permalink: /chroma/
             if (!A.source) drawIdle();
             else if (settings.mode === 'wheel') drawWheel();
             else if (settings.mode === 'wash') drawWash();
+            else if (settings.mode === 'hands') drawHands();
             else drawAurora();
-            drawFlash();
+            if (settings.mode !== 'hands') drawFlash();
             g.globalCompositeOperation = 'source-over';
         }
 
@@ -1387,8 +1646,8 @@ permalink: /chroma/
         requestAnimationFrame(frame);
 
         // ─── UI ──────────────────────────────────────────────────────────
-        const MODES = ['aurora', 'wheel', 'wash'];
-        const MODE_LABEL = { aurora: 'Aurora', wheel: 'Wheel', wash: 'Wash' };
+        const MODES = ['aurora', 'wheel', 'wash', 'hands'];
+        const MODE_LABEL = { aurora: 'Aurora', wheel: 'Wheel', wash: 'Wash', hands: 'Hands' };
         const controls = $('controls');
         let hideTimer = 0;
 
@@ -1422,6 +1681,7 @@ permalink: /chroma/
             $('opt-vibrate').checked = settings.vibrate;
             $('opt-labels').checked = settings.labels;
             $('opt-legend').checked = settings.legend;
+            $('opt-drums').checked = settings.drums;
             $('row-vibrate').style.display = canVibrate ? '' : 'none';
             $('btn-listen').textContent = A.source ? '■ Stop' : '● Listen';
             $('btn-listen').setAttribute('aria-label', A.source ? 'Stop listening' : 'Start listening');
@@ -1431,7 +1691,7 @@ permalink: /chroma/
         $('btn-mode').addEventListener('click', () => setMode(MODES[(MODES.indexOf(settings.mode) + 1) % MODES.length]));
         document.querySelectorAll('#mode-seg button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
         $('sens').addEventListener('input', (e) => { settings.sensitivity = parseFloat(e.target.value); saveSettings(); });
-        [['opt-calm', 'calm'], ['opt-vibrate', 'vibrate'], ['opt-labels', 'labels'], ['opt-legend', 'legend']].forEach(([id, k]) => {
+        [['opt-calm', 'calm'], ['opt-drums', 'drums'], ['opt-vibrate', 'vibrate'], ['opt-labels', 'labels'], ['opt-legend', 'legend']].forEach(([id, k]) => {
             $(id).addEventListener('change', (e) => { settings[k] = e.target.checked; saveSettings(); });
         });
         $('btn-settings').addEventListener('click', () => open('settings'));
@@ -1455,6 +1715,7 @@ permalink: /chroma/
             M.chord = null; M.chordCand = null; M.key = null; M.keyEnergy = 0;
             M.keyChroma.fill(0); M.chordChroma.fill(0);
             M.floor = -70; M.peak = -30;
+            M.track.clear(); M.segments.length = 0; M.drums.length = 0; M.split = 60;
         }
 
         async function begin(kind) {
@@ -1501,8 +1762,15 @@ permalink: /chroma/
                         melody: M.melody ? NOTE_NAMES[M.melody.pc] : null,
                         tension: M.tension,
                         chroma: [...M.chroma],
-                        onsets: M.onsetCount,
-                        kicks: M.kickCount,
+                        noteOns: M.noteOnCount,
+                        kicks: M.drumCount.kick,
+                        drums: { ...M.drumCount },
+                        drumHits: M.drums.map((d) => ({ t: +(d.t - M.now).toFixed(2), type: d.type })),
+                        perc: M.perc,
+                        split: M.split,
+                        // Sounding notes, low to high, with the hand they were drawn in.
+                        notes: [...M.track.values()].filter((t) => t.on).sort((a, b) => a.midi - b.midi)
+                            .map((t) => ({ midi: t.midi, name: NOTE_NAMES[t.pc] + (Math.floor(t.midi / 12) - 1), hand: t.seg.hand })),
                         mode: settings.mode,
                     };
                 },
@@ -1528,7 +1796,7 @@ permalink: /chroma/
     })();
 
     // ─── Service worker ──────────────────────────────────────────────────
-    const SW_VERSION = '2610110647';
+    const SW_VERSION = '2610111200';
 
     if ('serviceWorker' in navigator) {
         // Only reload for an *update*, not when the first install claims the page.

@@ -14,15 +14,15 @@ run(async () => {
 
   let s = await state();
   assert(s.source === 'demo', `source should be demo, got ${s.source}`);
-  assert(s.onsets >= 8, `expected beats to register, got ${s.onsets} onsets`);
+  assert(s.noteOns >= 8, `expected notes to register, got ${s.noteOns} note-ons`);
   assert(s.kicks >= 4, `expected drum kicks to register, got ${s.kicks}`);
   assert(s.key === 'C major' || s.key === 'A minor', `demo is in C major, got key ${s.key}`);
   assert(s.chord, 'a chord or note is shown while the demo plays');
   assert(!(await page.locator('#start').isVisible()), 'start overlay closes when the demo begins');
   assert(await page.locator('#hud').evaluate((e) => !e.classList.contains('off')), 'HUD is visible');
-  console.log(`ok  demo: ${s.onsets} onsets, ${s.kicks} kicks, key ${s.key}, chord ${s.chord}`);
+  console.log(`ok  demo: ${s.noteOns} note-ons, drums ${JSON.stringify(s.drums)}, ${s.kicks} kicks, key ${s.key}, chord ${s.chord}`);
 
-  for (const mode of ['aurora', 'wheel', 'wash']) {
+  for (const mode of ['aurora', 'wheel', 'wash', 'hands']) {
     await page.evaluate((m) => window.__chroma.setMode(m), mode);
     await page.waitForTimeout(1200);
     if (shots) await page.screenshot({ path: path.join(shots, `chroma-${mode}.png`) });
