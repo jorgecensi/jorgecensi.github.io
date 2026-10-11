@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2610111200';
+const CACHE_VERSION = '2610110803';
 const CACHE_NAME = `chroma-${CACHE_VERSION}`;
 const OFFLINE_URL = '/chroma/';
 const PRECACHE_URLS = [
