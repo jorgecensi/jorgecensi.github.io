@@ -2708,7 +2708,7 @@ const MIDDLE_C   = 60;  // C4
     const INTERVAL_SONGS = {
       1: 'Jaws theme', 2: 'Frère Jacques', 3: 'Greensleeves', 4: 'When the Saints Go Marching In',
       5: 'Here Comes the Bride', 6: 'The Simpsons theme', 7: 'Star Wars theme',
-      8: 'The Entertainer', 9: 'My Bonnie Lies Over the Ocean', 10: 'Somewhere (West Side Story)',
+      8: 'The Entertainer', 9: 'My Bonnie Lies Over the Ocean', 10: { name: 'The Winner Takes It All', where: '“win-ner” in the chorus' },
       12: 'Somewhere Over the Rainbow',
     };
 
@@ -2746,7 +2746,9 @@ const MIDDLE_C   = 60;  // C4
               pop: [{ title: 'Can’t Help Falling in Love', artist: 'Elvis Presley', year: 1961, cue: '“Wise men”', id: 'vGJTaP6anOU' }] },
         8:  { tune: { name: 'The Entertainer', cue: 'the 3rd to the 4th note', notes: [[-2,.5],[-1,.5],[0,1],[8,2]] } },
         9:  { tune: { name: 'My Bonnie Lies Over the Ocean', cue: '“My Bon-”', notes: [[0,1],[9,1.5],[7,.5],[5,1],[7,1],[5,1],[2,1],[0,1],[-3,2]] } },
-        10: { tune: { name: 'A whole step short of the octave, then up to it', figure: true, notes: [[0,1],[10,1.5],[12,2]] } },
+        10: { tune: { name: 'A whole step short of the octave, then up to it', figure: true, notes: [[0,1],[10,1.5],[12,2]] },
+              // D up to C on "win-ner" (alijamieson.co.uk), 10 semitones.
+              pop: [{ title: 'The Winner Takes It All', artist: 'ABBA', year: 1980, cue: '“win-ner” in the chorus', id: '81WhM9dOcYI' }] },
         11: { tune: { name: 'A half step below the octave, rising into it', figure: true, notes: [[0,1],[11,1.5],[12,2]] },
               pop: [{ title: 'Don’t Know Why', artist: 'Norah Jones', year: 2002, cue: '“I wai-”', id: 'tO4dxvguQDk' }] },
         12: { tune: { name: 'The same note, higher', figure: true, notes: [[0,1],[12,1],[0,1],[12,2]] },
@@ -2807,7 +2809,10 @@ const MIDDLE_C   = 60;  // C4
         choices: pool.semis.map(n => ({ id: String(n), label: INTERVAL_NAMES[n] })),
         answer: String(semis),
         explain: `${name} — ${semis} semitone${semis === 1 ? '' : 's'}` +
-                 (song && mode !== 'harmonic' ? ` · like the start of “${song}” (going ${down ? 'down' : 'up'})` : ''),
+                 (song && mode !== 'harmonic'
+                   ? ` · like ${typeof song === 'string' ? `the start of “${song}”` : `${song.where} of “${song.name}”`}` +
+                     ` (going ${down ? 'down' : 'up'})`
+                   : ''),
       };
     }
 
@@ -3629,7 +3634,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610090803';
+        const SW_VERSION = '2610140001';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
