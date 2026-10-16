@@ -104,6 +104,12 @@ run(async () => {
     return null;
   });
   assert(startRef, 'at least one recording has a start time');
+
+  // The rising minor 7th has a recording too (it used to be text only).
+  await mt(() => window.__musicTheory.showRefs('up', 10));
+  const m7Text = await page.locator('#learn-refs').innerText();
+  assert(/The Winner Takes It All/.test(m7Text) && await page.locator('#learn-refs [data-video]').count() === 1,
+    'the rising minor 7th card offers The Winner Takes It All to watch, got: ' + m7Text);
   await mt((r) => window.__musicTheory.showRefs(r.dir, r.n), startRef);
   const startBtn = page.locator(`#learn-refs [data-video="${startRef.id}"]`);
   const startLink = await startBtn.locator('xpath=..').locator('a').getAttribute('href');
