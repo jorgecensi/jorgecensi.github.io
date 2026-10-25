@@ -332,6 +332,19 @@ permalink: /cyber-quest/
         .objectives li.done { color: var(--muted); }
         .objectives li.done::before { content: "☑"; color: var(--accent); }
         .objectives li.done span { text-decoration: line-through; }
+        .objectives li.current { color: var(--text); font-weight: 600; }
+        .objectives li.current::before { content: "▶"; color: var(--info); }
+
+        .lesson {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.10), var(--panel)); border: 1px solid rgba(56, 189, 248, 0.45);
+            border-radius: 12px; padding: 12px 14px; font-size: 0.9rem; line-height: 1.5;
+        }
+        .lesson:empty { display: none; }
+        .lesson .step { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--info); font-weight: 700; }
+        .lesson h4 { margin: 2px 0 6px; font-size: 1rem; }
+        .lesson p { margin: 0; }
+        .lesson code { font-family: var(--mono); font-size: 0.85em; background: #070d18; color: #b5f5d9; padding: 1px 5px; border-radius: 4px; }
+        .lab-group { margin-bottom: 18px; }
 
         .terminal {
             background: #05090f; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
@@ -419,8 +432,8 @@ permalink: /cyber-quest/
             <div class="missions" id="mission-list"></div>
 
             <p class="section-label" style="margin-top:22px">💻 Terminal Ops — hands-on command line</p>
-            <p class="tier-blurb" style="margin:-4px 2px 10px">Defend a real(istic) Linux server. Use actual commands to investigate and lock it down — it all runs safely in your browser.</p>
-            <div class="missions" id="lab-list"></div>
+            <p class="tier-blurb" style="margin:-4px 2px 10px">Learn the Linux command line from zero, then defend a server with real commands. It all runs safely in your browser.</p>
+            <div id="lab-list"></div>
 
             <div class="home-links">
                 <button class="btn secondary" data-go="guide">📘 Field Guide</button>
@@ -524,7 +537,9 @@ permalink: /cyber-quest/
                 <h3>💻 Terminal Ops</h3>
                 <ul>
                     <li>A simulated Linux server you defend with <b>real commands</b> — <code>ls</code>, <code>cat</code>, <code>grep</code>, <code>ps</code>, <code>kill</code>, <code>chmod</code>, <code>ss</code>, <code>ufw</code>, <code>systemctl</code> and more. You can even pipe, like <code>cat file | grep word</code>.</li>
-                    <li>Each lab gives you a scenario and objectives. Clear every objective to finish. Stuck? Type <code>help</code> for commands or <code>hint</code> for your next step.</li>
+                    <li><b>📘 Basics</b> start from zero: moving around, where Linux keeps settings and logs, reading logs, processes and scheduled jobs, permissions and services. Each step has a short 📖 lesson above the terminal that explains the idea and the command to try.</li>
+                    <li><b>🚨 Incidents</b> unlock after the Basics: you use what you learned to catch an intruder and harden the server, with lessons that point back to the Basics.</li>
+                    <li>Stuck? Type <code>hint</code> for the exact command, <code>help</code> for every command, or <code>man ls</code> to explain one.</li>
                     <li>It's a sandbox in your browser on a fake filesystem — nothing touches a real machine. Labs unlock in order and earn XP like missions.</li>
                 </ul>
             </div>
@@ -565,6 +580,7 @@ permalink: /cyber-quest/
                 <div class="count" id="ops-count"></div>
             </div>
             <div class="term-wrap">
+                <div class="lesson" id="ops-lesson" aria-live="polite"></div>
                 <div class="objectives">
                     <h3>Objectives</h3>
                     <ul id="ops-objectives"></ul>
@@ -594,7 +610,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2610250549';
+    const SW_VERSION = '2610252240';
 
     (() => {
         'use strict';
@@ -1954,14 +1970,27 @@ permalink: /cyber-quest/
                 </div>`;
             }).join('');
 
-            $('lab-list').innerHTML = LABS.map((l, i) => {
-                const open = labUnlocked(i);
-                const done = labDone(l.id);
-                return `<button class="mission" data-lab="${l.id}" ${open ? '' : 'disabled'}>
-                    <span class="m-icon">${open ? l.icon : '🔒'}</span>
-                    <span class="m-body"><h3>${esc(l.title)}</h3><p>${esc(open ? l.blurb : 'Clear the previous lab to unlock.')}</p></span>
-                    <span class="stars">${open ? (done ? '✅' : `+${l.xp}`) : ''}</span>
-                </button>`;
+            $('lab-list').innerHTML = LAB_STAGES.map((st) => {
+                const labs = LABS.filter((l) => l.stage === st.id);
+                const cleared = labs.filter((l) => labDone(l.id)).length;
+                const cards = labs.map((l, n) => {
+                    const i = LABS.indexOf(l);
+                    const open = labUnlocked(i);
+                    const done = labDone(l.id);
+                    const lockMsg = n === 0 && st.id === 'ops' ? 'Finish the Basics to unlock.' : 'Clear the previous lab to unlock.';
+                    return `<button class="mission" data-lab="${l.id}" ${open ? '' : 'disabled'}>
+                        <span class="m-icon">${open ? l.icon : '🔒'}</span>
+                        <span class="m-body"><h3>${n + 1}. ${esc(l.title)}</h3><p>${esc(open ? l.blurb : lockMsg)}</p></span>
+                        <span class="stars">${open ? (done ? '✅' : `+${l.xp}`) : ''}</span>
+                    </button>`;
+                }).join('');
+                return `<div class="lab-group">
+                    <div class="tier-head">
+                        <div><span class="tier-name">${st.icon} ${esc(st.name)}</span><span class="tier-blurb">${esc(st.blurb)}</span></div>
+                        <span class="tier-count">${cleared}/${labs.length}</span>
+                    </div>
+                    <div class="missions">${cards}</div>
+                </div>`;
             }).join('');
         }
 
@@ -2415,12 +2444,307 @@ permalink: /cyber-quest/
                         services: {}
                     };
                 },
+                stage: 'basics',
+                chips: ['pwd', 'ls', 'ls -a', 'cat incident-ticket.txt', 'whoami', 'ps aux', 'hint'],
                 tasks: [
-                    { id: 'pwd', desc: 'Print your current directory', hint: 'Type: pwd', check: (T) => T.ran(/^\s*pwd\b/) },
-                    { id: 'ls', desc: 'List files, including hidden ones (ls -a)', hint: 'Type: ls -a', check: (T) => T.ran(/^\s*ls\b.*\s-\w*a/) || T.ran(/^\s*ls\s+-a/) },
-                    { id: 'cat', desc: 'Read the incident ticket', hint: 'Type: cat incident-ticket.txt', check: (T) => T.readAbs('/home/alex/incident-ticket.txt') },
-                    { id: 'who', desc: 'Check which user you are', hint: 'Type: whoami', check: (T) => T.ran(/^\s*(whoami|id)\b/) },
-                    { id: 'ps', desc: 'See what processes are running', hint: 'Type: ps aux', check: (T) => T.ran(/^\s*ps\b/) }
+                    {
+                        id: 'pwd', desc: 'Print your current directory', hint: 'Type: pwd', check: (T) => T.ran(/^\s*pwd\b/),
+                        lesson: 'A terminal is a text conversation with the computer: you type a command, press <b>Enter</b>, and it answers. You are always "standing" in some folder (Linux calls folders <b>directories</b>). <code>pwd</code> (print working directory) tells you which one.'
+                    },
+                    {
+                        id: 'ls', desc: 'List files, including hidden ones (ls -a)', hint: 'Type: ls -a', check: (T) => T.ran(/^\s*ls\b.*\s-\w*a/) || T.ran(/^\s*ls\s+-a/),
+                        lesson: '<code>ls</code> lists what\'s in the current directory. Files whose names start with a dot (like <code>.note</code>) are <b>hidden</b>, and plain <code>ls</code> skips them. Add the <b>option</b> <code>-a</code> ("all") to see them: <code>ls -a</code>. Options change what a command does, and they almost always start with a dash.'
+                    },
+                    {
+                        id: 'cat', desc: 'Read the incident ticket', hint: 'Type: cat incident-ticket.txt', check: (T) => T.readAbs('/home/alex/incident-ticket.txt'),
+                        lesson: '<code>cat FILE</code> prints a file\'s contents. Type <code>cat incident-ticket.txt</code>. Tip: on a keyboard, type the first few letters and use ↑ to repeat earlier commands. Read the hidden <code>.note</code> too if you like.'
+                    },
+                    {
+                        id: 'who', desc: 'Check which user you are', hint: 'Type: whoami', check: (T) => T.ran(/^\s*(whoami|id)\b/),
+                        lesson: 'Every command runs as a <b>user</b>, and what you can do depends on who you are. <code>whoami</code> prints your username. <code>id</code> also shows your groups. Being in the <b>sudo</b> group means you can run admin commands.'
+                    },
+                    {
+                        id: 'ps', desc: 'See what processes are running', hint: 'Type: ps aux', check: (T) => T.ran(/^\s*ps\b/),
+                        lesson: 'A <b>process</b> is a program that is running right now. <code>ps aux</code> lists all of them. You\'ll learn to read that table properly in a later lab. For now, just take a look.'
+                    }
+                ]
+            },
+            {
+                id: 'linux-map',
+                stage: 'basics',
+                icon: '🗺️',
+                title: 'The Linux Map',
+                blurb: 'Learn where Linux keeps settings, logs, users and temporary files.',
+                xp: 45,
+                scenario: 'Every Linux server uses the same basic layout. Once you know it,\nyou always know where to look: settings in /etc, logs in /var/log,\nusers in /home, and scratch space in /tmp.\n\nFollow the lesson above the terminal, one step at a time.',
+                skills: ['ls /', 'cd', 'cat', 'ls -a'],
+                chips: ['ls /', 'cd /etc', 'ls', 'cat hostname', 'ls /var/log', 'cd ~', 'pwd', 'ls -a /tmp', 'hint'],
+                debrief: 'You have the map now. / is the root of everything, /etc holds settings, /var/log holds logs, /home holds each user\'s files, and /tmp and /var/tmp are shared scratch space where malware likes to hide. Paths that start with / are absolute, and anything else starts from where you are.',
+                build() {
+                    return {
+                        fs: d({
+                            bin: d({ ls: f('-rwxr-xr-x', '<program>\n', 'root'), cat: f('-rwxr-xr-x', '<program>\n', 'root'), grep: f('-rwxr-xr-x', '<program>\n', 'root') }, 'drwxr-xr-x', 'root'),
+                            etc: d({
+                                hostname: f('-rw-r--r--', 'web-01\n', 'root'),
+                                passwd: f('-rw-r--r--', 'root:x:0:0:root:/root:/bin/bash\nalex:x:1000:1000:Alex:/home/alex:/bin/bash\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\n', 'root'),
+                                crontab: f('-rw-r--r--', '# system-wide scheduled jobs (you\'ll learn these later)\n', 'root'),
+                                'cron.d': d({}, 'drwxr-xr-x', 'root'),
+                                ssh: d({ sshd_config: f('-rw-r--r--', '# SSH server settings\nPort 22\nPermitRootLogin no\n', 'root') }, 'drwxr-xr-x', 'root')
+                            }, 'drwxr-xr-x', 'root'),
+                            home: d({ alex: d({ 'notes.txt': f('-rw-r--r--', 'My home folder. Only I (and admins) should change things in here.\n') }) }, 'drwxr-xr-x', 'root'),
+                            root: d({}, 'drwx------', 'root'),
+                            tmp: d({
+                                'report.pdf.part': f('-rw-r--r--', '<partial download>\n'),
+                                '.sneaky': f('-rw-r--r--', 'Found me! Malware loves names that start with a dot inside /tmp\nand /var/tmp: anyone can write here, and plain "ls" won\'t show it.\n', 'www-data')
+                            }, 'drwxrwxrwt', 'root'),
+                            usr: d({ bin: d({}, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root'),
+                            var: d({
+                                log: d({
+                                    syslog: f('-rw-r-----', 'Mar 09 09:00:01 web-01 systemd[1]: Started Daily apt upgrade.\n', 'root'),
+                                    'auth.log': f('-rw-r-----', 'Mar 09 08:30:15 web-01 sshd[1902]: Accepted publickey for alex from 10.0.4.22\n', 'root')
+                                }, 'drwxr-xr-x', 'root'),
+                                tmp: d({}, 'drwxrwxrwt', 'root'),
+                                www: d({ html: d({ 'index.html': f('-rw-r--r--', '<h1>It works!</h1>\n', 'www-data') }) }, 'drwxr-xr-x', 'root')
+                            }, 'drwxr-xr-x', 'root')
+                        }, 'drwxr-xr-x', 'root'),
+                        cwd: '/',
+                        procs: [{ user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' }, { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'root', desc: 'List the top of the filesystem (ls /)', hint: 'Type: ls /', check: (T) => T.listed.has('/'),
+                        lesson: 'Linux has one big tree of folders that starts at <b>/</b>, called "root". There are no C: or D: drives: every file lives somewhere under /. You\'re standing at the top right now. Type <code>ls /</code> to see the main folders.'
+                    },
+                    {
+                        id: 'etc', desc: 'Go into /etc and list it', hint: 'Type: cd /etc  then  ls', check: (T) => T.listed.has('/etc'),
+                        lesson: '<b>/etc</b> holds the system\'s settings (configuration): user accounts (<code>passwd</code>), the server\'s name (<code>hostname</code>), SSH settings and scheduled jobs. Admins and attackers both look here first. Move in with <code>cd /etc</code>, then type <code>ls</code>.'
+                    },
+                    {
+                        id: 'hostname', desc: 'Read the server\'s name in /etc/hostname', hint: 'Type: cat /etc/hostname', check: (T) => T.readAbs('/etc/hostname'),
+                        lesson: 'Settings files are usually plain text, so <code>cat</code> can read them. You can give a <b>relative</b> path from where you are (<code>cat hostname</code> while in /etc) or an <b>absolute</b> path from the root (<code>cat /etc/hostname</code>). Absolute paths work from anywhere.'
+                    },
+                    {
+                        id: 'logs', desc: 'List the logs in /var/log', hint: 'Type: ls /var/log', check: (T) => T.listed.has('/var/log'),
+                        lesson: '<b>/var</b> holds data that changes ("variable"). <b>/var/log</b> is where Linux keeps its <b>logs</b>, the records of what happened: <code>syslog</code> for the system in general, <code>auth.log</code> for logins and admin commands. You can list a folder without going into it: <code>ls /var/log</code>.'
+                    },
+                    {
+                        id: 'home', desc: 'Go to your home folder (cd ~) and check with pwd', hint: 'Type: cd ~  then  pwd', check: (T) => T.visited.has('/home/alex') && T.ran(/^\s*pwd\b/),
+                        lesson: 'Each user gets a personal folder under <b>/home</b>, so yours is <code>/home/alex</code>. <code>~</code> is a shortcut for it, and a plain <code>cd</code> takes you there too. (<b>/root</b> is the admin\'s home, which is different from <b>/</b>.) Type <code>cd ~</code>, then <code>pwd</code>.'
+                    },
+                    {
+                        id: 'tmp', desc: 'Find the hidden file in /tmp (ls -a /tmp)', hint: 'Type: ls -a /tmp  then  cat /tmp/.sneaky', check: (T) => T.listedAll.has('/tmp'),
+                        lesson: '<b>/tmp</b> and <b>/var/tmp</b> are scratch space that <i>any</i> user can write to. That\'s exactly why malware likes to hide there, often under a name starting with a dot so plain <code>ls</code> skips it. Type <code>ls -a /tmp</code>, then read what you find with <code>cat</code>.'
+                    }
+                ]
+            },
+            {
+                id: 'reading-logs',
+                stage: 'basics',
+                icon: '📜',
+                title: 'Reading Logs',
+                blurb: 'Use tail, grep and pipes to find out what happened, and when.',
+                xp: 50,
+                scenario: 'Logs record everything: logins, errors, restarts. They\'re long, so\nnobody reads them top to bottom. You jump to the end with tail\nand search them with grep.\n\nYou start in /var/log, where the logs live.',
+                skills: ['tail', 'grep -i', 'cat', 'grep | wc -l', 'answer'],
+                chips: ['ls', 'tail syslog', 'grep -i error syslog', 'cat auth.log', 'grep Failed auth.log | wc -l', 'hint'],
+                debrief: 'Log skills: tail for the newest events, grep to filter, -i to ignore upper and lower case, and a pipe to chain commands (grep | wc -l counts matches). auth.log is where logins live: "Failed password" is a wrong guess, and "Accepted" means someone got in. You\'ll use exactly this in Catch the Intruder.',
+                build() {
+                    return {
+                        fs: d({
+                            home: d({ alex: d({}) }),
+                            var: d({
+                                log: d({
+                                    syslog: f('-rw-r-----', [
+                                        'Mar 09 06:00:01 web-01 systemd[1]: Starting Daily apt upgrade...',
+                                        'Mar 09 06:00:44 web-01 systemd[1]: Finished Daily apt upgrade.',
+                                        'Mar 09 07:12:09 web-01 nginx[980]: ERROR upstream timed out (110) while reading response',
+                                        'Mar 09 07:12:10 web-01 nginx[980]: retrying upstream 127.0.0.1:8080',
+                                        'Mar 09 07:40:31 web-01 kernel: [ 9231.11] eth0: link up, 1000 Mbps',
+                                        'Mar 09 08:02:55 web-01 app[1201]: error: database connection refused',
+                                        'Mar 09 08:03:00 web-01 app[1201]: reconnected to database',
+                                        'Mar 09 08:59:59 web-01 CRON[2201]: (root) CMD (run-parts /etc/cron.hourly)',
+                                        'Mar 09 09:05:12 web-01 systemd[1]: Restarting nginx.service...',
+                                        'Mar 09 09:05:13 web-01 systemd[1]: Started nginx.service.',
+                                        'Mar 09 09:10:47 web-01 app[1201]: Error: disk usage at 91% on /var',
+                                        'Mar 09 09:14:02 web-01 systemd[1]: Started Session 42 of user alex.'
+                                    ].join('\n'), 'root'),
+                                    'auth.log': f('-rw-r-----', [
+                                        'Mar 09 03:40:01 web-01 sshd[811]: Failed password for root from 198.51.100.23 port 40122 ssh2',
+                                        'Mar 09 03:40:04 web-01 sshd[811]: Failed password for root from 198.51.100.23 port 40128 ssh2',
+                                        'Mar 09 03:40:07 web-01 sshd[811]: Failed password for admin from 198.51.100.23 port 40131 ssh2',
+                                        'Mar 09 03:40:11 web-01 sshd[811]: Failed password for test from 198.51.100.23 port 40139 ssh2',
+                                        'Mar 09 03:40:15 web-01 sshd[811]: Failed password for oracle from 198.51.100.23 port 40144 ssh2',
+                                        'Mar 09 08:30:15 web-01 sshd[1902]: Accepted publickey for alex from 10.0.4.22 port 44110 ssh2',
+                                        'Mar 09 08:31:02 web-01 sudo: alex : COMMAND=/usr/bin/apt update',
+                                        'Mar 09 09:14:02 web-01 sshd[2310]: Accepted publickey for alex from 10.0.4.22 port 44190 ssh2'
+                                    ].join('\n'), 'root')
+                                }, 'drwxr-xr-x', 'root')
+                            }, 'drwxr-xr-x', 'root')
+                        }, 'drwxr-xr-x', 'root'),
+                        cwd: '/var/log',
+                        procs: [{ user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' }, { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'tail', desc: 'Show the newest lines of syslog (tail)', hint: 'Type: tail syslog', check: (T) => T.ran(/^\s*tail\b.*syslog/),
+                        lesson: 'New log lines are added at the <b>bottom</b>, so the latest events are at the end. <code>tail syslog</code> shows the last 10 lines, and <code>tail -n 3 syslog</code> shows the last 3. (<code>head</code> does the same from the top.) Each line starts with a <b>timestamp</b>, then the server name and the program that wrote it.'
+                    },
+                    {
+                        id: 'grep', desc: 'Find every error in syslog, in any case (grep -i)', hint: 'Type: grep -i error syslog', check: (T) => T.ran(/^\s*grep\b(?=.*\s-\w*i)(?=.*error)(?=.*syslog)/i),
+                        lesson: '<code>grep WORD FILE</code> prints only the lines that contain WORD, which is the fastest way to search a log. Logs mix "error", "Error" and "ERROR", so add <code>-i</code> to ignore upper and lower case: <code>grep -i error syslog</code>. Compare it with plain <code>grep error syslog</code> to see what <code>-i</code> catches.'
+                    },
+                    {
+                        id: 'auth', desc: 'Read the login log, auth.log', hint: 'Type: cat auth.log', check: (T) => T.readAbs('/var/log/auth.log'),
+                        lesson: '<code>auth.log</code> records every login attempt and every <code>sudo</code> (admin) command. <b>sshd</b> is the SSH server, so its lines are remote logins. <b>Failed password</b> means a wrong guess. <b>Accepted</b> means someone got in. Read it with <code>cat auth.log</code>.'
+                    },
+                    {
+                        id: 'count', desc: 'Count the failed logins (grep … | wc -l)', hint: 'Type: grep Failed auth.log | wc -l', check: (T) => T.ran(/grep\b.*failed.*\|\s*wc\s+-l/i) || T.ran(/grep\s+-\w*c\w*\s+.*failed/i),
+                        lesson: 'The <b>pipe</b> <code>|</code> sends one command\'s output into the next command. <code>wc -l</code> counts lines, so <code>grep Failed auth.log | wc -l</code> counts the failed logins. (Shortcut: <code>grep -c Failed auth.log</code>.) Chaining small commands like this is the heart of the command line.'
+                    },
+                    {
+                        id: 'who', desc: 'Which IP address made the failed attempts? (answer <ip>)', hint: 'Look after "from" in: grep Failed auth.log   then type: answer <that IP>',
+                        answer: '198.51.100.23', wrong: 'Run grep Failed auth.log and read the address after the word "from".', check: (T) => T.answers.has('198.51.100.23'),
+                        lesson: 'Show only the failed lines with <code>grep Failed auth.log</code>. The address after the word <b>from</b> is where the attempts came from. Notice it tried several usernames (root, admin, test…): that\'s a password-guessing attack. When you know the IP, type <code>answer</code> and the address, e.g. <code>answer 192.0.2.1</code>.'
+                    }
+                ]
+            },
+            {
+                id: 'jobs',
+                stage: 'basics',
+                icon: '⚙️',
+                title: 'Processes & Scheduled Jobs',
+                blurb: 'See what\'s running, stop a runaway process, and read cron jobs.',
+                xp: 55,
+                scenario: 'Two things decide what runs on a server: processes that are running\nright now, and scheduled jobs (cron) that start programs on a\ntimetable. Attackers abuse both, so you need to be able to read both.\n\nThe server feels slow today...',
+                skills: ['ps aux', 'kill', 'cat /etc/crontab', 'ls /etc/cron.d', 'crontab -l'],
+                chips: ['ps aux', 'cat /etc/crontab', 'ls /etc/cron.d', 'crontab -l', 'hint'],
+                debrief: 'Processes: list them with ps aux, read the PID, and stop one with kill PID. Scheduled jobs live in three places: /etc/crontab, the files in /etc/cron.d, and each user\'s crontab -l. If something malicious keeps coming back after you kill it, a cron job is the first place to look.',
+                build() {
+                    return {
+                        fs: d({
+                            home: d({ alex: d({ 'backup.sh': f('-rwxr-xr-x', '#!/bin/bash\n# nightly backup (stuck in a loop today!)\nwhile true; do tar czf /tmp/backup.tgz /home/alex; done\n') }) }),
+                            etc: d({
+                                crontab: f('-rw-r--r--', [
+                                    '# /etc/crontab: the system-wide schedule',
+                                    '#',
+                                    '# .---------------- minute (0 - 59)',
+                                    '# |  .------------- hour (0 - 23)',
+                                    '# |  |  .---------- day of month (1 - 31)',
+                                    '# |  |  |  .------- month (1 - 12)',
+                                    '# |  |  |  |  .---- day of week (0 - 6, Sunday = 0)',
+                                    '# |  |  |  |  |',
+                                    '# m  h dom mon dow  user  command',
+                                    '17 *  *  *  *       root  run-parts /etc/cron.hourly',
+                                    '25 6  *  *  *       root  run-parts /etc/cron.daily'
+                                ].join('\n'), 'root'),
+                                'cron.d': d({
+                                    logrotate: f('-rw-r--r--', '# compress old logs every night at midnight\n0 0 * * * root /usr/sbin/logrotate /etc/logrotate.conf\n', 'root'),
+                                    certbot: f('-rw-r--r--', '# renew HTTPS certificates every 12 hours\n0 */12 * * * root certbot renew -q\n', 'root')
+                                }, 'drwxr-xr-x', 'root')
+                            }, 'drwxr-xr-x', 'root')
+                        }, 'drwxr-xr-x', 'root'),
+                        cwd: '/home/alex',
+                        crontab: '# alex\'s personal schedule\n# m  h  dom mon dow  command\n30 2  *   *   *    /home/alex/backup.sh\n',
+                        procs: [
+                            { user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' },
+                            { user: 'root', pid: 655, cpu: '0.0', mem: '0.2', cmd: '/usr/sbin/cron -f' },
+                            { user: 'root', pid: 712, cpu: '0.0', mem: '0.4', cmd: '/usr/sbin/sshd -D' },
+                            { user: 'www-data', pid: 980, cpu: '0.4', mem: '1.2', cmd: 'nginx: worker process' },
+                            { user: 'alex', pid: 3310, cpu: '87.5', mem: '3.1', cmd: '/bin/bash /home/alex/backup.sh' },
+                            { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }
+                        ],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'ps', desc: 'List every process (ps aux)', hint: 'Type: ps aux', check: (T) => T.ran(/^\s*ps\b/),
+                        lesson: 'Time to read <code>ps aux</code> properly. Each row is one running program. <b>USER</b> is who runs it, <b>PID</b> is its unique ID number, <b>%CPU</b> and <b>%MEM</b> are how much processor and memory it uses, and <b>COMMAND</b> is what was started. Rows using lots of CPU are highlighted. Type <code>ps aux</code>.'
+                    },
+                    {
+                        id: 'kill', desc: 'Stop the runaway backup.sh', hint: 'Find the PID of backup.sh in ps aux (second column), then: kill <PID>', check: (T) => T.killedCmds.has('backup.sh'),
+                        lesson: '<code>backup.sh</code> is stuck in a loop and eating the CPU. You stop a process by its <b>PID</b>, not its name. Find the number in the PID column of its row, then type <code>kill</code> and that number (e.g. <code>kill 1234</code>). Always identify a process before you kill it, because killing the wrong one can take the server down.'
+                    },
+                    {
+                        id: 'crontab', desc: 'Read the system schedule (/etc/crontab)', hint: 'Type: cat /etc/crontab', check: (T) => T.readAbs('/etc/crontab'),
+                        lesson: '<b>cron</b> is the program that starts commands on a timetable. The system timetable is <code>/etc/crontab</code>. Each job line starts with five time fields: <b>minute hour day-of-month month day-of-week</b>. Then come the user and the command. A <code>*</code> means "every", so <code>* * * * *</code> runs every minute. Type <code>cat /etc/crontab</code> and read the guide at the top.'
+                    },
+                    {
+                        id: 'crond', desc: 'List the job files in /etc/cron.d', hint: 'Type: ls /etc/cron.d  then cat one of the files', check: (T) => T.listed.has('/etc/cron.d'),
+                        lesson: 'Programs also drop their own schedules into <b>/etc/cron.d/</b>, one file per job. Attackers love this folder: a job here can re-download their malware every minute, even after you kill it. That trick is called <b>persistence</b>. Type <code>ls /etc/cron.d</code>, then <code>cat</code> a file to see what it does.'
+                    },
+                    {
+                        id: 'user', desc: 'Show your own scheduled jobs (crontab -l)', hint: 'Type: crontab -l', check: (T) => T.ran(/^\s*crontab\s+-l/),
+                        lesson: 'Each user can also have a personal schedule, which they list with <code>crontab -l</code>. Yours explains the runaway: <code>30 2 * * *</code> starts backup.sh at 02:30 every night. So three places to check for scheduled jobs: <code>/etc/crontab</code>, <code>/etc/cron.d/</code>, and each user\'s <code>crontab -l</code>.'
+                    }
+                ]
+            },
+            {
+                id: 'perms',
+                stage: 'basics',
+                icon: '🔐',
+                title: 'Permissions & Services',
+                blurb: 'Read rwx permissions, protect a key, and control services and ports.',
+                xp: 60,
+                scenario: 'Two more basics before your first real incident: who is allowed to\nread a file (permissions), and which programs are listening on the\nnetwork (services and ports).',
+                skills: ['ls -l', 'chmod', 'ss -tlnp', 'systemctl', 'ufw'],
+                chips: ['ls -l ~/.ssh', 'chmod 600 ~/.ssh/id_ed25519', 'ss -tlnp', 'systemctl status ftp', 'ufw status', 'hint'],
+                debrief: 'Permissions: ls -l shows rwx for owner, group and everyone else, and chmod changes them (600 = only the owner can read and write). Network: ss -tlnp shows which services are listening on which ports. systemctl stops services, and ufw blocks ports at the firewall. That\'s all the basics. You\'re ready for a real incident.',
+                build() {
+                    return {
+                        fs: d({
+                            home: d({ alex: d({
+                                '.ssh': d({
+                                    'id_ed25519': f('-rw-r--r--', '-----BEGIN OPENSSH PRIVATE KEY-----\n(training key — not real)\n-----END OPENSSH PRIVATE KEY-----\n'),
+                                    'id_ed25519.pub': f('-rw-r--r--', 'ssh-ed25519 AAAAC3Nza...training alex@laptop\n'),
+                                    'authorized_keys': f('-rw-------', 'ssh-ed25519 AAAAC3Nza...training alex@laptop\n')
+                                }, 'drwx------'),
+                                'notes.txt': f('-rw-r--r--', 'todo: check why FTP is still running?\n')
+                            }) }, 'drwxr-xr-x', 'root')
+                        }, 'drwxr-xr-x', 'root'),
+                        cwd: '/home/alex',
+                        procs: [
+                            { user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' },
+                            { user: 'root', pid: 712, cpu: '0.0', mem: '0.4', cmd: '/usr/sbin/sshd -D' },
+                            { user: 'root', pid: 733, cpu: '0.0', mem: '0.3', cmd: '/usr/sbin/vsftpd' },
+                            { user: 'www-data', pid: 980, cpu: '0.3', mem: '1.2', cmd: 'nginx: worker process' }
+                        ],
+                        net: [
+                            { proto: 'tcp', port: 21, addr: '0.0.0.0', proc: 'vsftpd' },
+                            { proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' },
+                            { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx' }
+                        ],
+                        services: { ftp: 'active', ssh: 'active', nginx: 'active' }
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'lsl', desc: 'Show permissions in ~/.ssh (ls -l)', hint: 'Type: ls -l ~/.ssh', check: (T) => T.listedLong.has('/home/alex/.ssh'),
+                        lesson: '<code>ls -l</code> ("long") shows details for each file. The first column, like <code>-rw-r--r--</code>, holds the <b>permissions</b>. The first character is <code>-</code> for a file or <code>d</code> for a directory. Then come three groups of three: <b>owner</b>, <b>group</b>, <b>everyone else</b>. <b>r</b> = read, <b>w</b> = write, <b>x</b> = run, <b>-</b> = not allowed. Type <code>ls -l ~/.ssh</code>.'
+                    },
+                    {
+                        id: 'chmod', desc: 'Make your private key readable only by you (chmod 600)', hint: 'Type: chmod 600 ~/.ssh/id_ed25519', check: (T) => { const n = T.node('/home/alex/.ssh/id_ed25519'); return n && n.mode === '-rw-------'; },
+                        lesson: '<code>id_ed25519</code> is your <b>private key</b>, which works like a password. But <code>-rw-r--r--</code> means everyone can read it! <code>chmod</code> changes permissions using one digit per group: r=4, w=2, x=1, added up. So <b>6</b> = rw and <b>0</b> = nothing, which makes <b>600</b> "owner can read and write, nobody else can do anything". Type <code>chmod 600 ~/.ssh/id_ed25519</code>, then check with <code>ls -l ~/.ssh</code>.'
+                    },
+                    {
+                        id: 'ss', desc: 'List the ports that are listening (ss -tlnp)', hint: 'Type: ss -tlnp', check: (T) => T.ran(/^\s*(ss|netstat)\b/),
+                        lesson: 'Programs that accept network connections <b>listen</b> on a numbered <b>port</b>: 22 = SSH, 443 = HTTPS, 21 = FTP. <code>ss -tlnp</code> lists them (<b>t</b>cp, <b>l</b>istening, <b>n</b>umbers, <b>p</b>rocess). An address of <code>0.0.0.0</code> means "reachable from every network", including the internet.'
+                    },
+                    {
+                        id: 'stop', desc: 'FTP sends passwords as plain text — stop it (systemctl)', hint: 'Type: systemctl status ftp  then  systemctl stop ftp', check: (T) => T.stoppedSvc.has('ftp'),
+                        lesson: 'Programs that run in the background are called <b>services</b>, and <code>systemctl</code> controls them. <code>systemctl status ftp</code> checks one, <code>systemctl stop ftp</code> stops it now, and <code>systemctl disable ftp</code> stops it starting again at boot. Old FTP sends passwords unencrypted, so it has to go.'
+                    },
+                    {
+                        id: 'ufw', desc: 'Block port 21 and turn the firewall on (ufw)', hint: 'Type: ufw deny 21  then  ufw enable', check: (T) => T.ufw.enabled && T.ufw.deny.has('21'),
+                        lesson: 'A <b>firewall</b> decides which ports the outside world may reach. <code>ufw</code> ("uncomplicated firewall") is Ubuntu\'s simple one. Add a rule with <code>ufw deny 21</code>, switch the firewall on with <code>ufw enable</code>, and check with <code>ufw status</code>.'
+                    }
                 ]
             },
             {
@@ -2431,6 +2755,8 @@ permalink: /cyber-quest/
                 xp: 75,
                 scenario: 'ALERT: web-01\'s CPU is pinned at 100% and the box is crawling.\nSomething is running that shouldn\'t be. Find it, kill it, and work\nout how the attacker got in — and how they\'re getting back in.\n\nStart with "ps aux" to see what\'s eating the CPU.',
                 skills: ['ps', 'kill', 'cat', 'grep', 'ufw'],
+                stage: 'ops',
+                chips: ['ps aux', 'ls /etc/cron.d', 'grep Accepted /var/log/auth.log', 'ufw status', 'hint'],
                 debrief: 'Textbook incident response: you spotted the rogue process (a cryptominer), killed it, found the persistence (a malicious cron job re-downloading it), traced the entry in the auth log, and blocked the source IP. Killing the process alone would have left the cron job to restart it — always hunt for persistence.',
                 build() {
                     return {
@@ -2472,11 +2798,21 @@ permalink: /cyber-quest/
                     };
                 },
                 tasks: [
-                    { id: 'ps', desc: 'Find the process eating the CPU', hint: 'Type: ps aux — look at the %CPU column', check: (T) => T.ran(/^\s*ps\b/) },
-                    { id: 'kill', desc: 'Kill the cryptominer', hint: 'Find its PID in "ps aux" (the one at 99% CPU), then: kill <PID>', check: (T) => T.killedCmds.has('kdevtmpfsi') },
-                    { id: 'cron', desc: 'Find how it restarts itself', hint: 'Read the cron job: cat /etc/cron.d/apache-update', check: (T) => T.readAbs('/etc/cron.d/apache-update') },
-                    { id: 'log', desc: 'Find the attacker\'s successful login in the auth log', hint: 'Try: grep Accepted /var/log/auth.log', check: (T) => T.ran(/grep\s+.*accepted.*auth\.log/i) || (T.readAbs('/var/log/auth.log') && T.ran(/grep/i)) },
-                    { id: 'block', desc: 'Block the attacker\'s IP (203.0.113.66)', hint: 'Type: ufw deny from 203.0.113.66', check: (T) => T.ufw.denyFrom.has('203.0.113.66') }
+                    { id: 'ps', desc: 'Find the process eating the CPU', hint: 'Type: ps aux — look at the %CPU column', check: (T) => T.ran(/^\s*ps\b/),
+                        lesson: 'You know this one from <b>Processes & Scheduled Jobs</b>: run <code>ps aux</code> and look for the highest <b>%CPU</b>. Cryptominers burn CPU to earn money for the attacker. Look at where it runs from too: remember which folders malware likes to hide in (<b>The Linux Map</b>)?'
+                    },
+                    { id: 'kill', desc: 'Kill the cryptominer', hint: 'Find its PID in "ps aux" (the one at 99% CPU), then: kill <PID>', check: (T) => T.killedCmds.has('kdevtmpfsi'),
+                        lesson: 'Read its <b>PID</b> from the second column of <code>ps aux</code> and stop it with <code>kill PID</code>. It runs from a hidden folder in <code>/var/tmp</code>, a classic malware hideout.'
+                    },
+                    { id: 'cron', desc: 'Find how it restarts itself', hint: 'Read the cron job: cat /etc/cron.d/apache-update', check: (T) => T.readAbs('/etc/cron.d/apache-update'),
+                        lesson: 'Killing it isn\'t enough if something starts it again. Scheduled jobs live in <code>/etc/crontab</code>, <code>/etc/cron.d/</code> and users\' <code>crontab -l</code>. Try <code>ls /etc/cron.d</code> and <code>cat</code> anything you don\'t recognise. A job that downloads a script from the internet and pipes it into <code>bash</code> every minute is a huge red flag.'
+                    },
+                    { id: 'log', desc: 'Find the attacker\'s successful login in the auth log', hint: 'Try: grep Accepted /var/log/auth.log', check: (T) => T.ran(/grep\s+.*accepted.*auth\.log/i) || (T.readAbs('/var/log/auth.log') && T.ran(/grep/i)),
+                        lesson: 'How did they get in? Logins are recorded in <code>/var/log/auth.log</code> (<b>Reading Logs</b>). Lots of <b>Failed password</b> lines followed by an <b>Accepted</b> one from the same address means a guessing attack that worked. Try <code>grep Accepted /var/log/auth.log</code> and look for an address that isn\'t from your office (10.x.x.x).'
+                    },
+                    { id: 'block', desc: 'Block the attacker\'s IP (203.0.113.66)', hint: 'Type: ufw deny from 203.0.113.66', check: (T) => T.ufw.denyFrom.has('203.0.113.66'),
+                        lesson: 'Cut them off at the firewall. Last time you blocked a port, and <code>ufw</code> can also block a whole address: <code>ufw deny from IP</code>.'
+                    }
                 ]
             },
             {
@@ -2487,6 +2823,8 @@ permalink: /cyber-quest/
                 xp: 95,
                 scenario: 'The intruder is out. Now harden web-01 so it can\'t happen again.\nThere\'s a world-writable secret, a plaintext service that should never\nhave been on, and a database port open to the whole internet.\n\nUse "ls -l", "find", "ss", "chmod", "systemctl" and "ufw".',
                 skills: ['ls', 'find', 'chmod', 'ss', 'systemctl', 'ufw'],
+                stage: 'ops',
+                chips: ['ls -l', 'find /var/www -perm -0004 -type f', 'ss -tlnp', 'systemctl status telnet', 'ufw status', 'hint'],
                 debrief: 'This is hardening: least privilege (chmod 640 so the world can\'t read the DB password), reducing attack surface (stop and disable plaintext Telnet), and a default-deny firewall (close the database port to the internet). Each one removes a door an attacker could have walked through.',
                 build() {
                     return {
@@ -2518,17 +2856,31 @@ permalink: /cyber-quest/
                     };
                 },
                 tasks: [
-                    { id: 'find', desc: 'Find the world-readable/writable file under /var/www', hint: 'Try: find /var/www -perm -0004 -type f   (or use ls -l to spot the rw-rw-rw- file)', check: (T) => T.ran(/^\s*find\b.*-perm/) || T.ran(/^\s*ls\s+-l/) },
-                    { id: 'chmod', desc: 'Remove world access from config.php (chmod 640)', hint: 'Type: chmod 640 config.php', check: (T) => { const n = T.node('/var/www/html/config.php'); return n && n.mode[7] === '-' && n.mode[8] === '-' && n.mode[9] === '-'; } },
-                    { id: 'ss', desc: 'List listening services', hint: 'Type: ss -tlnp', check: (T) => T.ran(/^\s*(ss|netstat)\b/) },
-                    { id: 'telnet', desc: 'Stop the plaintext Telnet service', hint: 'Type: systemctl stop telnet', check: (T) => T.stoppedSvc.has('telnet') },
-                    { id: 'db', desc: 'Close the database port (3306) to the internet', hint: 'Type: ufw deny 3306', check: (T) => T.ufw.deny.has('3306') }
+                    { id: 'find', desc: 'Find the world-readable/writable file under /var/www', hint: 'Try: find /var/www -perm -0004 -type f   (or use ls -l to spot the rw-rw-rw- file)', check: (T) => T.ran(/^\s*find\b.*-perm/) || T.ran(/^\s*ls\s+-l/),
+                        lesson: 'Permissions again (<b>Permissions & Services</b>): the last three letters are for <b>everyone else</b>. You\'re in <code>/var/www/html</code>, the website\'s folder, so <code>ls -l</code> will show it. To search a whole tree, <code>find /var/www -perm -0004 -type f</code> lists files everyone can read (<code>-0002</code> = everyone can write).'
+                    },
+                    { id: 'chmod', desc: 'Remove world access from config.php (chmod 640)', hint: 'Type: chmod 640 config.php', check: (T) => { const n = T.node('/var/www/html/config.php'); return n && n.mode[7] === '-' && n.mode[8] === '-' && n.mode[9] === '-'; },
+                        lesson: '<code>config.php</code> holds the database password and is <code>rw-rw-rw-</code>, so anyone on the server can read or even change it. <b>640</b> = owner rw (6), group r (4), everyone else nothing (0). Use <code>chmod</code> with that number.'
+                    },
+                    { id: 'ss', desc: 'List listening services', hint: 'Type: ss -tlnp', check: (T) => T.ran(/^\s*(ss|netstat)\b/),
+                        lesson: 'Which doors are open? <code>ss -tlnp</code> lists listening ports. Anything on <code>0.0.0.0</code> is reachable from the internet. Flagged ones are worth a closer look.'
+                    },
+                    { id: 'telnet', desc: 'Stop the plaintext Telnet service', hint: 'Type: systemctl stop telnet', check: (T) => T.stoppedSvc.has('telnet'),
+                        lesson: 'Port 23 is <b>Telnet</b>, an ancient remote login that sends everything, passwords included, as plain text. Like FTP in the basics, stop the service with <code>systemctl</code>.'
+                    },
+                    { id: 'db', desc: 'Close the database port (3306) to the internet', hint: 'Type: ufw deny 3306', check: (T) => T.ufw.deny.has('3306'),
+                        lesson: 'Port 3306 is <b>MySQL</b>. The website talks to it from the same machine, so nobody on the internet needs to reach it. Block the port with <code>ufw</code>.'
+                    }
                 ]
             }
         ];
 
         const labDone = (id) => !!(progress.labs && progress.labs[id] && progress.labs[id].done);
-        const labUnlocked = (i) => i === 0 || labDone(LABS[i - 1].id);
+        const labUnlocked = (i) => i === 0 || labDone(LABS[i - 1].id) || labDone(LABS[i].id);
+        const LAB_STAGES = [
+            { id: 'basics', name: 'Basics', icon: '📘', blurb: 'Learn the command line step by step. No experience needed.' },
+            { id: 'ops', name: 'Incidents', icon: '🚨', blurb: 'Put the basics to work on a real(istic) attack.' }
+        ];
 
         const Ops = {
             lab: null, T: null, hist: [], histPos: 0,
@@ -2536,6 +2888,9 @@ permalink: /cyber-quest/
             open(id) {
                 this.lab = LABS.find((l) => l.id === id);
                 const l = this.lab;
+                const group = LABS.filter((x) => x.stage === l.stage);
+                const st = LAB_STAGES.find((x) => x.id === l.stage);
+                $('ob-tag').textContent = '💻 Terminal Ops · ' + st.name + ' ' + (group.indexOf(l) + 1) + '/' + group.length;
                 $('ob-icon').textContent = l.icon;
                 $('ob-title').textContent = l.title;
                 $('ob-scenario').textContent = l.scenario;
@@ -2553,6 +2908,8 @@ permalink: /cyber-quest/
                     fs: b.fs, cwd: b.cwd, procs: b.procs, net: b.net, services: b.services,
                     history: [], read: new Set(), killedCmds: new Set(), killedPids: new Set(),
                     stoppedSvc: new Set(), disabledSvc: new Set(),
+                    visited: new Set([b.cwd]), listed: new Set(), listedAll: new Set(), listedLong: new Set(),
+                    answers: new Set(), crontab: b.crontab || '',
                     ufw: { enabled: false, deny: new Set(), allow: new Set(), denyFrom: new Set() },
                     ran(re) { return this.history.some((c) => re.test(c)); },
                     readAbs(p) { return this.read.has(p); },
@@ -2562,9 +2919,12 @@ permalink: /cyber-quest/
                 $('ops-name').textContent = l.icon + ' ' + l.title;
                 $('ops-out').innerHTML = '';
                 $('ops-done').className = 'term-done';
-                $('ops-chips').innerHTML = ['help', 'ls -a', 'cat incident-ticket.txt', 'ps aux', 'hint', 'clear']
+                $('ops-chips').innerHTML = (l.chips || ['help', 'ls -a', 'ps aux', 'hint']).concat(['help', 'clear'])
+                    .filter((c, i, arr) => arr.indexOf(c) === i)
                     .map((c) => `<button class="chip" data-chip="${esc(c)}">${esc(c)}</button>`).join('');
-                this.print('Connected to web-01. Type <span class="hl">help</span> for a list of commands, or <span class="hl">hint</span> for your next objective.', 'dim');
+                $('ops-prompt').textContent = this.prompt();
+                this.print('Connected to web-01. Read the 📖 lesson above, then type the command below and press Enter.', 'dim');
+                this.print('Stuck? <span class="hl">hint</span> shows the exact command. <span class="hl">help</span> lists every command.', 'dim');
                 this.print('');
                 this.renderObjectives();
                 show('ops');
@@ -2629,14 +2989,17 @@ permalink: /cyber-quest/
             },
 
             pipe(input, stage) {
-                const a = stage.split(/\s+/);
+                const a = tokens(stage);
                 const cmd = a[0];
                 let lines = (input.out || []).map((l) => (typeof l === 'string' ? l : l.text || ''));
                 if (cmd === 'grep') {
-                    const i = a.includes('-i'); const v = a.includes('-v');
+                    const fl = a.filter((x) => x.startsWith('-')).join('');
+                    const i = fl.includes('i'); const v = fl.includes('v');
                     const pat = a.filter((x, k) => k > 0 && !x.startsWith('-')).join(' ');
                     const re = new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), i ? 'i' : '');
-                    return { out: lines.filter((l) => re.test(l) !== v).map((l) => ({ text: l, html: hlMatch(l, pat, i) })) };
+                    const hits = lines.filter((l) => re.test(l) !== v);
+                    if (fl.includes('c')) return { out: [String(hits.length)] };
+                    return { out: hits.map((l) => ({ text: l, html: hlMatch(l, pat, i) })) };
                 }
                 if (cmd === 'wc' && a.includes('-l')) return { out: [String(lines.length)] };
                 if (cmd === 'head') { const n = num(a, 10); return { out: lines.slice(0, n) }; }
@@ -2645,11 +3008,12 @@ permalink: /cyber-quest/
             },
 
             runCmd(line) {
-                const a = line.split(/\s+/).filter(Boolean);
+                const a = tokens(line);
                 const cmd = a[0];
                 const T = this.T;
                 const args = a.slice(1);
-                const pos = args.filter((x) => !x.startsWith('-'));
+                const nIdx = args.indexOf('-n');
+                const pos = args.filter((x, k) => !x.startsWith('-') && !(nIdx >= 0 && k === nIdx + 1));
                 const flags = args.filter((x) => x.startsWith('-')).join('');
 
                 switch (cmd) {
@@ -2671,11 +3035,32 @@ permalink: /cyber-quest/
                         if (!n) return { err: ['cd: ' + (pos[0] || '') + ': No such file or directory'] };
                         if (n.type !== 'dir') return { err: ['cd: ' + pos[0] + ': Not a directory'] };
                         T.cwd = this.resolve(pos[0] || '~');
+                        T.visited.add(T.cwd);
                         $('ops-prompt').textContent = this.prompt();
                         return {};
                     }
                     case 'ls': return this.ls(pos[0], flags);
-                    case 'cat': return this.cat(pos);
+                    case 'cat': case 'less': case 'more': return this.cat(pos);
+                    case 'wc': {
+                        if (!flags.includes('l')) return { err: ['wc: this simulation supports wc -l (count lines)'] };
+                        const n = this.cat(pos);
+                        return n.err ? n : { out: [n.out.length + ' ' + pos[0]] };
+                    }
+                    case 'crontab': {
+                        if (!flags.includes('l')) return { err: ['crontab: use crontab -l to list your scheduled jobs'] };
+                        return T.crontab ? { out: T.crontab.replace(/\n$/, '').split('\n') } : { out: ['no crontab for alex'] };
+                    }
+                    case 'answer': {
+                        const guess = args.join(' ').trim();
+                        if (!guess) return { err: ['usage: answer <your answer>'] };
+                        const t = this.lab.tasks.find((x) => x.answer && !x.check(T));
+                        if (!t) return { out: ['Nothing to answer right now.'] };
+                        if (guess.toLowerCase() === t.answer.toLowerCase()) {
+                            T.answers.add(t.answer);
+                            return { out: [{ html: '<span class="ok">✔ Correct: ' + esc(guess) + '</span>' }] };
+                        }
+                        return { err: ['✘ Not quite. ' + (t.wrong || 'Look again and try another answer.')] };
+                    }
                     case 'head': { const n = this.cat(pos); if (n.out) n.out = n.out.slice(0, num(args, 10)); return n; }
                     case 'tail': { const n = this.cat(pos); if (n.out) n.out = n.out.slice(-num(args, 10)); return n; }
                     case 'grep': return this.grep(args);
@@ -2691,7 +3076,7 @@ permalink: /cyber-quest/
                     case 'sudo': return this.runCmd(args.join(' '));
                     case 'clear': return {};
                     case 'exit': show('home'); return {};
-                    default: return { err: [cmd + ': command not found'] };
+                    default: return { err: [cmd + ': command not found (type help for the list)'] };
                 }
             },
 
@@ -2700,6 +3085,11 @@ permalink: /cyber-quest/
                 if (!n) return { err: ['ls: cannot access \'' + (path || '') + '\': No such file or directory'] };
                 const all = flags.includes('a');
                 const long = flags.includes('l');
+                const abs = this.resolve(path || '.');
+                const dir = n.type === 'dir' ? abs : abs.replace(/\/[^/]*$/, '') || '/';
+                this.T.listed.add(dir);
+                if (all) this.T.listedAll.add(dir);
+                if (long) this.T.listedLong.add(dir);
                 if (n.type === 'file') {
                     const name = this.resolve(path).split('/').pop();
                     return { out: [long ? lsLine(n, name) : name] };
@@ -2728,8 +3118,10 @@ permalink: /cyber-quest/
             },
 
             grep(args) {
-                const i = args.includes('-i');
-                const r = args.includes('-r') || args.includes('-R');
+                const fl = args.filter((x) => x.startsWith('-')).join('');
+                const i = fl.includes('i');
+                const r = fl.includes('r') || fl.includes('R');
+                const c = fl.includes('c');
                 const rest = args.filter((x) => !x.startsWith('-'));
                 const pat = rest[0] || '';
                 const targets = rest.slice(1);
@@ -2752,6 +3144,7 @@ permalink: /cyber-quest/
                     if (!n) { out.push({ text: '', html: '<span class="err">grep: ' + esc(t) + ': No such file or directory</span>' }); continue; }
                     scan(this.resolve(t), n, r && n.type === 'dir');
                 }
+                if (c) return { out: [String(out.filter((o) => o.text).length)] };
                 return { out };
             },
 
@@ -2868,12 +3261,19 @@ permalink: /cyber-quest/
             },
 
             renderObjectives() {
-                $('ops-objectives').innerHTML = this.lab.tasks.map((t) => {
-                    const done = t.check(this.T);
-                    return '<li class="' + (done ? 'done' : '') + '"><span>' + esc(t.desc) + '</span></li>';
+                const tasks = this.lab.tasks;
+                const cur = tasks.findIndex((t) => !t.check(this.T));
+                $('ops-objectives').innerHTML = tasks.map((t, i) => {
+                    const cls = t.check(this.T) ? 'done' : i === cur ? 'current' : '';
+                    return '<li class="' + cls + '"><span>' + esc(t.desc) + '</span></li>';
                 }).join('');
-                const done = this.lab.tasks.filter((t) => t.check(this.T)).length;
-                $('ops-count').textContent = done + '/' + this.lab.tasks.length;
+                const done = tasks.filter((t) => t.check(this.T)).length;
+                $('ops-count').textContent = done + '/' + tasks.length;
+                // The lesson for the first unfinished step (lesson HTML is authored content).
+                const t = tasks[cur];
+                $('ops-lesson').innerHTML = t && t.lesson
+                    ? '<div class="step">📖 Step ' + (cur + 1) + ' of ' + tasks.length + '</div><h4>' + esc(t.desc) + '</h4><p>' + t.lesson + '</p>'
+                    : '';
             },
 
             checkTasks() {
@@ -2902,7 +3302,16 @@ permalink: /cyber-quest/
             }
         };
 
-        function num(a, def) { const i = a.indexOf('-n'); return i >= 0 ? parseInt(a[i + 1], 10) || def : def; }
+        // Split a command line into words, keeping "quoted phrases" together.
+        function tokens(line) {
+            return (line.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((t) => t.replace(/^(["'])(.*)\1$/, '$2'));
+        }
+        function num(a, def) {
+            const i = a.indexOf('-n');
+            if (i >= 0) return parseInt(a[i + 1], 10) || def;
+            const short = a.find((x) => /^-\d+$/.test(x)); // tail -5
+            return short ? parseInt(short.slice(1), 10) : def;
+        }
         function hlMatch(line, pat, ci) {
             if (!pat) return esc(line);
             try {
@@ -2942,11 +3351,14 @@ permalink: /cyber-quest/
             '<span class="hl">Available commands</span> (this is a safe simulation):',
             '  <span class="hl">ls</span> [-a -l] [dir]   list files        <span class="hl">cd</span> &lt;dir&gt;        change directory',
             '  <span class="hl">pwd</span>                where am I         <span class="hl">cat</span> &lt;file&gt;      read a file',
+            '  <span class="hl">tail</span> [-n 5] FILE   last lines         <span class="hl">head</span> [-n 5] FILE  first lines',
+            '  <span class="hl">wc -l</span> FILE         count lines        <span class="hl">crontab -l</span>       your scheduled jobs',
             '  <span class="hl">grep</span> [-i -r] PAT FILE  search in files   <span class="hl">find</span> PATH -perm -0002   find files',
             '  <span class="hl">ps</span> aux             running processes  <span class="hl">kill</span> &lt;pid&gt;      stop a process',
             '  <span class="hl">chmod</span> 640 &lt;file&gt;    change permissions <span class="hl">ss</span> -tlnp         listening ports',
             '  <span class="hl">ufw</span> deny &lt;port&gt;     firewall rule      <span class="hl">systemctl</span> stop &lt;svc&gt;  stop a service',
             '  <span class="hl">whoami</span> / <span class="hl">id</span>        who am I          <span class="hl">sha256sum</span> &lt;file&gt;  checksum a file',
+            '  <span class="hl">answer</span> &lt;text&gt;      answer a question  <span class="hl">man</span> &lt;cmd&gt;        explain a command',
             '  <span class="hl">hint</span>  next step        <span class="hl">clear</span>  wipe screen   you can also pipe:  cat file | grep word'
         ].join('\n');
         const MAN = {
@@ -2958,7 +3370,16 @@ permalink: /cyber-quest/
             ss: 'ss — show listening sockets. -t tcp, -l listening, -n numeric, -p process.',
             find: 'find — search for files. -perm -0002 finds world-writable, -name matches a name, -type f files only.',
             ps: 'ps — report running processes. "ps aux" shows every process with CPU and memory.',
-            systemctl: 'systemctl — control services. stop halts now, disable stops it starting at boot.'
+            systemctl: 'systemctl — control services. stop halts now, disable stops it starting at boot.',
+            cd: 'cd — change directory. cd /etc goes to an absolute path, cd .. goes up one, cd ~ (or just cd) goes home.',
+            pwd: 'pwd — print working directory: the folder you are in right now.',
+            cat: 'cat — print a file. Works with relative (notes.txt) or absolute (/etc/hostname) paths.',
+            tail: 'tail — show the last lines of a file (newest log entries). tail -n 3 shows the last 3.',
+            head: 'head — show the first lines of a file. head -n 3 shows the first 3.',
+            wc: 'wc -l — count lines. Often used after a pipe: grep Failed auth.log | wc -l',
+            crontab: 'crontab -l — list your scheduled (cron) jobs. Fields: minute hour day-of-month month day-of-week, then the command.',
+            whoami: 'whoami — print your username. id also shows your groups.',
+            answer: 'answer — submit an answer to a question objective, e.g. answer 192.0.2.1'
         };
 
         // ── Events ────────────────────────────────────────────────────────
