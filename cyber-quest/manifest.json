@@ -2,7 +2,7 @@
   "id": "/cyber-quest/",
   "name": "Cyber Quest — Learn Cybersecurity",
   "short_name": "Cyber Quest",
-  "description": "A beginner-friendly game that teaches cybersecurity by doing: spot phishing emails, unmask fake links, forge strong passwords and outsmart social engineers.",
+  "description": "A game that takes you from beginner to advanced cybersecurity: spot phishing, read email headers and logs, find vulnerable code and run an incident response.",
   "start_url": "/cyber-quest/",
   "scope": "/cyber-quest/",
   "display": "standalone",

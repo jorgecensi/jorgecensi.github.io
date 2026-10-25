@@ -12,7 +12,7 @@ permalink: /cyber-quest/
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Cyber Quest">
     <meta name="theme-color" content="#0b1220">
-    <meta name="description" content="A beginner-friendly game that teaches cybersecurity by doing: spot phishing emails, unmask fake links, forge strong passwords and outsmart social engineers.">
+    <meta name="description" content="A game that takes you from beginner to advanced cybersecurity: spot phishing, read email headers and logs, find vulnerable code and run an incident response.">
     <title>Cyber Quest — Learn Cybersecurity</title>
     <link rel="manifest" href="/cyber-quest/manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="/img/cyber-quest-icon-192.png">
@@ -111,6 +111,18 @@ permalink: /cyber-quest/
         .stars { font-size: 0.95rem; letter-spacing: 1px; white-space: nowrap; }
         .stars .off { opacity: 0.2; filter: grayscale(1); }
 
+        .tier { margin-bottom: 20px; }
+        .tier-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin: 0 2px 10px; }
+        .tier-name { display: block; font-weight: 800; font-size: 1.05rem; }
+        .tier-blurb { display: block; font-size: 0.8rem; color: var(--muted); }
+        .tier-count { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); white-space: nowrap; }
+        .tier.locked .tier-head { opacity: 0.6; }
+        .tier-label { margin-top: 18px; }
+        .tier-tag {
+            display: inline-block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+            color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; margin-bottom: 10px;
+        }
+
         .home-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
 
         .btn {
@@ -197,6 +209,34 @@ permalink: /cyber-quest/
             border: 1px solid var(--line); font-size: 0.95rem;
         }
         .bubble .who { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 2px; }
+
+        .snippet, .code-lines {
+            font-family: var(--mono); font-size: 0.8rem; background: #070d18; border: 1px solid var(--line);
+            border-radius: 12px; margin: 0 0 14px; color: #cbd5e1;
+        }
+        .snippet { padding: 12px 14px; white-space: pre-wrap; word-break: break-word; line-height: 1.55; }
+        .code-lines { display: grid; padding: 6px; gap: 2px; overflow-x: auto; }
+        .code-head { padding: 4px 8px 4px 38px; color: var(--muted); white-space: pre; }
+        .code-lines .opt.line {
+            display: flex; gap: 10px; align-items: baseline; text-align: left; font-family: var(--mono); font-size: 0.8rem;
+            padding: 8px; border-radius: 8px; background: transparent; border: 1px solid transparent;
+        }
+        .code-lines .opt.line:not([disabled]):hover { border-color: var(--info); background: rgba(56, 189, 248, 0.06); }
+        .code-lines .opt.line code { white-space: pre-wrap; word-break: break-all; font-family: inherit; }
+        .code-lines .ln { flex: 0 0 20px; color: #475569; text-align: right; user-select: none; }
+        .opt.ord { display: flex; align-items: center; gap: 12px; }
+        .ord-n {
+            flex: 0 0 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800;
+            border: 1px dashed var(--line); color: var(--accent-ink); font-size: 0.9rem;
+        }
+        .opt.ord.picked .ord-n { background: var(--accent); border-color: var(--accent); }
+        .opt.ord.wrong .ord-n { background: var(--danger); border-color: var(--danger); color: #fff; }
+        .ord-reset { margin-top: 10px; }
+        .feedback code, .prompt code { font-family: var(--mono); font-size: 0.85em; background: #070d18; padding: 1px 5px; border-radius: 4px; word-break: break-word; }
+        .unlock {
+            background: rgba(250, 204, 21, 0.1); border: 1px solid var(--gold); border-radius: 12px; padding: 12px 14px;
+            margin-bottom: 14px; font-size: 0.92rem;
+        }
 
         .options { display: grid; gap: 10px; }
         .opt {
@@ -293,7 +333,7 @@ permalink: /cyber-quest/
             <div class="topbar">
                 <div class="brand">
                     <img src="/img/cyber-quest-icon-192.png" alt="">
-                    <div>Cyber Quest<small>Learn cybersecurity by playing</small></div>
+                    <div>Cyber Quest<small>From beginner to advanced cybersecurity</small></div>
                 </div>
                 <button class="icon-btn" data-go="about" aria-label="How to play">?</button>
             </div>
@@ -307,7 +347,7 @@ permalink: /cyber-quest/
                 <div class="rank-next" id="rank-next"></div>
             </div>
 
-            <p class="section-label">Missions</p>
+            <p class="section-label">Your path: Beginner → Intermediate → Advanced</p>
             <div class="missions" id="mission-list"></div>
 
             <div class="home-links">
@@ -322,6 +362,7 @@ permalink: /cyber-quest/
                 <button class="icon-btn" data-go="home">← Back</button>
             </div>
             <div class="briefing">
+                <div class="tier-tag" id="b-tier"></div>
                 <div class="big" id="b-icon"></div>
                 <h2 id="b-title"></h2>
                 <div class="terminal" id="b-text"></div>
@@ -384,6 +425,16 @@ permalink: /cyber-quest/
                 </ul>
             </div>
             <div class="guide-sec">
+                <h3>Three tiers</h3>
+                <ul>
+                    <li>🟢 <b>Beginner</b>: phishing, links, passwords, scams and safe habits. No experience needed.</li>
+                    <li>🟡 <b>Intermediate</b>: email headers (SPF, DKIM, DMARC), ports and networks, cryptography, malware.</li>
+                    <li>🔴 <b>Advanced</b>: web vulnerabilities in real code, threat hunting in logs, security architecture and incident response.</li>
+                    <li>Beat a tier's boss to unlock the next tier. Harder tiers are worth more XP per answer.</li>
+                    <li>Later tiers add new challenges: tap the vulnerable line of code or the suspicious log entry, and put steps in the right order.</li>
+                </ul>
+            </div>
+            <div class="guide-sec">
                 <h3>Shields &amp; stars</h3>
                 <ul>
                     <li>You start each mission with 🛡️🛡️🛡️. A wrong answer costs one. Lose all three and you're breached — try again.</li>
@@ -392,9 +443,9 @@ permalink: /cyber-quest/
                 </ul>
             </div>
             <div class="guide-sec">
-                <h3>The final boss</h3>
+                <h3>Bosses</h3>
                 <ul>
-                    <li>Clear every mission to unlock <b>Breach Day</b>: ten mixed questions against the clock.</li>
+                    <li>Each tier ends with a boss: ten random questions from that tier, against the clock (20, 25 and 30 seconds per question).</li>
                 </ul>
             </div>
             <div class="guide-sec">
@@ -430,6 +481,7 @@ permalink: /cyber-quest/
         const MISSIONS = [
             {
                 id: 'phish',
+                tier: 'beginner',
                 title: 'Inbox Inspector',
                 icon: '📧',
                 blurb: 'Spot phishing emails before they hook you.',
@@ -544,6 +596,7 @@ permalink: /cyber-quest/
             },
             {
                 id: 'links',
+                tier: 'beginner',
                 title: 'Link Detective',
                 icon: '🔗',
                 blurb: 'Read a URL like a pro and unmask fakes.',
@@ -611,6 +664,7 @@ permalink: /cyber-quest/
             },
             {
                 id: 'passwords',
+                tier: 'beginner',
                 title: 'Password Forge',
                 icon: '🔑',
                 blurb: 'Build passwords that would take centuries to crack.',
@@ -660,6 +714,7 @@ permalink: /cyber-quest/
             },
             {
                 id: 'social',
+                tier: 'beginner',
                 title: 'Social Engineer',
                 icon: '🎭',
                 blurb: 'Scammers hack people, not computers. Don\'t get hacked.',
@@ -766,6 +821,7 @@ permalink: /cyber-quest/
             },
             {
                 id: 'habits',
+                tier: 'beginner',
                 title: 'Safe Habits',
                 icon: '🛡️',
                 blurb: 'The everyday moves that stop most attacks.',
@@ -868,10 +924,11 @@ permalink: /cyber-quest/
             },
             {
                 id: 'boss',
+                tier: 'beginner',
                 title: 'Breach Day',
                 icon: '💀',
                 boss: true,
-                blurb: 'Final boss: 10 mixed threats against the clock.',
+                blurb: 'Beginner boss: 10 mixed threats against the clock.',
                 briefing: '> ALERT: multiple attacks in progress.\n> 10 threats. 20 seconds each. 3 shields.\n> Everything you\'ve learned. Go.',
                 learn: ['Putting it all together under pressure — just like the real thing'],
                 tips: [
@@ -881,15 +938,784 @@ permalink: /cyber-quest/
                 ],
                 count: 10,
                 time: 20
+            },
+
+            // ── Intermediate ──
+            {
+                id: 'headers',
+                tier: 'intermediate',
+                title: 'Header Forensics',
+                icon: '🧾',
+                blurb: 'The From line can lie. The headers rarely do.',
+                briefing: '> Suspicious mail reported by finance.\n> Pull the raw headers.\n> Read the evidence.',
+                learn: ['What SPF, DKIM and DMARC actually check', 'Reply-To tricks and invoice fraud', 'Unicode lookalike (homograph) domains'],
+                tips: [
+                    'SPF lists which servers may send mail for a domain. It checks the envelope sender (Return-Path), not the visible From.',
+                    'DKIM is a digital signature. It proves which domain signed the message and that it wasn\'t altered. It is not encryption.',
+                    'DMARC passes only if SPF or DKIM passes and lines up with the visible From domain. p=reject tells receivers to block failures.',
+                    'Passing SPF, DKIM and DMARC only proves which domain sent the mail. An attacker\'s lookalike domain can pass perfectly.',
+                    'A Reply-To that differs from From is a classic trick: your reply goes to the attacker.',
+                    'Any change of bank details is verified out-of-band, using contact details you already had.',
+                    'Lookalike Unicode domains show up as xn--… (punycode) in raw headers and many browsers.'
+                ],
+                questions: [
+                    {
+                        kind: 'choice',
+                        code: 'From: "PayPal" <service@paypal.com>\nReply-To: paypal-support@protonmail.com\nAuthentication-Results: mx.yourcompany.com;\n  spf=fail smtp.mailfrom=paypal.com;\n  dkim=none;\n  dmarc=fail header.from=paypal.com',
+                        prompt: 'What do these headers tell you?',
+                        options: [
+                            'The From address is forged — paypal.com\'s own checks failed',
+                            'It\'s genuine — the From address says paypal.com',
+                            'It\'s genuine, the receiving server is just misconfigured',
+                            'Nothing — no part of an email header can be trusted'
+                        ],
+                        answer: 0,
+                        explain: 'SPF failed, so the sending server isn\'t authorised for paypal.com. There\'s no DKIM signature, and DMARC failed. On top of that, replies go to a webmail address. The <code>Authentication-Results</code> line is added by <i>your own</i> mail server, which makes it the part you can trust.'
+                    },
+                    {
+                        kind: 'choice',
+                        code: 'From: "Microsoft 365" <no-reply@micros0ft-security.com>\nAuthentication-Results: mx.yourcompany.com;\n  spf=pass smtp.mailfrom=micros0ft-security.com;\n  dkim=pass header.d=micros0ft-security.com;\n  dmarc=pass header.from=micros0ft-security.com',
+                        prompt: 'SPF, DKIM and DMARC all pass. Is this email trustworthy?',
+                        options: [
+                            'No — it only proves micros0ft-security.com sent it, and that\'s a lookalike domain',
+                            'Yes — all three checks passed',
+                            'Yes — DMARC pass means Microsoft verified it',
+                            'No — passing all three checks is suspicious in itself'
+                        ],
+                        answer: 0,
+                        explain: 'Email authentication proves <i>which domain</i> sent the message, not that the domain is honest. Attackers register lookalikes (here a zero instead of an "o") and set up SPF, DKIM and DMARC properly. Always judge the domain itself.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'What does DKIM actually do?',
+                        options: [
+                            'Signs the message so receivers can verify the signing domain and that it wasn\'t altered',
+                            'Encrypts the email so only the recipient can read it',
+                            'Lists the IP addresses allowed to send for a domain',
+                            'Filters out spam using AI'
+                        ],
+                        answer: 0,
+                        explain: 'The sending domain signs headers and body with its private key, and receivers check the signature with the public key published in DNS. The content stays readable, so it isn\'t encryption. Listing allowed servers is SPF\'s job.'
+                    },
+                    {
+                        kind: 'choice',
+                        code: 'From: "Accounts Payable" <ap@acme-corp.com>\nReply-To: ap@acme-c0rp.com\nSubject: RE: Invoice 8812 — updated bank details',
+                        prompt: 'A long-standing supplier emails new bank details in an existing thread. What should finance do?',
+                        options: [
+                            'Treat it as fraud until verified — phone the supplier on a number already on file',
+                            'Update the details; it\'s a reply in an existing thread',
+                            'Reply and ask them to confirm by email',
+                            'Send a small test payment to the new account first'
+                        ],
+                        answer: 0,
+                        explain: 'Business email compromise. The Reply-To is a lookalike domain (zero for "o"). "RE:" and a familiar thread are easy to fake, or the supplier\'s mailbox really was hacked. A test payment that arrives proves nothing. Only an out-of-band call to a known number does.'
+                    },
+                    {
+                        kind: 'url',
+                        context: 'An email link displays as "аpple.com/id". In the raw source the domain is different.',
+                        url: 'https://xn--pple-43d.com/id', domain: 'xn--pple-43d.com', answer: 0,
+                        explain: 'An IDN homograph. The first letter is the Cyrillic "а" (U+0430), which looks identical to the Latin "a". In punycode it becomes <code>xn--pple-43d.com</code>, a completely different domain from apple.com.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'You want receivers to block mail that spoofs your company\'s domain. Which DMARC policy does that?',
+                        options: ['p=reject', 'p=none', 'p=monitor', 'v=spf1 +all'],
+                        answer: 0,
+                        explain: '<code>p=none</code> only collects reports, <code>p=quarantine</code> sends failures to spam, and <code>p=reject</code> blocks them. There is no "monitor" policy. Teams usually start with none, read the reports, then tighten. And <code>+all</code> in SPF would authorise every server on the internet, so never use it.'
+                    }
+                ]
+            },
+            {
+                id: 'network',
+                tier: 'intermediate',
+                title: 'Network Recon',
+                icon: '🌐',
+                blurb: 'Every exposed service is a door. Know which ones are open.',
+                briefing: '> Every service you expose is a door.\n> Learn the doors.\n> Close the ones you don\'t need.',
+                learn: ['Common ports and what they reveal', 'Firewalls, TLS and what the network still sees', 'DNS attacks, and the ethics of scanning'],
+                tips: [
+                    'Ports identify services: 22 SSH, 23 Telnet, 53 DNS, 80 HTTP, 443 HTTPS, 445 SMB, 3389 RDP.',
+                    'Never expose RDP (3389) or SMB (445) directly to the internet. They\'re top ransomware entry points.',
+                    'Firewalls should default-deny: block everything, then allow only what\'s needed.',
+                    'TLS hides the content of your traffic, but the network can still see which servers you talk to and how much.',
+                    'If DNS or a registrar account is hijacked, the right name can point to the wrong server. Never click through certificate errors.',
+                    'Only scan or test systems you own or have written permission to test.'
+                ],
+                questions: [
+                    {
+                        kind: 'lines',
+                        prompt: 'A scan of your company\'s public web server. Tap the open port that\'s the biggest risk.',
+                        head: 'PORT      STATE   SERVICE',
+                        lines: ['22/tcp    closed  ssh', '80/tcp    open    http', '443/tcp   open    https', '3389/tcp  open    ms-wbt-server'],
+                        answer: 3,
+                        explain: '3389 is Remote Desktop (RDP). Exposed RDP is one of the most common ways ransomware gangs get in, through password guessing or unpatched bugs. Remove it or put it behind a VPN. Ports 80 and 443 are expected on a web server, and 80 should just redirect to 443.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Which firewall approach is the safest default?',
+                        options: [
+                            'Deny all traffic, then allow only the specific services needed',
+                            'Allow all traffic, then block known-bad IPs',
+                            'Allow everything from inside the office network',
+                            'Block only ports above 1024'
+                        ],
+                        answer: 0,
+                        explain: 'With default-deny (an allow-list), a forgotten service is blocked automatically. A block-list only stops threats you already know about.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'On hotel Wi-Fi you log in to https://bank.example. What can the hotel network still see?',
+                        options: [
+                            'Which site you\'re connecting to and how much data — not the pages or your password',
+                            'Everything, including your password',
+                            'Nothing at all',
+                            'Your password, but not the pages'
+                        ],
+                        answer: 0,
+                        explain: 'TLS encrypts the content: pages, forms and cookies. The server name usually still leaks through DNS lookups and the TLS handshake (SNI), and traffic volume and timing are visible. Encrypted DNS and Encrypted Client Hello reduce this. A VPN moves that visibility to the VPN provider.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Users land on a fake bank login even when they type the correct address. Which attack fits best?',
+                        options: [
+                            'DNS hijacking or poisoning — the name resolves to the attacker\'s server',
+                            'SQL injection',
+                            'Brute force',
+                            'A DDoS attack'
+                        ],
+                        answer: 0,
+                        explain: 'If a router, a DNS resolver or the domain\'s registrar account is compromised, the right name can point to the wrong IP. A certificate error is often the only visible sign, which is why you never click through one. Protect registrar accounts with MFA, and use DNSSEC where you can.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'An old switch is managed over Telnet (port 23). What should replace it, and why?',
+                        options: [
+                            'SSH — it encrypts the whole session, including the password',
+                            'FTP — it\'s faster',
+                            'HTTP — every device supports it',
+                            'Nothing — Telnet is fine on an internal network'
+                        ],
+                        answer: 0,
+                        explain: 'Telnet sends everything, passwords included, as plain text that anyone on the path can capture. And "internal" networks are exactly where attackers go once they\'re inside. SSH encrypts the session and supports key-based login.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'A colleague wants to port-scan a competitor\'s website "just to see what\'s open". What do you say?',
+                        options: [
+                            'Don\'t — scanning systems without permission can be illegal; only test what you\'re authorised to',
+                            'Fine — scanning is passive and harmless',
+                            'Fine, if they use a VPN',
+                            'Fine, as long as they don\'t exploit anything'
+                        ],
+                        answer: 0,
+                        explain: 'Unauthorised scanning can break laws like the US Computer Fraud and Abuse Act or the UK Computer Misuse Act, and it breaks most providers\' terms. Professionals get a written scope first. To practise legally, use your own lab, CTFs or bug-bounty programs.'
+                    }
+                ]
+            },
+            {
+                id: 'crypto',
+                tier: 'intermediate',
+                title: 'Crypto Lab',
+                icon: '🔐',
+                blurb: 'Hashing, encryption, keys and certificates — demystified.',
+                briefing: '> Crypto is maths that keeps secrets.\n> Used wrong, it keeps nothing.\n> Learn which tool does which job.',
+                learn: ['Hashing vs encryption vs encoding', 'Salted, slow password hashes', 'Public keys, private keys and certificates'],
+                tips: [
+                    'Encryption is reversible with a key. Hashing is one-way. Encoding (like Base64) is reversible by anyone and hides nothing.',
+                    'Store passwords with an algorithm built for passwords: Argon2id, bcrypt or scrypt. Never plain MD5 or SHA-1.',
+                    'A salt is a random value per user. Identical passwords then get different hashes, and precomputed tables fail.',
+                    'Symmetric crypto (like AES) uses one shared key. Asymmetric crypto (RSA, elliptic curves) uses a key pair.',
+                    'Encrypt with the recipient\'s public key. Sign with your own private key. Never share a private key.',
+                    'A certificate binds a public key to a domain, vouched for by a trusted CA. A certificate warning means that binding failed.',
+                    'Never roll your own crypto. Use well-reviewed libraries.'
+                ],
+                questions: [
+                    {
+                        kind: 'choice',
+                        prompt: 'A website stores user passwords. What should it store?',
+                        options: [
+                            'A salted hash from a slow password algorithm like Argon2id or bcrypt',
+                            'The passwords AES-encrypted, with the key on the same server',
+                            'An MD5 hash of each password',
+                            'Plain text, in a database nobody else can access'
+                        ],
+                        answer: 0,
+                        explain: 'If the database leaks, a slow salted hash makes every single guess expensive. MD5 is built to be fast, and GPUs try billions of MD5 guesses per second. Encryption with the key on the same server falls as soon as the server does.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Two users both choose the password "sunshine". With proper salting, their stored hashes are…',
+                        options: [
+                            'Different — each user has a unique random salt',
+                            'Identical',
+                            'Identical, but encrypted',
+                            'Not stored at all'
+                        ],
+                        answer: 0,
+                        explain: 'Hash(salt + password) differs for every user, so an attacker can\'t crack everyone with the same password in one go, and precomputed rainbow tables are useless. Salts aren\'t secret. They\'re stored next to the hash.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Alice wants Bob to send her a secret file. Which key does Bob encrypt it with?',
+                        options: ['Alice\'s public key', 'Alice\'s private key', 'Bob\'s private key', 'Bob\'s public key'],
+                        answer: 0,
+                        explain: 'Anything encrypted with Alice\'s public key can only be decrypted with her private key, which only she holds. Signatures work the other way round: you sign with your own private key, and anyone can verify with your public key.'
+                    },
+                    {
+                        kind: 'order',
+                        prompt: 'Put these steps of an HTTPS connection in order. Tap them first to last.',
+                        items: [
+                            'Browser connects; the server sends its certificate',
+                            'Browser checks the certificate matches the domain and is signed by a trusted CA',
+                            'Both sides agree on fresh session keys (key exchange)',
+                            'Traffic flows, encrypted with fast symmetric keys'
+                        ],
+                        explain: 'That\'s a simplified TLS handshake. Public-key crypto proves the server\'s identity and agrees on keys. Then fast symmetric encryption (such as AES-GCM) protects the actual data.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'On café Wi-Fi your bank\'s site shows "Your connection is not private — NET::ERR_CERT_AUTHORITY_INVALID".',
+                        options: [
+                            'Stop — the certificate can\'t be verified, which is what interception looks like',
+                            'Click "Proceed anyway" — it\'s still encrypted',
+                            'Refresh until it goes away',
+                            'Turn off your antivirus and retry'
+                        ],
+                        answer: 0,
+                        explain: 'Encryption is useless if you\'re encrypting to the attacker. A certificate error on a major site you use often is the signature of a machine-in-the-middle attack. Disconnect and use mobile data.'
+                    },
+                    {
+                        kind: 'choice',
+                        code: '# config.yml\ndb_password: cGFzc3dvcmQxMjM=',
+                        prompt: 'A developer says the password is "encrypted" in this config. Are they right?',
+                        options: [
+                            'No — it\'s Base64, an encoding anyone can reverse instantly',
+                            'Yes — Base64 is a form of encryption',
+                            'Yes, as long as nobody knows it\'s Base64',
+                            'No — it\'s a hash, so it can\'t be reversed'
+                        ],
+                        answer: 0,
+                        explain: '<code>cGFzc3dvcmQxMjM=</code> decodes to "password123" without any key. Encoding changes the format, encryption needs a key, and hashing is one-way. Secrets belong in a secrets manager, not in config files.'
+                    }
+                ]
+            },
+            {
+                id: 'malware',
+                tier: 'intermediate',
+                title: 'Malware Lab',
+                icon: '🦠',
+                blurb: 'Know your enemy: how malware gets in, hides and spreads.',
+                briefing: '> Sample quarantined.\n> Classify it. Trace how it got in.\n> Stop the next one.',
+                learn: ['Worms, trojans, ransomware and infostealers', 'Double extensions and macro loaders', 'Session theft, least privilege and the ransomware kill chain'],
+                tips: [
+                    'Trojan: pretends to be something useful. Worm: spreads by itself. Ransomware: encrypts data for a ransom. Infostealer: steals saved passwords and session cookies.',
+                    'Turn on "show file extensions". Invoice.pdf.exe is a program, not a PDF.',
+                    '"Enable content to view this document" is the attacker talking. Never enable macros on an unexpected file.',
+                    'Stolen session cookies can bypass MFA. After an infection, revoke sessions as well as resetting passwords.',
+                    'Use a standard (non-admin) account day to day. Malware runs with your privileges.',
+                    'Ransomware gangs usually steal data before encrypting it (double extortion), and they often spend days inside first. That gives you time to catch them.'
+                ],
+                questions: [
+                    {
+                        kind: 'choice',
+                        prompt: 'Which type of malware spreads across networks by itself, without anyone clicking anything?',
+                        options: ['Worm', 'Trojan', 'Adware', 'Phishing kit'],
+                        answer: 0,
+                        explain: 'Worms exploit vulnerable services to copy themselves from machine to machine. WannaCry (2017) went worldwide in days through an SMBv1 flaw that Microsoft had already patched months earlier (MS17-010). Patching and blocking SMB at the network edge stops this.'
+                    },
+                    {
+                        kind: 'lines',
+                        prompt: 'Your Downloads folder, with file extensions visible. Tap the file that\'s almost certainly malware.',
+                        lines: ['holiday-photos.zip', 'Invoice_8812.pdf.exe', 'meeting-notes.docx', 'report-Q3.xlsx', 'podcast-ep12.mp3'],
+                        answer: 1,
+                        explain: 'Windows hides known extensions by default, so this shows up as "Invoice_8812.pdf", often with a PDF-looking icon. It\'s actually a program. Turn on <b>View → File name extensions</b> in Explorer.'
+                    },
+                    {
+                        kind: 'chat',
+                        chat: [
+                            { who: 'Payment_Advice.docm (opened in Word)', text: '⚠️ SECURITY WARNING  Macros have been disabled.  [Enable Content]\n\nThis document was created in an earlier version of Microsoft Office. To view it, click "Enable Content" above.' }
+                        ],
+                        prompt: 'What\'s really going on?',
+                        options: [
+                            'The file wants to run a macro — likely a malware loader. Close it and report it.',
+                            'It\'s just an old format — enable content to view it',
+                            'Word scanned it, so enabling is safe',
+                            'Save it and open it on a home computer instead'
+                        ],
+                        answer: 0,
+                        explain: 'The "created in an earlier version" text is part of the document. The attacker wrote it to get you to click. The macro then downloads the real malware. This tactic was so effective that Microsoft now blocks macros in files from the internet by default.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'An infostealer hit a colleague\'s browser. You reset their password and MFA, but the attacker is still in their email. How?',
+                        options: [
+                            'Stolen session cookies — the attacker reuses an already-logged-in session. Revoke all sessions.',
+                            'The password reset didn\'t save',
+                            'The attacker guessed the new password',
+                            'MFA doesn\'t work on email'
+                        ],
+                        answer: 0,
+                        explain: 'After login, a session cookie proves who you are, so an attacker who steals it skips both password and MFA. Revoke all active sessions and tokens, check for new mail-forwarding rules, and rebuild the infected machine.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Why use a standard (non-admin) account for everyday work?',
+                        options: [
+                            'Malware runs with your permissions — without admin rights it can do far less damage',
+                            'Admin accounts are slower',
+                            'Standard accounts don\'t get phishing emails',
+                            'It saves disk space'
+                        ],
+                        answer: 0,
+                        explain: 'That\'s the principle of least privilege: every user and program gets only the access it needs. A malicious attachment opened by a standard user usually can\'t install drivers, disable security tools or read other users\' files.'
+                    },
+                    {
+                        kind: 'order',
+                        prompt: 'Put a typical ransomware attack in order. Tap first to last.',
+                        items: [
+                            'Initial access — phishing, exposed RDP or a stolen password',
+                            'Foothold and privilege escalation',
+                            'Lateral movement and data theft',
+                            'Delete backups, then encrypt systems',
+                            'Ransom demand, with a threat to leak the stolen data'
+                        ],
+                        explain: 'Attackers often spend days inside before encrypting. Every stage in the middle is a chance to detect them. That\'s what turns a catastrophe into a contained incident.'
+                    }
+                ]
+            },
+            {
+                id: 'boss-int',
+                tier: 'intermediate',
+                title: 'Incident Night',
+                icon: '🌙',
+                boss: true,
+                blurb: 'Intermediate boss: 10 analyst challenges, 25 seconds each.',
+                briefing: '> 02:47. Pager goes off.\n> 10 alerts. 25 seconds each. 3 shields.\n> Headers, ports, crypto, malware. Triage fast.',
+                learn: ['Applying analyst skills under time pressure'],
+                tips: [
+                    'Triage first: what\'s the impact, and is it still happening?',
+                    'Write down what you see as you go. Your notes become the incident timeline.',
+                    'When evidence conflicts, trust the system-generated data (auth results, logs) over what a message claims.'
+                ],
+                count: 10,
+                time: 25
+            },
+
+            // ── Advanced ──
+            {
+                id: 'webapp',
+                tier: 'advanced',
+                title: 'Web App Breaker',
+                icon: '💉',
+                blurb: 'Find the hole in the code before an attacker does.',
+                briefing: '> Code review before release.\n> Find the vulnerability, pick the fix.\n> (Only ever test apps you\'re authorised to.)',
+                learn: ['SQL injection and parameterised queries', 'Cross-site scripting (XSS)', 'Broken access control (IDOR), SSRF and responsible disclosure'],
+                tips: [
+                    'Never build SQL by joining strings with user input. Use parameterised queries (prepared statements).',
+                    'XSS: treat user input as data. Use textContent or a framework\'s auto-escaping, and add a Content-Security-Policy.',
+                    'Broken access control tops the OWASP Top 10. On every request, check that the user is allowed to access that specific record.',
+                    'SSRF: when your server fetches URLs for users, allow-list destinations and block internal addresses like 169.254.169.254.',
+                    'Validate on the server. Client-side checks are for convenience, not security.',
+                    'Found a bug? Report it through security.txt or a bug-bounty program, and don\'t go beyond what\'s needed to show it.'
+                ],
+                questions: [
+                    {
+                        kind: 'lines',
+                        prompt: 'A login handler (Python). Tap the line that\'s vulnerable to SQL injection.',
+                        lines: [
+                            'username = request.form["username"]',
+                            'password = request.form["password"]',
+                            'query = "SELECT * FROM users WHERE name = \'" + username + "\'"',
+                            'user = db.execute(query).fetchone()',
+                            'if user and check_password(user.hash, password):',
+                            '    login(user)'
+                        ],
+                        answer: 2,
+                        explain: 'User input is glued straight into the SQL text, so input like <code>x\' OR \'1\'=\'1\' --</code> rewrites the query\'s logic. Fix: <code>db.execute("SELECT * FROM users WHERE name = ?", (username,))</code>. The database then always treats the input as data, never as code.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'What\'s the real fix for SQL injection?',
+                        options: [
+                            'Parameterised queries (prepared statements)',
+                            'Stripping single quotes from input',
+                            'Hiding database error messages',
+                            'A longer database password'
+                        ],
+                        answer: 0,
+                        explain: 'Character filtering is easy to get around: there are too many encodings, edge cases and query contexts. Hiding errors only slows attackers down. Parameterised queries keep code and data separate by design. Least-privilege database accounts limit the damage if something slips through.'
+                    },
+                    {
+                        kind: 'lines',
+                        prompt: 'A comments widget (JavaScript). Tap the line that allows cross-site scripting (XSS).',
+                        lines: [
+                            'const comment = await getComment(id);',
+                            'const box = document.querySelector("#comments");',
+                            'const p = document.createElement("p");',
+                            'p.innerHTML = comment.text;',
+                            'box.appendChild(p);'
+                        ],
+                        answer: 3,
+                        explain: '<code>innerHTML</code> parses the text as HTML. A comment like <code>&lt;img src=x onerror=alert(1)&gt;</code> then runs script in every visitor\'s browser, where it can steal sessions or act as them. Use <code>p.textContent = comment.text</code> instead, and add a Content-Security-Policy as a second layer.'
+                    },
+                    {
+                        kind: 'choice',
+                        code: 'GET /api/invoices/10422      (logged in as user 77)\n→ 200 OK  {"invoice": 10422, "owner": 77, ...}\n\nGET /api/invoices/10423\n→ 200 OK  {"invoice": 10423, "owner": 912, ...}',
+                        prompt: 'What vulnerability does this show?',
+                        options: [
+                            'IDOR / broken access control — the API never checks the invoice belongs to the user',
+                            'SQL injection',
+                            'Cross-site scripting',
+                            'None — the user is logged in'
+                        ],
+                        answer: 0,
+                        explain: 'Being logged in (authentication) isn\'t the same as being allowed (authorisation). Changing one number exposes another customer\'s invoice. The server must check ownership on every request. Random IDs make guessing harder, but they don\'t fix the bug.'
+                    },
+                    {
+                        kind: 'choice',
+                        code: 'POST /api/fetch-image\n{"url": "http://169.254.169.254/latest/meta-data/iam/security-credentials/"}',
+                        prompt: 'A "fetch image from URL" feature receives this. Why is it dangerous?',
+                        options: [
+                            'SSRF — the server requests its own cloud metadata service, which can leak credentials',
+                            'It\'s a malformed URL that will just fail',
+                            'It\'s cross-site scripting',
+                            'It only affects the user who sent it'
+                        ],
+                        answer: 0,
+                        explain: '169.254.169.254 is the instance metadata service in major clouds. With server-side request forgery, your server fetches internal URLs on the attacker\'s behalf, including temporary cloud credentials. Defences: allow-list destinations, block internal and link-local ranges after resolving DNS, and on AWS require IMDSv2.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'While shopping online, you notice a bug that lets you see other customers\' orders. What do you do?',
+                        options: [
+                            'Stop there and report it through their security contact or bug-bounty program (check /.well-known/security.txt)',
+                            'Download some orders as proof, then email them',
+                            'Post it publicly so they\'re forced to fix it fast',
+                            'Sell it — they should have found it themselves'
+                        ],
+                        answer: 0,
+                        explain: 'That\'s coordinated (responsible) disclosure. Going beyond what\'s needed to show the issue, like downloading other people\'s data, can be illegal even with good intentions. Many companies publish a security.txt file and safe-harbour terms for reporters.'
+                    }
+                ]
+            },
+            {
+                id: 'logs',
+                tier: 'advanced',
+                title: 'Threat Hunter',
+                icon: '📜',
+                blurb: 'The attacker left traces. Find them in the logs.',
+                briefing: '> 03:00. Something is off.\n> The evidence is in the logs.\n> Hunt.',
+                learn: ['Brute force vs password spraying', 'Impossible travel and session theft', 'Beaconing and "living off the land" commands'],
+                tips: [
+                    'Brute force means many passwords against one account. Password spraying means one common password against many accounts, staying under lockout limits.',
+                    'In a run of failed logins, the line that matters most is the success that follows.',
+                    'Impossible travel: logins too far apart for the time between them. Rule out VPNs, then treat it as a compromise.',
+                    'Malware "beacons" to its command-and-control server at regular intervals. Clockwork traffic to a rare domain is a lead.',
+                    'Attackers "live off the land" with built-in tools like PowerShell, certutil and wmic. Hidden, encoded commands deserve a look.',
+                    'Collect logs centrally (SIEM) and keep them long enough. You can\'t hunt in logs you didn\'t keep.'
+                ],
+                questions: [
+                    {
+                        kind: 'lines',
+                        prompt: 'SSH auth log from a server. Tap the line that shows the attack succeeded.',
+                        head: 'TIME      USER    SOURCE IP       RESULT',
+                        lines: [
+                            '03:12:01  admin   203.0.113.45    FAIL',
+                            '03:12:02  admin   203.0.113.45    FAIL',
+                            '03:12:02  admin   203.0.113.45    FAIL',
+                            '03:12:03  admin   203.0.113.45    FAIL',
+                            '03:12:04  admin   203.0.113.45    SUCCESS',
+                            '08:30:15  jsmith  10.0.4.22       SUCCESS'
+                        ],
+                        answer: 4,
+                        explain: 'Rapid failures from one IP against one account mean brute force, and the 03:12:04 success means it worked. Respond: disable the account, kill its sessions, block the IP, and check what "admin" did next. Prevent it with key-only SSH, MFA, rate limiting, and no generic "admin" logins.'
+                    },
+                    {
+                        kind: 'choice',
+                        code: '09:01:10  alice@corp   FAIL  198.51.100.7\n09:01:12  bob@corp     FAIL  198.51.100.7\n09:01:15  carol@corp   FAIL  198.51.100.7\n09:01:17  dave@corp    FAIL  198.51.100.7\n…  296 more accounts, 1 attempt each  …',
+                        prompt: 'What attack is this?',
+                        options: [
+                            'Password spraying — one guess per account to avoid lockouts',
+                            'Brute force on a single account',
+                            'A user who forgot their password',
+                            'A DDoS attack'
+                        ],
+                        answer: 0,
+                        explain: 'One attempt per account stays under lockout thresholds. Across 300 accounts, someone will have picked a password like "Autumn2026!". Defences: MFA, banned-password lists, and alerts when many accounts fail from one source.'
+                    },
+                    {
+                        kind: 'choice',
+                        code: 'user: maria@corp\n08:55  login  SUCCESS  São Paulo, BR  (usual laptop)\n09:20  login  SUCCESS  Moscow, RU     (new device, new browser)',
+                        prompt: 'What\'s the best read on this?',
+                        options: [
+                            'Impossible travel — likely stolen credentials or session; verify with Maria and revoke sessions',
+                            'Normal — she\'s travelling',
+                            'A logging bug — ignore it',
+                            'The São Paulo login must be the attacker'
+                        ],
+                        answer: 0,
+                        explain: 'Nearly 12,000 km in 25 minutes isn\'t physically possible. A VPN can explain a jump like this, so check that. But the new device and new browser point to stolen credentials or a stolen session token. Contact the user out-of-band, revoke sessions, reset credentials and review recent activity.'
+                    },
+                    {
+                        kind: 'lines',
+                        prompt: 'Process list from a workstation. Tap the most suspicious command.',
+                        lines: [
+                            'explorer.exe',
+                            'chrome.exe --type=renderer',
+                            'powershell.exe -NoP -W Hidden -Enc SQBFAFgAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAATgBl…',
+                            'OneDrive.exe /background',
+                            'svchost.exe -k netsvcs -p'
+                        ],
+                        answer: 2,
+                        explain: 'A hidden window, no profile, and a Base64-encoded command (<code>-Enc</code>). Decoded, it starts <code>IEX(New-Object Net…</code>, PowerShell\'s classic download-and-run idiom. Attackers love built-in tools because they blend in ("living off the land"). PowerShell script block logging records the decoded commands.'
+                    },
+                    {
+                        kind: 'choice',
+                        code: 'DNS queries from host WS-0142\n10:00:00  cdn-update-sync.top\n10:05:00  cdn-update-sync.top\n10:10:01  cdn-update-sync.top\n10:15:00  cdn-update-sync.top\n10:20:00  cdn-update-sync.top',
+                        prompt: 'What does this pattern suggest?',
+                        options: [
+                            'Beaconing — malware checking in with a command-and-control server every 5 minutes',
+                            'Normal software updates',
+                            'Someone browsing the web',
+                            'Broken DNS'
+                        ],
+                        answer: 0,
+                        explain: 'Clockwork-regular requests to a rare, generic-sounding domain on a cheap TLD fit a C2 beacon. Genuine updaters also poll, but they go to well-known vendor domains. Check which process makes the requests, then isolate the host and block the domain.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Which log source best shows an attacker moving between Windows machines with stolen admin credentials?',
+                        options: [
+                            'Windows Security logon events (ID 4624, logon types 3 and 10), collected centrally',
+                            'The web server access log',
+                            'The printer\'s error log',
+                            'Browser history'
+                        ],
+                        answer: 0,
+                        explain: 'Event 4624 records successful logons. Type 3 (network) and type 10 (RemoteInteractive, i.e. RDP) show remote access between machines. Ship them to a SIEM so an attacker who clears one machine\'s logs can\'t erase the evidence.'
+                    }
+                ]
+            },
+            {
+                id: 'architecture',
+                tier: 'advanced',
+                title: 'Security Architect',
+                icon: '🏰',
+                blurb: 'Design systems that survive when (not if) something fails.',
+                briefing: '> Any single control will fail.\n> Design so that one failure\n> isn\'t the whole company.',
+                learn: ['Defence in depth and zero trust', 'Phishing-resistant MFA and secrets handling', 'Risk-based patching and supply-chain attacks'],
+                tips: [
+                    'Defence in depth: assume any single control will fail, and layer them.',
+                    'Zero trust: being "inside the network" grants nothing. Verify user, device and context on every request.',
+                    'Segment networks, and keep backups isolated with separate credentials, so one compromised laptop can\'t reach everything.',
+                    'Passkeys and FIDO2 security keys resist phishing because they\'re cryptographically bound to the real site.',
+                    'A secret pushed to a public repo is compromised. Rotate it first, then clean up.',
+                    'Prioritise patches by real-world risk: actively exploited (e.g. CISA\'s KEV catalog) and internet-facing first.',
+                    'Supply chain: commit lockfiles, check package names for typosquats, and scan dependencies.'
+                ],
+                questions: [
+                    {
+                        kind: 'choice',
+                        prompt: 'A developer pushes an AWS access key to a public GitHub repo and deletes the commit five minutes later. What now?',
+                        options: [
+                            'Revoke and rotate the key now, then check CloudTrail for misuse — assume it was stolen',
+                            'Nothing — the commit is gone',
+                            'Make the repository private',
+                            'Rewrite git history and move on'
+                        ],
+                        answer: 0,
+                        explain: 'Bots scan public repos for keys within minutes, sometimes seconds. Deleting the commit doesn\'t undo forks, caches or what the bots already copied. Rotate first, then investigate, then clean up. Prevent it next time with secret scanning, pre-commit hooks and short-lived credentials.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Which MFA method resists a real-time phishing proxy that relays your login to the real site?',
+                        options: [
+                            'A passkey or FIDO2 security key',
+                            'SMS codes',
+                            'Authenticator-app 6-digit codes',
+                            'Email codes'
+                        ],
+                        answer: 0,
+                        explain: 'Any code you can type, you can type into a fake site, and the proxy relays it in real time. FIDO2 and passkeys are bound to the real domain, so the browser won\'t use them on a lookalike. That\'s why they\'re called phishing-resistant.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Three new vulnerabilities land today. Which do you patch first?',
+                        options: [
+                            'CVSS 8.1 on your internet-facing VPN, actively exploited (in CISA KEV)',
+                            'CVSS 9.8 in a library on an isolated test box with no network',
+                            'CVSS 7.5 in a printer driver, no known exploit',
+                            'Whichever was announced first'
+                        ],
+                        answer: 0,
+                        explain: 'Risk = likelihood × impact. CVSS measures severity, not how likely you are to be hit. An actively exploited flaw on an internet-facing edge device is an emergency, and VPNs and firewalls are favourite initial-access targets. The 9.8 still gets patched, just not first.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Ransomware on one office laptop spread to every server and encrypted the backups too. Which design gap mattered most?',
+                        options: [
+                            'No segmentation, and backups reachable with the same admin credentials',
+                            'Passwords one character too short',
+                            'Laptops that were too old',
+                            'Not enough antivirus vendors'
+                        ],
+                        answer: 0,
+                        explain: 'A flat network let the attacker reach everything from one foothold. Shared admin credentials gave them the backups too. Segment the network, use separate credentials for backup systems, and keep at least one copy offline or immutable.'
+                    },
+                    {
+                        kind: 'choice',
+                        code: '// package.json (pull request #418)\n"dependencies": {\n  "express": "^4.19.2",\n  "crossenv": "^6.1.1",\n  "lodash": "^4.17.21"\n}',
+                        prompt: 'Reviewing this pull request, what\'s the red flag?',
+                        options: [
+                            '"crossenv" — a known malicious typosquat of the real "cross-env" package',
+                            'The caret (^) version ranges',
+                            'Lodash is deprecated',
+                            'Nothing — these are all popular packages'
+                        ],
+                        answer: 0,
+                        explain: 'In 2017 a malicious "crossenv" package on npm imitated "cross-env" and sent developers\' environment variables, which often hold secrets, to its author. Check names carefully, commit lockfiles, and use tools that flag known-malicious packages.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'What does "zero trust" mean in practice?',
+                        options: [
+                            'Every request is authenticated and authorised on identity and device, wherever it comes from',
+                            'Employees aren\'t trusted to work from home',
+                            'You no longer need firewalls',
+                            'Only the IT team gets accounts'
+                        ],
+                        answer: 0,
+                        explain: 'The old castle-and-moat model trusted anything inside the office network. Zero trust drops that idea. Being on the VPN or the office Wi-Fi grants nothing by itself. Access is decided per user, per device, per request, with least privilege.'
+                    }
+                ]
+            },
+            {
+                id: 'ir',
+                tier: 'advanced',
+                title: 'Incident Commander',
+                icon: '🚨',
+                blurb: 'It\'s happening. Contain it, kick them out, learn from it.',
+                briefing: '> Confirmed breach.\n> You\'re the incident commander.\n> Every decision counts.',
+                learn: ['The incident response lifecycle', 'Containing without destroying evidence', 'Eradication, communication and blameless reviews'],
+                tips: [
+                    'Classic NIST SP 800-61 lifecycle: Preparation → Detection & Analysis → Containment, Eradication & Recovery → Post-Incident Activity.',
+                    'Isolate an infected machine from the network, but keep it powered on if you can. Memory holds evidence.',
+                    'Assume every credential used on a compromised machine is compromised. Rotate privileged ones first.',
+                    'Attackers leave multiple ways back in. Hunt for persistence, and rebuild from known-good images when in doubt.',
+                    'Coordinate out-of-band if email or chat might be compromised.',
+                    'Preserve evidence (hashes, timestamps, chain of custody), and finish with a blameless lessons-learned review.'
+                ],
+                questions: [
+                    {
+                        kind: 'order',
+                        prompt: 'Put the classic incident response lifecycle (NIST SP 800-61) in order. Tap first to last.',
+                        items: [
+                            'Preparation',
+                            'Detection & Analysis',
+                            'Containment, Eradication & Recovery',
+                            'Post-Incident Activity (lessons learned)'
+                        ],
+                        explain: 'Preparation (plans, logging, backups, drills) decides how well everything else goes. Lessons learned feed back into preparation, so it\'s really a loop.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Your EDR shows ransomware encrypting files on one workstation right now. First move?',
+                        options: [
+                            'Isolate it from the network (EDR isolation or pull the cable), but keep it powered on',
+                            'Power it off immediately',
+                            'Start a full antivirus scan and wait',
+                            'Email the whole company a warning from that machine'
+                        ],
+                        answer: 0,
+                        explain: 'Isolation stops the spread to file shares and other machines. CISA\'s ransomware guidance says to power down only if you can\'t disconnect, because shutting down destroys memory evidence, which can sometimes include keys. Then escalate to your IR team.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'An attacker had admin on a server for a week. You\'ve deleted their malware. Is the incident over?',
+                        options: [
+                            'No — rotate every credential they could reach, hunt for persistence, and rebuild if in doubt',
+                            'Yes — the malware is gone',
+                            'Yes, after a reboot',
+                            'Yes, once antivirus shows green'
+                        ],
+                        answer: 0,
+                        explain: 'A week of admin access means new accounts, scheduled tasks, web shells, stolen passwords and tokens. Eradication means removing <i>all</i> footholds. Rebuilding from a known-good image is often faster and safer than cleaning.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'The attacker may have access to your company email. How does the response team coordinate?',
+                        options: [
+                            'An out-of-band channel — a phone bridge or a separate, clean chat workspace',
+                            'Reply-all on the original alert email',
+                            'A shared document in the same (possibly compromised) tenant',
+                            'Updates on the company intranet'
+                        ],
+                        answer: 0,
+                        explain: 'If the attacker can read your plans, they\'ll change tactics or speed up. Set up out-of-band communications as part of <i>Preparation</i>, before you ever need them.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Why record hashes, timestamps and chain of custody for evidence during an incident?',
+                        options: [
+                            'So findings hold up for legal, insurance and regulatory purposes',
+                            'It\'s just paperwork for auditors',
+                            'It\'s needed to restore backups',
+                            'It makes the attacker easier to scare off'
+                        ],
+                        answer: 0,
+                        explain: 'Evidence may go to regulators, insurers, law enforcement or a court. Hash forensic images, record who handled what and when, and analyse copies rather than originals.'
+                    },
+                    {
+                        kind: 'lines',
+                        prompt: 'A draft post-incident report. Tap the weakest "finding".',
+                        lines: [
+                            'Initial access: password spraying against the VPN, which had no MFA.',
+                            'Root cause: Dave chose a weak password, so this is Dave\'s fault.',
+                            'Escalation: one local admin password was shared by every server.',
+                            'Detection gap: VPN logs were not sent to the SIEM.'
+                        ],
+                        answer: 1,
+                        explain: 'Blaming a person ends the analysis too early. Someone will always pick a weak password, and the system has to survive that. The real fixes are MFA on the VPN, unique local admin passwords (for example Windows LAPS), and log collection. Blameless reviews get honest reports, and honest reports get things fixed.'
+                    }
+                ]
+            },
+            {
+                id: 'boss-adv',
+                tier: 'advanced',
+                title: 'Red Team Exercise',
+                icon: '🐉',
+                boss: true,
+                blurb: 'Final exam: 10 advanced scenarios, 30 seconds each.',
+                briefing: '> Authorised red team engagement.\n> They\'re in. You\'re the defence.\n> 10 scenarios. 30 seconds each. Finish it.',
+                learn: ['Everything — code, logs, architecture and response'],
+                tips: [
+                    'Attackers need one way in. Defenders win by making every step after that noisy and hard.',
+                    'Keep learning: try CTFs, home labs, and resources like OWASP and the MITRE ATT&CK framework.',
+                    'Certifications such as CompTIA Security+ are a common next step into a security career.'
+                ],
+                count: 10,
+                time: 30
             }
         ];
 
+        const TIERS = [
+            { id: 'beginner', name: 'Beginner', icon: '🟢', blurb: 'Everyday security everyone needs.', xp: 10 },
+            { id: 'intermediate', name: 'Intermediate', icon: '🟡', blurb: 'Look under the hood: headers, networks, crypto and malware.', xp: 15 },
+            { id: 'advanced', name: 'Advanced', icon: '🔴', blurb: 'Think like an attacker, defend like an engineer.', xp: 20 }
+        ];
+        const tierOf = (m) => TIERS.find((t) => t.id === m.tier);
+
         const RANKS = [
             { xp: 0, name: 'Trainee' },
-            { xp: 100, name: 'Analyst' },
+            { xp: 100, name: 'Apprentice' },
             { xp: 250, name: 'Defender' },
-            { xp: 400, name: 'Guardian' },
-            { xp: 560, name: 'Cyber Sentinel' }
+            { xp: 450, name: 'Guardian' },
+            { xp: 650, name: 'SOC Analyst' },
+            { xp: 950, name: 'Threat Analyst' },
+            { xp: 1250, name: 'Incident Responder' },
+            { xp: 1550, name: 'Security Engineer' },
+            { xp: 1850, name: 'Threat Hunter' },
+            { xp: 2000, name: 'Cyber Sentinel' }
         ];
 
         // Password forge: details the attacker can find on Alex's social media.
@@ -918,7 +1744,8 @@ permalink: /cyber-quest/
         const starsFor = (id) => (progress.missions[id] && progress.missions[id].stars) || 0;
         function isUnlocked(i) {
             const m = MISSIONS[i];
-            if (m.boss) return MISSIONS.filter((x) => !x.boss).every((x) => starsFor(x.id) > 0);
+            if (m.boss) return MISSIONS.filter((x) => x.tier === m.tier && !x.boss).every((x) => starsFor(x.id) > 0);
+            // The first mission of a tier follows the previous tier's boss, so this also gates tiers.
             return i === 0 || starsFor(MISSIONS[i - 1].id) > 0;
         }
 
@@ -969,25 +1796,42 @@ permalink: /cyber-quest/
                 $('rank-next').textContent = 'Top rank reached. You\'re ready for the real world! 🎉';
             }
 
-            $('mission-list').innerHTML = MISSIONS.map((m, i) => {
-                const open = isUnlocked(i);
-                const stars = starsFor(m.id);
-                return `<button class="mission${m.boss ? ' boss' : ''}" data-mission="${m.id}" ${open ? '' : 'disabled'}>
-                    <span class="m-icon">${open ? m.icon : '🔒'}</span>
-                    <span class="m-body"><h3>${i + 1}. ${esc(m.title)}</h3><p>${esc(open ? m.blurb : (m.boss ? 'Clear every mission to unlock.' : 'Clear the previous mission to unlock.'))}</p></span>
-                    <span class="stars">${open ? starHtml(stars) : ''}</span>
-                </button>`;
+            $('mission-list').innerHTML = TIERS.map((t, ti) => {
+                const ms = MISSIONS.filter((m) => m.tier === t.id);
+                const cleared = ms.filter((m) => starsFor(m.id) > 0).length;
+                const tierOpen = isUnlocked(MISSIONS.indexOf(ms[0]));
+                const prevBoss = ti > 0 && MISSIONS.find((m) => m.tier === TIERS[ti - 1].id && m.boss);
+                const cards = ms.map((m, n) => {
+                    const i = MISSIONS.indexOf(m);
+                    const open = isUnlocked(i);
+                    const lockMsg = m.boss ? `Clear every ${t.name} mission to unlock.`
+                        : n === 0 ? `Beat ${prevBoss.title} to unlock this tier.`
+                        : 'Clear the previous mission to unlock.';
+                    return `<button class="mission${m.boss ? ' boss' : ''}" data-mission="${m.id}" ${open ? '' : 'disabled'}>
+                        <span class="m-icon">${open ? m.icon : '🔒'}</span>
+                        <span class="m-body"><h3>${n + 1}. ${esc(m.title)}</h3><p>${esc(open ? m.blurb : lockMsg)}</p></span>
+                        <span class="stars">${open ? starHtml(starsFor(m.id)) : ''}</span>
+                    </button>`;
+                }).join('');
+                return `<div class="tier${tierOpen ? '' : ' locked'}">
+                    <div class="tier-head">
+                        <div><span class="tier-name">${t.icon} ${esc(t.name)}</span><span class="tier-blurb">${esc(t.blurb)}</span></div>
+                        <span class="tier-count">${tierOpen ? `${cleared}/${ms.length}` : '🔒'}</span>
+                    </div>
+                    <div class="missions">${cards}</div>
+                </div>`;
             }).join('');
         }
 
         function renderGuide() {
-            $('guide-list').innerHTML = MISSIONS.map((m) => {
-                const done = starsFor(m.id) > 0;
-                return `<div class="guide-sec${done ? '' : ' locked'}">
-                    <h3>${m.icon} ${esc(m.title)}</h3>
-                    ${done ? `<ul>${m.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<p class="sub" style="margin:0">🔒 Clear this mission to unlock these rules.</p>'}
-                </div>`;
-            }).join('');
+            $('guide-list').innerHTML = TIERS.map((t) => `<p class="section-label tier-label">${t.icon} ${esc(t.name)}</p>` +
+                MISSIONS.filter((m) => m.tier === t.id).map((m) => {
+                    const done = starsFor(m.id) > 0;
+                    return `<div class="guide-sec${done ? '' : ' locked'}">
+                        <h3>${m.icon} ${esc(m.title)}</h3>
+                        ${done ? `<ul>${m.tips.map((tip) => `<li>${esc(tip)}</li>`).join('')}</ul>` : '<p class="sub" style="margin:0">🔒 Clear this mission to unlock these rules.</p>'}
+                    </div>`;
+                }).join('')).join('');
         }
 
         // ── Game state ────────────────────────────────────────────────────
@@ -999,6 +1843,7 @@ permalink: /cyber-quest/
         function openBriefing(id) {
             const m = MISSIONS.find((x) => x.id === id);
             S.mission = m;
+            $('b-tier').textContent = `${tierOf(m).icon} ${tierOf(m).name}${m.boss ? ' · Boss' : ''}`;
             $('b-icon').textContent = m.icon;
             $('b-title').textContent = m.title;
             $('b-text').textContent = m.briefing;
@@ -1009,7 +1854,7 @@ permalink: /cyber-quest/
         function startMission() {
             const m = S.mission;
             if (m.boss) {
-                const pool = MISSIONS.filter((x) => !x.boss).flatMap((x) => x.questions.filter((q) => q.kind !== 'forge'));
+                const pool = MISSIONS.filter((x) => x.tier === m.tier && !x.boss).flatMap((x) => x.questions.filter((q) => q.kind !== 'forge'));
                 S.queue = shuffle(pool).slice(0, m.count);
             } else {
                 S.queue = m.questions.slice();
@@ -1067,14 +1912,37 @@ permalink: /cyber-quest/
                 html += `<div class="prompt">Would you trust this link?</div>`;
                 opts = ['🚩 Suspicious', '✅ Safe'];
                 S.order = [0, 1];
+            } else if (q.kind === 'lines') {
+                // Tap the line: every line is an option, in its original order.
+                html += `<div class="q-kind">🔎 Investigate</div><div class="prompt">${esc(q.prompt)}</div>`;
+                S.order = q.lines.map((_, i) => i);
+                html += `<div class="code-lines" id="opts">` +
+                    (q.head ? `<div class="code-head">${esc(q.head)}</div>` : '') +
+                    q.lines.map((l, i) => `<button class="opt line" data-opt="${i}"><span class="ln">${i + 1}</span><code>${esc(l)}</code></button>`).join('') +
+                    `</div>`;
+                area.innerHTML = html;
+                if (S.mission.time) startTimer(S.mission.time);
+                return;
+            } else if (q.kind === 'order') {
+                // Tap the items first to last; S.order maps display slot → true position.
+                html += `<div class="q-kind">🧩 Sequence</div><div class="prompt">${esc(q.prompt)}</div>`;
+                do { S.order = shuffle(q.items.map((_, i) => i)); } while (q.items.length > 1 && S.order.every((v, i) => v === i));
+                S.picked = [];
+                html += `<div class="options" id="opts">` +
+                    S.order.map((k, d) => `<button class="opt ord" data-ord="${d}"><span class="ord-n"></span>${esc(q.items[k])}</button>`).join('') +
+                    `</div><button class="icon-btn ord-reset" id="ord-reset">↺ Start over</button>`;
+                area.innerHTML = html;
+                if (S.mission.time) startTimer(S.mission.time);
+                return;
             } else {
                 if (q.kind === 'chat') {
                     html += `<div class="q-kind">🎭 Situation</div><div class="chat">` +
-                        q.chat.map((c) => `<div class="bubble"><span class="who">${esc(c.who)}</span>${esc(c.text)}</div>`).join('') +
+                        q.chat.map((c) => `<div class="bubble"><span class="who">${esc(c.who)}</span>${esc(c.text).replace(/\n/g, '<br>')}</div>`).join('') +
                         `</div>`;
                 } else {
                     html += `<div class="q-kind">❓ Question</div>`;
                 }
+                if (q.code) html += `<pre class="snippet">${esc(q.code)}</pre>`;
                 html += `<div class="prompt">${esc(q.prompt).replace(/\n/g, '<br>')}</div>`;
                 S.order = shuffle(q.options.map((_, i) => i));
                 opts = S.order.map((i) => q.options[i]);
@@ -1099,8 +1967,29 @@ permalink: /cyber-quest/
         function choose(displayIdx) {
             if (S.answered) return;
             const q = S.queue[S.idx];
+            if (q.kind === 'order') return resolve(false, -1, true); // only reached on timeout
             const picked = displayIdx < 0 ? -1 : S.order[displayIdx];
             resolve(picked === q.answer, displayIdx, displayIdx < 0);
+        }
+
+        function pickOrder(d) {
+            if (S.answered || S.picked.includes(d)) return;
+            S.picked.push(d);
+            const btn = document.querySelector(`#opts [data-ord="${d}"]`);
+            btn.classList.add('picked');
+            btn.querySelector('.ord-n').textContent = S.picked.length;
+            if (S.picked.length === S.order.length) {
+                resolve(S.picked.every((dd, pos) => S.order[dd] === pos), -1, false);
+            }
+        }
+
+        function resetOrder() {
+            if (S.answered) return;
+            S.picked = [];
+            document.querySelectorAll('#opts .ord').forEach((b) => {
+                b.classList.remove('picked');
+                b.querySelector('.ord-n').textContent = '';
+            });
         }
 
         function resolve(ok, displayIdx, timedOut) {
@@ -1111,9 +2000,12 @@ permalink: /cyber-quest/
             const buttons = document.querySelectorAll('#opts .opt');
             buttons.forEach((b, i) => {
                 b.disabled = true;
-                if (S.order[i] === q.answer) b.classList.add('correct');
+                if (q.kind === 'order') {
+                    b.classList.add(S.picked.indexOf(i) === S.order[i] ? 'correct' : 'wrong');
+                } else if (S.order[i] === q.answer) b.classList.add('correct');
                 else if (i === displayIdx) b.classList.add('wrong');
             });
+            if ($('ord-reset')) $('ord-reset').remove();
 
             if (ok) {
                 S.correct++;
@@ -1139,6 +2031,12 @@ permalink: /cyber-quest/
                 html += `<p>${q.explain}</p>`;
             } else if (q.kind === 'url') {
                 html += `<p>Real owner: <b style="color:var(--gold)">${esc(q.domain)}</b> — ${q.answer === 1 ? 'safe' : 'suspicious'}.</p><p>${q.explain}</p>`;
+            } else if (q.kind === 'order') {
+                if (!ok) html += `<p><b>Correct order:</b></p><ol>${q.items.map((it) => `<li>${esc(it)}</li>`).join('')}</ol>`;
+                html += `<p>${q.explain}</p>`;
+            } else if (q.kind === 'lines') {
+                if (!ok) html += `<p><b>The line to catch:</b> <code>${esc(q.lines[q.answer])}</code></p>`;
+                html += `<p>${q.explain}</p>`;
             } else {
                 if (!ok) html += `<p><b>Best answer:</b> ${esc(q.options[q.answer])}</p>`;
                 html += `<p>${q.explain}</p>`;
@@ -1166,7 +2064,7 @@ permalink: /cyber-quest/
             stopTimer();
             const m = S.mission;
             const stars = !won ? 0 : S.mistakes === 0 ? 3 : S.mistakes === 1 ? 2 : 1;
-            const perQ = m.boss ? 15 : 10;
+            const perQ = tierOf(m).xp + (m.boss ? 5 : 0);
             const xp = won ? S.correct * perQ + stars * 10 : 0;
             const prev = progress.missions[m.id] || { stars: 0, xp: 0 };
             const firstClear = won && prev.stars === 0;
@@ -1181,12 +2079,18 @@ permalink: /cyber-quest/
                 ? `<p>${S.correct} of ${S.queue.length} correct.</p>`
                 : '<p>You ran out of shields. Every expert got here by learning from mistakes — read the explanations and try again.</p>';
             $('r-xp').textContent = won ? (gained > 0 ? `+${gained} XP` : `${xp} XP (your best is ${prev.xp})`) : '';
-            $('r-learned').innerHTML = firstClear
-                ? `<div class="section-label">Added to your Field Guide</div><ul>${m.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>`
-                : '';
-
             const idx = MISSIONS.indexOf(m);
             const nextM = MISSIONS[idx + 1];
+            const newTier = firstClear && m.boss && nextM ? tierOf(nextM) : null;
+            if (won && m.boss && firstClear) $('r-title').textContent = `${tierOf(m).name} tier complete!`;
+            $('r-learned').innerHTML = (newTier
+                ? `<div class="unlock">🔓 <b>${esc(newTier.name)} tier unlocked!</b><br>${esc(newTier.blurb)}</div>`
+                : won && m.boss && !nextM && firstClear
+                    ? '<div class="unlock">🏆 <b>You\'ve cleared every tier.</b><br>Keep going for real: try CTFs, home labs and the OWASP and MITRE ATT&amp;CK resources.</div>'
+                    : '') +
+                (firstClear
+                    ? `<div class="section-label">Added to your Field Guide</div><ul>${m.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>`
+                    : '');
             const nextBtn = $('r-next');
             if (won && nextM && isUnlocked(idx + 1)) {
                 nextBtn.textContent = `Next: ${nextM.icon} ${nextM.title}`;
@@ -1336,6 +2240,9 @@ permalink: /cyber-quest/
             if (mission && !mission.disabled) return openBriefing(mission.dataset.mission);
             const opt = e.target.closest('[data-opt]');
             if (opt) return choose(Number(opt.dataset.opt));
+            const ord = e.target.closest('[data-ord]');
+            if (ord) return pickOrder(Number(ord.dataset.ord));
+            if (e.target.closest('#ord-reset')) return resetOrder();
             if (e.target.id === 'next') return next();
         });
         $('b-start').addEventListener('click', startMission);
@@ -1357,9 +2264,9 @@ permalink: /cyber-quest/
             if (S.screen !== 'play' || e.target.tagName === 'INPUT') return;
             if (e.key === 'Enter' && S.answered && $('next')) { e.preventDefault(); next(); return; }
             const n = Number(e.key);
-            if (!S.answered && n >= 1 && n <= 4) {
-                const btn = document.querySelector(`#opts [data-opt="${n - 1}"]`);
-                if (btn) choose(n - 1);
+            if (!S.answered && n >= 1 && n <= 9) {
+                if (document.querySelector(`#opts [data-ord="${n - 1}"]`)) pickOrder(n - 1);
+                else if (document.querySelector(`#opts [data-opt="${n - 1}"]`)) choose(n - 1);
             }
         });
 
@@ -1372,8 +2279,16 @@ permalink: /cyber-quest/
                 get progress() { return JSON.parse(JSON.stringify(progress)); },
                 missions: MISSIONS.map((m) => m.id),
                 analysePassword,
-                answerCorrect() { const q = S.queue[S.idx]; choose(S.order.indexOf(q.answer)); },
-                answerWrong() { const q = S.queue[S.idx]; choose(S.order.findIndex((i) => i !== q.answer)); },
+                answerCorrect() {
+                    const q = S.queue[S.idx];
+                    if (q.kind === 'order') q.items.forEach((_, k) => pickOrder(S.order.indexOf(k)));
+                    else choose(S.order.indexOf(q.answer));
+                },
+                answerWrong() {
+                    const q = S.queue[S.idx];
+                    if (q.kind === 'order') q.items.forEach((_, k) => pickOrder(S.order.indexOf(q.items.length - 1 - k)));
+                    else choose(S.order.findIndex((i) => i !== q.answer));
+                },
                 next
             };
         }
