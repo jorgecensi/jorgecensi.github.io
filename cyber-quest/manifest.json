@@ -1,0 +1,31 @@
+{
+  "id": "/cyber-quest/",
+  "name": "Cyber Quest — Learn Cybersecurity",
+  "short_name": "Cyber Quest",
+  "description": "A game that takes you from beginner to advanced cybersecurity: spot phishing, read email headers and logs, find vulnerable code and run an incident response.",
+  "start_url": "/cyber-quest/",
+  "scope": "/cyber-quest/",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/img/cyber-quest-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/cyber-quest-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "education"],
+  "lang": "en-US",
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
