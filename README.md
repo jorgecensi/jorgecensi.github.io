@@ -19,7 +19,7 @@ a PWA).
 - `tuner/` — Instrument tuner (PWA)
 - `ding/` — Tap bell for yes/no answers (PWA)
 - `chroma/` — Turns music heard through the mic into colour, for deaf and hard-of-hearing listeners (PWA)
-- `cyber-quest/` — Cybersecurity game in three tiers, beginner to advanced: phishing and passwords, then headers/networks/crypto/malware, then web vulns, log hunting, architecture and incident response (PWA); plus **Terminal Ops**, hands-on labs in a simulated Linux shell
+- `cyber-quest/` — Cybersecurity game in three tiers, beginner to advanced: phishing and passwords, then headers/networks/crypto/malware, then web vulns, log hunting, architecture and incident response (PWA); plus **Terminal Ops**, guided command-line basics and incident labs in a simulated Linux shell
 - `music-theory/` — Music theory trainer (PWA): a guided ear-first Learn path (hear it, play it, then learn why) plus free-play scales, chords, intervals and quizzes
 - `binary/` — Binary number trainer (PWA, also available in `pt-BR/binary/`)
 - `tennis-planner.html` — Tennis match/availability planner (PWA)
