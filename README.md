@@ -19,6 +19,7 @@ a PWA).
 - `tuner/` — Instrument tuner (PWA)
 - `ding/` — Tap bell for yes/no answers (PWA)
 - `chroma/` — Turns music heard through the mic into colour, for deaf and hard-of-hearing listeners (PWA)
+- `cyber-quest/` — Beginner cybersecurity game: phishing, links, passwords, social engineering, safe habits (PWA)
 - `music-theory/` — Music theory trainer (PWA): a guided ear-first Learn path (hear it, play it, then learn why) plus free-play scales, chords, intervals and quizzes
 - `binary/` — Binary number trainer (PWA, also available in `pt-BR/binary/`)
 - `tennis-planner.html` — Tennis match/availability planner (PWA)

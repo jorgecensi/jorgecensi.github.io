@@ -62,6 +62,7 @@ jobs:
           echo "worldcup=$(check 'worldcup-2026/sw.js worldcup-2026/index.html worldcup-2026/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "ding=$(check 'ding/sw.js ding/index.html ding/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "chroma=$(check 'chroma/sw.js chroma/index.html chroma/manifest.json')" >> "${GITHUB_OUTPUT}"
+          echo "cyber_quest=$(check 'cyber-quest/sw.js cyber-quest/index.html cyber-quest/manifest.json')" >> "${GITHUB_OUTPUT}"
 
       - name: Update PWA version constants
         run: |
@@ -91,6 +92,7 @@ jobs:
               "worldcup":     "${{ steps.changed.outputs.worldcup }}" == "true",
               "ding":         "${{ steps.changed.outputs.ding }}" == "true",
               "chroma":       "${{ steps.changed.outputs.chroma }}" == "true",
+              "cyber_quest":  "${{ steps.changed.outputs.cyber_quest }}" == "true",
           }
 
           # On tag/dispatch, bump everything; on push to main, only bump changed PWAs
@@ -154,6 +156,9 @@ jobs:
           if bump_all or changed["chroma"]:
               versioned_files["chroma/sw.js"] = ("CACHE_VERSION", version)
               versioned_files["chroma/index.html"] = ("SW_VERSION", version)
+          if bump_all or changed["cyber_quest"]:
+              versioned_files["cyber-quest/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["cyber-quest/index.html"] = ("SW_VERSION", version)
 
           for relative_path, (const_name, ver) in versioned_files.items():
               path = repo / relative_path
@@ -211,6 +216,8 @@ jobs:
             ding/sw.js \
             ding/index.html \
             chroma/sw.js \
-            chroma/index.html
+            chroma/index.html \
+            cyber-quest/sw.js \
+            cyber-quest/index.html
           git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }} [skip ci]"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"

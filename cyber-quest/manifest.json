@@ -1,0 +1,31 @@
+{
+  "id": "/cyber-quest/",
+  "name": "Cyber Quest — Learn Cybersecurity",
+  "short_name": "Cyber Quest",
+  "description": "A beginner-friendly game that teaches cybersecurity by doing: spot phishing emails, unmask fake links, forge strong passwords and outsmart social engineers.",
+  "start_url": "/cyber-quest/",
+  "scope": "/cyber-quest/",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/img/cyber-quest-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/cyber-quest-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "education"],
+  "lang": "en-US",
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

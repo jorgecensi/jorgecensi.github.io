@@ -1,0 +1,1413 @@
+---
+layout: null
+permalink: /cyber-quest/
+---
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cyber Quest">
+    <meta name="theme-color" content="#0b1220">
+    <meta name="description" content="A beginner-friendly game that teaches cybersecurity by doing: spot phishing emails, unmask fake links, forge strong passwords and outsmart social engineers.">
+    <title>Cyber Quest — Learn Cybersecurity</title>
+    <link rel="manifest" href="/cyber-quest/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/cyber-quest-icon-192.png">
+    <link rel="apple-touch-icon" href="/img/cyber-quest-icon-192.png">
+
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --bg: #0b1220;
+            --panel: #121c2f;
+            --panel-2: #18243b;
+            --line: #26344f;
+            --text: #e6edf7;
+            --muted: #93a3bd;
+            --accent: #10b981;
+            --accent-ink: #052e22;
+            --danger: #f43f5e;
+            --warn: #f59e0b;
+            --info: #38bdf8;
+            --gold: #facc15;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.45;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-image:
+                linear-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+            background-size: 28px 28px;
+            min-height: 100vh;
+        }
+
+        #app {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: calc(16px + var(--safe-top)) 16px calc(28px + var(--safe-bottom));
+        }
+
+        button { font: inherit; color: inherit; cursor: pointer; }
+        button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+
+        .screen { display: none; }
+        .screen.active { display: block; animation: fade 0.25s ease; }
+        @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+        /* ── Header ── */
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.25rem; letter-spacing: 0.02em; }
+        .brand img { width: 36px; height: 36px; border-radius: 9px; }
+        .brand small { display: block; font-weight: 500; font-size: 0.75rem; color: var(--muted); letter-spacing: 0; }
+        .icon-btn {
+            background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            padding: 8px 12px; font-size: 0.9rem;
+        }
+
+        .rank-card {
+            background: linear-gradient(135deg, #0f2a2a, var(--panel));
+            border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 18px;
+        }
+        .rank-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+        .rank-name { font-size: 1.15rem; font-weight: 700; }
+        .rank-xp { font-family: var(--mono); color: var(--accent); }
+        .bar { height: 8px; background: #0a1322; border-radius: 99px; overflow: hidden; margin-top: 10px; }
+        .bar > i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width 0.4s ease; }
+        .rank-next { font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
+
+        .section-label { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+
+        .missions { display: grid; gap: 10px; }
+        .mission {
+            display: flex; align-items: center; gap: 14px; text-align: left; width: 100%;
+            background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .mission:not([disabled]):hover { border-color: var(--accent); transform: translateY(-1px); }
+        .mission[disabled] { opacity: 0.45; cursor: not-allowed; }
+        .mission .m-icon {
+            flex: 0 0 48px; height: 48px; border-radius: 12px; display: grid; place-items: center;
+            font-size: 1.6rem; background: var(--panel-2);
+        }
+        .mission.boss .m-icon { background: #3a1020; }
+        .mission .m-body { flex: 1; min-width: 0; }
+        .mission h3 { margin: 0; font-size: 1rem; }
+        .mission p { margin: 2px 0 0; font-size: 0.83rem; color: var(--muted); }
+        .stars { font-size: 0.95rem; letter-spacing: 1px; white-space: nowrap; }
+        .stars .off { opacity: 0.2; filter: grayscale(1); }
+
+        .home-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            border: 0; border-radius: 12px; padding: 14px 18px; font-weight: 700; font-size: 1rem;
+            background: var(--accent); color: var(--accent-ink); width: 100%;
+        }
+        .btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+        .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+        .btn-row { display: grid; gap: 10px; margin-top: 16px; }
+
+        /* ── Briefing ── */
+        .briefing {
+            background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+        }
+        .briefing .big { font-size: 3rem; line-height: 1; }
+        .briefing h2 { margin: 10px 0 4px; }
+        .briefing .terminal {
+            font-family: var(--mono); font-size: 0.88rem; background: #070d18; border: 1px solid var(--line);
+            border-radius: 10px; padding: 12px; color: #b5f5d9; margin: 14px 0; white-space: pre-wrap;
+        }
+        .briefing ul { padding-left: 20px; margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
+
+        /* ── Play ── */
+        .hud { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .hud .progress { flex: 1; }
+        .hud .count { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+        .shields { font-size: 1.05rem; letter-spacing: 2px; white-space: nowrap; }
+        .shields .lost { opacity: 0.18; filter: grayscale(1); }
+        .timer { height: 4px; background: #0a1322; border-radius: 99px; overflow: hidden; margin-bottom: 12px; display: none; }
+        .timer.show { display: block; }
+        .timer > i { display: block; height: 100%; background: var(--warn); width: 100%; }
+
+        .q-kind { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 6px 0; }
+        .context {
+            font-size: 0.9rem; color: var(--muted); background: var(--panel); border-left: 3px solid var(--info);
+            padding: 8px 12px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+        }
+        .prompt { font-size: 1.1rem; font-weight: 600; margin: 4px 0 14px; }
+
+        /* Email mock */
+        .email { background: #f8fafc; color: #0f172a; border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+        .email-head { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; }
+        .email-head .subject { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+        .email-head .meta { color: #475569; word-break: break-word; }
+        .email-head .meta b { color: #0f172a; }
+        .email-body { padding: 14px; font-size: 0.92rem; }
+        .email-body p { margin: 0 0 10px; }
+        .email-body .fake-btn {
+            display: inline-block; background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 8px;
+            font-weight: 600; margin: 4px 0 10px;
+        }
+        .email-body .link { color: #2563eb; text-decoration: underline; word-break: break-all; }
+        .hover-hint { font-family: var(--mono); font-size: 0.75rem; color: #64748b; word-break: break-all; }
+        .attach {
+            display: inline-flex; align-items: center; gap: 6px; background: #e2e8f0; border-radius: 8px;
+            padding: 6px 10px; font-size: 0.82rem; font-family: var(--mono);
+        }
+        /* Red flags stay invisible until the answer is revealed. */
+        .flag { background: none; color: inherit; border-radius: 3px; }
+        .revealed .flag { background: rgba(244, 63, 94, 0.18); box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.6); }
+        .revealed .flag::after {
+            content: attr(data-n); display: inline-grid; place-items: center; width: 1.2em; height: 1.2em;
+            margin-left: 3px; border-radius: 50%; background: var(--danger); color: #fff;
+            font-size: 0.7em; font-weight: 700; vertical-align: super; font-family: system-ui, sans-serif;
+        }
+        .revealed.legit .flag { background: rgba(16, 185, 129, 0.18); box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.7); }
+        .revealed.legit .flag::after { background: var(--accent); }
+
+        /* URL mock */
+        .urlbar {
+            display: flex; align-items: center; gap: 8px; background: #1e293b; border: 1px solid var(--line);
+            border-radius: 99px; padding: 12px 16px; font-family: var(--mono); font-size: 0.95rem;
+            word-break: break-all; margin-bottom: 14px;
+        }
+        .urlbar .lock { flex: 0 0 auto; }
+        .urlbar .scheme, .urlbar .sub, .urlbar .path { color: #94a3b8; }
+        .urlbar .reg { color: #f1f5f9; }
+        .revealed .urlbar .reg { background: rgba(250, 204, 21, 0.2); color: var(--gold); border-radius: 4px; padding: 0 2px; }
+
+        .chat { display: grid; gap: 8px; margin-bottom: 14px; }
+        .bubble {
+            max-width: 88%; padding: 10px 14px; border-radius: 16px 16px 16px 4px; background: var(--panel-2);
+            border: 1px solid var(--line); font-size: 0.95rem;
+        }
+        .bubble .who { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 2px; }
+
+        .options { display: grid; gap: 10px; }
+        .opt {
+            text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+            padding: 14px; font-size: 0.97rem; transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .opt:not([disabled]):hover { border-color: var(--info); }
+        .opt[disabled] { cursor: default; }
+        .opt.correct { border-color: var(--accent); background: rgba(16, 185, 129, 0.14); }
+        .opt.wrong { border-color: var(--danger); background: rgba(244, 63, 94, 0.14); }
+        .options.two { grid-template-columns: 1fr 1fr; }
+        .options.two .opt { text-align: center; font-weight: 700; }
+
+        .feedback {
+            display: none; margin-top: 14px; border-radius: 14px; padding: 14px 16px;
+            background: var(--panel); border: 1px solid var(--line);
+        }
+        .feedback.show { display: block; animation: fade 0.25s ease; }
+        .feedback.good { border-color: var(--accent); }
+        .feedback.bad { border-color: var(--danger); }
+        .feedback h4 { margin: 0 0 6px; font-size: 1.05rem; }
+        .feedback p { margin: 0 0 8px; font-size: 0.93rem; }
+        .feedback ol { margin: 6px 0 8px; padding-left: 22px; font-size: 0.9rem; }
+        .feedback ol li { margin-bottom: 4px; }
+        .feedback .tip {
+            font-size: 0.85rem; color: #b5f5d9; background: #0a1a17; border-radius: 8px; padding: 8px 10px; margin-top: 6px;
+        }
+
+        .shake { animation: shake 0.35s ease; }
+        @keyframes shake {
+            20% { transform: translateX(-6px); } 40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); } 80% { transform: translateX(4px); }
+        }
+
+        /* Password forge */
+        .dossier {
+            background: var(--panel); border: 1px dashed var(--warn); border-radius: 12px; padding: 12px 14px;
+            font-size: 0.88rem; margin-bottom: 12px;
+        }
+        .dossier b { color: var(--warn); }
+        .pw-input {
+            width: 100%; font-family: var(--mono); font-size: 1.1rem; padding: 14px; border-radius: 12px;
+            border: 1px solid var(--line); background: #070d18; color: var(--text);
+        }
+        .meter { height: 10px; border-radius: 99px; background: #0a1322; overflow: hidden; margin: 12px 0 6px; }
+        .meter > i { display: block; height: 100%; width: 0; transition: width 0.2s ease, background 0.2s ease; }
+        .crack { font-size: 0.92rem; }
+        .crack b { font-family: var(--mono); }
+        .checks { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 6px; font-size: 0.9rem; }
+        .checks li::before { content: "○"; display: inline-block; width: 1.4em; color: var(--muted); }
+        .checks li.ok::before { content: "●"; color: var(--accent); }
+        .checks li.bad::before { content: "✕"; color: var(--danger); }
+        .warn-note { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
+
+        /* Results */
+        .results { text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px 18px; }
+        .results .big { font-size: 3.4rem; line-height: 1; }
+        .results h2 { margin: 10px 0 4px; }
+        .results .stars { font-size: 2rem; margin: 8px 0; }
+        .results .xp { font-family: var(--mono); color: var(--accent); }
+        .learned { text-align: left; margin-top: 16px; }
+        .learned li { margin-bottom: 6px; font-size: 0.9rem; }
+
+        /* Field guide / about */
+        .page h2 { margin: 0 0 4px; }
+        .page .sub { color: var(--muted); margin: 0 0 16px; font-size: 0.92rem; }
+        .guide-sec { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+        .guide-sec h3 { margin: 0 0 6px; font-size: 1rem; }
+        .guide-sec ul { margin: 0; padding-left: 20px; font-size: 0.9rem; }
+        .guide-sec li { margin-bottom: 6px; }
+        .guide-sec.locked { opacity: 0.5; }
+        .page p { font-size: 0.93rem; }
+
+        .toast {
+            position: fixed; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0;
+            bottom: calc(18px + var(--safe-bottom)); background: var(--panel-2); border: 1px solid var(--accent);
+            padding: 10px 16px; border-radius: 12px; font-size: 0.9rem; transition: all 0.25s ease; pointer-events: none;
+            max-width: calc(100% - 32px);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast button { pointer-events: auto; margin-left: 10px; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 4px 10px; font-weight: 700; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+
+        <!-- Home -->
+        <section class="screen active" id="home">
+            <div class="topbar">
+                <div class="brand">
+                    <img src="/img/cyber-quest-icon-192.png" alt="">
+                    <div>Cyber Quest<small>Learn cybersecurity by playing</small></div>
+                </div>
+                <button class="icon-btn" data-go="about" aria-label="How to play">?</button>
+            </div>
+
+            <div class="rank-card">
+                <div class="rank-row">
+                    <div><div class="section-label" style="margin:0">Your rank</div><div class="rank-name" id="rank-name">Trainee</div></div>
+                    <div class="rank-xp" id="rank-xp">0 XP</div>
+                </div>
+                <div class="bar"><i id="rank-bar"></i></div>
+                <div class="rank-next" id="rank-next"></div>
+            </div>
+
+            <p class="section-label">Missions</p>
+            <div class="missions" id="mission-list"></div>
+
+            <div class="home-links">
+                <button class="btn secondary" data-go="guide">📘 Field Guide</button>
+                <button class="btn secondary" data-go="about">🎮 How to play</button>
+            </div>
+        </section>
+
+        <!-- Briefing -->
+        <section class="screen" id="briefing">
+            <div class="topbar">
+                <button class="icon-btn" data-go="home">← Back</button>
+            </div>
+            <div class="briefing">
+                <div class="big" id="b-icon"></div>
+                <h2 id="b-title"></h2>
+                <div class="terminal" id="b-text"></div>
+                <div class="section-label">You'll learn</div>
+                <ul id="b-learn"></ul>
+                <div class="btn-row">
+                    <button class="btn" id="b-start">Start mission</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Play -->
+        <section class="screen" id="play">
+            <div class="hud">
+                <button class="icon-btn" id="quit" aria-label="Quit mission">✕</button>
+                <div class="progress"><div class="bar" style="margin:0"><i id="q-bar"></i></div></div>
+                <div class="count" id="q-count"></div>
+                <div class="shields" id="shields" aria-label="Shields left"></div>
+            </div>
+            <div class="timer" id="timer"><i id="timer-bar"></i></div>
+            <div id="q-area"></div>
+            <div class="feedback" id="feedback" aria-live="polite"></div>
+        </section>
+
+        <!-- Results -->
+        <section class="screen" id="results">
+            <div class="results">
+                <div class="big" id="r-icon"></div>
+                <h2 id="r-title"></h2>
+                <div class="stars" id="r-stars"></div>
+                <div id="r-text"></div>
+                <div class="xp" id="r-xp"></div>
+                <div class="learned" id="r-learned"></div>
+                <div class="btn-row">
+                    <button class="btn" id="r-next">Continue</button>
+                    <button class="btn secondary" id="r-retry">Play again</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Field guide -->
+        <section class="screen page" id="guide">
+            <div class="topbar"><button class="icon-btn" data-go="home">← Back</button></div>
+            <h2>📘 Field Guide</h2>
+            <p class="sub">Every mission you clear adds its rules here. Keep them — they work in real life.</p>
+            <div id="guide-list"></div>
+        </section>
+
+        <!-- About -->
+        <section class="screen page" id="about">
+            <div class="topbar"><button class="icon-btn" data-go="home">← Back</button></div>
+            <h2>🎮 How to play</h2>
+            <p class="sub">Cyber Quest teaches the everyday security skills that stop most real attacks.</p>
+            <div class="guide-sec">
+                <h3>Missions</h3>
+                <ul>
+                    <li>Each mission is a set of real-world situations: an email, a link, a phone call, a choice.</li>
+                    <li>Decide what you'd do. After every answer you see <b>why</b> — read it, that's where the learning is.</li>
+                    <li>Clear a mission to unlock the next one and add its rules to your Field Guide.</li>
+                </ul>
+            </div>
+            <div class="guide-sec">
+                <h3>Shields &amp; stars</h3>
+                <ul>
+                    <li>You start each mission with 🛡️🛡️🛡️. A wrong answer costs one. Lose all three and you're breached — try again.</li>
+                    <li>No mistakes = ⭐⭐⭐. One mistake = ⭐⭐. More = ⭐.</li>
+                    <li>XP counts your best run on each mission, and your rank grows with it.</li>
+                </ul>
+            </div>
+            <div class="guide-sec">
+                <h3>The final boss</h3>
+                <ul>
+                    <li>Clear every mission to unlock <b>Breach Day</b>: ten mixed questions against the clock.</li>
+                </ul>
+            </div>
+            <div class="guide-sec">
+                <h3>Privacy</h3>
+                <ul>
+                    <li>Everything runs on your device. Nothing you type is sent anywhere.</li>
+                    <li>Still: never type a password you really use into any game or quiz — that's lesson one!</li>
+                </ul>
+            </div>
+            <div class="btn-row">
+                <button class="btn secondary" id="reset">Reset progress</button>
+            </div>
+        </section>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+    const SW_VERSION = 'dev';
+
+    (() => {
+        'use strict';
+
+        // ── Data ──────────────────────────────────────────────────────────
+        // Question kinds:
+        //   email  — an inbox message; answer 0 = phishing, 1 = legit. `flags` explain the numbered marks.
+        //   url    — a link to judge;  answer 0 = suspicious, 1 = safe. `domain` is the registered domain.
+        //   chat   — a conversation, then a multiple-choice response.
+        //   choice — a plain multiple-choice question.
+        //   forge  — the password-building challenge.
+        // For chat/choice, `answer` indexes the original `options` order; options are shuffled at play time.
+
+        const MISSIONS = [
+            {
+                id: 'phish',
+                title: 'Inbox Inspector',
+                icon: '📧',
+                blurb: 'Spot phishing emails before they hook you.',
+                briefing: '> INCOMING: 6 new messages\n> Some are real. Some are traps.\n> Decide which is which.',
+                learn: ['What phishing is and why it works', 'The red flags: urgency, odd senders, lookalike links', 'What to do when you\'re not sure'],
+                tips: [
+                    'Phishing = a fake message that tries to make you click, log in, pay or download something.',
+                    'Check the sender\'s real address, not just the display name. "Netflix" can come from anywhere.',
+                    'Urgency, threats and too-good-to-be-true offers are the scammer\'s favourite tools.',
+                    'Never log in through a link in an email. Open the app or type the address yourself.',
+                    'Unexpected attachments (especially .zip, .html, .exe or "enable macros") are a big red flag.',
+                    'Not sure? Ask the sender through a different channel, or report it to your IT team.'
+                ],
+                questions: [
+                    {
+                        kind: 'email',
+                        from: { name: 'Netflix Support', addr: 'billing@<mark class="flag" data-n="1">netflix-account-help.com</mark>' },
+                        subject: 'Your membership is on hold',
+                        body: '<p><mark class="flag" data-n="2">Dear Customer,</mark></p>' +
+                            '<p>We were unable to validate your billing information. <mark class="flag" data-n="3">Update your payment within 24 hours or your account will be permanently suspended.</mark></p>' +
+                            '<span class="fake-btn">Update payment</span>' +
+                            '<div class="hover-hint">Link goes to: <mark class="flag" data-n="4">http://netflix-account-help.com/login</mark></div>',
+                        answer: 0,
+                        flags: [
+                            'The sender\'s domain isn\'t netflix.com — anyone can register "netflix-account-help.com".',
+                            'A generic greeting. Real services usually use your name.',
+                            'Pressure and threats ("24 hours", "permanently") are designed to make you act before you think.',
+                            'The button leads to the same fake site, and it isn\'t even https.'
+                        ],
+                        explain: 'Classic phishing. The goal is to get your card details on a fake login page.'
+                    },
+                    {
+                        kind: 'email',
+                        context: 'You set up GitHub on your new laptop 10 minutes ago.',
+                        from: { name: 'GitHub', addr: 'noreply@<mark class="flag" data-n="1">github.com</mark>' },
+                        subject: '[GitHub] A new SSH key was added to your account',
+                        body: '<p>Hi alexdev,</p>' +
+                            '<p>The following SSH key was added to your account: <b>new-laptop</b>.</p>' +
+                            '<p><mark class="flag" data-n="2">If you believe this key was added in error, you can remove it in your account settings.</mark></p>' +
+                            '<p><mark class="flag" data-n="3">No action is needed if this was you.</mark></p>',
+                        answer: 1,
+                        flags: [
+                            'It comes from the real github.com domain.',
+                            'It tells you where to go, without pushing you to click a login link.',
+                            'No pressure, no threats — and it matches something you just did.'
+                        ],
+                        explain: 'This looks legit: it\'s expected, calm, and from the real domain. Sender addresses <i>can</i> be faked, though — so if you ever want to check, open GitHub yourself rather than using a link.'
+                    },
+                    {
+                        kind: 'email',
+                        from: { name: 'IT Helpdesk', addr: 'it-support@<mark class="flag" data-n="1">company-helpdesk.net</mark>' },
+                        subject: '⚠️ Mailbox full — action required',
+                        body: '<p>Your mailbox has exceeded its storage limit. You will stop receiving new emails.</p>' +
+                            '<p><mark class="flag" data-n="2">To keep your account active, reply with your username and password</mark> so we can increase your quota.</p>' +
+                            '<p>IT Department</p>',
+                        answer: 0,
+                        flags: [
+                            'Your company\'s IT team writes from your company\'s domain, not a random .net address.',
+                            'No real IT team will ever ask for your password. They don\'t need it.'
+                        ],
+                        explain: 'Phishing. Asking for a password by email is always a scam — no exceptions.'
+                    },
+                    {
+                        kind: 'email',
+                        from: { name: 'Sarah Chen (CEO)', addr: '<mark class="flag" data-n="1">sarah.chen.ceo1@gmail.com</mark>' },
+                        subject: 'Quick favor',
+                        body: '<p>Are you at your desk? I\'m stuck in meetings all day and need a quick favor.</p>' +
+                            '<p><mark class="flag" data-n="2">Please buy 5 × $100 gift cards</mark> for a client thank-you and send me the codes. <mark class="flag" data-n="3">Keep this between us — it\'s a surprise.</mark></p>' +
+                            '<p><mark class="flag" data-n="4">I need them in the next hour.</mark></p><p>Sarah</p>',
+                        answer: 0,
+                        flags: [
+                            'A personal Gmail address, not the company\'s email.',
+                            'Gift cards are untraceable — scammers love them. Real companies pay clients in other ways.',
+                            'Secrecy stops you from checking with anyone else.',
+                            'Urgency again.'
+                        ],
+                        explain: 'This is "CEO fraud" (business email compromise). Check with the real person through a channel you already know — call them or message them on the company chat.'
+                    },
+                    {
+                        kind: 'email',
+                        context: 'You ordered headphones on Amazon yesterday.',
+                        from: { name: 'Amazon', addr: 'shipment-tracking@<mark class="flag" data-n="1">amazon.com</mark>' },
+                        subject: 'Your Amazon order has shipped',
+                        body: '<p>Hello Alex,</p>' +
+                            '<p><mark class="flag" data-n="2">Your package with "Wireless Headphones" has shipped</mark> and will arrive Thursday.</p>' +
+                            '<p><mark class="flag" data-n="3">Track your package in Your Orders.</mark></p>',
+                        answer: 1,
+                        flags: [
+                            'The real amazon.com domain.',
+                            'It matches what you actually ordered.',
+                            'It doesn\'t ask for a password, payment or download.'
+                        ],
+                        explain: 'Legit. Still a good habit: to track it, open the Amazon app instead of clicking. That habit protects you on the days a fake looks perfect.'
+                    },
+                    {
+                        kind: 'email',
+                        from: { name: 'Parcel Delivery', addr: 'notice@<mark class="flag" data-n="1">parcel-redelivery.info</mark>' },
+                        subject: 'We missed you! Your parcel is waiting',
+                        body: '<p><mark class="flag" data-n="2">We tried to deliver your package today but nobody was home.</mark></p>' +
+                            '<p>To schedule a new delivery, <mark class="flag" data-n="3">pay the $1.99 redelivery fee</mark> using the attached form.</p>' +
+                            '<span class="attach">📎 <mark class="flag" data-n="4">Redelivery_Form.html</mark></span>',
+                        answer: 0,
+                        flags: [
+                            'A strange domain that isn\'t any real courier.',
+                            'You weren\'t expecting a package — a vague story fits anyone.',
+                            'The fee is tiny so you won\'t think twice — but they want your card number, not $1.99.',
+                            'An .html attachment opens a fake page on your own device. Never open unexpected attachments.'
+                        ],
+                        explain: 'Phishing. Check deliveries on the courier\'s own website using the tracking number from the shop.'
+                    }
+                ]
+            },
+            {
+                id: 'links',
+                title: 'Link Detective',
+                icon: '🔗',
+                blurb: 'Read a URL like a pro and unmask fakes.',
+                briefing: '> Every link has a real owner.\n> Scammers hide theirs behind familiar words.\n> Find the owner. Judge the link.',
+                learn: ['How to find who really owns a link', 'Lookalike letters and fake subdomains', 'What the padlock does (and doesn\'t) mean'],
+                tips: [
+                    'The real owner of a link is the part just before the first single "/" — e.g. in accounts.google.com/x it\'s google.com.',
+                    'Anything to the left of that can be made up: paypal.com.secure-login.net belongs to secure-login.net.',
+                    'Watch for lookalikes: paypa1 (number one), rnicrosoft ("rn" pretending to be "m").',
+                    'The padlock (https) only means the connection is encrypted. Scam sites have padlocks too.',
+                    'Short links (bit.ly etc.) hide where they go. Be extra careful when one arrives unexpectedly.',
+                    'Safest of all: use bookmarks or type the address yourself for anything important.'
+                ],
+                questions: [
+                    {
+                        kind: 'choice',
+                        prompt: 'First, the key skill. Who really owns this link?\nhttps://login.paypal.com.account-verify.net/home',
+                        options: ['account-verify.net', 'paypal.com', 'login.paypal.com', 'home'],
+                        answer: 0,
+                        explain: 'Read the address part (before the first single "/") from the <b>right</b>. The last two pieces — account-verify.net — are the real owner. Everything to the left of that is decoration the owner can set to anything.'
+                    },
+                    {
+                        kind: 'url', context: 'You want to log in to PayPal.',
+                        url: 'https://www.paypal.com/signin', domain: 'paypal.com', answer: 1,
+                        explain: 'Owned by paypal.com. "www" is just a normal subdomain.'
+                    },
+                    {
+                        kind: 'url', context: 'A text message says your PayPal account is limited.',
+                        url: 'https://paypa1.com/signin', domain: 'paypa1.com', answer: 0,
+                        explain: 'Look closely: that\'s the number <b>1</b>, not the letter l. A lookalike domain.'
+                    },
+                    {
+                        kind: 'url', context: 'An email asks you to verify your PayPal account.',
+                        url: 'https://paypal.com.secure-login.net/verify', domain: 'secure-login.net', answer: 0,
+                        explain: 'The owner is secure-login.net. "paypal.com" is just a subdomain they added to fool you.'
+                    },
+                    {
+                        kind: 'url', context: 'You click "Sign in" on google.com.',
+                        url: 'https://accounts.google.com/signin', domain: 'google.com', answer: 1,
+                        explain: 'Owned by google.com — "accounts" is Google\'s own subdomain.'
+                    },
+                    {
+                        kind: 'url', context: 'A message says your Microsoft password expires today.',
+                        url: 'https://www.rnicrosoft.com/login', domain: 'rnicrosoft.com', answer: 0,
+                        explain: '"rn" squeezed together looks like "m": r-n-icrosoft. Plus, the urgent message was a red flag already.'
+                    },
+                    {
+                        kind: 'url', context: 'A stranger on social media says you won a free phone.',
+                        url: 'https://bit.ly/fr33-ph0ne-w1nner', domain: 'bit.ly', answer: 0,
+                        explain: 'Short links hide the real destination, and "you won!" from a stranger is bait. Don\'t click.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'A site shows a padlock 🔒 next to its address. What does that tell you?',
+                        options: [
+                            'Your connection to that site is encrypted — but not that the site is honest',
+                            'The site has been checked and is safe',
+                            'The site belongs to a real company',
+                            'Your antivirus approved it'
+                        ],
+                        answer: 0,
+                        explain: 'HTTPS stops others on the network from reading your traffic. But anyone can get a padlock for free — including scammers. Always check the owner of the address too.'
+                    }
+                ]
+            },
+            {
+                id: 'passwords',
+                title: 'Password Forge',
+                icon: '🔑',
+                blurb: 'Build passwords that would take centuries to crack.',
+                briefing: '> Target: Alex\'s new email password\n> Attacker: a rig guessing 10 billion per second\n> Make it hold for 100+ years.',
+                learn: ['Why length beats complexity', 'Why personal info and reuse are dangerous', 'Password managers and passphrases'],
+                tips: [
+                    'Length wins. A long passphrase of random words beats a short jumble of symbols.',
+                    'Never use personal info (pets, birthdays, teams) — it\'s the first thing attackers try.',
+                    'Never reuse passwords. One breach unlocks every account that shares it.',
+                    'Use a password manager so every account gets a unique, strong password you don\'t have to remember.',
+                    'Never type a real password into a quiz, game or "strength checker" you don\'t trust.'
+                ],
+                questions: [
+                    { kind: 'forge' },
+                    {
+                        kind: 'choice',
+                        prompt: 'Which password is strongest?',
+                        options: ['purple-tractor-ocean-giggle', 'P@ssw0rd!', 'Tr0ub4dor&3', 'Alex1998!'],
+                        answer: 0,
+                        explain: 'Four random words make a long password that\'s easy to remember and very hard to guess. "P@ssw0rd!" swaps letters for symbols in ways cracking tools try first, and "Alex1998!" is personal info.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'A gaming site you use got hacked. You used the same password for your email. What happens next?',
+                        options: [
+                            'Attackers try that email + password on lots of other sites, including your email',
+                            'Nothing — the hack only affects the gaming site',
+                            'The gaming site will change your email password for you',
+                            'Only your gaming account is at risk'
+                        ],
+                        answer: 0,
+                        explain: 'This is "credential stuffing": leaked logins get tested automatically on hundreds of sites. Change the password everywhere you reused it, and turn on two-factor authentication.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'You have 60 accounts. What\'s the best way to give each a unique, strong password?',
+                        options: [
+                            'Use a password manager',
+                            'Write them all in a notes app called "passwords"',
+                            'Use one strong password with the site name at the end',
+                            'Use your browser\'s "remember me" on public computers'
+                        ],
+                        answer: 0,
+                        explain: 'A password manager creates and remembers a unique random password for every site. You only remember one strong master password (and protect it with two-factor).'
+                    }
+                ]
+            },
+            {
+                id: 'social',
+                title: 'Social Engineer',
+                icon: '🎭',
+                blurb: 'Scammers hack people, not computers. Don\'t get hacked.',
+                briefing: '> The easiest way past a firewall?\n> Just ask someone nicely.\n> Spot the manipulation.',
+                learn: ['How scammers use trust, fear and urgency', 'Why you verify through another channel', 'Baiting, pretexting and tailgating'],
+                tips: [
+                    'Social engineering = tricking people into giving access, money or information.',
+                    'Never share one-time codes. Anyone asking for one is trying to log in as you.',
+                    'Verify through a channel you already trust: call the known number, not the one they give you.',
+                    'Real tech support never cold-calls you or shows pop-ups with a phone number.',
+                    'Found a USB stick? Don\'t plug it in — hand it to IT.',
+                    'It\'s OK to be "rude" for security. Real colleagues understand.'
+                ],
+                questions: [
+                    {
+                        kind: 'chat',
+                        chat: [
+                            { who: 'Unknown caller', text: 'Hi, this is Mike from IT. We\'re upgrading your account and I just sent a 6-digit code to your phone. Can you read it back to me so I can confirm it\'s you?' }
+                        ],
+                        prompt: 'What do you do?',
+                        options: [
+                            'Refuse, hang up, and call IT on the number you already know',
+                            'Read the code — he knows your name, so he must be from IT',
+                            'Ask him to email you first, then read him the code',
+                            'Give him half the code to be safe'
+                        ],
+                        answer: 0,
+                        explain: 'That code is the key to your account — he\'s trying to log in as you right now. A real IT team never needs it. Verification codes are for you only.'
+                    },
+                    {
+                        kind: 'chat',
+                        chat: [
+                            { who: '+1 (555) 013-2291', text: 'Hi it\'s Mom! 😩 Dropped my phone in the sink, this is my new number.' },
+                            { who: '+1 (555) 013-2291', text: 'Can you send $300 for a bill? It\'s urgent, I\'ll pay you back tonight ❤️' }
+                        ],
+                        prompt: 'What do you do?',
+                        options: [
+                            'Call Mom on her old number (or ask something only she\'d know) before anything else',
+                            'Send it — she said it\'s urgent',
+                            'Reply asking for her bank details first',
+                            'Send $150 to be careful'
+                        ],
+                        answer: 0,
+                        explain: 'The "new number" story is a very common scam. A quick call to the number you already have usually reveals it. If it\'s really her, she won\'t mind.'
+                    },
+                    {
+                        kind: 'chat',
+                        chat: [
+                            { who: 'Pop-up in your browser', text: '🚨 WARNING! Your computer is infected with 5 viruses! Call Microsoft Support NOW at 1-800-555-0199. Do not close this window!' }
+                        ],
+                        prompt: 'What do you do?',
+                        options: [
+                            'Close the tab or browser (force-quit if needed). Don\'t call.',
+                            'Call the number — it says Microsoft',
+                            'Click OK to start the scan',
+                            'Restart and follow the instructions it gives'
+                        ],
+                        answer: 0,
+                        explain: 'Websites can\'t scan your computer. Real companies never put phone numbers in scary pop-ups. If you call, they\'ll ask for remote access and payment.'
+                    },
+                    {
+                        kind: 'chat',
+                        chat: [
+                            { who: 'Person in a hi-vis vest', text: 'Hey, hands full! Could you hold the door? I\'m from the cleaning company.' }
+                        ],
+                        prompt: 'You\'re at your office\'s badge-only door. What do you do?',
+                        options: [
+                            'Politely ask them to badge in, or point them to reception',
+                            'Hold the door — they look official',
+                            'Let them in but watch where they go',
+                            'Lend them your badge'
+                        ],
+                        answer: 0,
+                        explain: 'This is "tailgating". A vest, a clipboard and full hands are a classic disguise. Reception can check who they are.'
+                    },
+                    {
+                        kind: 'chat',
+                        chat: [
+                            { who: 'Viral social media post', text: '🏴‍☠️ Find your PIRATE NAME! Your first pet\'s name + the street you grew up on. Comment below! 👇' }
+                        ],
+                        prompt: 'Should you play?',
+                        options: [
+                            'No — those are common security-question answers',
+                            'Yes, it\'s harmless fun',
+                            'Yes, but only on a private account',
+                            'Yes, but use your mother\'s maiden name instead'
+                        ],
+                        answer: 0,
+                        explain: '"First pet" and "street you grew up on" are classic password-reset questions. Fun quizzes are a cheap way to collect them.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'You find a USB stick in the car park labelled "Salaries 2026 — CONFIDENTIAL". What do you do?',
+                        options: [
+                            'Hand it to IT or security without plugging it in',
+                            'Plug it in to find the owner',
+                            'Plug it into a home computer instead of a work one',
+                            'Open just one file to see what it is'
+                        ],
+                        answer: 0,
+                        explain: 'This is "baiting". A tempting label makes people curious, and a planted USB can install malware the moment you plug it in.'
+                    }
+                ]
+            },
+            {
+                id: 'habits',
+                title: 'Safe Habits',
+                icon: '🛡️',
+                blurb: 'The everyday moves that stop most attacks.',
+                briefing: '> Most breaches aren\'t movie hacks.\n> They\'re a missed update, a reused password,\n> a public Wi-Fi login. Build the habits.',
+                learn: ['Updates, two-factor and backups', 'Public Wi-Fi and app permissions', 'Locking your screen'],
+                tips: [
+                    'Install updates promptly — most of them fix security holes attackers already know about.',
+                    'Turn on two-factor authentication (2FA), ideally with an authenticator app, passkey or security key.',
+                    'Never approve a login prompt you didn\'t start. Deny it and change your password.',
+                    'Back up important files to somewhere ransomware can\'t reach (offline or a separate cloud backup).',
+                    'On public Wi-Fi, avoid sensitive tasks or use mobile data. Fake hotspots exist.',
+                    'Give apps only the permissions they need. Lock your screen whenever you walk away.'
+                ],
+                questions: [
+                    {
+                        kind: 'choice',
+                        prompt: 'Your phone says a system update is available. What\'s the best move?',
+                        options: [
+                            'Install it soon — updates often fix security holes',
+                            'Ignore it; updates just add features',
+                            'Wait a year to see if it\'s stable',
+                            'Only update when the phone stops working'
+                        ],
+                        answer: 0,
+                        explain: 'Once a security fix is released, attackers study it and target people who haven\'t updated. Turning on automatic updates is one of the best things you can do.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Which one adds the most protection to your email account?',
+                        options: [
+                            'Two-factor authentication with an authenticator app or security key',
+                            'Adding one more character to your password',
+                            'Logging out every time',
+                            'A security question about your favourite food'
+                        ],
+                        answer: 0,
+                        explain: 'With 2FA, a stolen password alone isn\'t enough — the attacker also needs your phone or key. Authenticator apps, passkeys and security keys are stronger than SMS codes, but any 2FA is far better than none.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'At 2 a.m. your phone keeps buzzing: "Approve sign-in?" You didn\'t try to log in.',
+                        options: [
+                            'Deny it, then change your password — someone knows it',
+                            'Approve it so the buzzing stops',
+                            'Ignore it and go back to sleep',
+                            'Approve it once to see what happens'
+                        ],
+                        answer: 0,
+                        explain: 'This is "MFA fatigue": the attacker has your password and spams prompts hoping you\'ll tap Approve. Deny, change the password, and tell your IT team if it\'s a work account.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'Ransomware locks every file on your laptop and demands payment. What would have saved you?',
+                        options: [
+                            'A recent backup kept somewhere separate from the laptop',
+                            'A copy of the files in another folder on the same laptop',
+                            'A stronger screen-lock password',
+                            'Paying quickly before the price goes up'
+                        ],
+                        answer: 0,
+                        explain: 'Ransomware encrypts everything it can reach, including other folders and plugged-in drives. Keep backups offline or in a separate backup service. Paying doesn\'t guarantee you get files back.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'At the airport you see open Wi-Fi called "Free_Airport_WiFi". You need to check your bank account.',
+                        options: [
+                            'Use your mobile data for banking instead',
+                            'Connect — it has "Airport" in the name',
+                            'Connect, but use private browsing mode',
+                            'Connect and ignore any certificate warnings'
+                        ],
+                        answer: 0,
+                        explain: 'Anyone can name a hotspot "Free_Airport_WiFi". On a fake one, the attacker controls your connection. Use mobile data (or a trusted VPN) for anything sensitive, and never click past certificate warnings.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'A new flashlight app asks to access your contacts, location and microphone.',
+                        options: [
+                            'Deny — a flashlight doesn\'t need those. Consider a different app.',
+                            'Allow all — apps need permissions to work',
+                            'Allow contacts only',
+                            'Allow everything, then uninstall it later'
+                        ],
+                        answer: 0,
+                        explain: 'Permissions should match the job. A flashlight asking for your contacts is probably collecting data to sell, or worse.'
+                    },
+                    {
+                        kind: 'choice',
+                        prompt: 'You\'re stepping away from your work laptop for "just two minutes".',
+                        options: [
+                            'Lock the screen (Windows + L, or Ctrl + Cmd + Q on Mac)',
+                            'Leave it — it\'s only two minutes',
+                            'Turn the screen brightness down',
+                            'Close the lid halfway'
+                        ],
+                        answer: 0,
+                        explain: 'Two minutes is plenty to send an email as you or plug in a malicious USB. Locking takes one second — make it a reflex.'
+                    }
+                ]
+            },
+            {
+                id: 'boss',
+                title: 'Breach Day',
+                icon: '💀',
+                boss: true,
+                blurb: 'Final boss: 10 mixed threats against the clock.',
+                briefing: '> ALERT: multiple attacks in progress.\n> 10 threats. 20 seconds each. 3 shields.\n> Everything you\'ve learned. Go.',
+                learn: ['Putting it all together under pressure — just like the real thing'],
+                tips: [
+                    'Attackers create time pressure on purpose. When you feel rushed, slow down.',
+                    'Stop, think, verify: most attacks fall apart when you check through another channel.',
+                    'Mistakes happen. If you clicked something, report it quickly — fast reporting limits the damage.'
+                ],
+                count: 10,
+                time: 20
+            }
+        ];
+
+        const RANKS = [
+            { xp: 0, name: 'Trainee' },
+            { xp: 100, name: 'Analyst' },
+            { xp: 250, name: 'Defender' },
+            { xp: 400, name: 'Guardian' },
+            { xp: 560, name: 'Cyber Sentinel' }
+        ];
+
+        // Password forge: details the attacker can find on Alex's social media.
+        const DOSSIER = ['alex', 'biscuit', '1998', 'maple', 'arsenal'];
+        const COMMON = ['password', 'qwerty', 'letmein', 'welcome', 'admin', 'iloveyou', 'monkey', 'dragon',
+            'football', 'sunshine', 'princess', 'abc123', '123456', 'master', 'login', 'secret'];
+        const GUESSES_PER_SEC = 1e10;
+        const TARGET_YEARS = 100;
+        const SECS_PER_YEAR = 3.156e7;
+
+        // ── Progress ──────────────────────────────────────────────────────
+        const STORE_KEY = 'cyber-quest-progress-v1';
+        let progress = loadProgress();
+
+        function loadProgress() {
+            try {
+                const p = JSON.parse(localStorage.getItem(STORE_KEY));
+                if (p && p.v === 1 && p.missions) return p;
+            } catch (e) { /* storage blocked */ }
+            return { v: 1, missions: {} };
+        }
+        function saveProgress() {
+            try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (e) { /* ignore */ }
+        }
+        const totalXp = () => Object.values(progress.missions).reduce((s, m) => s + (m.xp || 0), 0);
+        const starsFor = (id) => (progress.missions[id] && progress.missions[id].stars) || 0;
+        function isUnlocked(i) {
+            const m = MISSIONS[i];
+            if (m.boss) return MISSIONS.filter((x) => !x.boss).every((x) => starsFor(x.id) > 0);
+            return i === 0 || starsFor(MISSIONS[i - 1].id) > 0;
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────
+        const $ = (id) => document.getElementById(id);
+        const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        function shuffle(a) {
+            const r = a.slice();
+            for (let i = r.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [r[i], r[j]] = [r[j], r[i]];
+            }
+            return r;
+        }
+        const starHtml = (n) => [1, 2, 3].map((i) => `<span class="${i <= n ? '' : 'off'}">⭐</span>`).join('');
+
+        function show(screen) {
+            document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === screen));
+            S.screen = screen;
+            window.scrollTo(0, 0);
+            if (screen === 'home') renderHome();
+            if (screen === 'guide') renderGuide();
+        }
+
+        let toastTimer = null;
+        function toast(html, ms = 2600) {
+            const t = $('toast');
+            t.innerHTML = html;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            if (ms) toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+        }
+
+        // ── Home / guide ──────────────────────────────────────────────────
+        function renderHome() {
+            const xp = totalXp();
+            let r = 0;
+            while (r + 1 < RANKS.length && xp >= RANKS[r + 1].xp) r++;
+            $('rank-name').textContent = RANKS[r].name;
+            $('rank-xp').textContent = `${xp} XP`;
+            const next = RANKS[r + 1];
+            if (next) {
+                const pct = ((xp - RANKS[r].xp) / (next.xp - RANKS[r].xp)) * 100;
+                $('rank-bar').style.width = `${Math.max(0, Math.min(100, pct))}%`;
+                $('rank-next').textContent = `${next.xp - xp} XP to ${next.name}`;
+            } else {
+                $('rank-bar').style.width = '100%';
+                $('rank-next').textContent = 'Top rank reached. You\'re ready for the real world! 🎉';
+            }
+
+            $('mission-list').innerHTML = MISSIONS.map((m, i) => {
+                const open = isUnlocked(i);
+                const stars = starsFor(m.id);
+                return `<button class="mission${m.boss ? ' boss' : ''}" data-mission="${m.id}" ${open ? '' : 'disabled'}>
+                    <span class="m-icon">${open ? m.icon : '🔒'}</span>
+                    <span class="m-body"><h3>${i + 1}. ${esc(m.title)}</h3><p>${esc(open ? m.blurb : (m.boss ? 'Clear every mission to unlock.' : 'Clear the previous mission to unlock.'))}</p></span>
+                    <span class="stars">${open ? starHtml(stars) : ''}</span>
+                </button>`;
+            }).join('');
+        }
+
+        function renderGuide() {
+            $('guide-list').innerHTML = MISSIONS.map((m) => {
+                const done = starsFor(m.id) > 0;
+                return `<div class="guide-sec${done ? '' : ' locked'}">
+                    <h3>${m.icon} ${esc(m.title)}</h3>
+                    ${done ? `<ul>${m.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<p class="sub" style="margin:0">🔒 Clear this mission to unlock these rules.</p>'}
+                </div>`;
+            }).join('');
+        }
+
+        // ── Game state ────────────────────────────────────────────────────
+        const S = {
+            screen: 'home', mission: null, queue: [], idx: 0, shields: 3, mistakes: 0, correct: 0,
+            answered: false, order: null, timer: null, deadline: 0
+        };
+
+        function openBriefing(id) {
+            const m = MISSIONS.find((x) => x.id === id);
+            S.mission = m;
+            $('b-icon').textContent = m.icon;
+            $('b-title').textContent = m.title;
+            $('b-text').textContent = m.briefing;
+            $('b-learn').innerHTML = m.learn.map((l) => `<li>${esc(l)}</li>`).join('');
+            show('briefing');
+        }
+
+        function startMission() {
+            const m = S.mission;
+            if (m.boss) {
+                const pool = MISSIONS.filter((x) => !x.boss).flatMap((x) => x.questions.filter((q) => q.kind !== 'forge'));
+                S.queue = shuffle(pool).slice(0, m.count);
+            } else {
+                S.queue = m.questions.slice();
+            }
+            S.idx = 0;
+            S.shields = 3;
+            S.mistakes = 0;
+            S.correct = 0;
+            show('play');
+            renderQuestion();
+        }
+
+        function renderHud() {
+            $('q-bar').style.width = `${(S.idx / S.queue.length) * 100}%`;
+            $('q-count').textContent = `${Math.min(S.idx + 1, S.queue.length)}/${S.queue.length}`;
+            $('shields').innerHTML = [0, 1, 2].map((i) => `<span class="${i < S.shields ? '' : 'lost'}">🛡️</span>`).join('');
+        }
+
+        function renderQuestion() {
+            const q = S.queue[S.idx];
+            S.answered = false;
+            renderHud();
+            const fb = $('feedback');
+            fb.className = 'feedback';
+            fb.innerHTML = '';
+            const area = $('q-area');
+            area.className = '';
+
+            if (q.kind === 'forge') {
+                renderForge(area);
+                stopTimer();
+                return;
+            }
+
+            let html = '';
+            let opts;
+            if (q.kind === 'email') {
+                html += `<div class="q-kind">📧 Inbox</div>`;
+                if (q.context) html += `<div class="context">${esc(q.context)}</div>`;
+                html += `<div class="email">
+                    <div class="email-head">
+                        <div class="subject">${esc(q.subject)}</div>
+                        <div class="meta"><b>${esc(q.from.name)}</b> &lt;${q.from.addr}&gt;</div>
+                        <div class="meta">To: you</div>
+                    </div>
+                    <div class="email-body">${q.body}</div>
+                </div>`;
+                html += `<div class="prompt">Phishing or legit?</div>`;
+                opts = ['🎣 Phishing', '✅ Legit'];
+                S.order = [0, 1];
+            } else if (q.kind === 'url') {
+                html += `<div class="q-kind">🔗 Link check</div>`;
+                if (q.context) html += `<div class="context">${esc(q.context)}</div>`;
+                html += urlBar(q.url, q.domain);
+                html += `<div class="prompt">Would you trust this link?</div>`;
+                opts = ['🚩 Suspicious', '✅ Safe'];
+                S.order = [0, 1];
+            } else {
+                if (q.kind === 'chat') {
+                    html += `<div class="q-kind">🎭 Situation</div><div class="chat">` +
+                        q.chat.map((c) => `<div class="bubble"><span class="who">${esc(c.who)}</span>${esc(c.text)}</div>`).join('') +
+                        `</div>`;
+                } else {
+                    html += `<div class="q-kind">❓ Question</div>`;
+                }
+                html += `<div class="prompt">${esc(q.prompt).replace(/\n/g, '<br>')}</div>`;
+                S.order = shuffle(q.options.map((_, i) => i));
+                opts = S.order.map((i) => q.options[i]);
+            }
+            const two = q.kind === 'email' || q.kind === 'url';
+            html += `<div class="options${two ? ' two' : ''}" id="opts">` +
+                opts.map((o, i) => `<button class="opt" data-opt="${i}">${esc(o)}</button>`).join('') + `</div>`;
+            area.innerHTML = html;
+
+            if (S.mission.time) startTimer(S.mission.time);
+        }
+
+        function urlBar(url, domain) {
+            const m = url.match(/^(https?:\/\/)([^/]+)(.*)$/);
+            const [, scheme, host, path] = m;
+            const at = host.lastIndexOf(domain);
+            const sub = at > 0 ? host.slice(0, at) : '';
+            const lock = scheme === 'https://' ? '🔒' : '⚠️';
+            return `<div class="urlbar"><span class="lock">${lock}</span><span><span class="scheme">${esc(scheme)}</span><span class="sub">${esc(sub)}</span><span class="reg">${esc(domain)}</span><span class="path">${esc(path)}</span></span></div>`;
+        }
+
+        function choose(displayIdx) {
+            if (S.answered) return;
+            const q = S.queue[S.idx];
+            const picked = displayIdx < 0 ? -1 : S.order[displayIdx];
+            resolve(picked === q.answer, displayIdx, displayIdx < 0);
+        }
+
+        function resolve(ok, displayIdx, timedOut) {
+            const q = S.queue[S.idx];
+            S.answered = true;
+            stopTimer();
+
+            const buttons = document.querySelectorAll('#opts .opt');
+            buttons.forEach((b, i) => {
+                b.disabled = true;
+                if (S.order[i] === q.answer) b.classList.add('correct');
+                else if (i === displayIdx) b.classList.add('wrong');
+            });
+
+            if (ok) {
+                S.correct++;
+            } else {
+                S.mistakes++;
+                S.shields--;
+                $('play').classList.remove('shake');
+                void $('play').offsetWidth;
+                $('play').classList.add('shake');
+                if (navigator.vibrate) navigator.vibrate(120);
+            }
+            renderHud();
+
+            // Reveal the red flags / the link's real owner.
+            const area = $('q-area');
+            area.classList.add('revealed');
+            if ((q.kind === 'email' || q.kind === 'url') && q.answer === 1) area.classList.add('legit');
+
+            let html = `<h4>${timedOut ? '⏰ Time\'s up!' : ok ? '✅ Correct!' : '❌ Not quite'}</h4>`;
+            if (q.kind === 'email') {
+                html += `<p>${q.answer === 0 ? 'This was <b>phishing</b>.' : 'This one was <b>legit</b>.'} ${q.answer === 0 ? 'Red flags' : 'Signs it\'s real'}:</p>`;
+                html += `<ol>${q.flags.map((f) => `<li>${esc(f)}</li>`).join('')}</ol>`;
+                html += `<p>${q.explain}</p>`;
+            } else if (q.kind === 'url') {
+                html += `<p>Real owner: <b style="color:var(--gold)">${esc(q.domain)}</b> — ${q.answer === 1 ? 'safe' : 'suspicious'}.</p><p>${q.explain}</p>`;
+            } else {
+                if (!ok) html += `<p><b>Best answer:</b> ${esc(q.options[q.answer])}</p>`;
+                html += `<p>${q.explain}</p>`;
+            }
+
+            const last = S.idx + 1 >= S.queue.length;
+            const dead = S.shields <= 0;
+            html += `<div class="btn-row" style="margin-top:10px"><button class="btn" id="next">${dead ? 'See results' : last ? 'Finish mission' : 'Next →'}</button></div>`;
+            const fb = $('feedback');
+            fb.innerHTML = html;
+            fb.className = `feedback show ${ok ? 'good' : 'bad'}`;
+            $('next').focus({ preventScroll: true });
+            fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function next() {
+            if (S.shields <= 0) return finish(false);
+            S.idx++;
+            if (S.idx >= S.queue.length) return finish(true);
+            renderQuestion();
+            window.scrollTo(0, 0);
+        }
+
+        function finish(won) {
+            stopTimer();
+            const m = S.mission;
+            const stars = !won ? 0 : S.mistakes === 0 ? 3 : S.mistakes === 1 ? 2 : 1;
+            const perQ = m.boss ? 15 : 10;
+            const xp = won ? S.correct * perQ + stars * 10 : 0;
+            const prev = progress.missions[m.id] || { stars: 0, xp: 0 };
+            const firstClear = won && prev.stars === 0;
+            const gained = Math.max(0, xp - prev.xp);
+            progress.missions[m.id] = { stars: Math.max(prev.stars, stars), xp: Math.max(prev.xp, xp) };
+            saveProgress();
+
+            $('r-icon').textContent = won ? (m.boss ? '🏆' : m.icon) : '💥';
+            $('r-title').textContent = won ? (m.boss ? 'Breach stopped!' : 'Mission complete!') : 'Breached!';
+            $('r-stars').innerHTML = won ? starHtml(stars) : '';
+            $('r-text').innerHTML = won
+                ? `<p>${S.correct} of ${S.queue.length} correct.</p>`
+                : '<p>You ran out of shields. Every expert got here by learning from mistakes — read the explanations and try again.</p>';
+            $('r-xp').textContent = won ? (gained > 0 ? `+${gained} XP` : `${xp} XP (your best is ${prev.xp})`) : '';
+            $('r-learned').innerHTML = firstClear
+                ? `<div class="section-label">Added to your Field Guide</div><ul>${m.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>`
+                : '';
+
+            const idx = MISSIONS.indexOf(m);
+            const nextM = MISSIONS[idx + 1];
+            const nextBtn = $('r-next');
+            if (won && nextM && isUnlocked(idx + 1)) {
+                nextBtn.textContent = `Next: ${nextM.icon} ${nextM.title}`;
+                nextBtn.onclick = () => openBriefing(nextM.id);
+            } else {
+                nextBtn.textContent = won ? 'Back to missions' : 'Try again';
+                nextBtn.onclick = won ? () => show('home') : () => startMission();
+            }
+            $('r-retry').textContent = won ? 'Play again' : 'Back to missions';
+            $('r-retry').onclick = won ? () => startMission() : () => show('home');
+            show('results');
+        }
+
+        // ── Timer (boss) ──────────────────────────────────────────────────
+        function startTimer(secs) {
+            stopTimer();
+            $('timer').classList.add('show');
+            S.deadline = performance.now() + secs * 1000;
+            const tick = () => {
+                const left = S.deadline - performance.now();
+                $('timer-bar').style.width = `${Math.max(0, left / (secs * 1000)) * 100}%`;
+                if (left <= 0) { S.timer = null; choose(-1); return; }
+                S.timer = requestAnimationFrame(tick);
+            };
+            S.timer = requestAnimationFrame(tick);
+        }
+        function stopTimer() {
+            if (S.timer) cancelAnimationFrame(S.timer);
+            S.timer = null;
+            if (!S.mission || !S.mission.time) $('timer').classList.remove('show');
+        }
+
+        // ── Password forge ────────────────────────────────────────────────
+        const LEET = { '0': 'o', '1': 'l', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's', '!': 'i' };
+        const unleet = (s) => s.toLowerCase().replace(/[013457@$!]/g, (c) => LEET[c]);
+
+        // A rough guess-count estimate: charset^length, with dictionary words, personal
+        // details, repeats and keyboard runs counted as a few guesses instead of full entropy.
+        function analysePassword(pw) {
+            const lower = pw.toLowerCase();
+            const plain = unleet(pw);
+            let pool = 0;
+            if (/[a-z]/.test(pw)) pool += 26;
+            if (/[A-Z]/.test(pw)) pool += 26;
+            if (/[0-9]/.test(pw)) pool += 10;
+            if (/[^a-zA-Z0-9]/.test(pw)) pool += 33;
+            const perChar = pool ? Math.log2(pool) : 0;
+
+            const personal = DOSSIER.filter((w) => lower.includes(w) || plain.includes(w));
+            const common = COMMON.filter((w) => lower.includes(w) || plain.includes(w));
+
+            // Characters "explained" by a known word only cost ~10 bits per word.
+            let covered = 0;
+            [...personal, ...common].forEach((w) => { covered += w.length; });
+            let effLen = Math.max(0, pw.length - covered);
+            // Runs like "aaaa" or "1234" add almost nothing.
+            const runs = pw.match(/(.)\1{2,}/g) || [];
+            runs.forEach((r) => { effLen -= r.length - 1; });
+            const seq = '0123456789abcdefghijklmnopqrstuvwxyz qwertyuiopasdfghjklzxcvbnm';
+            for (let i = 0; i + 3 < lower.length; i++) {
+                if (seq.includes(lower.slice(i, i + 4))) effLen -= 1;
+            }
+            effLen = Math.max(0, effLen);
+            const bits = effLen * perChar + (personal.length + common.length) * 10;
+            const seconds = Math.pow(2, bits) / GUESSES_PER_SEC / 2;
+            return { bits, seconds, personal, common, length: pw.length };
+        }
+
+        function humanTime(s) {
+            if (s < 1) return 'instantly';
+            const units = [['second', 60], ['minute', 60], ['hour', 24], ['day', 365], ['year', 1000], ['thousand years', 1000], ['million years', 1000], ['billion years', Infinity]];
+            let v = s;
+            for (const [name, step] of units) {
+                if (v < step) {
+                    const n = Math.floor(v);
+                    return `${n.toLocaleString()} ${name}${n === 1 || name.includes(' ') ? '' : 's'}`;
+                }
+                v /= step;
+            }
+            return 'longer than the universe has existed';
+        }
+
+        function renderForge(area) {
+            area.innerHTML = `
+                <div class="q-kind">🔑 Password Forge</div>
+                <div class="dossier">🕵️ <b>What an attacker found on Alex's social media:</b><br>
+                    Name Alex · dog called Biscuit · born 1998 · lives on Maple Street · Arsenal fan</div>
+                <div class="prompt">Create a new password for Alex that would survive ${TARGET_YEARS}+ years of guessing.</div>
+                <input class="pw-input" id="pw" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Try: biscuit1998" aria-label="Password to test">
+                <div class="meter"><i id="pw-meter"></i></div>
+                <div class="crack" id="pw-crack">Start typing…</div>
+                <ul class="checks">
+                    <li id="c-len">At least 12 characters</li>
+                    <li id="c-common">No common passwords or words like "password"</li>
+                    <li id="c-personal">Nothing from Alex's social media</li>
+                    <li id="c-time">Would take ${TARGET_YEARS}+ years to crack</li>
+                </ul>
+                <p class="warn-note">💡 Tip: try 4 random words, like <i>lamp-orbit-pickle-canyon</i>. Never type a password you really use.</p>
+                <div class="btn-row"><button class="btn" id="pw-lock" disabled>Lock it in 🔒</button></div>`;
+            const input = $('pw');
+            const update = () => {
+                const pw = input.value;
+                const a = analysePassword(pw);
+                const okLen = a.length >= 12;
+                const okCommon = a.common.length === 0;
+                const okPersonal = a.personal.length === 0;
+                const okTime = a.seconds >= TARGET_YEARS * SECS_PER_YEAR;
+                const set = (id, ok) => { $(id).className = pw ? (ok ? 'ok' : 'bad') : ''; };
+                set('c-len', okLen);
+                set('c-common', okCommon);
+                set('c-personal', okPersonal);
+                set('c-time', okTime);
+                const pct = Math.min(100, (a.bits / 90) * 100);
+                const color = a.bits < 30 ? 'var(--danger)' : a.bits < 50 ? 'var(--warn)' : a.bits < 66 ? 'var(--info)' : 'var(--accent)';
+                $('pw-meter').style.width = pw ? `${Math.max(4, pct)}%` : '0';
+                $('pw-meter').style.background = color;
+                let msg = pw ? `Time to crack: <b>${humanTime(a.seconds)}</b>` : 'Start typing…';
+                if (a.personal.length) msg += `<br>🚨 "${esc(a.personal[0])}" is on Alex's social media — attackers try that first.`;
+                else if (a.common.length) msg += `<br>🚨 "${esc(a.common[0])}" is in every cracking word list.`;
+                $('pw-crack').innerHTML = msg;
+                $('pw-lock').disabled = !(okLen && okCommon && okPersonal && okTime);
+            };
+            input.addEventListener('input', update);
+            $('pw-lock').addEventListener('click', () => {
+                const a = analysePassword(input.value);
+                S.answered = true;
+                S.correct++;
+                input.disabled = true;
+                $('pw-lock').disabled = true;
+                const fb = $('feedback');
+                fb.innerHTML = `<h4>✅ Forged!</h4>
+                    <p>Estimated time to crack: <b>${humanTime(a.seconds)}</b>.</p>
+                    <p>Notice what made the biggest difference: <b>length</b>. Each extra character multiplies the work for the attacker, while swapping "a" for "@" barely helps — cracking tools try those swaps first.</p>
+                    <div class="tip">In real life, let a password manager generate and remember passwords like this for you.</div>
+                    <div class="btn-row" style="margin-top:10px"><button class="btn" id="next">Next →</button></div>`;
+                fb.className = 'feedback show good';
+                fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+            setTimeout(() => input.focus({ preventScroll: true }), 50);
+        }
+
+        // ── Events ────────────────────────────────────────────────────────
+        document.addEventListener('click', (e) => {
+            const go = e.target.closest('[data-go]');
+            if (go) return show(go.dataset.go);
+            const mission = e.target.closest('[data-mission]');
+            if (mission && !mission.disabled) return openBriefing(mission.dataset.mission);
+            const opt = e.target.closest('[data-opt]');
+            if (opt) return choose(Number(opt.dataset.opt));
+            if (e.target.id === 'next') return next();
+        });
+        $('b-start').addEventListener('click', startMission);
+        $('quit').addEventListener('click', () => {
+            if (window.confirm('Quit this mission? Progress in this run will be lost.')) {
+                stopTimer();
+                show('home');
+            }
+        });
+        $('reset').addEventListener('click', () => {
+            if (window.confirm('Reset all progress, stars and XP?')) {
+                progress = { v: 1, missions: {} };
+                saveProgress();
+                show('home');
+                toast('Progress reset.');
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (S.screen !== 'play' || e.target.tagName === 'INPUT') return;
+            if (e.key === 'Enter' && S.answered && $('next')) { e.preventDefault(); next(); return; }
+            const n = Number(e.key);
+            if (!S.answered && n >= 1 && n <= 4) {
+                const btn = document.querySelector(`#opts [data-opt="${n - 1}"]`);
+                if (btn) choose(n - 1);
+            }
+        });
+
+        renderHome();
+
+        // ── Test hook (?debug=1) ──────────────────────────────────────────
+        if (new URLSearchParams(location.search).has('debug')) {
+            window.__cyberQuest = {
+                get state() { return { screen: S.screen, mission: S.mission && S.mission.id, idx: S.idx, total: S.queue.length, shields: S.shields, answered: S.answered, kind: S.queue[S.idx] && S.queue[S.idx].kind }; },
+                get progress() { return JSON.parse(JSON.stringify(progress)); },
+                missions: MISSIONS.map((m) => m.id),
+                analysePassword,
+                answerCorrect() { const q = S.queue[S.idx]; choose(S.order.indexOf(q.answer)); },
+                answerWrong() { const q = S.queue[S.idx]; choose(S.order.findIndex((i) => i !== q.answer)); },
+                next
+            };
+        }
+    })();
+
+    // ── Service worker ────────────────────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+        // Only reload for an *update*, not when the first install claims the page.
+        const hadController = !!navigator.serviceWorker.controller;
+        navigator.serviceWorker.register(
+            `/cyber-quest/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
+            { scope: '/cyber-quest/' }
+        ).then((reg) => {
+            reg.addEventListener('updatefound', () => {
+                const w = reg.installing;
+                w.addEventListener('statechange', () => {
+                    if (w.state === 'installed' && navigator.serviceWorker.controller) {
+                        const t = document.getElementById('toast');
+                        t.innerHTML = 'A new version is ready. <button id="update-btn">Update</button>';
+                        t.classList.add('show');
+                        document.getElementById('update-btn').addEventListener('click', () => {
+                            if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                            else window.location.reload();
+                        });
+                    }
+                });
+            });
+        }).catch(() => {});
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (hadController) window.location.reload();
+        });
+    }
+    </script>
+</body>
+
+</html>
