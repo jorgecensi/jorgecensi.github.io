@@ -75,6 +75,11 @@ run(async () => {
             const pairs = evMidis.slice(1).map((m, i) => [evMidis[i], m]);
             assert(pairs.some(([a, b]) => a === q.midis[0] && b === q.midis[1]), `${tag}: the tune contains the interval`);
           }
+          if (v === 'song' && q.kind === 'meter-song') {
+            assert((q.meter === '3/4') === !q.accept.length, `${tag}: only a duple tune accepts its sibling meter`);
+            assert(q.accept.every(m => m !== '3/4' && q.choiceIds.includes(m)),
+              `${tag}: accepted meters are ${q.accept}`);
+          }
           if (v === 'song' && q.kind === 'chord-song') assert(q.answer === q.chordType, `${tag}: answer is the chord's type`);
           if (v === 'odd' && q.kind === 'odd' && id !== 'pulse' && evMidis.length === 6) {
             const d = [0, 2, 4].map(i => evMidis[i + 1] - evMidis[i]);
