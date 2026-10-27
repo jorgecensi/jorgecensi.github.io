@@ -12,8 +12,9 @@ const assert = (cond, msg) => { if (!cond) throw new Error('ASSERT FAILED: ' + m
 // block. A failed sample load is expected and must not count as an error.
 const isSampleNoise = (text) => /samples?|salamander|Failed to load|tonejs\.github\.io|ERR_/i.test(text);
 
-async function launch() {
-  const browser = await chromium.launch();
+// `launchOptions` go to chromium.launch() (e.g. fake-microphone flags).
+async function launch(launchOptions = {}) {
+  const browser = await chromium.launch(launchOptions);
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -54,7 +55,14 @@ async function launch() {
   // Evaluate a snippet against the debug API.
   const mt = (fn, arg) => page.evaluate(fn, arg);
 
-  return { browser, page, errors, assert, open, reload, mt, settle };
+  // Open a Learn unit the way a learner does: the unit name in the header
+  // opens the path sheet, then tap the unit.
+  const pickUnit = async (id) => {
+    await page.click('#learn-unit-btn');
+    await page.click(`#learn-path-sheet .learn-unit[data-unit="${id}"]`);
+  };
+
+  return { browser, page, errors, assert, open, reload, mt, settle, pickUnit };
 }
 
 function run(main) {

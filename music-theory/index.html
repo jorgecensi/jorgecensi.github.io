@@ -598,72 +598,382 @@ title: Music Theory
     }
     #panel-learn [hidden], #panel-quiz [hidden] { display: none !important; }
 
-    .learn-units {
+    /* Portrait: the Learn panel takes every pixel the piano doesn't, and
+       the round sits centred in it (no dead band above the keys). */
+    @media not all and (orientation: landscape) and (max-height: 520px) {
+      #panel-learn.active {
+        display: flex;
+        flex-direction: column;
+        max-height: none;
+        height: calc(100dvh - var(--learn-chrome, 296px) - var(--safe-top) - var(--safe-bottom));
+        min-height: 260px;
+      }
+      body.learn-focus { --learn-chrome: 212px; }
+    }
+    /* Focus mode (boss / daily mix): the app chrome steps aside. */
+    body.learn-focus header, body.learn-focus .mode-tabs { display: none; }
+
+    .learn-bar { display: flex; align-items: center; gap: 8px; margin: -4px 0 6px; }
+    .learn-unit-btn {
+      flex: 1;
+      min-width: 0;
+      min-height: 44px;
       display: flex;
+      align-items: center;
       gap: 6px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      margin: 0 -16px 10px;
-      padding: 0 16px 2px;
-    }
-    .learn-units::-webkit-scrollbar { display: none; }
-    .learn-unit {
-      flex-shrink: 0;
-      padding: 4px 10px;
-      border-radius: 14px;
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--panel2);
-      border: 1px solid var(--border2);
+      background: none;
+      border: none;
+      padding: 0;
       color: var(--text);
+      text-align: left;
       cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      font-family: inherit;
     }
-    .learn-unit.is-done    { color: var(--green); border-color: rgba(16,185,129,0.45); }
-    .learn-unit.is-current { border-color: var(--accent); color: var(--accent); }
-    .learn-unit.is-viewing { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-    .learn-unit:disabled   { color: var(--text-dim); opacity: 0.6; cursor: default; }
-
-    .learn-head { margin-bottom: 8px; }
-    .learn-title { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
-    .learn-goal  { font-size: 12px; color: var(--text-dim); margin-top: 2px; line-height: 1.35; }
-
-    .learn-steps { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
-    .learn-step-arrow { color: var(--text-dim); font-size: 11px; }
-    .learn-step {
-      padding: 3px 10px;
-      border-radius: 6px;
+    .learn-unit-btn svg { color: var(--text-dim); flex-shrink: 0; }
+    .learn-unit-text, .learn-runhead-text { display: flex; flex-direction: column; min-width: 0; }
+    .learn-kicker {
       font-size: 11px;
       font-weight: 700;
+      letter-spacing: 0.8px;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      background: transparent;
-      border: 1px solid var(--border2);
-      color: var(--text-dim);
-      cursor: pointer;
+      color: #9ca3af;
     }
-    .learn-step.is-done    { color: var(--green); border-color: rgba(16,185,129,0.45); }
-    .learn-step.is-viewing { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
-    .learn-step:disabled   { opacity: 0.5; cursor: default; }
-
-    .learn-meter {
+    .learn-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .learn-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--panel2);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .learn-chip svg { flex-shrink: 0; }
+    .learn-chip.is-cold { color: #9ca3af; }
+    .learn-icon-btn {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      font-size: 11px;
-      color: var(--text-dim);
+      border-radius: 12px;
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
     }
-    .learn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--panel2); border: 1px solid var(--border2); }
-    .learn-dot.hit  { background: var(--green); border-color: var(--green); }
-    .learn-dot.miss { background: #ef4444; border-color: #ef4444; }
-    .learn-meter-text { margin-left: 6px; }
+    .learn-icon-btn:hover { color: var(--text); background: var(--panel2); }
 
-    #learn-round { gap: 8px; }
-    #learn-label { font-size: 16px; }
-    #learn-options .quiz-choices { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); }
-    #learn-options .quiz-choices .quiz-opt-btn { padding: 7px 4px; font-size: 12px; }
+    .learn-runhead { display: flex; align-items: center; gap: 8px; margin: -4px 0 6px -8px; }
+    .learn-runhead-text { flex: 1; align-items: center; text-align: center; }
+    .run-lives { display: flex; gap: 3px; padding-right: 2px; }
+    .run-lives svg { width: 18px; height: 18px; }
+
+    /* Steps as one segmented bar (buttons, so a done step can be revisited). */
+    .learn-steps { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 4px; }
+    .learn-step {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 4px 0;
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      text-align: left;
+      cursor: pointer;
+    }
+    .learn-step:disabled { cursor: default; opacity: 0.55; }
+    .learn-step-bar, .run-seg { display: block; height: 6px; border-radius: 3px; background: #26264a; overflow: hidden; }
+    .learn-step-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+    .learn-step.is-done .learn-step-bar i { background: var(--green); }
+    .learn-step.is-viewing { color: var(--text); }
+    .learn-steps.is-run { gap: 3px; }
+    .run-seg.hit  { background: var(--green); }
+    .run-seg.miss { background: #ef4444; }
+    .run-seg.now  { background: var(--text); }
+
+    .learn-progress-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #9ca3af;
+      min-height: 18px;
+    }
+    .learn-meter b { color: var(--text); }
+    .learn-goal { font-size: 13px; color: #9ca3af; line-height: 1.4; margin-top: 8px; text-align: center; }
+
+    /* The round: the question is the hero, centred in the space. */
+    .learn-round {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 10px 0 4px;
+      text-align: center;
+    }
+    .learn-round > * { max-width: 520px; }
+    .learn-q { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    /* Answered: question and Play share a row, so the result fits. */
+    .learn-round.is-answered { gap: 10px; }
+    .learn-round.is-answered .learn-q { flex-direction: row-reverse; gap: 12px; width: 100%; justify-content: flex-start; }
+    .learn-round.is-answered #learn-label { font-size: 17px; text-align: left; flex: 1; }
+    .learn-round.is-answered .learn-play-wrap, .learn-round.is-answered .learn-timer { width: 52px; height: 52px; flex-shrink: 0; }
+    .learn-round.is-answered .learn-play { width: 44px; height: 44px; box-shadow: none; }
+    .learn-round.is-answered .learn-play svg { width: 20px; height: 20px; }
+    .learn-round.is-answered .learn-tag, .learn-round.is-answered .learn-timer-text { display: none; }
+    .learn-round.is-answered #learn-options .quiz-choices .quiz-opt-btn { min-height: 48px; }
+    .learn-round .quiz-options, .learn-round .learn-result, .learn-round .learn-sing,
+    .learn-round .learn-next, .learn-round .quiz-staff { width: 100%; }
+    .learn-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    #learn-label { font-size: 22px; line-height: 1.25; font-weight: 800; letter-spacing: -0.4px; min-height: 0; }
+    .learn-play-wrap { position: relative; width: 104px; height: 104px; display: flex; align-items: center; justify-content: center; }
+    .learn-play {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 28px rgba(245,158,11,0.35);
+    }
+    .learn-play:active { transform: scale(0.96); }
+    .learn-timer { position: absolute; inset: 0; width: 104px; height: 104px; pointer-events: none; }
+    .learn-timer-arc { stroke: var(--accent); stroke-dasharray: 289; transition: stroke 0.2s; }
+    .learn-timer.low .learn-timer-arc { stroke: #ef4444; }
+    .learn-timer-text { margin-top: -8px; font-size: 13px; font-weight: 700; color: #9ca3af; }
+    .learn-link-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      min-height: 32px;
+      cursor: pointer;
+    }
+    #learn-options .quiz-choices { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; }
+    #learn-options .quiz-choices .quiz-opt-btn { min-height: 56px; border-radius: 14px; font-size: 15px; font-weight: 700; }
+    #learn-options .quiz-choices.is-many .quiz-opt-btn { min-height: 44px; font-size: 13px; }
+    #learn-options:not(:has(.quiz-choices)) { font-size: 14px; color: #9ca3af; }
+
+    .learn-result {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      text-align: left;
+    }
+    .learn-result > * { flex-shrink: 0; }   /* never squash lines when the card scrolls */
+    .learn-result .quiz-feedback { text-align: left; font-size: 15px; font-weight: 800; }
+    .learn-result .learn-fact { background: none; border: none; padding: 0; font-size: 14px; }
+    .learn-result .round-instrument { font-size: 12px; color: #9ca3af; }
+    /* The song card flattens into the result: no box in a box. */
+    .learn-result .iv-refs { padding: 10px 0 0; border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; }
+    .learn-result .iv-refs-title { display: none; }
+    .learn-next {
+      min-height: 52px;
+      border-radius: 14px;
+      border: none;
+      background: var(--accent);
+      color: var(--bg);
+      font: inherit;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .learn-why { margin-top: 14px; }
+    #panel-learn > .learn-card { margin: auto 0; }   /* centred in the space, like a round */
+
+    /* ── Sheets: the path and settings ── */
+    .sheet-backdrop { position: fixed; inset: 0; background: rgba(5,5,15,0.6); z-index: 103; }
+    .sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 104;
+      max-height: 88dvh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      margin: 0 auto;
+      max-width: 560px;
+      padding: 10px 20px calc(24px + var(--safe-bottom));
+      border-radius: 22px 22px 0 0;
+      background: var(--panel);
+      border-top: 1px solid var(--border2);
+      box-shadow: 0 -12px 40px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sheet[hidden], .sheet-backdrop[hidden] { display: none; }
+    .sheet-grip { width: 40px; height: 5px; border-radius: 3px; background: #4b5563; align-self: center; margin-bottom: 8px; flex-shrink: 0; }
+    .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .sheet-head h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+    .sheet-done {
+      min-height: 44px;
+      background: none;
+      border: none;
+      color: var(--accent);
+      font: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 64px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .setting-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .setting-text b { font-size: 15px; }
+    .setting-text span { font-size: 13px; color: #9ca3af; }
+    .switch {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 48px;
+      height: 28px;
+      flex-shrink: 0;
+      border-radius: 999px;
+      background: #374151;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--text);
+      transition: left 0.15s;
+    }
+    .switch:checked { background: var(--accent); }
+    .switch:checked::after { left: 23px; background: var(--bg); }
+    .switch:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
+    .sheet-danger {
+      margin-top: 14px;
+      min-height: 48px;
+      border-radius: 12px;
+      border: 1px solid rgba(239,68,68,0.45);
+      background: none;
+      color: #f87171;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .daily-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 2px 0 12px;
+      padding: 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #3a2410, var(--panel2) 70%);
+      border: 1px solid rgba(251,146,60,0.35);
+    }
+    .daily-icon {
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+      border-radius: 14px;
+      background: rgba(251,146,60,0.18);
+      color: #fb923c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .daily-card.is-cold .daily-icon { color: #9ca3af; background: var(--panel2); }
+    .daily-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .daily-title { font-size: 16px; font-weight: 800; }
+    .daily-sub { font-size: 12px; color: #d1d5db; }
+    .daily-btn {
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: none;
+      background: #fb923c;
+      color: var(--bg);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .daily-btn:disabled { background: var(--panel2); color: #9ca3af; cursor: default; }
+    .daily-btn.is-done { background: var(--green-dim); color: var(--green); }
+
+    .learn-units { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .learn-unit {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 48px;
+      padding: 0 12px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+    }
+    .learn-unit svg { flex-shrink: 0; }
+    .learn-unit-name { flex: 1; min-width: 0; }
+    .learn-unit-meta { font-size: 12px; font-weight: 700; color: #9ca3af; white-space: nowrap; }
+    .learn-unit.is-current { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.55); }
+    .learn-unit.is-current .learn-unit-meta { color: var(--accent); }
+    .learn-unit.is-viewing { box-shadow: inset 0 0 0 2px var(--accent); }
+    .learn-unit:disabled { color: #9ca3af; cursor: default; }
 
     .learn-why-text p {
       font-size: 13px;
@@ -681,19 +991,6 @@ title: Music Theory
       margin-bottom: 6px;
     }
     .learn-songs .song-chord-chip { font-size: 12px; padding: 4px 12px; }
-
-    .learn-reset {
-      display: block;
-      margin: 14px auto 0;
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-size: 11px;
-      text-decoration: underline;
-      cursor: pointer;
-      opacity: 0.7;
-    }
-    .learn-reset:hover { opacity: 1; color: var(--text); }
 
     /* Interval references: a playable public-domain tune plus well-known
        recordings, embedded from YouTube only when the learner asks. */
@@ -734,14 +1031,103 @@ title: Music Theory
       white-space: nowrap;
     }
     .round-instrument:not(:empty)::before { content: '🎵 '; }
-    .key-context {
-      display: flex;
-      white-space: nowrap;
-      align-items: center;
-      gap: 6px;
+
+    /* ── Learn: game layer (XP, combos, boss and daily runs, facts, singing) ── */
+    .learn-combo {
       font-size: 12px;
+      font-weight: 800;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .learn-combo:empty { display: none; }
+    .learn-combo.pop { animation: combo-pop 0.45s ease-out; }
+    @keyframes combo-pop {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.35); }
+      100% { transform: scale(1); }
+    }
+
+    .xp-pop {
+      display: inline-block;
+      margin-left: 6px;
+      color: var(--accent);
+      font-weight: 800;
+      animation: xp-rise 0.9s ease-out;
+    }
+    @keyframes xp-rise {
+      0%   { opacity: 0; transform: translateY(6px); }
+      30%  { opacity: 1; transform: translateY(0); }
+      100% { opacity: 1; }
+    }
+
+    /* A short glow on the keys of a right answer. */
+    .key.key-glow { animation: key-glow 0.7s ease-out; }
+    @keyframes key-glow {
+      0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.0); }
+      35%  { box-shadow: 0 0 18px 6px rgba(16,185,129,0.75); }
+      100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.0); }
+    }
+
+    .learn-fact {
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--text);
+      background: var(--panel2);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 6px 10px;
+    }
+    .learn-fact::before { content: '💡 '; }
+
+    .learn-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      background: var(--panel2);
+    }
+    .learn-card-title { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
+    .learn-card-text { font-size: 13px; line-height: 1.45; color: var(--text); }
+    .learn-card-text .dim { color: var(--text-dim); }
+    .learn-card .btn-row { margin-top: 2px; }
+    .learn-card.is-win  { border-color: var(--green); }
+    .learn-card.is-lose { border-color: #ef4444; }
+
+    /* Singing the answer into the mic. */
+    .learn-sing {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
       color: var(--text-dim);
-      cursor: pointer;
+    }
+    .learn-sing-note { font-size: 20px; font-weight: 800; color: var(--text); min-width: 48px; text-align: center; }
+    .learn-sing-level { flex: 1; height: 6px; border-radius: 3px; background: var(--panel); overflow: hidden; max-width: 160px; }
+    .learn-sing-level i { display: block; height: 100%; width: 0; background: var(--green); }
+    .learn-sing.is-match .learn-sing-note { color: var(--green); }
+
+    /* Celebration: emoji confetti that falls once (no flashing). */
+    .confetti {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 102;
+    }
+    .confetti span {
+      position: absolute;
+      top: -40px;
+      font-size: 22px;
+      animation: confetti-fall linear forwards;
+    }
+    @keyframes confetti-fall {
+      to { transform: translateY(110vh) rotate(540deg); opacity: 0.6; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .confetti { display: none; }
+      .key.key-glow, .learn-combo.pop, .xp-pop { animation: none; }
     }
 
     /* Landscape phones: keep the path compact (declared after the base
@@ -750,14 +1136,51 @@ title: Music Theory
       /* Take the height the compact header, tabs and 150px keyboard leave
          (~216px), so a round's answer buttons fit without scrolling. */
       #panel-learn, #panel-quiz { max-height: max(36vh, calc(100dvh - 216px - var(--safe-top) - var(--safe-bottom))); }
-      .learn-units { margin: 0 -14px 6px; padding: 0 14px 2px; }
-      /* Title and step indicator share one line. */
-      .learn-head { float: left; margin: 0 12px 6px 0; }
-      .learn-goal { display: none; }
-      .learn-steps { margin-bottom: 6px; }
-      #learn-round, #learn-why { clear: both; }
-      #learn-round { gap: 5px; }
-      #learn-label { font-size: 14px; min-height: 0; }
+      body.learn-focus #panel-learn { max-height: max(36vh, calc(100dvh - 166px - var(--safe-top) - var(--safe-bottom))); }
+      /* Header and steps share one line; the round packs tight under it. */
+      .learn-bar, .learn-runhead { margin: -2px 0 2px; }
+      .learn-title { font-size: 15px; }
+      .learn-goal, .learn-tag, .learn-timer-text, .learn-kicker, .learn-progress-row { display: none !important; }
+      .learn-bar .learn-icon-btn, .learn-runhead .learn-icon-btn { height: 36px; }
+      .learn-unit-btn { min-height: 36px; }
+      .learn-step { padding: 2px 0 6px; font-size: 0; gap: 0; }   /* bars only; each keeps its aria-label */
+      .learn-progress-row { margin-top: 0; }
+      .learn-round { justify-content: flex-start; gap: 6px; padding-top: 4px; }
+      /* Question and Play always share a row here, with the answers beside them. */
+      .learn-q { flex-direction: row-reverse; gap: 12px; }
+      .learn-round:not(.is-answered) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: center;
+        column-gap: 16px;
+        row-gap: 4px;
+      }
+      .learn-round:not(.is-answered) > * { grid-column: 1; max-width: none; }
+      .learn-round:not(.is-answered) > .quiz-options { grid-column: 2; grid-row: 1 / span 3; }
+      #learn-label { font-size: 15px; text-align: left; }
+      .learn-link-btn { min-height: 24px; font-size: 12px; }
+      .learn-play-wrap { width: 56px; height: 56px; }
+      .learn-play { width: 44px; height: 44px; box-shadow: none; }
+      .learn-play svg { width: 20px; height: 20px; }
+      .learn-timer { width: 56px; height: 56px; }
+      #learn-options .quiz-choices .quiz-opt-btn { min-height: 40px; }
+      .learn-result { padding: 10px; gap: 6px; }
+      /* Answered: the result and Next sit beside the question and answers. */
+      .learn-round.is-answered {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: start;
+        column-gap: 16px;
+        row-gap: 6px;
+      }
+      .learn-round.is-answered > * { grid-column: 1; max-width: none; }
+      .learn-round.is-answered > .learn-result {
+        grid-column: 2;
+        grid-row: 1 / span 6;
+        max-height: max(150px, calc(100dvh - 290px));
+        overflow-y: auto;
+      }
+      .learn-round.is-answered > .learn-next { min-height: 44px; }
       .iv-video { max-width: 280px; }   /* fits the short panel without scrolling */
     }
 
@@ -842,33 +1265,76 @@ title: Music Theory
 
     <!-- LEARN: guided ear-first path (hear → play → why) -->
     <div id="panel-learn" class="panel active" role="tabpanel">
-      <div class="learn-units" id="learn-units" role="group" aria-label="Units"></div>
-      <div class="learn-head">
-        <div class="learn-title" id="learn-title"></div>
-        <div class="learn-goal" id="learn-goal"></div>
+      <!-- One header line: the unit (opens the path), XP, streak, settings -->
+      <div class="learn-bar" id="learn-bar">
+        <button class="learn-unit-btn" id="learn-unit-btn" aria-haspopup="dialog" aria-controls="learn-path-sheet">
+          <span class="learn-unit-text">
+            <span class="learn-kicker" id="learn-kicker"></span>
+            <span class="learn-title" id="learn-title"></span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <span class="learn-chip" id="learn-xp" title="XP"></span>
+        <span class="learn-chip" id="learn-streak-chip" title="Day streak"></span>
+        <button class="learn-icon-btn" id="learn-settings-btn" aria-label="Learn settings" aria-haspopup="dialog" aria-controls="learn-settings-sheet">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
       </div>
-      <div class="learn-steps" id="learn-steps"></div>
 
-      <div class="quiz-card" id="learn-round">
+      <!-- Focus mode (boss / daily mix): replaces the header while a run is on -->
+      <div class="learn-runhead" id="learn-run-bar" hidden>
+        <button class="learn-icon-btn" id="learn-run-quit" aria-label="Leave this run">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <span class="learn-runhead-text">
+          <span class="learn-kicker" id="learn-run-kicker"></span>
+          <span class="learn-title" id="learn-run-count"></span>
+        </span>
+        <span class="run-lives" id="learn-lives" role="img"></span>
+      </div>
+
+      <!-- Step progress: Hear → Play → Why → Boss (or a run's questions) -->
+      <div class="learn-steps" id="learn-steps" role="group" aria-label="Steps"></div>
+      <div class="learn-progress-row" id="learn-progress-row">
+        <span class="learn-meter" id="learn-meter"></span>
+        <span class="learn-combo" id="learn-combo" aria-live="polite"></span>
+      </div>
+      <div class="learn-goal" id="learn-goal"></div>
+
+      <div class="learn-round" id="learn-round">
+        <span class="learn-tag" id="learn-tag" hidden></span>
+        <div class="learn-q">
         <div class="quiz-label" id="learn-label"></div>
-        <div class="quiz-top-row">
-          <button class="play-btn" id="learn-play-btn">🔊 Play</button>
-          <button class="play-btn secondary" id="learn-hint-btn" hidden>💡 Hint</button>
-          <button class="play-btn secondary" id="learn-next-btn" style="visibility:hidden">Next →</button>
-          <label class="key-context" id="learn-keyctx-row" title="Plays I–IV–V–I in the key before each interval" hidden>
-            <input type="checkbox" class="keyctx-toggle" id="learn-keyctx"> Play the key first
-          </label>
-          <label class="key-context" title="Each question plays on a random instrument">
-            <input type="checkbox" id="learn-mix"> Mix instruments
-          </label>
-          <span class="round-instrument" id="learn-instrument" aria-live="polite"></span>
-          <div class="learn-meter" id="learn-meter" style="margin-left:auto"></div>
+        <div class="learn-play-wrap">
+          <svg class="learn-timer" id="learn-timer" viewBox="0 0 104 104" role="img" aria-label="Time left" hidden>
+            <circle cx="52" cy="52" r="46" fill="none" stroke="var(--panel2)" stroke-width="7"/>
+            <circle class="learn-timer-arc" cx="52" cy="52" r="46" fill="none" stroke-width="7" stroke-linecap="round" transform="rotate(-90 52 52)"/>
+          </svg>
+          <button class="learn-play" id="learn-play-btn" aria-label="Play">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          </button>
         </div>
+        </div>
+        <span class="learn-timer-text" id="learn-timer-text" hidden></span>
+        <button class="learn-link-btn" id="learn-hint-btn" hidden>💡 Hint: hear it in a song</button>
         <div class="quiz-staff" id="learn-staff" aria-hidden="true"></div>
         <div class="quiz-options" id="learn-options"></div>
-        <div class="quiz-feedback" id="learn-feedback"></div>
-        <div class="iv-refs" id="learn-refs" hidden></div>
+        <div class="learn-sing" id="learn-sing" hidden>
+          <span aria-hidden="true">🎤</span>
+          <span class="learn-sing-note" id="learn-sing-note">–</span>
+          <div class="learn-sing-level"><i id="learn-sing-level"></i></div>
+          <span id="learn-sing-status">Listening…</span>
+        </div>
+        <section class="learn-result" id="learn-result" aria-live="polite" hidden>
+          <div class="quiz-feedback" id="learn-feedback"></div>
+          <div class="learn-fact" id="learn-fact" hidden></div>
+          <div class="iv-refs" id="learn-refs" hidden></div>
+          <span class="round-instrument" id="learn-instrument"></span>
+        </section>
+        <button class="learn-next" id="learn-next-btn" style="visibility:hidden">Next</button>
       </div>
+
+      <div class="learn-card" id="learn-card" hidden></div>
 
       <div class="learn-why" id="learn-why" hidden>
         <div class="learn-why-text" id="learn-why-text"></div>
@@ -878,8 +1344,6 @@ title: Music Theory
           <button class="play-btn" id="learn-got-it">Got it ✓</button>
         </div>
       </div>
-
-      <button class="learn-reset" id="learn-reset">Reset progress</button>
     </div>
 
     <!-- SCALES -->
@@ -981,6 +1445,54 @@ title: Music Theory
     </div>
     <div class="keyboard" id="keyboard" role="group" aria-label="Piano keys"></div>
   </div>
+
+  <!-- Learn sheets: the path (units + daily mix) and settings -->
+  <div class="sheet-backdrop" id="learn-sheet-backdrop" hidden></div>
+  <section class="sheet" id="learn-path-sheet" role="dialog" aria-modal="true" aria-labelledby="learn-path-title" hidden>
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 id="learn-path-title">Your path</h2>
+      <button class="learn-icon-btn" data-close-sheet aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="daily-card" id="learn-daily-card">
+      <div class="daily-icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>
+      </div>
+      <div class="daily-text">
+        <span class="daily-title" id="learn-streak"></span>
+        <span class="daily-sub" id="learn-daily-sub"></span>
+      </div>
+      <button class="daily-btn" id="learn-daily-btn">Start</button>
+    </div>
+    <ol class="learn-units" id="learn-units" aria-label="Units"></ol>
+  </section>
+
+  <section class="sheet" id="learn-settings-sheet" role="dialog" aria-modal="true" aria-labelledby="learn-settings-title" hidden>
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 id="learn-settings-title">Settings</h2>
+      <button class="sheet-done" data-close-sheet>Done</button>
+    </div>
+    <label class="setting-row">
+      <span class="setting-text"><b>Mix instruments</b><span>Each question plays on a different instrument</span></span>
+      <input type="checkbox" class="switch" role="switch" id="learn-mix">
+    </label>
+    <label class="setting-row">
+      <span class="setting-text"><b>Play the key first</b><span>A short I–IV–V–I before each interval</span></span>
+      <input type="checkbox" class="switch keyctx-toggle" role="switch" id="learn-keyctx">
+    </label>
+    <label class="setting-row">
+      <span class="setting-text"><b>Sing answers</b><span>Answer interval Play rounds into the mic</span></span>
+      <input type="checkbox" class="switch" role="switch" id="learn-sing-toggle">
+    </label>
+    <label class="setting-row">
+      <span class="setting-text"><b>Sound effects</b><span>Combos, lost lives and wins</span></span>
+      <input type="checkbox" class="switch" role="switch" id="learn-sfx">
+    </label>
+    <button class="sheet-danger" id="learn-reset">Reset progress</button>
+  </section>
 
   <!-- Level-up Banner -->
   <div id="quiz-levelup" class="levelup-banner" role="status" aria-live="polite"></div>
@@ -1314,6 +1826,118 @@ const MIDDLE_C   = 60;  // C4
       'Pentatonic Minor': 'five notes, no half steps',
     };
 
+    // ── Learn game layer data ──
+    // One-line facts shown after each answer, so the "why" arrives a little at
+    // a time during the rounds instead of only as reading at the end. A fact
+    // about the question's own answer is preferred, then the unit's. Keep each
+    // to one sentence and keep them accurate: they teach as much as the "why".
+    const UNIT_FACTS = {
+      'pulse': [
+        'A waltz counts in 3: ONE-two-three, ONE-two-three.',
+        'Most pop songs are in 4/4, so counting 1-2-3-4 is a safe first guess.',
+        'Many marches are in 2/4, so you can step LEFT-right to them.',
+        'The bottom number of a time signature names the beat note: 4 means a quarter note.',
+        'A drummer’s “1, 2, 3, 4!” count-in is one bar of 4/4.',
+      ],
+      'perfect-intervals': [
+        'Perfect 4ths, 5ths and octaves sound hollow because their frequencies line up in simple ratios.',
+        'A 4th and a 5th add up to an octave: C up to F, then F up to C.',
+      ],
+      'thirds': [
+        'Stack a major 3rd and a minor 3rd and you have built a chord.',
+        'Minor 3rd = 3 semitones, major 3rd = 4: one key is the whole difference.',
+      ],
+      'major-minor-chords': [
+        'Major and minor chords share their root and 5th; only the middle note moves.',
+        'Play a chord one note at a time and listen to the middle note: is it the bright 3rd or the dark one?',
+      ],
+      'seconds': [
+        'Hum any tune slowly: most of its moves are 2nds.',
+        'Two half steps make one whole step.',
+      ],
+      'sixths': [
+        'A 6th turned upside down is a 3rd: the two always add up to 12 semitones.',
+        'Harmony singers love 3rds and 6ths because they sound sweet together.',
+      ],
+      'sevenths': [
+        'To spot a 7th, imagine the octave above the first note: a 7th falls just short of it.',
+        'The tritone splits the octave exactly in half: 6 + 6 semitones.',
+      ],
+      'all-intervals': [
+        'Flip any interval and the two sizes add up to 12 semitones (a 4th flips into a 5th).',
+        'Falling intervals cover the same distance as rising ones; only the direction changes.',
+      ],
+      'major-scale': [
+        'Do-re-mi-fa-sol-la-ti-do is the major scale, sung.',
+        'The major scale’s half steps sit between notes 3–4 and 7–8.',
+      ],
+      'dominant-7th': [
+        'The “dominant” is the chord built on the 5th note of a key: G in C major.',
+        'A 12-bar blues can use a dominant 7th on every chord.',
+      ],
+      'minor-and-modes': [
+        'Modes reuse the major scale’s notes but call a different note home.',
+        'Listen for the 3rd first (major or minor?), then the 6th and 7th.',
+      ],
+    };
+
+    const INTERVAL_FACTS = {
+      1:  ['A minor 2nd is the very next key, black or white: the smallest step on a piano.',
+           'The Jaws theme is built on a minor 2nd going back and forth.'],
+      2:  ['A major 2nd is a whole step: two keys along.'],
+      3:  ['The playground “na-na na-na-na” chant falls a minor 3rd.',
+           'A minor 3rd on the bottom makes a chord minor.'],
+      4:  ['A major 3rd on the bottom makes a chord major.',
+           'Many two-tone doorbells fall a major 3rd: “ding-dong”.'],
+      5:  ['A perfect 4th has a 4:3 frequency ratio.',
+           'Flip a perfect 4th and you get a perfect 5th.'],
+      6:  ['The tritone is exactly half an octave: 6 semitones.',
+           'The tritone was nicknamed “diabolus in musica”: the devil in music.'],
+      7:  ['A power chord is just a root plus its perfect 5th.',
+           'A perfect 5th has a 3:2 frequency ratio, the simplest after the octave.'],
+      8:  ['A minor 6th flips into a major 3rd: 8 + 4 = 12 semitones.'],
+      9:  ['A major 6th flips into a minor 3rd: 9 + 3 = 12 semitones.'],
+      10: ['A minor 7th is the note that turns a major chord into a 7 chord.',
+           'A minor 7th is a whole step short of the octave.'],
+      11: ['A major 7th sits a half step under the octave, so it leans hard into it.'],
+      12: ['An octave doubles the frequency: A4 is 440 Hz and A5 is 880 Hz.',
+           'Notes an octave apart share a name because they blend almost into one.'],
+    };
+
+    const CHORD_FACTS = {
+      'Major':        ['A major chord is a major 3rd with a minor 3rd stacked on top: C–E–G.'],
+      'Minor':        ['Lower a major chord’s 3rd by one semitone and it turns minor: C–E♭–G.'],
+      'Dominant 7th': ['G7 pulls to C because its B and F (a tritone) squeeze in to C and E.',
+                       'A dominant 7th is a major chord plus a minor 7th: G–B–D–F.'],
+    };
+
+    const SCALE_FACTS = {
+      'Major':            ['The major scale climbs W–W–H–W–W–W–H.',
+                           'Start the major scale on C and it uses only white keys.'],
+      'Natural Minor':    ['Natural minor is major with the 3rd, 6th and 7th lowered.',
+                           'A minor uses the same notes as C major, but treats A as home.'],
+      'Dorian':           ['Dorian is natural minor with a raised 6th.',
+                           '“Scarborough Fair” is a well-known Dorian melody.'],
+      'Mixolydian':       ['Mixolydian is major with a lowered 7th: a lot of rock riffs live here.'],
+      'Pentatonic Minor': ['Minor pentatonic has five notes and no half steps, so almost nothing clashes.'],
+    };
+
+    // Each unit ends with a boss: a mixed, timed run with three lives.
+    // Beating it finishes the unit and unlocks the next one.
+    const UNIT_BOSSES = {
+      'pulse':             'The Metronome',
+      'perfect-intervals': 'The Power Chord',
+      'thirds':            'The Mood Swinger',
+      'major-minor-chords':'The Chord Goblin',
+      'seconds':           'The Half-Step Hustler',
+      'sixths':            'The Sweet Sixth',
+      'sevenths':          'The Devil’s Interval',
+      'all-intervals':     'The Interval Hydra',
+      'major-scale':       'The Scale Keeper',
+      'dominant-7th':      'The Unresolved',
+      'minor-and-modes':   'The Mode Shifter',
+    };
+
     // ── State ─────────────────────────────────────────────────────────────────
 
     const state = {
@@ -1340,6 +1964,13 @@ const MIDDLE_C   = 60;  // C4
       learnStep:       'hear',
       learnJustPassed: false,   // the step was passed on the last answer; Next moves on
       learnLastQ:      null,    // last Learn question, for "Show me on the keyboard"
+      learnCombo:      0,       // right answers in a row (this session only)
+      learnRun:        null,    // an active boss or daily-mix run (see startRun)
+      learnDaily:      false,   // the Daily mix is on screen instead of a unit
+      lastFact:        '',      // so the same fact doesn't show twice running
+      timedOut:        false,   // the round being answered ran out of time
+      forcedVariant:   null,    // debug: serve only this question variant
+      todayOverride:   null,    // debug: the local date streaks are judged against
       get learnUnitId() { return LEARN_UNITS[this.learnUnitIdx].id; },
     };
 
@@ -1355,7 +1986,7 @@ const MIDDLE_C   = 60;  // C4
     const LEARN_LAYOUT = 2;
     const LEARN_LAYOUT_1 = ['pulse','perfect-intervals','thirds','major-minor-chords',
                             'all-intervals','major-scale','dominant-7th','minor-and-modes'];
-    const LEARN_STEP_NAMES = ['hear','play','why','done'];
+    const LEARN_STEP_NAMES = ['hear','play','why','boss','done'];
 
     // Sounds for the keyboard and every Play button. Piano is the Salamander
     // samples and Electric piano a Tone.js synth; the rest are recordings from
@@ -1415,10 +2046,17 @@ const MIDDLE_C   = 60;  // C4
       return {
         v: 1,
         quiz:  { level: 1, streak: 0, majorScaleRootsDone: [] },
-        learn: { unitIdx: 0, layout: LEARN_LAYOUT, units },
+        learn: { unitIdx: 0, layout: LEARN_LAYOUT, units,
+                 xp: 0,                    // earned in Learn rounds, boss and daily runs
+                 bestCombo: 0 },           // longest run of right answers
+        daily: { last: null,               // local date (YYYY-MM-DD) of the last finished mix
+                 streak: 0,                // consecutive days with a finished mix
+                 best: 0 },
         settings: { keyContext: false,     // play a I–IV–V–I before each interval
                     instrument: 'piano',   // an INSTRUMENTS id, or RANDOM_INSTRUMENT
-                    learnMix: true },      // Learn rounds use a random instrument
+                    learnMix: true,        // Learn rounds use a random instrument
+                    sfx: true,             // combo / life / win sounds
+                    sing: false },         // interval play rounds are sung into the mic
       };
     }
 
@@ -1446,6 +2084,13 @@ const MIDDLE_C   = 60;  // C4
           const inst = d.settings.instrument;
           if (inst === RANDOM_INSTRUMENT || INSTRUMENT_IDS.includes(inst)) p.settings.instrument = inst;
           p.settings.learnMix = d.settings.learnMix !== false;
+          p.settings.sfx = d.settings.sfx !== false;
+          p.settings.sing = d.settings.sing === true;
+        }
+        if (d.daily && typeof d.daily === 'object') {
+          p.daily.last = typeof d.daily.last === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.daily.last) ? d.daily.last : null;
+          p.daily.streak = p.daily.last ? toInt(d.daily.streak, 0, 1e6, 0) : 0;
+          p.daily.best = Math.max(p.daily.streak, toInt(d.daily.best, 0, 1e6, 0));
         }
         if (d.quiz) {
           p.quiz.level  = toInt(d.quiz.level, 1, 3, 1);
@@ -1456,6 +2101,8 @@ const MIDDLE_C   = 60;  // C4
           }
         }
         if (d.learn) {
+          p.learn.xp = toInt(d.learn.xp, 0, 1e9, 0);
+          p.learn.bestCombo = toInt(d.learn.bestCombo, 0, 1e6, 0);
           const saved = d.learn.units || {};
           LEARN_UNITS.forEach(u => {
             const su = saved[u.id];
@@ -1635,7 +2282,7 @@ const MIDDLE_C   = 60;  // C4
 
     // Every note a question will sound, including the key-context cadence.
     function questionMidis(q) {
-      const ms = [...(q.midis || []), ...(q.givenMidis || []), ...(q.hintMidis || [])];
+      const ms = [...(q.midis || []), ...(q.givenMidis || []), ...(q.hintMidis || []), ...(q.extraMidis || [])];
       if (q.rootMidi != null) ms.push(q.rootMidi);
       if (q.kind === 'interval' && progress.settings.keyContext && ms.length) {
         ms.push(Math.min(...ms) - 13);
@@ -2215,8 +2862,9 @@ const MIDDLE_C   = 60;  // C4
     // Play any question's prompt, whichever quiz or Learn step it came from.
     function playQuestion(q) {
       if (!q) return;
-      if (q.kind === 'interval')           playIntervalPrompt(q, progress.settings.keyContext);
-      else if (q.kind === 'interval-play') playNote(q.rootMidi);
+      if (q.events)                        playEvents(q.events);   // Learn variants carry their own prompt
+      else if (q.kind === 'interval')      playIntervalPrompt(q, progress.settings.keyContext);
+      else if (q.kind === 'interval-play' || q.kind === 'sing') playNote(q.rootMidi);
       else if (q.kind === 'chord')         q.arpeggiate ? playEvents(chordThenArpEvents(q.midis)) : playChord(q.midis);
       else if (q.kind === 'scale')         playScaleSequence(q.midis);
       else if (q.kind === 'note')          playNote(q.midis[0]);
@@ -2249,6 +2897,7 @@ const MIDDLE_C   = 60;  // C4
       state.quizQuestion = q;
       state.quizAnswered = false;
       state.quizPlayed = new Set();
+      state.quizPlayedMidi = null;
       state.quizRequired = q.choices ? 0 : (q.needPcs || q.answerPcs).size;
       clearHighlight();
 
@@ -2264,8 +2913,12 @@ const MIDDLE_C   = 60;  // C4
       const refs = qEl('refs');
       refs.hidden = true;
       refs.innerHTML = '';
-      qEl('keyctx-row').hidden = q.kind !== 'interval';
-      if (state.mode === 'learn') document.getElementById('learn-hint-btn').hidden = !intervalRef(q);
+      const keyctx = qEl('keyctx-row');   // Learn keeps this in its settings sheet
+      if (keyctx) keyctx.hidden = q.kind !== 'interval';
+      if (state.mode === 'learn') {
+        document.getElementById('learn-hint-btn').hidden = !intervalRef(q);
+        learnRoundShown(q);
+      }
 
       // Given notes (already sounded) and hint keys light up as the root.
       [...(q.givenMidis || []), ...(q.hintMidis || [])].forEach(m => {
@@ -2328,7 +2981,7 @@ const MIDDLE_C   = 60;  // C4
         state.majorScaleRootsDone.add(q.rootPc);
       }
 
-      if (q.kind === 'interval-play') {
+      if (q.kind === 'interval-play' || q.kind === 'sing') {
         // Mark the key they struck if it was wrong, then the exact two keys,
         // and let them hear the interval.
         document.querySelectorAll('.key.quiz-sel').forEach(k => k.classList.remove('quiz-sel'));
@@ -2583,19 +3236,18 @@ const MIDDLE_C   = 60;  // C4
       measurePlayingUntil = performance.now() + end * 1000;
     }
 
-    function playMeasurePrompt(q) {
+    function measurePromptEvents(q) {
       const total = meterTotal(q.meter);
-      if (q.kind === 'meter-ear') {
-        playEvents(meterClicks(q.meter, total <= 4 ? 4 : total >= 9 ? 2 : 3));
-      } else if (q.kind === 'count') {
-        playEvents(meterClicks(q.meter, q.count));
-      } else if (q.kind === 'complete') {
-        // One bar of count-in, then the rhythm with its gap.
-        playEvents([...meterClicks(q.meter, 1), ...rhythmEvents(q.rhythm, q.gapIdx, total)]);
-      } else {
-        // No count-in here — it would give the meter away. Play it twice.
-        playEvents([...rhythmEvents(q.rhythm, -1), ...rhythmEvents(q.rhythm, -1, total)]);
-      }
+      if (q.kind === 'meter-ear') return meterClicks(q.meter, total <= 4 ? 4 : total >= 9 ? 2 : 3);
+      if (q.kind === 'count')     return meterClicks(q.meter, q.count);
+      // One bar of count-in, then the rhythm with its gap.
+      if (q.kind === 'complete')  return [...meterClicks(q.meter, 1), ...rhythmEvents(q.rhythm, q.gapIdx, total)];
+      // No count-in here — it would give the meter away. Play it twice.
+      return [...rhythmEvents(q.rhythm, -1), ...rhythmEvents(q.rhythm, -1, total)];
+    }
+
+    function playMeasurePrompt(q) {
+      playEvents(measurePromptEvents(q));
     }
 
     // ── Measures: notation ──
@@ -2664,7 +3316,7 @@ const MIDDLE_C   = 60;  // C4
       const opts = qEl('options');
       opts.textContent = '';
       const grid = document.createElement('div');
-      grid.className = 'quiz-choices';
+      grid.className = 'quiz-choices' + (q.choices.length > 4 ? ' is-many' : '');
       q.choices.forEach(c => {
         const btn = document.createElement('button');
         btn.className = 'quiz-opt-btn';
@@ -2687,11 +3339,12 @@ const MIDDLE_C   = 60;  // C4
       });
       const staff = qEl('staff');
       if (staff.classList.contains('visible')) staff.innerHTML = renderMeasureSvg(q, true);
-      if (q.kind === 'interval') {
+      if (q.kind === 'interval' || q.kind === 'interval-song') {
         revealIntervalKeys(q);
-        renderIntervalRefs(q, qEl('refs'));
+        renderIntervalRefs({ ...q, kind: 'interval' }, qEl('refs'));
         if (state.mode === 'learn') document.getElementById('learn-hint-btn').hidden = true;
-      } else if (q.kind === 'chord' || q.kind === 'scale') revealNoteKeys(q);
+      } else if (q.reveal) q.reveal(id);
+      else if (q.kind === 'chord' || q.kind === 'scale') revealNoteKeys(q);
 
       const fb = qEl('feedback');
       fb.textContent = (correct ? '✓ Correct! ' : '✗ ') + q.explain;
@@ -2967,6 +3620,7 @@ const MIDDLE_C   = 60;  // C4
       if (state.mode !== 'learn' || state.quizAnswered || !intervalRef(q)) return false;
       q.hinted = true;
       document.getElementById('learn-hint-btn').hidden = true;
+      document.getElementById('learn-result').hidden = false;
       const refs = document.getElementById('learn-refs');
       renderIntervalRefs(q, refs);
       revealInPanel(refs);
@@ -3027,9 +3681,10 @@ const MIDDLE_C   = 60;  // C4
     // (beginRound / answerChoice / registerQuizKey), rendered into the Learn
     // panel via qEl().
 
-    const LEARN_STEP_LABELS = { hear: 'Hear', play: 'Play', why: 'Why' };
+    const LEARN_STEP_LABELS = { hear: 'Hear', play: 'Play', why: 'Why', boss: 'Boss' };
 
-    const unitSteps = (u) => (u.play ? ['hear','play','why'] : ['hear','why']);
+    // Every unit ends with its boss; beating it marks the unit done.
+    const unitSteps = (u) => (u.play ? ['hear','play','why','boss'] : ['hear','why','boss']);
 
     function unitProgress(id) {
       if (!progress.learn.units[id]) {
@@ -3037,6 +3692,8 @@ const MIDDLE_C   = 60;  // C4
       }
       return progress.learn.units[id];
     }
+
+    const unitById = (id) => LEARN_UNITS.find(u => u.id === id) || LEARN_UNITS[state.learnUnitIdx];
 
     // Position of a step in the unit ('done' sits after the last step).
     function stepIndex(u, step) {
@@ -3058,14 +3715,21 @@ const MIDDLE_C   = 60;  // C4
         stats.recent.slice(-LEARN_PASS_WINDOW).filter(Boolean).length >= LEARN_PASS_MIN;
     }
 
+    const ORDINALS = ['root','2nd','3rd','4th','5th','6th','7th','octave'];
+    const anA = (name) => (/^[AEIOU]/.test(name) ? 'an' : 'a');
+    const pluralName = (name) => name + 's';
+    // When a list of timed events stops sounding, in seconds.
+    const eventsEnd = (events) => events.reduce((m, e) => Math.max(m, e.t + e.dur), 0);
+    const noteEvents = (midis, step, dur, t0 = 0, vel = 0.82) =>
+      midis.map((m, i) => ({ t: t0 + i * step, notes: [midiToNoteName(m)], vel, dur }));
+
     // Keyboard round: the root is lit and already sounding; play the note
     // that completes the interval above it.
-    function makeIntervalPlayQuestion(semisPool) {
+    function makeIntervalPlayQuestion(semisPool, root = 55 + Math.floor(Math.random() * 11)) {   // G3–F4
       const semis = pick(semisPool);
-      const root = 55 + Math.floor(Math.random() * 11);   // G3–F4
       const target = root + semis;
       const name = INTERVAL_NAMES[semis];
-      const a = /^[AEIOU]/.test(name) ? 'an' : 'a';
+      const a = anA(name);
       return {
         kind: 'interval-play', mode: 'ascending', semis,
         low: root, high: target, rootMidi: root, targetMidi: target,
@@ -3082,7 +3746,9 @@ const MIDDLE_C   = 60;  // C4
       };
     }
 
-    function makeLearnQuestion(u, step) {
+    // The original round for each step: name what you hear, or build it on
+    // the keyboard (named for the first few play rounds, then by ear).
+    function makeStandardLearnQuestion(u, step, inRun) {
       const spec = u[step];
       const isChord = spec.type === 'chord';
 
@@ -3112,7 +3778,7 @@ const MIDDLE_C   = 60;  // C4
       q.arpeggiate = true;
       q.focusMidi = q.midis[0] + 5;
       // Name it for the first few rounds, then play it blind from a lit root.
-      if (unitProgress(u.id).play.total < LEARN_NAME_ROUNDS) {
+      if (!inRun && unitProgress(u.id).play.total < LEARN_NAME_ROUNDS) {
         q.prompt = `Play: ${q.answerName}`;
       } else {
         q.prompt = `Play what you hear — it starts on the lit ${NOTE_NAMES[root]}`;
@@ -3121,20 +3787,1087 @@ const MIDDLE_C   = 60;  // C4
       return q;
     }
 
+    // ── Learn: question variants ──
+    // Each step mixes the standard round with other games on the same skill,
+    // so a unit doesn't feel like one flashcard on repeat. Every variant is
+    // built on the same pools as the unit, and records into the same stats.
+
+    // Interval songs whose tune is a real melody (not a teaching figure).
+    function songIntervalCandidates(spec) {
+      const out = [];
+      (spec.modes || ['ascending']).forEach(mode => {
+        if (mode === 'harmonic') return;
+        const dir = mode === 'descending' ? 'down' : 'up';
+        spec.semis.forEach(n => {
+          const ref = INTERVAL_REFS[dir][n];
+          if (ref && !ref.tune.figure) out.push({ n, mode, dir, tune: ref.tune });
+        });
+      });
+      return out;
+    }
+
+    // A start note that keeps every note of the tune in a comfortable range.
+    function tuneStart(offsets, lo = 55, hi = 67) {
+      const min = Math.max(lo, 50 - Math.min(...offsets));
+      const max = Math.min(hi, 82 - Math.max(...offsets));
+      return max < min ? min : min + Math.floor(Math.random() * (max - min + 1));
+    }
+
+    // "Name that interval": the tune plays, and the learner names the
+    // interval at its cue (Greensleeves' “A-las” is a minor 3rd).
+    function makeSongIntervalQuestion(spec) {
+      const c = pick(songIntervalCandidates(spec));
+      const offs = c.tune.notes.map(x => x[0]);
+      const start = tuneStart(offs);
+      const second = start + (c.dir === 'down' ? -c.n : c.n);
+      return {
+        kind: 'interval-song', mode: c.mode, semis: c.n,
+        low: Math.min(start, second), high: Math.max(start, second),
+        midis: [start, second],
+        extraMidis: offs.map(o => start + o),
+        events: tuneEvents(c.tune, start),
+        tag: `♪ ${c.tune.name}`,
+        prompt: `Listen for ${c.tune.cue}. Which interval is it?`,
+        choices: spec.semis.map(n => ({ id: String(n), label: INTERVAL_NAMES[n] })),
+        answer: String(c.n),
+        explain: `${INTERVAL_NAMES[c.n]} going ${c.dir}: ${c.n} semitone${c.n === 1 ? '' : 's'}.`,
+      };
+    }
+
+    // Songs whose chords are all ones learned by `unitIdx`, with at least one
+    // chord of a type this unit asks about.
+    function songChordCandidates(types, unitIdx) {
+      const out = [];
+      learnSongs(unitIdx).forEach(name => SONGS[name].forEach((c, i) => {
+        if (types.includes(c.type)) out.push({ name, i });
+      }));
+      return out;
+    }
+
+    // The chords of a song you know, then one of them again on its own:
+    // major, minor or 7th?
+    function makeSongChordQuestion(spec, unitIdx) {
+      const { name, i } = pick(songChordCandidates(spec.types, unitIdx));
+      const chords = SONGS[name].map(c => {
+        const rootMidi = rootMidiIn(c.root, LEARN_RANGE, 11);
+        return { ...c, midis: CHORDS[c.type].intervals.map(x => rootMidi + x) };
+      });
+      const target = chords[i];
+      const STEP = 1.15;
+      const events = chords.map((c, k) => ({ t: k * STEP, notes: c.midis.map(midiToNoteName), vel: 0.7, dur: 1.05 }));
+      const again = chords.length * STEP + 0.6;
+      events.push(...chordThenArpEvents(target.midis).map(e => ({ ...e, t: e.t + again })));
+      const title = name.split(' – ')[0];
+      return {
+        kind: 'chord-song', chordType: target.type, rootPc: target.root,
+        midis: target.midis,
+        extraMidis: chords.flatMap(c => c.midis),
+        events,
+        tag: `♪ ${title}`,
+        prompt: `Its chords play, then chord ${i + 1} again. What kind of chord is it?`,
+        choices: spec.types.map(t => ({ id: t, label: t })),
+        answer: target.type,
+        explain: `Chord ${i + 1} of “${title}” is ${target.label}: ${target.type}.`,
+        reveal: () => revealNoteKeys({ midis: target.midis }),
+      };
+    }
+
+    // Three sounds, two alike: which one is the odd one out?
+    function makeOddOneOutQuestion(spec) {
+      const odd = Math.floor(Math.random() * 3);
+      let items;
+      let one, many;   // names for the explanation
+      if (spec.type === 'interval') {
+        const [same, diff] = shuffle([...spec.semis]).slice(0, 2);
+        const down = (spec.modes || []).includes('descending') && Math.random() < 0.5;
+        items = [0, 1, 2].map(k => {
+          const n = k === odd ? diff : same;
+          const low = 55 + Math.floor(Math.random() * 9);
+          return { n, midis: down ? [low + n, low] : [low, low + n] };
+        });
+        one = INTERVAL_NAMES[diff];
+        many = pluralName(INTERVAL_NAMES[same]);
+      } else if (spec.type === 'chord') {
+        const [same, diff] = shuffle([...spec.types]).slice(0, 2);
+        items = [0, 1, 2].map(k => {
+          const type = k === odd ? diff : same;
+          return { type, midis: makeChordQuestion(pick(LEARN_ROOTS), type, LEARN_RANGE).midis };
+        });
+        one = `${diff} chord`;
+        many = `${same} chords`;
+      } else {
+        // Scales share a root, so only their shape differs.
+        const [same, diff] = shuffle([...spec.types]).slice(0, 2);
+        const root = pick(LEARN_ROOTS);
+        items = [0, 1, 2].map(k => {
+          const type = k === odd ? diff : same;
+          return { type, midis: makeScaleQuestion(root, type, LEARN_RANGE, true).midis };
+        });
+        one = `${NOTE_NAMES[root]} ${diff} scale`;
+        many = `${same} scales`;
+      }
+      // Each sound, then a short breath before the next.
+      const spacing = spec.type === 'interval' ? 2.1 : spec.type === 'chord' ? 2.0 : items[0].midis.length * 0.2 + 0.9;
+      const events = [];
+      items.forEach((it, k) => {
+        const t0 = k * spacing;
+        if (spec.type === 'interval') events.push(...noteEvents(it.midis, 0.75, 0.9, t0));
+        else if (spec.type === 'chord') events.push({ t: t0, notes: it.midis.map(midiToNoteName), vel: 0.8, dur: 1.5 });
+        else events.push(...noteEvents(it.midis, 0.2, 0.22, t0));
+      });
+      const oddItem = items[odd];
+      const q = {
+        kind: 'odd', midis: oddItem.midis,
+        extraMidis: items.flatMap(it => it.midis),
+        events,
+        tag: 'Odd one out',
+        prompt: 'Two of these three sound alike. Which one is the odd one out?',
+        choices: ['1st', '2nd', '3rd'].map((l, k) => ({ id: String(k), label: l })),
+        answer: String(odd),
+        explain: `The ${['1st','2nd','3rd'][odd]} was ${anA(one)} ${one}; the other two were ${many}.`,
+        reveal: () => (spec.type === 'interval' ? revealIntervalKeys(oddItem) : revealNoteKeys(oddItem)),
+      };
+      if (spec.type === 'interval') q.semis = oddItem.n;
+      else if (spec.type === 'chord') q.chordType = oddItem.type;
+      else q.scaleType = oddItem.type;
+      return q;
+    }
+
+    // A major scale with one note a semitone off: which degree is wrong?
+    function makeWrongNoteQuestion() {
+      const root = pick(LEARN_ROOTS);
+      const rootMidi = rootMidiIn(root, LEARN_RANGE, 12);
+      const right = [...SCALES.Major.intervals.map(i => rootMidi + i), rootMidi + 12];
+      const options = [];
+      for (let d = 1; d <= 6; d++) {
+        [-1, 1].forEach(s => { if (!right.includes(right[d] + s)) options.push([d, right[d] + s]); });
+      }
+      const [deg, bad] = pick(options);
+      const heard = right.slice();
+      heard[deg] = bad;
+      return {
+        kind: 'wrong-note', scaleType: 'Major', rootPc: root,
+        midis: right, extraMidis: [bad],
+        events: noteEvents(heard, 0.32, 0.34),
+        tag: 'Spot the wrong note',
+        prompt: `One note of this ${NOTE_NAMES[root]} major scale is off. Which one?`,
+        choices: [1, 2, 3, 4, 5, 6].map(d => ({ id: String(d), label: ORDINALS[d] })),
+        answer: String(deg),
+        explain: `The ${ORDINALS[deg]} should be ${NOTE_NAMES[right[deg] % 12]}, not ${NOTE_NAMES[bad % 12]}.`,
+        reveal: () => {
+          revealNoteKeys({ midis: right });
+          const good = document.querySelector(`.key[data-midi="${right[deg]}"]`);
+          const wrong = document.querySelector(`.key[data-midi="${bad}"]`);
+          if (good) good.classList.add('quiz-correct');
+          if (wrong) wrong.classList.add('quiz-wrong');
+        },
+      };
+    }
+
+    // Count the bars: low accented downbeats, 2 to 4 of them.
+    function makeCountQuestion(meters) {
+      const meter = pick(meters);
+      const count = 2 + Math.floor(Math.random() * 3);
+      return {
+        kind: 'count', meter, count,
+        tag: 'Count the bars',
+        prompt: `How many bars of ${meter} do you hear?`,
+        choices: ['2', '3', '4'].map(n => ({ id: n, label: n })),
+        answer: String(count),
+        explain: `${count} bars — count the low accented downbeats.`,
+      };
+    }
+
+    // Play-by-ear: the interval sounds, the first note is lit, play the second.
+    function makeBlindIntervalPlayQuestion(semisPool) {
+      const q = makeIntervalPlayQuestion(semisPool);
+      q.events = noteEvents(q.midis, 0.8, 1.0);
+      q.tag = 'By ear';
+      q.prompt = `Play the second note you hear — the first is the lit ${NOTE_NAMES[q.rootMidi % 12]}`;
+      return q;
+    }
+
+    // Up-tunes where `0 → +n` happens somewhere, and where (index k).
+    function phraseCandidates(semisPool) {
+      return semisPool.map(n => {
+        const ref = INTERVAL_REFS.up[n];
+        if (!ref || ref.tune.figure) return null;
+        const notes = ref.tune.notes;
+        const k = notes.findIndex((x, i) => i < notes.length - 1 && x[0] === 0 && notes[i + 1][0] === n);
+        return k < 0 ? null : { n, tune: ref.tune, k };
+      }).filter(Boolean);
+    }
+
+    // Finish the phrase: hear the tune, then its lead-in up to the lit key,
+    // and play the note that comes next.
+    function makePhraseQuestion(semisPool) {
+      const c = pick(phraseCandidates(semisPool));
+      const offs = c.tune.notes.map(x => x[0]);
+      const root = tuneStart(offs, 55, 65);
+      const q = makeIntervalPlayQuestion([c.n]);
+      const target = root + c.n;
+      const full = tuneEvents(c.tune, root);
+      const leadIn = tuneEvents({ notes: c.tune.notes.slice(0, c.k + 1) }, root);
+      const gap = eventsEnd(full) + 0.7;
+      return Object.assign(q, {
+        low: root, high: target, rootMidi: root, targetMidi: target, midis: [root, target],
+        answerPcs: new Set([root % 12, target % 12]), needPcs: new Set([target % 12]),
+        givenMidis: [root], exactMidi: target, focusMidi: root + Math.round(c.n / 2),
+        extraMidis: offs.map(o => root + o),
+        events: [...full, ...leadIn.map(e => ({ ...e, t: e.t + gap }))],
+        tag: `♪ Finish the phrase: ${c.tune.name}`,
+        prompt: `Play the note that comes after the lit key (${c.tune.cue}).`,
+        answerName: `${NOTE_NAMES[target % 12]} — ${anA(INTERVAL_NAMES[c.n])} ${INTERVAL_NAMES[c.n]} above ${NOTE_NAMES[root % 12]}`,
+      });
+    }
+
+    // Complete the chord: the lit keys are part of it, add the missing note
+    // (the 3rd decides major vs minor; the 7th makes a 7 chord).
+    function makeChordCompleteQuestion(spec) {
+      const type = pick(spec.types);
+      const root = pick(LEARN_ROOTS);
+      const q = makeChordQuestion(root, type, LEARN_RANGE);
+      const missIdx = q.midis.length === 4 ? 3 : 1;
+      const missing = q.midis[missIdx];
+      const given = q.midis.filter((_, k) => k !== missIdx);
+      return Object.assign(q, {
+        givenMidis: given,
+        needPcs: new Set([missing % 12]),
+        events: [{ t: 0, notes: given.map(midiToNoteName), vel: 0.8, dur: 1.4 }],
+        focusMidi: q.midis[0] + 5,
+        tag: 'Complete the chord',
+        prompt: missIdx === 3
+          ? `Make it a ${NOTE_NAMES[root]} ${type}: the lit keys are a major chord. Add the missing note.`
+          : `Make it ${NOTE_NAMES[root]} ${type}: the lit keys are its root and 5th. Add the missing note.`,
+        answerName: `${NOTE_NAMES[root]} ${type}: add ${NOTE_NAMES[missing % 12]}`,
+      });
+    }
+
+    // A scale with one note left silent: play the missing one.
+    function makeMissingNoteQuestion(spec) {
+      const type = pick(spec.types);
+      const root = pick(spec.roots || LEARN_ROOTS);
+      const q = makeScaleQuestion(root, type, LEARN_RANGE, true);
+      const gap = 1 + Math.floor(Math.random() * (q.midis.length - 2));   // never the root or octave
+      const missing = q.midis[gap];
+      return Object.assign(q, {
+        givenMidis: [q.midis[0]],
+        needPcs: new Set([missing % 12]),
+        events: noteEvents(q.midis, 0.32, 0.3).filter((_, k) => k !== gap),
+        focusMidi: q.midis[0] + 5,
+        tag: 'Missing note',
+        prompt: `One note is silent in this ${NOTE_NAMES[root]} ${type} scale. Play it.`,
+        answerName: `${NOTE_NAMES[missing % 12]}, note ${gap + 1} of ${NOTE_NAMES[root]} ${type}`,
+      });
+    }
+
+    // Sing the answer: like the keyboard round, but judged from the mic. Any
+    // octave counts, since voices sit at different heights.
+    function makeSingQuestion(semisPool, root) {
+      const q = makeIntervalPlayQuestion(semisPool, root);
+      const name = INTERVAL_NAMES[q.semis];
+      q.kind = 'sing';
+      q.tag = 'Sing it';
+      q.prompt = `Sing ${anA(name)} ${name} above the lit ${NOTE_NAMES[q.rootMidi % 12]} (any octave), or tap it`;
+      return q;
+    }
+
+    // [variant, weight]: the standard round stays the most common.
+    const LEARN_VARIANTS = {
+      hear: {
+        interval: [['standard', 3], ['song', 1], ['odd', 1]],
+        chord:    [['standard', 3], ['song', 1], ['odd', 1]],
+        scale:    [['standard', 3], ['odd', 1], ['wrong-note', 1]],
+        meter:    [['standard', 3], ['count', 1]],
+      },
+      play: {
+        interval: [['standard', 2], ['blind', 1], ['phrase', 1]],
+        chord:    [['standard', 2], ['complete', 1]],
+        scale:    [['standard', 2], ['missing', 1]],
+      },
+    };
+
+    function variantAvailable(u, step, v) {
+      const spec = u[step];
+      const idx = LEARN_UNITS.indexOf(u);
+      if (v === 'standard' || v === 'count' || v === 'blind' || v === 'complete' || v === 'missing') return true;
+      if (v === 'song') {
+        return spec.type === 'interval' ? songIntervalCandidates(spec).length > 0
+          : spec.type === 'chord' && songChordCandidates(spec.types, idx).length > 0;
+      }
+      if (v === 'odd') return (spec.semis || spec.types || []).length >= 2;
+      if (v === 'wrong-note') return spec.type === 'scale' && spec.types.includes('Major');
+      if (v === 'phrase') return phraseCandidates(spec.semis).length > 0;
+      return false;
+    }
+
+    function pickWeighted(pairs) {
+      const total = pairs.reduce((s, [, w]) => s + w, 0);
+      let r = Math.random() * total;
+      for (const [v, w] of pairs) { if ((r -= w) < 0) return v; }
+      return pairs[pairs.length - 1][0];
+    }
+
+    function chooseVariant(u, step) {
+      const list = (LEARN_VARIANTS[step][u[step].type] || [['standard', 1]])
+        .filter(([v]) => variantAvailable(u, step, v));
+      if (state.forcedVariant && list.some(([v]) => v === state.forcedVariant)) return state.forcedVariant;
+      return pickWeighted(list);
+    }
+
+    function buildVariant(u, step, variant, inRun) {
+      const spec = u[step];
+      switch (variant) {
+        case 'song':       return spec.type === 'interval' ? makeSongIntervalQuestion(spec)
+                                                           : makeSongChordQuestion(spec, LEARN_UNITS.indexOf(u));
+        case 'odd':        return makeOddOneOutQuestion(spec);
+        case 'wrong-note': return makeWrongNoteQuestion();
+        case 'count':      return makeCountQuestion(spec.meters);
+        case 'blind':      return makeBlindIntervalPlayQuestion(spec.semis);
+        case 'phrase':     return makePhraseQuestion(spec.semis);
+        case 'complete':   return makeChordCompleteQuestion(spec);
+        case 'missing':    return makeMissingNoteQuestion(spec);
+        default:           return makeStandardLearnQuestion(u, step, inRun);
+      }
+    }
+
+    // `inRun`: a boss or daily round (no singing, no named warm-up rounds).
+    function makeLearnQuestion(u, step, inRun = false) {
+      const spec = u[step];
+      let q;
+      if (step === 'play' && spec.type === 'interval' && progress.settings.sing && !inRun) {
+        q = makeSingQuestion(spec.semis);
+        q.variant = 'sing';
+      } else {
+        // The first few play rounds name what to build: always the standard one.
+        const warmUp = step === 'play' && !inRun && unitProgress(u.id).play.total < LEARN_NAME_ROUNDS;
+        const variant = warmUp && !state.forcedVariant ? 'standard' : chooseVariant(u, step);
+        q = buildVariant(u, step, variant, inRun);
+        q.variant = variant;
+      }
+      q.unitId = u.id;
+      return q;
+    }
+
     function startLearnRound() {
       const step = state.learnStep;
-      if (state.mode !== 'learn' || (step !== 'hear' && step !== 'play')) return;
+      if (state.mode !== 'learn' || state.learnRun || (step !== 'hear' && step !== 'play')) return;
       state.learnJustPassed = false;
-      document.getElementById('learn-next-btn').textContent = 'Next →';
+      document.getElementById('learn-next-btn').textContent = 'Next';
       beginRound(makeLearnQuestion(LEARN_UNITS[state.learnUnitIdx], step));
       renderLearnMeter();
     }
 
+    // Round UI that only Learn has: run bar, sing meter, combo, facts.
+    function learnRoundShown(q) {
+      const run = state.learnRun;
+      document.getElementById('learn-fact').hidden = true;
+      document.getElementById('learn-result').hidden = true;
+      document.getElementById('learn-round').classList.remove('is-answered');
+      if (run) document.getElementById('learn-hint-btn').hidden = true;   // no hints against a boss
+      const tag = document.getElementById('learn-tag');
+      tag.textContent = q.tag || '';
+      tag.hidden = !q.tag;
+      renderRunBar();
+      renderCombo(false);
+      const singBox = document.getElementById('learn-sing');
+      singBox.hidden = q.kind !== 'sing';
+      if (q.kind === 'sing') {
+        qEl('options').textContent = '🎤 Sing it, or tap the key on the piano below';
+        startSinging(q);
+      } else {
+        stopSinging();
+      }
+    }
+
+    // The result card under the answers: verdict, fact, songs.
+    function showLearnResult() {
+      const box = document.getElementById('learn-result');
+      box.hidden = false;
+      document.getElementById('learn-round').classList.add('is-answered');
+      requestAnimationFrame(() => revealInPanel(document.getElementById('learn-next-btn')));
+    }
+
+    // ── Learn: XP, combos and feedback flourishes ──
+
+    const XP_PER_ANSWER = 10;
+    const COMBO_STEP = 5;          // every 5 in a row raises the multiplier…
+    const COMBO_MAX_MULT = 4;      // …up to x4
+    const comboMultiplier = (c) => Math.min(COMBO_MAX_MULT, 1 + Math.floor(c / COMBO_STEP));
+
+    // Update the combo and XP for one counted answer; returns the XP earned.
+    function awardAnswer(correct) {
+      if (!correct) {
+        state.learnCombo = 0;
+        renderCombo(false);
+        return 0;
+      }
+      state.learnCombo++;
+      const gained = XP_PER_ANSWER * comboMultiplier(state.learnCombo);
+      progress.learn.xp += gained;
+      progress.learn.bestCombo = Math.max(progress.learn.bestCombo, state.learnCombo);
+      renderCombo(true);
+      glowAnswerKeys();
+      if (state.learnCombo % COMBO_STEP === 0) {
+        playSting('combo', state.learnCombo);
+        showBanner(`⚡ ${state.learnCombo} in a row! XP x${comboMultiplier(state.learnCombo)}`);
+      }
+      renderLearnStats();
+      return gained;
+    }
+
+    function renderCombo(pop) {
+      const el = document.getElementById('learn-combo');
+      const c = state.learnCombo;
+      el.textContent = c >= 2 ? `⚡ ${c} in a row` + (comboMultiplier(c) > 1 ? ` · x${comboMultiplier(c)}` : '') : '';
+      el.classList.remove('pop');
+      if (pop && c >= 2) { void el.offsetWidth; el.classList.add('pop'); }
+    }
+
+    function glowAnswerKeys() {
+      const keys = document.querySelectorAll('.key.quiz-correct, .key.iv-a, .key.iv-b, .key.is-root, .key.in-scale');
+      keys.forEach(k => { k.classList.remove('key-glow'); void k.offsetWidth; k.classList.add('key-glow'); });
+      setTimeout(() => keys.forEach(k => k.classList.remove('key-glow')), 800);
+    }
+
+    function appendXpPop(gained) {
+      if (!gained) return;
+      const s = document.createElement('span');
+      s.className = 'xp-pop';
+      s.textContent = `+${gained} XP`;
+      qEl('feedback').appendChild(s);
+    }
+
+    // A one-line fact about this answer (or the unit) under the feedback.
+    function factFor(q, u) {
+      const own = [];
+      if (q) {
+        if (q.semis != null && INTERVAL_FACTS[q.semis]) own.push(...INTERVAL_FACTS[q.semis]);
+        if (q.chordType && CHORD_FACTS[q.chordType]) own.push(...CHORD_FACTS[q.chordType]);
+        if (q.scaleType && SCALE_FACTS[q.scaleType]) own.push(...SCALE_FACTS[q.scaleType]);
+      }
+      const fresh = (list) => list.filter(f => f !== state.lastFact);
+      const a = fresh(own), b = fresh(UNIT_FACTS[u.id] || []);
+      const pool = a.length && (Math.random() < 0.65 || !b.length) ? a : b;
+      return pool.length ? pick(pool) : '';
+    }
+
+    function showFact(q, u) {
+      const el = document.getElementById('learn-fact');
+      const f = factFor(q, u);
+      el.textContent = f;
+      el.hidden = !f;
+      state.lastFact = f;
+    }
+
+    // Short sounds on a quiet synth of their own, so they work before any
+    // samples load and never change the round's instrument.
+    let sfxSynth = null;
+    function sfxVoice() {
+      if (!sfxSynth) {
+        sfxSynth = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.005, decay: 0.12, sustain: 0.25, release: 0.35 },
+        }).toDestination();
+        sfxSynth.volume.value = -12;
+      }
+      return sfxSynth;
+    }
+
+    const STINGS = {
+      combo: (n) => ['C5','D5','E5','G5','A5','C6'].slice(0, Math.min(6, 2 + n / COMBO_STEP))
+        .map((note, i) => [i * 0.08, [note], 0.16]),
+      life:  () => [[0, ['E4'], 0.16], [0.17, ['C4'], 0.32]],
+      win:   () => [[0, ['C5'], 0.12], [0.12, ['E5'], 0.12], [0.24, ['G5'], 0.12],
+                    [0.38, ['C5','E5','G5','C6'], 0.9]],
+      lose:  () => [[0, ['G4'], 0.2], [0.22, ['F#4'], 0.2], [0.44, ['F4'], 0.2], [0.66, ['E4'], 0.6]],
+    };
+
+    function playSting(kind, n = 0) {
+      if (!progress.settings.sfx) return;
+      try {
+        if (Tone.getContext().rawContext.state !== 'running') return;   // no tap yet: stay silent
+        // A combo waits for the answer's own playback (e.g. the interval replay).
+        const wait = kind === 'combo' ? Math.min(2.5, Math.max(0, measurePlayingUntil - performance.now()) / 1000) : 0;
+        const t0 = Tone.now() + 0.05 + wait;
+        STINGS[kind](n).forEach(([t, notes, dur]) => sfxVoice().triggerAttackRelease(notes, dur, t0 + t, 0.6));
+      } catch (_) { /* sounds are a nicety */ }
+    }
+
+    function setSfx(on) {
+      progress.settings.sfx = !!on;
+      document.getElementById('learn-sfx').checked = !!on;
+      saveProgress();
+    }
+
+    // Emoji confetti for a beaten boss or the day's first mix.
+    function celebrate() {
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const box = document.createElement('div');
+      box.className = 'confetti';
+      box.setAttribute('aria-hidden', 'true');
+      const bits = ['🎵','🎶','⭐','🎉','✨','🎹','🥁','🎸'];
+      for (let i = 0; i < 28; i++) {
+        const s = document.createElement('span');
+        s.textContent = pick(bits);
+        s.style.left = `${Math.random() * 100}vw`;
+        s.style.animationDuration = `${1.6 + Math.random() * 1.4}s`;
+        s.style.animationDelay = `${Math.random() * 0.4}s`;
+        box.appendChild(s);
+      }
+      document.body.appendChild(box);
+      setTimeout(() => box.remove(), 3600);
+    }
+
+    const STAR_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" aria-hidden="true"><path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7-6.2-3.5-6.2 3.5 1.3-7L2 9.4l7-.9z"/></svg>';
+    const FLAME_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>';
+
+    function renderLearnStats() {
+      const xp = progress.learn.xp;
+      const xpEl = document.getElementById('learn-xp');
+      xpEl.innerHTML = `${STAR_SVG}<span>${xp}</span>`;
+      xpEl.setAttribute('aria-label', `${xp} XP`);
+      const d = progress.daily;
+      const live = streakAlive() && d.streak > 0;
+      const chip = document.getElementById('learn-streak-chip');
+      chip.innerHTML = `<span style="color:${live ? '#fb923c' : '#6b7280'};display:flex">${FLAME_SVG}</span><span>${live ? d.streak : 0}</span>`;
+      chip.classList.toggle('is-cold', !live);
+      chip.setAttribute('aria-label', live ? `${d.streak}-day streak` : 'No streak');
+
+      // The daily mix lives at the top of the path sheet.
+      const doneToday = d.last === localDate();
+      const can = runSources({ kind: 'daily' }).length > 0;
+      document.getElementById('learn-streak').textContent = live ? `${d.streak}-day streak`
+        : (d.best ? `Streak lost (best ${d.best})` : 'No streak yet');
+      document.getElementById('learn-daily-sub').textContent = !can
+        ? 'Pass a unit’s Hear step to unlock the daily mix'
+        : doneToday ? 'Today’s mix is done. Another one still earns XP.'
+        : live ? 'Today’s mix keeps it going · 10 questions, no timer'
+        : '10 questions, no timer. One a day builds a streak.';
+      document.getElementById('learn-daily-card').classList.toggle('is-cold', !live);
+      const btn = document.getElementById('learn-daily-btn');
+      btn.disabled = !can;
+      btn.classList.toggle('is-done', doneToday);
+      btn.textContent = doneToday ? 'Again' : 'Start';
+    }
+
+    // ── Learn: daily streak dates ──
+
+    // Local calendar date as YYYY-MM-DD, `offsetDays` from today.
+    function localDate(offsetDays = 0) {
+      const d = state.todayOverride ? new Date(`${state.todayOverride}T12:00:00`) : new Date();
+      d.setDate(d.getDate() + offsetDays);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    // A streak survives until a whole day passes without a finished mix.
+    const streakAlive = () => progress.daily.last === localDate() || progress.daily.last === localDate(-1);
+
+    // Count today's first finished mix; returns true if it was the first.
+    function recordDailyDone() {
+      const d = progress.daily;
+      const today = localDate();
+      if (d.last === today) return false;
+      d.streak = d.last === localDate(-1) ? d.streak + 1 : 1;
+      d.last = today;
+      d.best = Math.max(d.best, d.streak);
+      return true;
+    }
+
+    // ── Learn: boss and daily runs ──
+    // A run is a fixed set of mixed questions. A boss draws from its own unit
+    // (and a little from finished earlier ones), with three lives and a timer
+    // per question; beating it finishes the unit. The daily mix draws from
+    // every unit whose Hear step has passed, with no lives and no timer.
+
+    const BOSS_QUESTIONS = 10;
+    const BOSS_LIVES = 3;
+    const DAILY_QUESTIONS = 10;
+    const BOSS_BONUS_XP = 50;      // first win only
+    const DAILY_BONUS_XP = 30;     // first mix of the day only
+    // Answer time per question, on top of how long the prompt plays.
+    const ANSWER_SECS = { choice: 10, keys: 18 };
+
+    // Where a run's questions come from: [{ u, step, w }] with weights.
+    function runSources(run) {
+      if (run.kind === 'boss') {
+        const u = LEARN_UNITS[run.unitIdx];
+        const src = unitSteps(u).filter(s => s === 'hear' || s === 'play').map(step => ({ u, step, w: 3 }));
+        const earlier = LEARN_UNITS.slice(0, run.unitIdx).filter(v => unitProgress(v.id).step === 'done');
+        earlier.forEach(v => src.push({ u: v, step: 'hear', w: 2 / earlier.length }));
+        return src;
+      }
+      const src = [];
+      LEARN_UNITS.forEach(v => {
+        const at = stepIndex(v, unitProgress(v.id).step);
+        if (at > 0) src.push({ u: v, step: 'hear', w: 2 });
+        if (v.play && at > 1) src.push({ u: v, step: 'play', w: 1 });
+      });
+      return src;
+    }
+
+    function startRun(kind) {
+      abandonRun();
+      state.learnRun = {
+        kind, unitIdx: state.learnUnitIdx,
+        len: kind === 'boss' ? BOSS_QUESTIONS : DAILY_QUESTIONS,
+        idx: 0, correct: 0, xp: 0, results: [], resultsShown: false,
+        lives: kind === 'boss' ? BOSS_LIVES : null,
+        timed: kind === 'boss',
+        begun: false, ended: false, won: false, bonus: 0,
+      };
+      renderLearn();   // shows the round and starts the first question
+    }
+
+    function abandonRun() {
+      cancelAnimationFrame(runTimerRaf);
+      state.learnRun = null;
+      document.body.classList.remove('learn-focus');
+      stopSinging();
+    }
+
+    function startRunRound() {
+      const run = state.learnRun;
+      if (!run || run.ended || state.mode !== 'learn') return;
+      run.begun = true;
+      const s = pickWeighted(runSources(run).map(x => [x, x.w]));
+      const q = makeLearnQuestion(s.u, s.step, true);
+      document.getElementById('learn-next-btn').textContent = 'Next';
+      beginRound(q);
+      if (run.timed) startRunTimer(q);
+      renderRunBar();
+      renderLearnMeter();
+    }
+
+    // How long a question's prompt takes to play, in seconds.
+    function promptSeconds(q) {
+      if (q.events) return eventsEnd(q.events);
+      if (q.kind === 'interval') return eventsEnd(intervalPromptEvents(q, progress.settings.keyContext));
+      if (q.kind === 'chord') return q.arpeggiate ? eventsEnd(chordThenArpEvents(q.midis)) : 1.2;
+      if (q.kind === 'scale') return q.midis.length * 0.22 + 0.4;
+      if (METERS[q.meter]) return eventsEnd(measurePromptEvents(q));
+      return 1;
+    }
+
+    let runTimerRaf = 0;
+    function startRunTimer(q) {
+      const run = state.learnRun;
+      run.limit = (promptSeconds(q) + (q.choices ? ANSWER_SECS.choice : ANSWER_SECS.keys)) * 1000;
+      run.left = run.limit;
+      run.tickAt = performance.now();
+      cancelAnimationFrame(runTimerRaf);
+      const tick = () => {
+        if (state.learnRun !== run || run.ended || state.quizAnswered || state.quizQuestion !== q) return;
+        const now = performance.now();
+        // Capped so a backgrounded tab doesn't lose its time all at once.
+        run.left -= Math.min(250, now - run.tickAt);
+        run.tickAt = now;
+        renderTimer();
+        if (run.left <= 0) { timeUp(); return; }
+        runTimerRaf = requestAnimationFrame(tick);
+      };
+      renderTimer();
+      runTimerRaf = requestAnimationFrame(tick);
+    }
+
+    const TIMER_ARC = 289;   // the ring's circumference (r = 46)
+    function renderTimer() {
+      const run = state.learnRun;
+      const ring = document.getElementById('learn-timer');
+      const txt = document.getElementById('learn-timer-text');
+      const on = !!run && run.timed && !run.ended;
+      ring.toggleAttribute('hidden', !on);
+      txt.hidden = !on;
+      if (!on) return;
+      const frac = run.limit ? Math.max(0, run.left) / run.limit : 1;
+      const secs = Math.ceil(Math.max(0, run.left) / 1000);
+      ring.querySelector('.learn-timer-arc').style.strokeDashoffset = String(TIMER_ARC * (1 - frac));
+      ring.classList.toggle('low', frac < 0.25);
+      ring.setAttribute('aria-label', `${secs} seconds left`);
+      if (txt.textContent !== `${secs} s left`) txt.textContent = `${secs} s left`;
+    }
+
+    // Out of time: the round is answered with whatever was given (so, wrong).
+    function timeUp() {
+      const q = state.quizQuestion;
+      if (!q || state.quizAnswered) return;
+      state.timedOut = true;
+      try {
+        if (q.choices) answerChoice(null);
+        else checkQuizAnswer();
+      } finally {
+        state.timedOut = false;
+      }
+    }
+
+    const HEART_SVG = (full) => `<svg viewBox="0 0 24 24" aria-hidden="true" ${full
+      ? 'fill="#ef4444"' : 'fill="none" stroke="#4b5563" stroke-width="2"'}><path d="M12 21s-7.5-4.6-9.5-9.2C1.2 8.6 3.2 5 6.6 5c2 0 3.4 1.1 4.4 2.5C12 6.1 13.4 5 15.4 5c3.4 0 5.4 3.6 4.1 6.8C19.5 16.4 12 21 12 21z"/></svg>`;
+
+    // Focus mode: while a run is on (until its results card), the run's own
+    // header and a segment per question replace the app chrome and steps.
+    function renderRunBar() {
+      const run = state.learnRun;
+      const focus = !!run && !run.resultsShown && state.mode === 'learn';
+      document.body.classList.toggle('learn-focus', focus);
+      document.getElementById('learn-bar').hidden = focus;
+      document.getElementById('learn-run-bar').hidden = !focus;
+      renderTimer();
+      if (!focus) return;
+      const n = Math.min(run.len, run.idx + (state.quizAnswered ? 0 : 1));
+      const boss = run.kind === 'boss';
+      document.getElementById('learn-run-kicker').textContent =
+        boss ? `Boss · question ${n} of ${run.len}` : `Question ${n} of ${run.len}`;
+      document.getElementById('learn-run-count').textContent =
+        boss ? UNIT_BOSSES[LEARN_UNITS[run.unitIdx].id] : 'Daily mix';
+      const lives = document.getElementById('learn-lives');
+      lives.innerHTML = run.lives == null ? ''
+        : Array.from({ length: BOSS_LIVES }, (_, i) => HEART_SVG(i < run.lives)).join('');
+      lives.setAttribute('aria-label', run.lives == null ? '' : `${Math.max(0, run.lives)} of ${BOSS_LIVES} lives left`);
+      const strip = document.getElementById('learn-steps');
+      strip.hidden = false;
+      strip.className = 'learn-steps is-run';
+      strip.style.setProperty('--n', run.len);
+      strip.setAttribute('aria-label', `${run.correct} right of ${run.idx} answered`);
+      strip.innerHTML = Array.from({ length: run.len }, (_, i) => {
+        const r = run.results[i];
+        return `<span class="run-seg${r === true ? ' hit' : r === false ? ' miss' : i === run.idx ? ' now' : ''}"></span>`;
+      }).join('');
+    }
+
+    // ✕ in the run header: leave the boss (back to its card) or the mix.
+    function quitRun() {
+      const daily = state.learnDaily;
+      abandonRun();
+      if (daily) leaveDaily();
+      else viewLearnStep('boss');
+    }
+
+    function recordRunResult(correct) {
+      const run = state.learnRun;
+      const q = state.quizQuestion;
+      cancelAnimationFrame(runTimerRaf);
+      run.idx++;
+      run.results.push(!!correct);
+      if (correct) run.correct++;
+      const fb = qEl('feedback');
+      if (state.timedOut) fb.textContent = '⏱ Time’s up! ' + fb.textContent;
+      const gained = awardAnswer(correct);
+      run.xp += gained;
+      if (!correct && run.lives != null) {
+        run.lives--;
+        if (run.lives > 0) playSting('life');
+      }
+      if (run.lives === 0 || run.idx >= run.len) finishRun();
+      document.getElementById('learn-next-btn').textContent = run.ended ? 'See results' : 'Next';
+      appendXpPop(gained);
+      showFact(q, unitById(q.unitId));
+      showLearnResult();
+      state.learnLastQ = { unitId: q.unitId, q };
+      renderRunBar();
+      saveProgress();
+    }
+
+    function finishRun() {
+      const run = state.learnRun;
+      run.ended = true;
+      run.won = run.kind === 'daily' || run.lives > 0;
+      if (run.kind === 'boss') {
+        if (run.won) {
+          const first = completeUnit(run.unitIdx);
+          if (first) { run.bonus = BOSS_BONUS_XP; progress.learn.xp += run.bonus; }
+          playSting('win');
+          celebrate();
+          if (!first) showBanner(`${UNIT_BOSSES[LEARN_UNITS[run.unitIdx].id]} beaten again! ⚔️`);
+        } else {
+          playSting('lose');
+          showBanner('Out of lives — the boss wins this round');
+        }
+      } else {
+        run.first = recordDailyDone();
+        if (run.first) {
+          run.bonus = DAILY_BONUS_XP;
+          progress.learn.xp += run.bonus;
+          playSting('win');
+          celebrate();
+          showBanner(`Daily mix done — 🔥 ${progress.daily.streak}-day streak!`);
+        } else {
+          showBanner('Mix done! Extra practice counts for XP.');
+        }
+      }
+      saveProgress();
+      renderLearnStats();
+    }
+
+    // Mark a unit done and move the frontier on. False if it was done already.
+    function completeUnit(idx) {
+      const up = unitProgress(LEARN_UNITS[idx].id);
+      if (up.step === 'done') return false;
+      up.step = 'done';
+      // The next unfinished unit becomes the frontier (later units may
+      // already be done, e.g. after new units were added to the path).
+      const next = LEARN_UNITS.findIndex((u, i) => i > idx && unitProgress(u.id).step !== 'done');
+      if (next >= 0 && progress.learn.unitIdx === idx) {
+        progress.learn.unitIdx = next;
+        showBanner(`Boss beaten! Unit ${next + 1} unlocked: ${LEARN_UNITS[next].title} 🎉`);
+      } else if (LEARN_UNITS.every(u => unitProgress(u.id).step === 'done')) {
+        showBanner('Path complete — great ears! 🎉');
+      } else {
+        showBanner('Boss beaten! 🎉');
+      }
+      saveProgress();
+      return true;
+    }
+
+    // The card shown before a boss, and after any run.
+    function renderLearnCard(u) {
+      const card = document.getElementById('learn-card');
+      const run = state.learnRun;
+      card.className = 'learn-card';
+      let title, text, buttons;
+      if (run && run.ended) {
+        const score = `${run.correct}/${run.len} right · +${run.xp + run.bonus} XP` +
+          (run.bonus ? ` (incl. +${run.bonus} bonus)` : '');
+        if (run.kind === 'boss' && run.won) {
+          card.classList.add('is-win');
+          const next = progress.learn.unitIdx;
+          title = `🏆 ${UNIT_BOSSES[u.id]} is beaten!`;
+          text = `${score}.` + (next > run.unitIdx ? ` Next up: ${LEARN_UNITS[next].title}.` : '');
+          buttons = [['next-unit', next > run.unitIdx ? `Unit ${next + 1}: ${LEARN_UNITS[next].title} →` : 'Back to the path →', ''],
+                     ['boss', 'Rematch ⚔️', 'secondary']];
+        } else if (run.kind === 'boss') {
+          card.classList.add('is-lose');
+          title = `💥 ${UNIT_BOSSES[u.id]} wins this time`;
+          text = `${score}. Three slips and the run ends. Practise a little, then come back swinging.`;
+          buttons = [['boss', 'Try again ⚔️', ''], ['hear', 'Practise this unit', 'secondary']];
+        } else {
+          card.classList.add('is-win');
+          title = run.first ? `🔥 Daily mix done — ${progress.daily.streak}-day streak` : '🔁 Mix done';
+          text = `${score}. ${run.first ? 'Come back tomorrow to keep the streak alive.' : 'Today’s streak was already counted, but the XP is yours.'}`;
+          buttons = [['leave-daily', 'Back to the path', ''], ['daily', 'Another mix', 'secondary']];
+        }
+      } else {
+        const beaten = unitProgress(u.id).step === 'done';
+        title = `⚔️ Boss: ${UNIT_BOSSES[u.id]}`;
+        text = (beaten ? 'You’ve beaten this one already. A rematch is good practice and still earns XP. ' : '') +
+          `${BOSS_QUESTIONS} mixed questions from this unit` +
+          (state.learnUnitIdx > 0 ? ', plus a few from earlier ones' : '') +
+          `. You have ${BOSS_LIVES} lives and a timer on each question. ` +
+          `<span class="dim">Beat it to ${beaten ? 'prove it was no fluke' : 'finish the unit'}.</span>`;
+        buttons = [['boss', beaten ? 'Rematch ⚔️' : 'Fight ⚔️', '']];
+      }
+      card.innerHTML = `<div class="learn-card-title"></div><div class="learn-card-text"></div><div class="btn-row"></div>`;
+      card.querySelector('.learn-card-title').textContent = title;
+      card.querySelector('.learn-card-text').innerHTML = text;
+      const row = card.querySelector('.btn-row');
+      buttons.forEach(([action, label, cls]) => {
+        const b = document.createElement('button');
+        b.className = `play-btn ${cls}`.trim();
+        b.dataset.action = action;
+        b.textContent = label;
+        b.addEventListener('click', () => learnCardAction(action));
+        row.appendChild(b);
+      });
+    }
+
+    function learnCardAction(action) {
+      if (action === 'boss') startRun('boss');
+      else if (action === 'daily') startRun('daily');
+      else if (action === 'leave-daily') leaveDaily();
+      else if (action === 'next-unit') { abandonRun(); viewLearnUnit(progress.learn.unitIdx); }
+      else if (action === 'hear') { abandonRun(); viewLearnStep('hear'); }
+    }
+
+    function enterDaily() {
+      if (!runSources({ kind: 'daily' }).length) return false;
+      abandonRun();
+      state.learnDaily = true;
+      startRun('daily');
+      return true;
+    }
+
+    function leaveDaily() {
+      abandonRun();
+      state.learnDaily = false;
+      renderLearn();
+    }
+
+    // ── Learn: singing into the mic ──
+    // Pitch detection is the Tuner app's autocorrelation. A note counts once
+    // it is held steadily: the right note class for 0.4 s, a wrong one for 1 s
+    // (so sliding into the note isn't marked wrong). Listening waits for the
+    // prompt to finish, so the app doesn't hear itself.
+
+    const SING_RIGHT_MS = 400;
+    const SING_WRONG_MS = 1000;
+    const SING_IN_TUNE_CENTS = 40;
+    const sing = { stream: null, ctx: null, analyser: null, buf: null, corr: null, raf: 0, q: null,
+                   listenFrom: 0, stableMidi: null, stableSince: 0 };
+
+    function detectPitch(buf, sampleRate) {
+      let rms = 0;
+      for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+      if (Math.sqrt(rms / buf.length) < 0.01) return null;
+      const minLag = Math.floor(sampleRate / 1500);
+      const maxLag = Math.ceil(sampleRate / 70);
+      if (!sing.corr || sing.corr.length < maxLag) sing.corr = new Float32Array(maxLag);
+      const corr = sing.corr;
+      for (let lag = minLag; lag < maxLag; lag++) {
+        let c = 0;
+        const len = buf.length - lag;
+        for (let i = 0; i < len; i++) c += buf[i] * buf[i + lag];
+        corr[lag] = c;
+      }
+      let firstMin = minLag;
+      for (let i = minLag + 1; i < maxLag - 1; i++) {
+        if (corr[i] <= corr[i - 1] && corr[i] <= corr[i + 1]) { firstMin = i; break; }
+      }
+      let bestLag = -1, bestCorr = -Infinity;
+      for (let i = firstMin; i < maxLag; i++) {
+        if (corr[i] > bestCorr) { bestCorr = corr[i]; bestLag = i; }
+      }
+      if (bestLag < 0 || bestCorr <= 0) return null;
+      const y1 = corr[bestLag > 0 ? bestLag - 1 : bestLag];
+      const y2 = corr[bestLag];
+      const y3 = corr[bestLag < maxLag - 1 ? bestLag + 1 : bestLag];
+      const d = y1 - 2 * y2 + y3;
+      return sampleRate / (d !== 0 ? bestLag + 0.5 * (y1 - y3) / d : bestLag);
+    }
+
+    async function ensureMic() {
+      if (sing.analyser) return true;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+      try {
+        sing.stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false },
+        });
+        sing.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        try { await Promise.race([sing.ctx.resume(), new Promise(r => setTimeout(r, 750))]); } catch (_) {}
+        const src = sing.ctx.createMediaStreamSource(sing.stream);
+        sing.analyser = sing.ctx.createAnalyser();
+        sing.analyser.fftSize = 2048;
+        src.connect(sing.analyser);
+        sing.buf = new Float32Array(sing.analyser.fftSize);
+        return true;
+      } catch (_) {
+        releaseMic();
+        return false;
+      }
+    }
+
+    // Close the mic entirely (sing mode off, or the page backgrounded).
+    function releaseMic() {
+      if (sing.stream) sing.stream.getTracks().forEach(t => t.stop());
+      if (sing.ctx) { try { sing.ctx.close(); } catch (_) {} }
+      sing.stream = sing.ctx = sing.analyser = null;
+    }
+
+    function setSingUi(note, level, status, match = false) {
+      document.getElementById('learn-sing-note').textContent = note;
+      document.getElementById('learn-sing-level').style.width = `${Math.round(Math.min(1, level) * 100)}%`;
+      document.getElementById('learn-sing-status').textContent = status;
+      document.getElementById('learn-sing').classList.toggle('is-match', match);
+    }
+
+    async function startSinging(q) {
+      cancelAnimationFrame(sing.raf);
+      sing.q = q;
+      sing.stableMidi = null;
+      sing.listenFrom = performance.now() + 1500;
+      setSingUi('–', 0, 'Hear the lit note, then sing');
+      const ok = await ensureMic();
+      if (state.quizQuestion !== q || state.quizAnswered) return;
+      if (!ok) {
+        setSingUi('–', 0, 'Can’t use the microphone — tap the key instead');
+        return;
+      }
+      sing.raf = requestAnimationFrame(singTick);
+    }
+
+    function stopSinging() {
+      cancelAnimationFrame(sing.raf);
+      sing.q = null;
+    }
+
+    function singTick() {
+      const q = sing.q;
+      if (!q || state.quizQuestion !== q || state.quizAnswered || !sing.analyser) return;
+      sing.analyser.getFloatTimeDomainData(sing.buf);
+      let rms = 0;
+      for (let i = 0; i < sing.buf.length; i++) rms += sing.buf[i] * sing.buf[i];
+      const level = Math.sqrt(rms / sing.buf.length) * 8;
+      const now = performance.now();
+      const listening = now >= sing.listenFrom && now >= measurePlayingUntil + 300;
+      const f = listening ? detectPitch(sing.buf, sing.ctx.sampleRate) : null;
+      if (f) {
+        const mf = 69 + 12 * Math.log2(f / 440);
+        const m = Math.round(mf);
+        const cents = Math.round((mf - m) * 100);
+        const match = m % 12 === q.targetMidi % 12;
+        const steady = Math.abs(cents) <= SING_IN_TUNE_CENTS;
+        setSingUi(NOTE_NAMES[((m % 12) + 12) % 12], level,
+          `${cents >= 0 ? '+' : ''}${cents}¢${match ? (steady ? ' · hold it…' : ' · nearly') : ''}`, match && steady);
+        if (m === sing.stableMidi && (steady || !match)) {
+          const held = now - sing.stableSince;
+          if ((match && held >= SING_RIGHT_MS) || (!match && held >= SING_WRONG_MS)) { judgeSung(m); return; }
+        } else if (m !== sing.stableMidi) {
+          sing.stableMidi = m;
+          sing.stableSince = now;
+        }
+      } else {
+        sing.stableMidi = null;
+        setSingUi('–', listening ? level : 0, listening ? 'Listening…' : 'Hear the lit note, then sing');
+      }
+      sing.raf = requestAnimationFrame(singTick);
+    }
+
+    // Judge a sung note (a MIDI number) against the current sing round.
+    function judgeSung(midi) {
+      const q = state.quizQuestion;
+      if (!q || q.kind !== 'sing' || state.quizAnswered) return false;
+      stopSinging();
+      const correct = ((midi % 12) + 12) % 12 === q.targetMidi % 12;
+      revealIntervalKeys(q);
+      const wrongKey = !correct && document.querySelector(`.key[data-midi="${midi}"]`);
+      if (wrongKey) wrongKey.classList.add('quiz-wrong');
+      measurePlayingUntil = 0;
+      playIntervalPrompt(q);
+      const fb = qEl('feedback');
+      const sung = NOTE_NAMES[((midi % 12) + 12) % 12];
+      fb.textContent = correct ? `✓ Correct! You sang ${sung}.` : `✗ You sang ${sung}. It was ${q.answerName}`;
+      fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
+      qEl('label').textContent = q.answerName;
+      qEl('options').textContent = '';
+      document.getElementById('learn-sing').classList.toggle('is-match', correct);
+      recordQuizResult(correct);
+      return true;
+    }
+
+    // The 🎤 toggle: asks for the mic straight away (it is a tap), and turns
+    // itself back off if the mic can't be used.
+    async function setSing(on, askMic = true) {
+      progress.settings.sing = !!on;
+      document.getElementById('learn-sing-toggle').checked = !!on;
+      saveProgress();
+      if (on && askMic && !(await ensureMic())) {
+        progress.settings.sing = false;
+        document.getElementById('learn-sing-toggle').checked = false;
+        saveProgress();
+        showBanner('Microphone blocked — singing is off');
+      }
+      if (!progress.settings.sing) releaseMic();
+      if (state.mode === 'learn' && !state.learnRun && state.learnStep === 'play') startLearnRound();
+    }
+
     function recordLearnResult(correct) {
+      stopSinging();
+      if (state.learnRun) { recordRunResult(correct); return; }
       const u = LEARN_UNITS[state.learnUnitIdx];
-      if (state.quizQuestion && state.quizQuestion.hinted) {
-        state.learnLastQ = { unitId: u.id, q: state.quizQuestion };
+      const q = state.quizQuestion;
+      if (q && q.hinted) {
+        state.learnLastQ = { unitId: u.id, q };
         qEl('feedback').textContent += '  (Hinted: practice only, not counted.)';
+        showFact(q, u);
+        showLearnResult();
         return;
       }
       const step = state.learnStep;
@@ -3144,7 +4877,8 @@ const MIDDLE_C   = 60;  // C4
       if (correct) stats.correct++;
       stats.recent.push(correct ? 1 : 0);
       if (stats.recent.length > LEARN_PASS_WINDOW) stats.recent.shift();
-      state.learnLastQ = { unitId: u.id, q: state.quizQuestion };
+      state.learnLastQ = { unitId: u.id, q };
+      const gained = awardAnswer(correct);
 
       // Only the unit's frontier step can advance; replaying an earlier
       // step (or a finished unit) is practice.
@@ -3154,17 +4888,27 @@ const MIDDLE_C   = 60;  // C4
         state.learnJustPassed = true;
         const fb = qEl('feedback');
         fb.textContent += up.step === 'play' ? '  Your ear has it — now play it!' : '  Step complete!';
-        document.getElementById('learn-next-btn').textContent = 'Continue →';
+        document.getElementById('learn-next-btn').textContent = 'Continue';
         showBanner(`${LEARN_STEP_LABELS[step]} ✓ — next: ${LEARN_STEP_LABELS[up.step]}`);
       }
+      appendXpPop(gained);
+      showFact(q, u);
+      showLearnResult();
       saveProgress();
       renderLearnMeter();
       renderLearnSteps();
     }
 
     // Next / Continue: move on to the next step if this one just passed,
-    // otherwise another round of the same step.
+    // otherwise another round of the same step. In a run: the next question,
+    // or the results once it is over.
     function learnNext() {
+      const run = state.learnRun;
+      if (run) {
+        if (run.ended) { run.resultsShown = true; renderLearn(); }
+        else startRunRound();
+        return;
+      }
       if (state.learnJustPassed) {
         state.learnJustPassed = false;
         state.learnStep = defaultLearnStep(LEARN_UNITS[state.learnUnitIdx]);
@@ -3174,30 +4918,30 @@ const MIDDLE_C   = 60;  // C4
       }
     }
 
-    // "Got it" on the why step: finish the unit and unlock the next one.
+    // "Got it" on the why step: on to the boss (a finished unit goes back to
+    // the path's frontier instead).
     function learnGotIt() {
-      if (state.learnStep !== 'why') return false;
-      const idx = state.learnUnitIdx;
-      const up = unitProgress(LEARN_UNITS[idx].id);
-      if (up.step === 'why') {
-        up.step = 'done';
-        // The next unfinished unit becomes the frontier (later units may
-        // already be done, e.g. after new units were added to the path).
-        const next = LEARN_UNITS.findIndex((u, i) => i > idx && unitProgress(u.id).step !== 'done');
-        if (next >= 0 && progress.learn.unitIdx === idx) {
-          progress.learn.unitIdx = next;
-          showBanner(`Unit ${next + 1} unlocked: ${LEARN_UNITS[next].title} 🎉`);
-        } else if (LEARN_UNITS.every(u => unitProgress(u.id).step === 'done')) {
-          showBanner('Path complete — great ears! 🎉');
-        }
-        saveProgress();
+      if (state.learnStep !== 'why' || state.learnDaily) return false;
+      const u = LEARN_UNITS[state.learnUnitIdx];
+      const up = unitProgress(u.id);
+      if (up.step === 'done') {
+        viewLearnUnit(progress.learn.unitIdx);
+        return true;
       }
-      viewLearnUnit(progress.learn.unitIdx);
+      if (up.step === 'why') {
+        up.step = 'boss';
+        saveProgress();
+        showBanner(`Boss unlocked: ${UNIT_BOSSES[u.id]} ⚔️`);
+      }
+      state.learnStep = 'boss';
+      renderLearn();
       return true;
     }
 
     function viewLearnUnit(idx) {
       if (idx < 0 || idx >= LEARN_UNITS.length || unitLocked(idx)) return;
+      abandonRun();
+      state.learnDaily = false;
       state.learnUnitIdx = idx;
       state.learnStep = defaultLearnStep(LEARN_UNITS[idx]);
       state.learnJustPassed = false;
@@ -3207,6 +4951,8 @@ const MIDDLE_C   = 60;  // C4
     function viewLearnStep(step) {
       const u = LEARN_UNITS[state.learnUnitIdx];
       if (stepIndex(u, step) > stepIndex(u, unitProgress(u.id).step)) return;  // no skipping ahead
+      abandonRun();
+      state.learnDaily = false;
       state.learnStep = step;
       state.learnJustPassed = false;
       renderLearn();
@@ -3219,87 +4965,164 @@ const MIDDLE_C   = 60;  // C4
         state.learnJustPassed = false;
         state.learnStep = defaultLearnStep(u);
       }
+      renderLearnStats();
       renderLearnUnits();
-      document.getElementById('learn-title').textContent = `${state.learnUnitIdx + 1}. ${u.title}`;
-      document.getElementById('learn-goal').textContent = u.goal;
-      renderLearnSteps();
+      const run = state.learnRun;
+      const runLive = !!run && !run.ended;
+      const inRound = runLive || (!state.learnDaily && (state.learnStep === 'hear' || state.learnStep === 'play'));
+      const onCard = !inRound && (state.learnDaily || state.learnStep === 'boss');
 
-      const inRound = state.learnStep === 'hear' || state.learnStep === 'play';
+      document.getElementById('learn-progress-row').hidden = runLive || !inRound;
+      const kicker = document.getElementById('learn-kicker');
+      const goal = document.getElementById('learn-goal');
+      if (state.learnDaily) {
+        kicker.textContent = 'Review';
+        document.getElementById('learn-title').textContent = 'Daily mix';
+        goal.textContent = 'Ten mixed questions from the units you have started. No timer, no lives.';
+        goal.hidden = runLive;
+        document.getElementById('learn-steps').hidden = !runLive;
+      } else {
+        kicker.textContent = `Unit ${state.learnUnitIdx + 1} of ${LEARN_UNITS.length}`;
+        document.getElementById('learn-title').textContent = u.title;
+        // The goal shows until the step has its first answer, then steps aside.
+        const st = inRound ? unitProgress(u.id)[state.learnStep] : null;
+        goal.textContent = u.goal;
+        goal.hidden = runLive || !(st && st.total === 0);
+        document.getElementById('learn-steps').hidden = false;
+        if (!runLive) renderLearnSteps();
+      }
+      renderRunBar();
+
       document.getElementById('learn-round').hidden = !inRound;
-      document.getElementById('learn-why').hidden = inRound;
+      document.getElementById('learn-card').hidden = !onCard;
+      document.getElementById('learn-why').hidden = inRound || onCard;
       if (state.mode !== 'learn') return;
-      if (inRound) {
+      if (runLive) {
+        if (!run.begun) startRunRound();
+      } else if (inRound) {
         startLearnRound();
       } else {
+        stopSinging();
         state.quizQuestion = null;
         state.quizAnswered = false;
         clearHighlight();
-        renderLearnWhy(u);
+        if (onCard) renderLearnCard(u);
+        else renderLearnWhy(u);
       }
     }
 
+    const UNIT_ICONS = {
+      done:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>',
+      current: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.6" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="#f59e0b" stroke="none"/></svg>',
+      open:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>',
+      locked:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+    };
+
+    // The path sheet's unit list: status, name, and where each one is up to.
     function renderLearnUnits() {
-      const row = document.getElementById('learn-units');
-      row.innerHTML = '';
+      const list = document.getElementById('learn-units');
+      list.innerHTML = '';
       LEARN_UNITS.forEach((u, i) => {
-        const done = unitProgress(u.id).step === 'done';
+        const step = unitProgress(u.id).step;
+        const done = step === 'done';
         const locked = unitLocked(i);
+        const current = i === progress.learn.unitIdx && !done;
+        const li = document.createElement('li');
         const b = document.createElement('button');
         b.className = 'learn-unit' +
           (done ? ' is-done' : '') +
           (locked ? ' is-locked' : '') +
-          (i === progress.learn.unitIdx && !done ? ' is-current' : '') +
-          (i === state.learnUnitIdx ? ' is-viewing' : '');
+          (current ? ' is-current' : '') +
+          (i === state.learnUnitIdx && !state.learnDaily ? ' is-viewing' : '');
         b.dataset.unit = u.id;
         b.disabled = locked;
-        b.textContent = `${locked ? '🔒 ' : ''}${i + 1}. ${u.title}${done ? ' ✓' : ''}`;
-        b.addEventListener('click', () => viewLearnUnit(i));
-        row.appendChild(b);
+        const status = done ? 'Done' : locked ? 'Locked' : current ? 'In progress' : 'Open';
+        b.setAttribute('aria-label', `${i + 1}. ${u.title}: ${status}`);
+        const meta = done ? 'Boss beaten' : locked ? '' : step === 'boss' ? 'Boss ready'
+          : `${LEARN_STEP_LABELS[step]}`;
+        b.innerHTML = UNIT_ICONS[done ? 'done' : locked ? 'locked' : current ? 'current' : 'open'] +
+          `<span class="learn-unit-name"></span><span class="learn-unit-meta"></span>`;
+        b.querySelector('.learn-unit-name').textContent = `${i + 1}. ${u.title}`;
+        b.querySelector('.learn-unit-meta').textContent = meta;
+        b.addEventListener('click', () => { closeSheets(); viewLearnUnit(i); });
+        li.appendChild(b);
+        list.appendChild(li);
       });
-      const cur = row.children[state.learnUnitIdx];
-      if (cur) row.scrollLeft = Math.max(0, cur.offsetLeft - row.offsetLeft - 24);
     }
 
+    // How far through a hear/play step: right answers in the window, out of
+    // the LEARN_PASS_MIN needed.
+    function stepFill(u, s) {
+      const st = unitProgress(u.id)[s];
+      if (!st) return 0;
+      return Math.min(1, st.recent.slice(-LEARN_PASS_WINDOW).filter(Boolean).length / LEARN_PASS_MIN);
+    }
+
+    // The steps as one segmented bar; done steps fill green, the current one
+    // fills amber as right answers come in.
     function renderLearnSteps() {
       const u = LEARN_UNITS[state.learnUnitIdx];
       const frontier = stepIndex(u, unitProgress(u.id).step);
       const box = document.getElementById('learn-steps');
+      box.className = 'learn-steps';
       box.innerHTML = '';
-      unitSteps(u).forEach((s, i) => {
-        if (i) {
-          const arrow = document.createElement('span');
-          arrow.className = 'learn-step-arrow';
-          arrow.textContent = '→';
-          box.appendChild(arrow);
-        }
+      const steps = unitSteps(u);
+      box.style.setProperty('--n', steps.length);
+      steps.forEach((s, i) => {
         const b = document.createElement('button');
         b.className = 'learn-step' +
           (i < frontier ? ' is-done' : '') +
           (s === state.learnStep ? ' is-viewing' : '');
         b.dataset.step = s;
         b.disabled = i > frontier;
-        b.textContent = LEARN_STEP_LABELS[s] + (i < frontier ? ' ✓' : '');
+        const fill = i < frontier ? 1 : i === frontier && (s === 'hear' || s === 'play') ? stepFill(u, s) : 0;
+        b.innerHTML = `<span class="learn-step-bar"><i style="width:${Math.round(fill * 100)}%"></i></span><span></span>`;
+        b.lastChild.textContent = LEARN_STEP_LABELS[s] + (i < frontier ? ' ✓' : '');
+        b.setAttribute('aria-label', `${LEARN_STEP_LABELS[s]}${i < frontier ? ', done' : i > frontier ? ', locked' : ''}`);
         b.addEventListener('click', () => viewLearnStep(s));
         box.appendChild(b);
       });
     }
 
-    // Last-10 answers as dots, plus how many are right.
+    // One line under the steps: where this step stands.
     function renderLearnMeter() {
       const el = document.getElementById('learn-meter');
       const step = state.learnStep;
-      if (step !== 'hear' && step !== 'play') { el.innerHTML = ''; return; }
-      const stats = unitProgress(LEARN_UNITS[state.learnUnitIdx].id)[step];
-      const recent = stats.recent.slice(-LEARN_PASS_WINDOW);
-      let html = '';
-      for (let i = 0; i < LEARN_PASS_WINDOW; i++) {
-        const r = recent[i];
-        html += `<span class="learn-dot${r === 1 ? ' hit' : r === 0 ? ' miss' : ''}"></span>`;
+      if (state.learnRun || (step !== 'hear' && step !== 'play')) { el.innerHTML = ''; return; }
+      const u = LEARN_UNITS[state.learnUnitIdx];
+      const stats = unitProgress(u.id)[step];
+      const hits = stats.recent.slice(-LEARN_PASS_WINDOW).filter(Boolean).length;
+      const label = `<b>${LEARN_STEP_LABELS[step]}</b>`;
+      if (stepIndex(u, unitProgress(u.id).step) > stepIndex(u, step)) {
+        el.innerHTML = `${label} · practice`;
+      } else if (hits >= LEARN_PASS_MIN && stats.total < LEARN_PASS_WINDOW) {
+        el.innerHTML = `${label} · ${LEARN_PASS_WINDOW - stats.total} more to go`;
+      } else {
+        el.innerHTML = `${label} · ${Math.min(hits, LEARN_PASS_MIN)} of ${LEARN_PASS_MIN} right to pass`;
       }
-      const hits = recent.filter(Boolean).length;
-      html += `<span class="learn-meter-text">${hits}/${LEARN_PASS_WINDOW}</span>`;
-      el.innerHTML = html;
       el.title = `Get ${LEARN_PASS_MIN} of your last ${LEARN_PASS_WINDOW} right to move on`;
+    }
+
+    // ── Learn: sheets ──
+
+    let sheetReturnFocus = null;
+    function openSheet(id) {
+      closeSheets();
+      if (id === 'learn-path-sheet') renderLearnUnits();
+      sheetReturnFocus = document.activeElement;
+      document.getElementById('learn-sheet-backdrop').hidden = false;
+      const sheet = document.getElementById(id);
+      sheet.hidden = false;
+      const first = sheet.querySelector('[data-close-sheet]');
+      if (first) first.focus();
+    }
+
+    function closeSheets() {
+      const open = document.querySelector('.sheet:not([hidden])');
+      document.querySelectorAll('.sheet').forEach(sh => { sh.hidden = true; });
+      document.getElementById('learn-sheet-backdrop').hidden = true;
+      if (open && sheetReturnFocus && document.contains(sheetReturnFocus)) sheetReturnFocus.focus();
+      sheetReturnFocus = null;
     }
 
     // Songs whose chords are all among the chord types learned so far.
@@ -3314,6 +5137,8 @@ const MIDDLE_C   = 60;  // C4
     function renderLearnWhy(u) {
       document.getElementById('learn-why-text').innerHTML = u.why.map(p => `<p>${p}</p>`).join('');
       document.getElementById('learn-show-me').hidden = !u.show;
+      document.getElementById('learn-got-it').textContent =
+        unitProgress(u.id).step === 'done' ? 'Got it ✓' : `Got it — face the boss ⚔️`;
 
       const songsBox = document.getElementById('learn-songs');
       songsBox.innerHTML = '';
@@ -3394,6 +5219,10 @@ const MIDDLE_C   = 60;  // C4
     // Wipe saved progress (Learn path and free-play quiz level/streak).
     function resetProgress() {
       const settings = progress.settings;   // a preference, not progress: keep it
+      abandonRun();
+      state.learnDaily = false;
+      state.learnCombo = 0;
+      renderCombo(false);
       try { localStorage.removeItem(PROGRESS_KEY); } catch (_) {}
       progress = defaultProgress();
       progress.settings = settings;
@@ -3408,9 +5237,22 @@ const MIDDLE_C   = 60;  // C4
     // Debug hook (?debug=1): answer the current round right or wrong through
     // the same paths a tap would take, then press Next.
     function debugAnswer(correct) {
+      if (!answerNow(correct)) return false;
+      setTimeout(() => {
+        if (!state.quizAnswered) return;
+        if (state.mode === 'learn') learnNext();
+        else if (state.mode === 'quiz') startQuizRound();
+      }, 0);
+      return true;
+    }
+
+    // Answer the current round right or wrong, without moving on.
+    function answerNow(correct) {
       const q = state.quizQuestion;
       if (!q || state.quizAnswered) return false;
-      if (q.choices) {
+      if (q.kind === 'sing') {
+        judgeSung(correct ? q.targetMidi : q.targetMidi + 1);
+      } else if (q.choices) {
         const wrong = q.choices.find(c => c.id !== q.answer);
         answerChoice(correct || !wrong ? q.answer : wrong.id);
       } else {
@@ -3430,17 +5272,33 @@ const MIDDLE_C   = 60;  // C4
           [bad, ...need.slice(1)].forEach(pc => registerQuizKey(midiFor(pc)));
         }
       }
-      setTimeout(() => {
-        if (!state.quizAnswered) return;
-        if (state.mode === 'learn') learnNext();
-        else if (state.mode === 'quiz') startQuizRound();
-      }, 0);
+      return true;
+    }
+
+    // Debug: play a whole boss run with right answers (or `misses` wrong ones
+    // first), ending on its results card. False unless a boss step is open.
+    function debugPlayBoss(misses = 0) {
+      if (state.learnDaily || state.learnStep !== 'boss') return false;
+      startRun('boss');
+      let k = 0;
+      while (state.learnRun && !state.learnRun.ended) {
+        answerNow(k++ >= misses);
+        if (!state.learnRun.ended) startRunRound();
+      }
+      learnNext();
       return true;
     }
 
     // ── Mode Switching ────────────────────────────────────────────────────────
 
     function switchMode(mode) {
+      // Leaving Learn ends a boss or daily run (they are short) and the mic.
+      if (mode !== 'learn') {
+        abandonRun();
+        state.learnDaily = false;
+        releaseMic();
+        closeSheets();
+      }
       state.mode = mode;
       state.ivNotes = [];
 
@@ -3551,8 +5409,19 @@ const MIDDLE_C   = 60;  // C4
       document.getElementById('learn-got-it').addEventListener('click', learnGotIt);
       document.getElementById('learn-show-me').addEventListener('click', learnShowMe);
       document.getElementById('learn-reset').addEventListener('click', () => {
-        if (confirm('Reset all progress? This clears the Learn path and your Quiz level.')) resetProgress();
+        if (confirm('Reset all progress? This clears the Learn path and your Quiz level.')) {
+          closeSheets();
+          resetProgress();
+        }
       });
+      document.getElementById('learn-unit-btn').addEventListener('click', () => openSheet('learn-path-sheet'));
+      document.getElementById('learn-settings-btn').addEventListener('click', () => openSheet('learn-settings-sheet'));
+      document.getElementById('learn-sheet-backdrop').addEventListener('click', closeSheets);
+      document.querySelectorAll('[data-close-sheet]').forEach(b => b.addEventListener('click', closeSheets));
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.querySelector('.sheet:not([hidden])')) closeSheets();
+      });
+      document.getElementById('learn-run-quit').addEventListener('click', quitRun);
 
       // Instrument picker (grouped by family) and the Learn "Mix instruments" toggle
       const instrumentSel = document.getElementById('instrument-select');
@@ -3567,6 +5436,25 @@ const MIDDLE_C   = 60;  // C4
       const mixCb = document.getElementById('learn-mix');
       mixCb.checked = progress.settings.learnMix;
       mixCb.addEventListener('change', () => setLearnMix(mixCb.checked));
+
+      // Learn game layer: daily mix, sound effects, singing
+      document.getElementById('learn-daily-btn').addEventListener('click', () => {
+        closeSheets();
+        ensureAudioStarted();   // this tap unlocks audio; the mix needn't wait for it
+        enterDaily();
+      });
+      const sfxCb = document.getElementById('learn-sfx');
+      sfxCb.checked = progress.settings.sfx;
+      sfxCb.addEventListener('change', () => setSfx(sfxCb.checked));
+      const singCb = document.getElementById('learn-sing-toggle');
+      singCb.checked = progress.settings.sing;
+      singCb.addEventListener('change', () => setSing(singCb.checked));
+      document.addEventListener('visibilitychange', () => {
+        // Don't hold the mic open in the background; pick it up again on return.
+        if (document.visibilityState === 'hidden') { stopSinging(); releaseMic(); return; }
+        const q = state.quizQuestion;
+        if (state.mode === 'learn' && q && q.kind === 'sing' && !state.quizAnswered) startSinging(q);
+      });
 
       // Initial display — the app opens on the Learn path
       updateScaleDisplay();
@@ -3608,10 +5496,54 @@ const MIDDLE_C   = 60;  // C4
             const q = { kind: 'interval', mode: down ? 'descending' : 'ascending', semis,
                         low, high: low + semis, midis: down ? [low + semis, low] : [low, low + semis] };
             renderIntervalRefs(q, qEl('refs'));
+            if (state.mode === 'learn') document.getElementById('learn-result').hidden = false;
           },
           // What the current interval question's prompt plays (null otherwise).
           promptEvents:    () => (state.quizQuestion && state.quizQuestion.kind === 'interval'
             ? intervalPromptEvents(state.quizQuestion, progress.settings.keyContext) : null),
+
+          // ── Learn game layer ──
+          // Force one question variant for Learn rounds ('standard', 'song',
+          // 'odd', 'wrong-note', 'count', 'blind', 'phrase', 'complete',
+          // 'missing'), or null for the normal random mix. Variants a unit
+          // can't serve fall back to the mix.
+          forceVariant:    (v) => { state.forcedVariant = v || null; return true; },
+          variantsFor:     (unitId, step) => {
+            const u = LEARN_UNITS.find(x => x.id === unitId);
+            return u && u[step] ? (LEARN_VARIANTS[step][u[step].type] || []).map(([v]) => v)
+              .filter(v => variantAvailable(u, step, v)) : [];
+          },
+          // The active boss/daily run (null when none): kind, idx, len, correct,
+          // lives, ended, won, xp, bonus, left/limit (ms on the timer).
+          get run()        { return state.learnRun; },
+          get combo()      { return state.learnCombo; },
+          viewStep:        (step) => viewLearnStep(step),
+          startBoss:       () => { if (state.learnStep !== 'boss' || state.learnDaily) return false; startRun('boss'); return true; },
+          playBoss:        (misses = 0) => debugPlayBoss(misses),
+          expireTimer:     () => { if (!state.learnRun || !state.learnRun.timed) return false; timeUp(); return true; },
+          startDaily:      () => enterDaily(),
+          leaveDaily:      () => leaveDaily(),
+          // Pretend today is this local date (YYYY-MM-DD), for streak tests.
+          setToday:        (d) => { state.todayOverride = d || null; renderLearnStats(); },
+          setSfx:          (on) => setSfx(on),
+          // Sing mode without asking for the mic (askMic false), and a sung note.
+          setSing:         (on, askMic = false) => setSing(on, askMic),
+          sing:            (midi) => judgeSung(midi),
+          // Begin a sing round on fixed notes (root MIDI, semitones up).
+          singRound:       (root, semis) => {
+            if (state.mode !== 'learn' || state.learnRun) return false;
+            const q = makeSingQuestion([semis], root);
+            q.unitId = LEARN_UNITS[state.learnUnitIdx].id;
+            beginRound(q);
+            return true;
+          },
+          singStatus:      () => ({ listening: !!sing.q, mic: !!sing.analyser,
+                                    note: document.getElementById('learn-sing-note').textContent }),
+          detectPitch:     (freq, sampleRate = 48000) => {
+            const buf = new Float32Array(2048);
+            for (let i = 0; i < buf.length; i++) buf[i] = 0.5 * Math.sin(2 * Math.PI * freq * i / sampleRate);
+            return detectPitch(buf, sampleRate);
+          },
         };
       }
 
@@ -3634,7 +5566,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610160655';
+        const SW_VERSION = '2610272330';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }

@@ -4,7 +4,7 @@
 const { launch, run, assert, PROGRESS_KEY } = require('./_helpers');
 
 run(async () => {
-  const { browser, page, errors, open, reload, mt } = await launch();
+  const { browser, page, errors, open, reload, mt, pickUnit } = await launch();
 
   await open();
   await mt(() => window.__musicTheory.resetProgress());
@@ -41,7 +41,7 @@ run(async () => {
   for (const id of ids.filter(i => i !== 'piano')) await mt((i) => window.__musicTheory.loadInstrument(i), id);
   await page.selectOption('#instrument-select', 'violin');
   await mt(() => window.__musicTheory.switchMode('learn'));
-  await page.locator('.learn-unit[data-unit="perfect-intervals"]').click();
+  await pickUnit('perfect-intervals');
   const seen = new Set();
   for (let i = 0; i < 12; i++) {
     const r = await mt(() => {
@@ -81,7 +81,7 @@ run(async () => {
   await page.selectOption('#instrument-select', 'cello');
   await mt(() => window.__musicTheory.setLearnMix(false));
   await mt(() => window.__musicTheory.switchMode('learn'));
-  await page.locator('.learn-unit[data-unit="perfect-intervals"]').click();
+  await pickUnit('perfect-intervals');
   assert(await mt(() => window.__musicTheory.instrument) === 'cello', 'unmixed Learn uses the picked cello');
 
   // Both choices are saved, restored on reload, and kept through a reset.
