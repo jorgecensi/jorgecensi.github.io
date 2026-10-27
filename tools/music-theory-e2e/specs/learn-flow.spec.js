@@ -44,11 +44,19 @@ run(async () => {
   assert(s.step === 'why', 'unit 1 has no play step: expected step "why", got "' + s.step + '"');
 
   await mt(() => window.__musicTheory.gotIt());
-  assert(await unitIdx() === 1, 'gotIt() advances unitIdx to 1, got ' + await unitIdx());
+  s = await unitState('pulse');
+  assert(s.step === 'boss', 'gotIt() opens the boss step, got "' + s.step + '"');
+  assert(await unitIdx() === 0, 'the next unit stays locked until the boss is beaten, got unitIdx ' + await unitIdx());
+  assert(await mt(() => window.__musicTheory.playBoss()), 'playBoss() runs the boss from its step');
+  assert(await unitIdx() === 1, 'beating the boss advances unitIdx to 1, got ' + await unitIdx());
+  assert(await page.locator('#learn-card').isVisible(), 'the boss ends on a results card');
+  assert(/beaten/i.test(await page.textContent('#learn-card')), 'the results card says the boss is beaten');
+  await page.click('#learn-card [data-action="next-unit"]');
+  assert(await mt(() => window.__musicTheory.state.learnUnitIdx) === 1, '"Next unit" opens unit 2');
   const unit2 = await mt(() => window.__musicTheory.units[1].id);
   assert(unit2 === 'perfect-intervals', 'units[1].id is perfect-intervals, got ' + unit2);
   s = await unitState('pulse');
-  assert(s.step === 'done', 'unit 1 is marked done after gotIt(), got "' + s.step + '"');
+  assert(s.step === 'done', 'unit 1 is marked done after its boss, got "' + s.step + '"');
 
   // ── Unit 2 hear: threshold is total >= 10 AND >= 8 correct in the last 10 ──
   // Sequence W W W then C...: after answer 10 the window holds 7 correct (not
@@ -89,7 +97,8 @@ run(async () => {
   assert(s.step === 'why', 'after play passes the step is "why", got "' + s.step + '"');
 
   await mt(() => window.__musicTheory.gotIt());
-  assert(await unitIdx() === 2, 'gotIt() advances unitIdx to 2, got ' + await unitIdx());
+  assert(await mt(() => window.__musicTheory.playBoss()), 'playBoss() runs unit 2\'s boss');
+  assert(await unitIdx() === 2, 'beating unit 2\'s boss advances unitIdx to 2, got ' + await unitIdx());
 
   // ── Reload: progress persists and the DOM marks unit 3 (thirds) active ──
   await reload();

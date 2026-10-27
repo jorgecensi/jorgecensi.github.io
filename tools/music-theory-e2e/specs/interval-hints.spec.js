@@ -43,6 +43,7 @@ run(async () => {
     v: 1, learn: { unitIdx: 1, units: { pulse: { step: 'done' } } },
   })), PROGRESS_KEY);
   await reload();
+  await mt(() => window.__musicTheory.forceVariant('standard'));   // Hint is on the standard round
   await mt(() => window.__musicTheory.switchMode('learn'));
 
   const hearStats = () => mt(() => window.__musicTheory.progress.learn.units['perfect-intervals'].hear);
