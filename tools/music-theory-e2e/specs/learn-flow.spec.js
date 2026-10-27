@@ -5,7 +5,7 @@
 const { launch, run, assert, PROGRESS_KEY } = require('./_helpers');
 
 run(async () => {
-  const { browser, page, errors, open, reload, mt } = await launch();
+  const { browser, page, errors, open, reload, mt, pickUnit } = await launch();
 
   await open();
   await mt(() => window.__musicTheory.resetProgress());
@@ -106,7 +106,7 @@ run(async () => {
   assert(await page.locator('#panel-learn').isVisible(), '#panel-learn visible after reload');
 
   const active = await page.evaluate(() => {
-    const panel = document.querySelector('#panel-learn');
+    const panel = document.querySelector('#learn-path-sheet');   // the unit list lives in the path sheet
     const el = panel.querySelector('[data-unit="thirds"]');
     if (el) return { via: 'data-unit', cls: el.className, aria: el.getAttribute('aria-current') };
     // Fallback: any active/current-looking element mentioning "Thirds".
@@ -131,7 +131,7 @@ run(async () => {
     k.dispatchEvent(new PointerEvent('pointerdown', o));
     k.dispatchEvent(new PointerEvent('pointerup', o));
   }, midi);
-  await page.click('[data-unit="perfect-intervals"]');
+  await pickUnit('perfect-intervals');
   await page.click('#learn-steps [data-step="play"]');
   const pq = await mt(() => {
     const q = window.__musicTheory.currentQuestion();
@@ -147,7 +147,7 @@ run(async () => {
   assert(s.step === 'done', 'practising a finished unit leaves it done, got "' + s.step + '"');
 
   // ── Leaving the tab right after passing a step resumes at the next step ──
-  await page.click('[data-unit="thirds"]');
+  await pickUnit('thirds');
   for (let i = 0; i < 9; i++) {
     await mt(() => window.__musicTheory.answerCorrect());
     await page.waitForTimeout(30);

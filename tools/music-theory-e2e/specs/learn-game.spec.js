@@ -30,7 +30,7 @@ function sineWav(freq, secs = 4, rate = 48000) {
 }
 
 run(async () => {
-  const { browser, page, errors, open, reload, mt } = await launch();
+  const { browser, page, errors, open, reload, mt, pickUnit } = await launch();
   await open();
   const ids = await mt(() => window.__musicTheory.units.map(u => u.id));
   const save = (blob) => page.evaluate(([k, d]) => localStorage.setItem(k, JSON.stringify(d)), [PROGRESS_KEY, blob]);
@@ -45,7 +45,7 @@ run(async () => {
   await mt(() => window.__musicTheory.switchMode('learn'));
   let served = 0;
   for (const id of ids) {
-    await page.click(`.learn-unit[data-unit="${id}"]`);
+    await pickUnit(id);
     for (const step of ['hear', 'play']) {
       const variants = await mt(([u, s]) => window.__musicTheory.variantsFor(u, s), [id, step]);
       if (!variants.length) continue;   // pulse has no play step
@@ -110,7 +110,7 @@ run(async () => {
   console.log('variants: served and answered', served, 'rounds');
 
   // Unforced, a unit mixes its variants.
-  await page.click('.learn-unit[data-unit="perfect-intervals"]');
+  await pickUnit('perfect-intervals');
   await mt(() => window.__musicTheory.viewStep('hear'));
   const kinds = new Set();
   for (let i = 0; i < 40; i++) {
@@ -159,6 +159,9 @@ run(async () => {
   assert(r && r.kind === 'boss' && r.lives === 3 && r.timed && r.len === 10, 'the boss run starts with 3 lives and a timer');
   assert(r.limit > 10000 && r.limit < 45000, 'the timer allows the prompt plus answer time, got ' + r.limit);
   assert(await visible('#learn-run-bar'), 'the run bar shows');
+  assert(!(await visible('.mode-tabs')) && !(await visible('#learn-bar')), 'focus mode hides the tabs and the unit header');
+  assert(await page.locator('#learn-steps .run-seg').count() === 10, 'the strip has a segment per boss question');
+  assert(await visible('#learn-timer'), 'the timer ring shows around Play');
   assert(!(await visible('#learn-hint-btn')), 'no hints during a boss');
   await page.waitForTimeout(300);
   r = await mt(() => window.__musicTheory.run);
@@ -175,6 +178,11 @@ run(async () => {
   assert(r.ended && !r.won && r.lives === 0, 'three misses end the run as a loss');
   assert(await visible('#learn-card') && /try again/i.test(await page.textContent('#learn-card')), 'the loss card offers a retry');
   assert((await prog()).learn.units.pulse.step === 'boss' && (await prog()).learn.unitIdx === 0, 'losing keeps the unit at its boss');
+  // ✕ leaves a boss mid-run, back to its card, with the app chrome back.
+  await page.click('#learn-card [data-action="boss"]');
+  await page.click('#learn-run-quit');
+  assert(!(await mt(() => window.__musicTheory.run)) && await visible('#learn-card'), '✕ leaves the boss for its card');
+  assert(await visible('.mode-tabs') && await visible('#learn-bar'), 'leaving focus mode brings the tabs back');
   const xpBefore = (await prog()).learn.xp;
   assert(await mt(() => window.__musicTheory.playBoss()), 'the boss can be played again');
   r = await mt(() => window.__musicTheory.run);
@@ -215,6 +223,15 @@ run(async () => {
   await save({ v: 1, learn: { unitIdx: 0, layout: 2, units: { pulse: unit('why') } } });
   await reload();
   await mt(() => window.__musicTheory.switchMode('learn'));
+  // The daily mix starts from the top of the path sheet.
+  await mt(() => window.__musicTheory.setToday('2026-10-26'));
+  await page.click('#learn-unit-btn');
+  assert(await visible('#learn-path-sheet') && /start/i.test(await page.textContent('#learn-daily-btn')), 'the path sheet offers the daily mix');
+  await page.click('#learn-daily-btn');
+  assert(!(await visible('#learn-path-sheet')), 'starting the mix closes the sheet');
+  assert((await mt(() => window.__musicTheory.run)).kind === 'daily', 'the sheet button starts the daily mix');
+  await page.click('#learn-run-quit');
+  assert(!(await mt(() => window.__musicTheory.state.learnDaily)), '✕ leaves the daily mix');
   const daily = async (date) => {
     await mt((d) => window.__musicTheory.setToday(d), date);
     assert(await mt(() => window.__musicTheory.startDaily()), 'the daily mix starts on ' + date);
@@ -254,7 +271,10 @@ run(async () => {
   await save({ v: 1, learn: { unitIdx: 1, layout: 2, units: { pulse: unit('done'), 'perfect-intervals': atPlay() } } });
   await reload();
   await mt(() => window.__musicTheory.switchMode('learn'));
-  assert(await visible('#learn-sing-row'), 'the Sing toggle shows in an interval play step');
+  await page.click('#learn-settings-btn');
+  assert(await visible('#learn-sing-toggle'), 'the Sing toggle is in the Learn settings sheet');
+  await page.keyboard.press('Escape');
+  assert(!(await visible('#learn-settings-sheet')), 'Escape closes the settings sheet');
   await mt(() => window.__musicTheory.setSing(true));
   let q = await mt(() => window.__musicTheory.currentQuestion());
   assert(q.kind === 'sing' && /sing/i.test(q.prompt), 'sing mode serves sing rounds');

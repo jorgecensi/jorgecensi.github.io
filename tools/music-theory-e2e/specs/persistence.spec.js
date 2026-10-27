@@ -3,7 +3,7 @@
 const { launch, run, assert, PROGRESS_KEY } = require('./_helpers');
 
 run(async () => {
-  const { browser, page, errors, open, reload, mt } = await launch();
+  const { browser, page, errors, open, reload, mt, pickUnit } = await launch();
 
   await open();
   await mt(() => window.__musicTheory.resetProgress());
@@ -72,7 +72,7 @@ run(async () => {
   await reload();
   // Walk the three new units' why steps in order through the UI.
   for (const id of ['seconds', 'sixths', 'sevenths']) {
-    await page.locator(`.learn-unit[data-unit="${id}"]`).click();
+    await pickUnit(id);
     assert(await mt(() => window.__musicTheory.gotIt()), 'gotIt() works on the ' + id + ' why step');
     assert(await mt(() => window.__musicTheory.playBoss()), 'the ' + id + ' boss can be played after its why step');
   }

@@ -55,7 +55,14 @@ async function launch(launchOptions = {}) {
   // Evaluate a snippet against the debug API.
   const mt = (fn, arg) => page.evaluate(fn, arg);
 
-  return { browser, page, errors, assert, open, reload, mt, settle };
+  // Open a Learn unit the way a learner does: the unit name in the header
+  // opens the path sheet, then tap the unit.
+  const pickUnit = async (id) => {
+    await page.click('#learn-unit-btn');
+    await page.click(`#learn-path-sheet .learn-unit[data-unit="${id}"]`);
+  };
+
+  return { browser, page, errors, assert, open, reload, mt, settle, pickUnit };
 }
 
 function run(main) {

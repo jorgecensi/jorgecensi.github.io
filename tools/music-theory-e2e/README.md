@@ -36,7 +36,16 @@ jekyll binary".
   on the resulting controller change. `_helpers.js` waits for navigations to
   go quiet before driving the page (same trick as auto-runner-e2e).
 - `specs/_helpers.js` is shared plumbing (launch, error collection, `open()`,
-  `reload()`); it is not a spec and `run.sh` ignores it.
+  `reload()`, and `pickUnit(id)`, which opens a Learn unit through the path
+  sheet the way a learner does); it is not a spec and `run.sh` ignores it.
+- **Where Learn's controls live**: the unit list and the Daily mix button are
+  in the path sheet (`#learn-path-sheet`, opened by `#learn-unit-btn`); Mix
+  instruments, Play the key first, Sing answers, Sound effects and Reset are
+  in the settings sheet (`#learn-settings-sheet`, opened by
+  `#learn-settings-btn`). Both close with `[data-close-sheet]` or Escape. A
+  spec must open a sheet before clicking anything in it. During a boss or
+  daily run, `body.learn-focus` hides the app header and tabs, and
+  `#learn-run-quit` leaves the run.
 
 ## The `?debug=1` API
 

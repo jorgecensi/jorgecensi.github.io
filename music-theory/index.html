@@ -598,72 +598,382 @@ title: Music Theory
     }
     #panel-learn [hidden], #panel-quiz [hidden] { display: none !important; }
 
-    .learn-units {
+    /* Portrait: the Learn panel takes every pixel the piano doesn't, and
+       the round sits centred in it (no dead band above the keys). */
+    @media not all and (orientation: landscape) and (max-height: 520px) {
+      #panel-learn.active {
+        display: flex;
+        flex-direction: column;
+        max-height: none;
+        height: calc(100dvh - var(--learn-chrome, 296px) - var(--safe-top) - var(--safe-bottom));
+        min-height: 260px;
+      }
+      body.learn-focus { --learn-chrome: 212px; }
+    }
+    /* Focus mode (boss / daily mix): the app chrome steps aside. */
+    body.learn-focus header, body.learn-focus .mode-tabs { display: none; }
+
+    .learn-bar { display: flex; align-items: center; gap: 8px; margin: -4px 0 6px; }
+    .learn-unit-btn {
+      flex: 1;
+      min-width: 0;
+      min-height: 44px;
       display: flex;
+      align-items: center;
       gap: 6px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      margin: 0 -16px 10px;
-      padding: 0 16px 2px;
-    }
-    .learn-units::-webkit-scrollbar { display: none; }
-    .learn-unit {
-      flex-shrink: 0;
-      padding: 4px 10px;
-      border-radius: 14px;
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--panel2);
-      border: 1px solid var(--border2);
+      background: none;
+      border: none;
+      padding: 0;
       color: var(--text);
+      text-align: left;
       cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      font-family: inherit;
     }
-    .learn-unit.is-done    { color: var(--green); border-color: rgba(16,185,129,0.45); }
-    .learn-unit.is-current { border-color: var(--accent); color: var(--accent); }
-    .learn-unit.is-viewing { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-    .learn-unit:disabled   { color: var(--text-dim); opacity: 0.6; cursor: default; }
-
-    .learn-head { margin-bottom: 8px; }
-    .learn-title { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
-    .learn-goal  { font-size: 12px; color: var(--text-dim); margin-top: 2px; line-height: 1.35; }
-
-    .learn-steps { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
-    .learn-step-arrow { color: var(--text-dim); font-size: 11px; }
-    .learn-step {
-      padding: 3px 10px;
-      border-radius: 6px;
+    .learn-unit-btn svg { color: var(--text-dim); flex-shrink: 0; }
+    .learn-unit-text, .learn-runhead-text { display: flex; flex-direction: column; min-width: 0; }
+    .learn-kicker {
       font-size: 11px;
       font-weight: 700;
+      letter-spacing: 0.8px;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      background: transparent;
-      border: 1px solid var(--border2);
-      color: var(--text-dim);
-      cursor: pointer;
+      color: #9ca3af;
     }
-    .learn-step.is-done    { color: var(--green); border-color: rgba(16,185,129,0.45); }
-    .learn-step.is-viewing { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
-    .learn-step:disabled   { opacity: 0.5; cursor: default; }
-
-    .learn-meter {
+    .learn-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .learn-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--panel2);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .learn-chip svg { flex-shrink: 0; }
+    .learn-chip.is-cold { color: #9ca3af; }
+    .learn-icon-btn {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      font-size: 11px;
-      color: var(--text-dim);
+      border-radius: 12px;
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
     }
-    .learn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--panel2); border: 1px solid var(--border2); }
-    .learn-dot.hit  { background: var(--green); border-color: var(--green); }
-    .learn-dot.miss { background: #ef4444; border-color: #ef4444; }
-    .learn-meter-text { margin-left: 6px; }
+    .learn-icon-btn:hover { color: var(--text); background: var(--panel2); }
 
-    #learn-round { gap: 8px; }
-    #learn-label { font-size: 16px; }
-    #learn-options .quiz-choices { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); }
-    #learn-options .quiz-choices .quiz-opt-btn { padding: 7px 4px; font-size: 12px; }
+    .learn-runhead { display: flex; align-items: center; gap: 8px; margin: -4px 0 6px -8px; }
+    .learn-runhead-text { flex: 1; align-items: center; text-align: center; }
+    .run-lives { display: flex; gap: 3px; padding-right: 2px; }
+    .run-lives svg { width: 18px; height: 18px; }
+
+    /* Steps as one segmented bar (buttons, so a done step can be revisited). */
+    .learn-steps { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 4px; }
+    .learn-step {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 4px 0;
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      text-align: left;
+      cursor: pointer;
+    }
+    .learn-step:disabled { cursor: default; opacity: 0.55; }
+    .learn-step-bar, .run-seg { display: block; height: 6px; border-radius: 3px; background: #26264a; overflow: hidden; }
+    .learn-step-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+    .learn-step.is-done .learn-step-bar i { background: var(--green); }
+    .learn-step.is-viewing { color: var(--text); }
+    .learn-steps.is-run { gap: 3px; }
+    .run-seg.hit  { background: var(--green); }
+    .run-seg.miss { background: #ef4444; }
+    .run-seg.now  { background: var(--text); }
+
+    .learn-progress-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #9ca3af;
+      min-height: 18px;
+    }
+    .learn-meter b { color: var(--text); }
+    .learn-goal { font-size: 13px; color: #9ca3af; line-height: 1.4; margin-top: 8px; text-align: center; }
+
+    /* The round: the question is the hero, centred in the space. */
+    .learn-round {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 10px 0 4px;
+      text-align: center;
+    }
+    .learn-round > * { max-width: 520px; }
+    .learn-q { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    /* Answered: question and Play share a row, so the result fits. */
+    .learn-round.is-answered { gap: 10px; }
+    .learn-round.is-answered .learn-q { flex-direction: row-reverse; gap: 12px; width: 100%; justify-content: flex-start; }
+    .learn-round.is-answered #learn-label { font-size: 17px; text-align: left; flex: 1; }
+    .learn-round.is-answered .learn-play-wrap, .learn-round.is-answered .learn-timer { width: 52px; height: 52px; flex-shrink: 0; }
+    .learn-round.is-answered .learn-play { width: 44px; height: 44px; box-shadow: none; }
+    .learn-round.is-answered .learn-play svg { width: 20px; height: 20px; }
+    .learn-round.is-answered .learn-tag, .learn-round.is-answered .learn-timer-text { display: none; }
+    .learn-round.is-answered #learn-options .quiz-choices .quiz-opt-btn { min-height: 48px; }
+    .learn-round .quiz-options, .learn-round .learn-result, .learn-round .learn-sing,
+    .learn-round .learn-next, .learn-round .quiz-staff { width: 100%; }
+    .learn-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    #learn-label { font-size: 22px; line-height: 1.25; font-weight: 800; letter-spacing: -0.4px; min-height: 0; }
+    .learn-play-wrap { position: relative; width: 104px; height: 104px; display: flex; align-items: center; justify-content: center; }
+    .learn-play {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 28px rgba(245,158,11,0.35);
+    }
+    .learn-play:active { transform: scale(0.96); }
+    .learn-timer { position: absolute; inset: 0; width: 104px; height: 104px; pointer-events: none; }
+    .learn-timer-arc { stroke: var(--accent); stroke-dasharray: 289; transition: stroke 0.2s; }
+    .learn-timer.low .learn-timer-arc { stroke: #ef4444; }
+    .learn-timer-text { margin-top: -8px; font-size: 13px; font-weight: 700; color: #9ca3af; }
+    .learn-link-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      min-height: 32px;
+      cursor: pointer;
+    }
+    #learn-options .quiz-choices { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; }
+    #learn-options .quiz-choices .quiz-opt-btn { min-height: 56px; border-radius: 14px; font-size: 15px; font-weight: 700; }
+    #learn-options .quiz-choices.is-many .quiz-opt-btn { min-height: 44px; font-size: 13px; }
+    #learn-options:not(:has(.quiz-choices)) { font-size: 14px; color: #9ca3af; }
+
+    .learn-result {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      text-align: left;
+    }
+    .learn-result > * { flex-shrink: 0; }   /* never squash lines when the card scrolls */
+    .learn-result .quiz-feedback { text-align: left; font-size: 15px; font-weight: 800; }
+    .learn-result .learn-fact { background: none; border: none; padding: 0; font-size: 14px; }
+    .learn-result .round-instrument { font-size: 12px; color: #9ca3af; }
+    /* The song card flattens into the result: no box in a box. */
+    .learn-result .iv-refs { padding: 10px 0 0; border: none; border-top: 1px solid var(--border); border-radius: 0; background: none; }
+    .learn-result .iv-refs-title { display: none; }
+    .learn-next {
+      min-height: 52px;
+      border-radius: 14px;
+      border: none;
+      background: var(--accent);
+      color: var(--bg);
+      font: inherit;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .learn-why { margin-top: 14px; }
+    #panel-learn > .learn-card { margin: auto 0; }   /* centred in the space, like a round */
+
+    /* ── Sheets: the path and settings ── */
+    .sheet-backdrop { position: fixed; inset: 0; background: rgba(5,5,15,0.6); z-index: 103; }
+    .sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 104;
+      max-height: 88dvh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      margin: 0 auto;
+      max-width: 560px;
+      padding: 10px 20px calc(24px + var(--safe-bottom));
+      border-radius: 22px 22px 0 0;
+      background: var(--panel);
+      border-top: 1px solid var(--border2);
+      box-shadow: 0 -12px 40px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sheet[hidden], .sheet-backdrop[hidden] { display: none; }
+    .sheet-grip { width: 40px; height: 5px; border-radius: 3px; background: #4b5563; align-self: center; margin-bottom: 8px; flex-shrink: 0; }
+    .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .sheet-head h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+    .sheet-done {
+      min-height: 44px;
+      background: none;
+      border: none;
+      color: var(--accent);
+      font: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 64px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .setting-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .setting-text b { font-size: 15px; }
+    .setting-text span { font-size: 13px; color: #9ca3af; }
+    .switch {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 48px;
+      height: 28px;
+      flex-shrink: 0;
+      border-radius: 999px;
+      background: #374151;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--text);
+      transition: left 0.15s;
+    }
+    .switch:checked { background: var(--accent); }
+    .switch:checked::after { left: 23px; background: var(--bg); }
+    .switch:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
+    .sheet-danger {
+      margin-top: 14px;
+      min-height: 48px;
+      border-radius: 12px;
+      border: 1px solid rgba(239,68,68,0.45);
+      background: none;
+      color: #f87171;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .daily-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 2px 0 12px;
+      padding: 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #3a2410, var(--panel2) 70%);
+      border: 1px solid rgba(251,146,60,0.35);
+    }
+    .daily-icon {
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+      border-radius: 14px;
+      background: rgba(251,146,60,0.18);
+      color: #fb923c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .daily-card.is-cold .daily-icon { color: #9ca3af; background: var(--panel2); }
+    .daily-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .daily-title { font-size: 16px; font-weight: 800; }
+    .daily-sub { font-size: 12px; color: #d1d5db; }
+    .daily-btn {
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: none;
+      background: #fb923c;
+      color: var(--bg);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .daily-btn:disabled { background: var(--panel2); color: #9ca3af; cursor: default; }
+    .daily-btn.is-done { background: var(--green-dim); color: var(--green); }
+
+    .learn-units { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .learn-unit {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 48px;
+      padding: 0 12px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+    }
+    .learn-unit svg { flex-shrink: 0; }
+    .learn-unit-name { flex: 1; min-width: 0; }
+    .learn-unit-meta { font-size: 12px; font-weight: 700; color: #9ca3af; white-space: nowrap; }
+    .learn-unit.is-current { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.55); }
+    .learn-unit.is-current .learn-unit-meta { color: var(--accent); }
+    .learn-unit.is-viewing { box-shadow: inset 0 0 0 2px var(--accent); }
+    .learn-unit:disabled { color: #9ca3af; cursor: default; }
 
     .learn-why-text p {
       font-size: 13px;
@@ -681,19 +991,6 @@ title: Music Theory
       margin-bottom: 6px;
     }
     .learn-songs .song-chord-chip { font-size: 12px; padding: 4px 12px; }
-
-    .learn-reset {
-      display: block;
-      margin: 14px auto 0;
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-size: 11px;
-      text-decoration: underline;
-      cursor: pointer;
-      opacity: 0.7;
-    }
-    .learn-reset:hover { opacity: 1; color: var(--text); }
 
     /* Interval references: a playable public-domain tune plus well-known
        recordings, embedded from YouTube only when the learner asks. */
@@ -734,30 +1031,8 @@ title: Music Theory
       white-space: nowrap;
     }
     .round-instrument:not(:empty)::before { content: '🎵 '; }
-    .key-context {
-      display: flex;
-      white-space: nowrap;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--text-dim);
-      cursor: pointer;
-    }
 
     /* ── Learn: game layer (XP, combos, boss and daily runs, facts, singing) ── */
-    .learn-stats {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-      font-size: 12px;
-      color: var(--text-dim);
-      flex-wrap: wrap;
-    }
-    .learn-stats b { color: var(--text); font-weight: 700; }
-    .learn-stats .daily-btn { margin-left: auto; padding: 4px 12px; font-size: 12px; }
-    .learn-stats .daily-btn.is-done { background: var(--green-dim); color: var(--green); border-color: var(--green); }
-
     .learn-combo {
       font-size: 12px;
       font-weight: 800;
@@ -804,27 +1079,6 @@ title: Music Theory
     }
     .learn-fact::before { content: '💡 '; }
 
-    /* Boss and daily runs: lives, progress and a per-question timer. */
-    .run-bar { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-dim); }
-    .run-lives { letter-spacing: 1px; font-size: 13px; }
-    .run-lives:empty { display: none; }
-    .run-count { font-weight: 700; color: var(--text); white-space: nowrap; }
-    .run-timer {
-      flex: 1;
-      height: 6px;
-      border-radius: 3px;
-      background: var(--panel2);
-      overflow: hidden;
-    }
-    .run-timer i {
-      display: block;
-      height: 100%;
-      width: 100%;
-      background: var(--accent);
-      transform-origin: left center;
-    }
-    .run-timer.low i { background: #ef4444; }
-
     .learn-card {
       display: flex;
       flex-direction: column;
@@ -854,15 +1108,6 @@ title: Music Theory
     .learn-sing-level i { display: block; height: 100%; width: 0; background: var(--green); }
     .learn-sing.is-match .learn-sing-note { color: var(--green); }
 
-    .learn-footer {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      margin-top: 14px;
-    }
-    .learn-footer .learn-reset { margin: 0; }
-
     /* Celebration: emoji confetti that falls once (no flashing). */
     .confetti {
       position: fixed;
@@ -891,20 +1136,51 @@ title: Music Theory
       /* Take the height the compact header, tabs and 150px keyboard leave
          (~216px), so a round's answer buttons fit without scrolling. */
       #panel-learn, #panel-quiz { max-height: max(36vh, calc(100dvh - 216px - var(--safe-top) - var(--safe-bottom))); }
-      .learn-units { margin: 0 -14px 6px; padding: 0 14px 2px; }
-      /* Stats and units share one line, so a round still fits. */
-      .learn-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-      .learn-top .learn-stats { margin: 0; flex-wrap: nowrap; flex-shrink: 0; gap: 8px; }
-      .learn-top .learn-stats .daily-btn { margin-left: 0; padding: 3px 10px; }
-      .learn-top .learn-units { flex: 1; min-width: 0; margin: 0 -14px 0 0; padding: 0 14px 2px 0; }
-      .run-bar { font-size: 11px; }
-      /* Title and step indicator share one line. */
-      .learn-head { float: left; margin: 0 12px 6px 0; }
-      .learn-goal { display: none; }
-      .learn-steps { margin-bottom: 6px; }
-      #learn-round, #learn-why, #learn-card { clear: both; }
-      #learn-round { gap: 5px; }
-      #learn-label { font-size: 14px; min-height: 0; }
+      body.learn-focus #panel-learn { max-height: max(36vh, calc(100dvh - 166px - var(--safe-top) - var(--safe-bottom))); }
+      /* Header and steps share one line; the round packs tight under it. */
+      .learn-bar, .learn-runhead { margin: -2px 0 2px; }
+      .learn-title { font-size: 15px; }
+      .learn-goal, .learn-tag, .learn-timer-text, .learn-kicker, .learn-progress-row { display: none !important; }
+      .learn-bar .learn-icon-btn, .learn-runhead .learn-icon-btn { height: 36px; }
+      .learn-unit-btn { min-height: 36px; }
+      .learn-step { padding: 2px 0 6px; font-size: 0; gap: 0; }   /* bars only; each keeps its aria-label */
+      .learn-progress-row { margin-top: 0; }
+      .learn-round { justify-content: flex-start; gap: 6px; padding-top: 4px; }
+      /* Question and Play always share a row here, with the answers beside them. */
+      .learn-q { flex-direction: row-reverse; gap: 12px; }
+      .learn-round:not(.is-answered) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: center;
+        column-gap: 16px;
+        row-gap: 4px;
+      }
+      .learn-round:not(.is-answered) > * { grid-column: 1; max-width: none; }
+      .learn-round:not(.is-answered) > .quiz-options { grid-column: 2; grid-row: 1 / span 3; }
+      #learn-label { font-size: 15px; text-align: left; }
+      .learn-link-btn { min-height: 24px; font-size: 12px; }
+      .learn-play-wrap { width: 56px; height: 56px; }
+      .learn-play { width: 44px; height: 44px; box-shadow: none; }
+      .learn-play svg { width: 20px; height: 20px; }
+      .learn-timer { width: 56px; height: 56px; }
+      #learn-options .quiz-choices .quiz-opt-btn { min-height: 40px; }
+      .learn-result { padding: 10px; gap: 6px; }
+      /* Answered: the result and Next sit beside the question and answers. */
+      .learn-round.is-answered {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: start;
+        column-gap: 16px;
+        row-gap: 6px;
+      }
+      .learn-round.is-answered > * { grid-column: 1; max-width: none; }
+      .learn-round.is-answered > .learn-result {
+        grid-column: 2;
+        grid-row: 1 / span 6;
+        max-height: max(150px, calc(100dvh - 290px));
+        overflow-y: auto;
+      }
+      .learn-round.is-answered > .learn-next { min-height: 44px; }
       .iv-video { max-width: 280px; }   /* fits the short panel without scrolling */
     }
 
@@ -989,55 +1265,73 @@ title: Music Theory
 
     <!-- LEARN: guided ear-first path (hear → play → why) -->
     <div id="panel-learn" class="panel active" role="tabpanel">
-      <div class="learn-top">
-        <div class="learn-stats" id="learn-stats">
-          <span id="learn-xp"></span>
-          <span id="learn-streak"></span>
-          <button class="play-btn secondary daily-btn" id="learn-daily-btn">🔁 Daily mix</button>
-        </div>
-        <div class="learn-units" id="learn-units" role="group" aria-label="Units"></div>
+      <!-- One header line: the unit (opens the path), XP, streak, settings -->
+      <div class="learn-bar" id="learn-bar">
+        <button class="learn-unit-btn" id="learn-unit-btn" aria-haspopup="dialog" aria-controls="learn-path-sheet">
+          <span class="learn-unit-text">
+            <span class="learn-kicker" id="learn-kicker"></span>
+            <span class="learn-title" id="learn-title"></span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <span class="learn-chip" id="learn-xp" title="XP"></span>
+        <span class="learn-chip" id="learn-streak-chip" title="Day streak"></span>
+        <button class="learn-icon-btn" id="learn-settings-btn" aria-label="Learn settings" aria-haspopup="dialog" aria-controls="learn-settings-sheet">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
       </div>
-      <div class="learn-head">
-        <div class="learn-title" id="learn-title"></div>
-        <div class="learn-goal" id="learn-goal"></div>
-      </div>
-      <div class="learn-steps" id="learn-steps"></div>
 
-      <div class="quiz-card" id="learn-round">
-        <div class="run-bar" id="learn-run-bar" hidden>
-          <span class="run-lives" id="learn-lives" aria-label="Lives"></span>
-          <span class="run-count" id="learn-run-count"></span>
-          <div class="run-timer" id="learn-timer" role="progressbar" aria-label="Time left"><i></i></div>
-        </div>
+      <!-- Focus mode (boss / daily mix): replaces the header while a run is on -->
+      <div class="learn-runhead" id="learn-run-bar" hidden>
+        <button class="learn-icon-btn" id="learn-run-quit" aria-label="Leave this run">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <span class="learn-runhead-text">
+          <span class="learn-kicker" id="learn-run-kicker"></span>
+          <span class="learn-title" id="learn-run-count"></span>
+        </span>
+        <span class="run-lives" id="learn-lives" role="img"></span>
+      </div>
+
+      <!-- Step progress: Hear → Play → Why → Boss (or a run's questions) -->
+      <div class="learn-steps" id="learn-steps" role="group" aria-label="Steps"></div>
+      <div class="learn-progress-row" id="learn-progress-row">
+        <span class="learn-meter" id="learn-meter"></span>
+        <span class="learn-combo" id="learn-combo" aria-live="polite"></span>
+      </div>
+      <div class="learn-goal" id="learn-goal"></div>
+
+      <div class="learn-round" id="learn-round">
+        <span class="learn-tag" id="learn-tag" hidden></span>
+        <div class="learn-q">
         <div class="quiz-label" id="learn-label"></div>
-        <div class="quiz-top-row">
-          <button class="play-btn" id="learn-play-btn">🔊 Play</button>
-          <button class="play-btn secondary" id="learn-hint-btn" hidden>💡 Hint</button>
-          <button class="play-btn secondary" id="learn-next-btn" style="visibility:hidden">Next →</button>
-          <label class="key-context" id="learn-keyctx-row" title="Plays I–IV–V–I in the key before each interval" hidden>
-            <input type="checkbox" class="keyctx-toggle" id="learn-keyctx"> Play the key first
-          </label>
-          <label class="key-context" id="learn-mix-row" title="Each question plays on a random instrument">
-            <input type="checkbox" id="learn-mix"> Mix instruments
-          </label>
-          <label class="key-context" id="learn-sing-row" title="Answer by singing into the microphone instead of tapping a key" hidden>
-            <input type="checkbox" id="learn-sing-toggle"> 🎤 Sing it
-          </label>
-          <span class="round-instrument" id="learn-instrument" aria-live="polite"></span>
-          <span class="learn-combo" id="learn-combo" aria-live="polite"></span>
-          <div class="learn-meter" id="learn-meter" style="margin-left:auto"></div>
+        <div class="learn-play-wrap">
+          <svg class="learn-timer" id="learn-timer" viewBox="0 0 104 104" role="img" aria-label="Time left" hidden>
+            <circle cx="52" cy="52" r="46" fill="none" stroke="var(--panel2)" stroke-width="7"/>
+            <circle class="learn-timer-arc" cx="52" cy="52" r="46" fill="none" stroke-width="7" stroke-linecap="round" transform="rotate(-90 52 52)"/>
+          </svg>
+          <button class="learn-play" id="learn-play-btn" aria-label="Play">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          </button>
         </div>
+        </div>
+        <span class="learn-timer-text" id="learn-timer-text" hidden></span>
+        <button class="learn-link-btn" id="learn-hint-btn" hidden>💡 Hint: hear it in a song</button>
         <div class="quiz-staff" id="learn-staff" aria-hidden="true"></div>
         <div class="quiz-options" id="learn-options"></div>
         <div class="learn-sing" id="learn-sing" hidden>
-          <span>🎤</span>
+          <span aria-hidden="true">🎤</span>
           <span class="learn-sing-note" id="learn-sing-note">–</span>
           <div class="learn-sing-level"><i id="learn-sing-level"></i></div>
           <span id="learn-sing-status">Listening…</span>
         </div>
-        <div class="quiz-feedback" id="learn-feedback"></div>
-        <div class="learn-fact" id="learn-fact" hidden></div>
-        <div class="iv-refs" id="learn-refs" hidden></div>
+        <section class="learn-result" id="learn-result" aria-live="polite" hidden>
+          <div class="quiz-feedback" id="learn-feedback"></div>
+          <div class="learn-fact" id="learn-fact" hidden></div>
+          <div class="iv-refs" id="learn-refs" hidden></div>
+          <span class="round-instrument" id="learn-instrument"></span>
+        </section>
+        <button class="learn-next" id="learn-next-btn" style="visibility:hidden">Next</button>
       </div>
 
       <div class="learn-card" id="learn-card" hidden></div>
@@ -1049,13 +1343,6 @@ title: Music Theory
           <button class="play-btn secondary" id="learn-show-me">🎹 Show me on the keyboard</button>
           <button class="play-btn" id="learn-got-it">Got it ✓</button>
         </div>
-      </div>
-
-      <div class="learn-footer">
-        <label class="key-context" title="Short sounds for combos, lost lives and wins">
-          <input type="checkbox" id="learn-sfx"> Sound effects
-        </label>
-        <button class="learn-reset" id="learn-reset">Reset progress</button>
       </div>
     </div>
 
@@ -1158,6 +1445,54 @@ title: Music Theory
     </div>
     <div class="keyboard" id="keyboard" role="group" aria-label="Piano keys"></div>
   </div>
+
+  <!-- Learn sheets: the path (units + daily mix) and settings -->
+  <div class="sheet-backdrop" id="learn-sheet-backdrop" hidden></div>
+  <section class="sheet" id="learn-path-sheet" role="dialog" aria-modal="true" aria-labelledby="learn-path-title" hidden>
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 id="learn-path-title">Your path</h2>
+      <button class="learn-icon-btn" data-close-sheet aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="daily-card" id="learn-daily-card">
+      <div class="daily-icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>
+      </div>
+      <div class="daily-text">
+        <span class="daily-title" id="learn-streak"></span>
+        <span class="daily-sub" id="learn-daily-sub"></span>
+      </div>
+      <button class="daily-btn" id="learn-daily-btn">Start</button>
+    </div>
+    <ol class="learn-units" id="learn-units" aria-label="Units"></ol>
+  </section>
+
+  <section class="sheet" id="learn-settings-sheet" role="dialog" aria-modal="true" aria-labelledby="learn-settings-title" hidden>
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 id="learn-settings-title">Settings</h2>
+      <button class="sheet-done" data-close-sheet>Done</button>
+    </div>
+    <label class="setting-row">
+      <span class="setting-text"><b>Mix instruments</b><span>Each question plays on a different instrument</span></span>
+      <input type="checkbox" class="switch" role="switch" id="learn-mix">
+    </label>
+    <label class="setting-row">
+      <span class="setting-text"><b>Play the key first</b><span>A short I–IV–V–I before each interval</span></span>
+      <input type="checkbox" class="switch keyctx-toggle" role="switch" id="learn-keyctx">
+    </label>
+    <label class="setting-row">
+      <span class="setting-text"><b>Sing answers</b><span>Answer interval Play rounds into the mic</span></span>
+      <input type="checkbox" class="switch" role="switch" id="learn-sing-toggle">
+    </label>
+    <label class="setting-row">
+      <span class="setting-text"><b>Sound effects</b><span>Combos, lost lives and wins</span></span>
+      <input type="checkbox" class="switch" role="switch" id="learn-sfx">
+    </label>
+    <button class="sheet-danger" id="learn-reset">Reset progress</button>
+  </section>
 
   <!-- Level-up Banner -->
   <div id="quiz-levelup" class="levelup-banner" role="status" aria-live="polite"></div>
@@ -2578,7 +2913,8 @@ const MIDDLE_C   = 60;  // C4
       const refs = qEl('refs');
       refs.hidden = true;
       refs.innerHTML = '';
-      qEl('keyctx-row').hidden = q.kind !== 'interval';
+      const keyctx = qEl('keyctx-row');   // Learn keeps this in its settings sheet
+      if (keyctx) keyctx.hidden = q.kind !== 'interval';
       if (state.mode === 'learn') {
         document.getElementById('learn-hint-btn').hidden = !intervalRef(q);
         learnRoundShown(q);
@@ -2980,7 +3316,7 @@ const MIDDLE_C   = 60;  // C4
       const opts = qEl('options');
       opts.textContent = '';
       const grid = document.createElement('div');
-      grid.className = 'quiz-choices';
+      grid.className = 'quiz-choices' + (q.choices.length > 4 ? ' is-many' : '');
       q.choices.forEach(c => {
         const btn = document.createElement('button');
         btn.className = 'quiz-opt-btn';
@@ -3284,6 +3620,7 @@ const MIDDLE_C   = 60;  // C4
       if (state.mode !== 'learn' || state.quizAnswered || !intervalRef(q)) return false;
       q.hinted = true;
       document.getElementById('learn-hint-btn').hidden = true;
+      document.getElementById('learn-result').hidden = false;
       const refs = document.getElementById('learn-refs');
       renderIntervalRefs(q, refs);
       revealInPanel(refs);
@@ -3489,7 +3826,8 @@ const MIDDLE_C   = 60;  // C4
         midis: [start, second],
         extraMidis: offs.map(o => start + o),
         events: tuneEvents(c.tune, start),
-        prompt: `🎵 “${c.tune.name}” — listen for ${c.tune.cue}. Which interval is it?`,
+        tag: `♪ ${c.tune.name}`,
+        prompt: `Listen for ${c.tune.cue}. Which interval is it?`,
         choices: spec.semis.map(n => ({ id: String(n), label: INTERVAL_NAMES[n] })),
         answer: String(c.n),
         explain: `${INTERVAL_NAMES[c.n]} going ${c.dir}: ${c.n} semitone${c.n === 1 ? '' : 's'}.`,
@@ -3525,7 +3863,8 @@ const MIDDLE_C   = 60;  // C4
         midis: target.midis,
         extraMidis: chords.flatMap(c => c.midis),
         events,
-        prompt: `🎵 The chords of “${title}”, then chord ${i + 1} again. What kind of chord is it?`,
+        tag: `♪ ${title}`,
+        prompt: `Its chords play, then chord ${i + 1} again. What kind of chord is it?`,
         choices: spec.types.map(t => ({ id: t, label: t })),
         answer: target.type,
         explain: `Chord ${i + 1} of “${title}” is ${target.label}: ${target.type}.`,
@@ -3581,6 +3920,7 @@ const MIDDLE_C   = 60;  // C4
         kind: 'odd', midis: oddItem.midis,
         extraMidis: items.flatMap(it => it.midis),
         events,
+        tag: 'Odd one out',
         prompt: 'Two of these three sound alike. Which one is the odd one out?',
         choices: ['1st', '2nd', '3rd'].map((l, k) => ({ id: String(k), label: l })),
         answer: String(odd),
@@ -3609,6 +3949,7 @@ const MIDDLE_C   = 60;  // C4
         kind: 'wrong-note', scaleType: 'Major', rootPc: root,
         midis: right, extraMidis: [bad],
         events: noteEvents(heard, 0.32, 0.34),
+        tag: 'Spot the wrong note',
         prompt: `One note of this ${NOTE_NAMES[root]} major scale is off. Which one?`,
         choices: [1, 2, 3, 4, 5, 6].map(d => ({ id: String(d), label: ORDINALS[d] })),
         answer: String(deg),
@@ -3629,6 +3970,7 @@ const MIDDLE_C   = 60;  // C4
       const count = 2 + Math.floor(Math.random() * 3);
       return {
         kind: 'count', meter, count,
+        tag: 'Count the bars',
         prompt: `How many bars of ${meter} do you hear?`,
         choices: ['2', '3', '4'].map(n => ({ id: n, label: n })),
         answer: String(count),
@@ -3640,6 +3982,7 @@ const MIDDLE_C   = 60;  // C4
     function makeBlindIntervalPlayQuestion(semisPool) {
       const q = makeIntervalPlayQuestion(semisPool);
       q.events = noteEvents(q.midis, 0.8, 1.0);
+      q.tag = 'By ear';
       q.prompt = `Play the second note you hear — the first is the lit ${NOTE_NAMES[q.rootMidi % 12]}`;
       return q;
     }
@@ -3672,7 +4015,8 @@ const MIDDLE_C   = 60;  // C4
         givenMidis: [root], exactMidi: target, focusMidi: root + Math.round(c.n / 2),
         extraMidis: offs.map(o => root + o),
         events: [...full, ...leadIn.map(e => ({ ...e, t: e.t + gap }))],
-        prompt: `🎵 Finish the phrase: “${c.tune.name}”. Play the note after the lit key (${c.tune.cue}).`,
+        tag: `♪ Finish the phrase: ${c.tune.name}`,
+        prompt: `Play the note that comes after the lit key (${c.tune.cue}).`,
         answerName: `${NOTE_NAMES[target % 12]} — ${anA(INTERVAL_NAMES[c.n])} ${INTERVAL_NAMES[c.n]} above ${NOTE_NAMES[root % 12]}`,
       });
     }
@@ -3691,6 +4035,7 @@ const MIDDLE_C   = 60;  // C4
         needPcs: new Set([missing % 12]),
         events: [{ t: 0, notes: given.map(midiToNoteName), vel: 0.8, dur: 1.4 }],
         focusMidi: q.midis[0] + 5,
+        tag: 'Complete the chord',
         prompt: missIdx === 3
           ? `Make it a ${NOTE_NAMES[root]} ${type}: the lit keys are a major chord. Add the missing note.`
           : `Make it ${NOTE_NAMES[root]} ${type}: the lit keys are its root and 5th. Add the missing note.`,
@@ -3710,6 +4055,7 @@ const MIDDLE_C   = 60;  // C4
         needPcs: new Set([missing % 12]),
         events: noteEvents(q.midis, 0.32, 0.3).filter((_, k) => k !== gap),
         focusMidi: q.midis[0] + 5,
+        tag: 'Missing note',
         prompt: `One note is silent in this ${NOTE_NAMES[root]} ${type} scale. Play it.`,
         answerName: `${NOTE_NAMES[missing % 12]}, note ${gap + 1} of ${NOTE_NAMES[root]} ${type}`,
       });
@@ -3721,7 +4067,8 @@ const MIDDLE_C   = 60;  // C4
       const q = makeIntervalPlayQuestion(semisPool, root);
       const name = INTERVAL_NAMES[q.semis];
       q.kind = 'sing';
-      q.prompt = `🎤 Sing ${anA(name)} ${name} above the lit ${NOTE_NAMES[q.rootMidi % 12]} (any octave) — or tap it`;
+      q.tag = 'Sing it';
+      q.prompt = `Sing ${anA(name)} ${name} above the lit ${NOTE_NAMES[q.rootMidi % 12]} (any octave), or tap it`;
       return q;
     }
 
@@ -3806,7 +4153,7 @@ const MIDDLE_C   = 60;  // C4
       const step = state.learnStep;
       if (state.mode !== 'learn' || state.learnRun || (step !== 'hear' && step !== 'play')) return;
       state.learnJustPassed = false;
-      document.getElementById('learn-next-btn').textContent = 'Next →';
+      document.getElementById('learn-next-btn').textContent = 'Next';
       beginRound(makeLearnQuestion(LEARN_UNITS[state.learnUnitIdx], step));
       renderLearnMeter();
     }
@@ -3815,11 +4162,12 @@ const MIDDLE_C   = 60;  // C4
     function learnRoundShown(q) {
       const run = state.learnRun;
       document.getElementById('learn-fact').hidden = true;
+      document.getElementById('learn-result').hidden = true;
+      document.getElementById('learn-round').classList.remove('is-answered');
       if (run) document.getElementById('learn-hint-btn').hidden = true;   // no hints against a boss
-      const u = unitById(q.unitId);
-      document.getElementById('learn-sing-row').hidden =
-        !!run || state.learnStep !== 'play' || !u.play || u.play.type !== 'interval';
-      document.getElementById('learn-sing-toggle').checked = progress.settings.sing;
+      const tag = document.getElementById('learn-tag');
+      tag.textContent = q.tag || '';
+      tag.hidden = !q.tag;
       renderRunBar();
       renderCombo(false);
       const singBox = document.getElementById('learn-sing');
@@ -3830,6 +4178,14 @@ const MIDDLE_C   = 60;  // C4
       } else {
         stopSinging();
       }
+    }
+
+    // The result card under the answers: verdict, fact, songs.
+    function showLearnResult() {
+      const box = document.getElementById('learn-result');
+      box.hidden = false;
+      document.getElementById('learn-round').classList.add('is-answered');
+      requestAnimationFrame(() => revealInPanel(document.getElementById('learn-next-btn')));
     }
 
     // ── Learn: XP, combos and feedback flourishes ──
@@ -3963,21 +4319,36 @@ const MIDDLE_C   = 60;  // C4
       setTimeout(() => box.remove(), 3600);
     }
 
+    const STAR_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" aria-hidden="true"><path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7-6.2-3.5-6.2 3.5 1.3-7L2 9.4l7-.9z"/></svg>';
+    const FLAME_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z"/></svg>';
+
     function renderLearnStats() {
       const xp = progress.learn.xp;
-      document.getElementById('learn-xp').innerHTML = `⭐ <b>${xp}</b> XP`;
+      const xpEl = document.getElementById('learn-xp');
+      xpEl.innerHTML = `${STAR_SVG}<span>${xp}</span>`;
+      xpEl.setAttribute('aria-label', `${xp} XP`);
       const d = progress.daily;
-      const alive = streakAlive();
-      document.getElementById('learn-streak').innerHTML = alive && d.streak
-        ? `🔥 <b>${d.streak}</b>-day streak`
-        : (d.best ? `🔥 Streak lost (best ${d.best})` : '🔥 No streak yet');
-      const btn = document.getElementById('learn-daily-btn');
+      const live = streakAlive() && d.streak > 0;
+      const chip = document.getElementById('learn-streak-chip');
+      chip.innerHTML = `<span style="color:${live ? '#fb923c' : '#6b7280'};display:flex">${FLAME_SVG}</span><span>${live ? d.streak : 0}</span>`;
+      chip.classList.toggle('is-cold', !live);
+      chip.setAttribute('aria-label', live ? `${d.streak}-day streak` : 'No streak');
+
+      // The daily mix lives at the top of the path sheet.
       const doneToday = d.last === localDate();
       const can = runSources({ kind: 'daily' }).length > 0;
-      btn.disabled = !can && !state.learnDaily;
-      btn.title = can ? 'Ten mixed questions from units you have started' : 'Pass a unit’s Hear step to unlock the daily mix';
-      btn.classList.toggle('is-done', doneToday && !state.learnDaily);
-      btn.textContent = state.learnDaily ? '✕ Leave mix' : doneToday ? '✓ Daily mix done' : '🔁 Daily mix';
+      document.getElementById('learn-streak').textContent = live ? `${d.streak}-day streak`
+        : (d.best ? `Streak lost (best ${d.best})` : 'No streak yet');
+      document.getElementById('learn-daily-sub').textContent = !can
+        ? 'Pass a unit’s Hear step to unlock the daily mix'
+        : doneToday ? 'Today’s mix is done. Another one still earns XP.'
+        : live ? 'Today’s mix keeps it going · 10 questions, no timer'
+        : '10 questions, no timer. One a day builds a streak.';
+      document.getElementById('learn-daily-card').classList.toggle('is-cold', !live);
+      const btn = document.getElementById('learn-daily-btn');
+      btn.disabled = !can;
+      btn.classList.toggle('is-done', doneToday);
+      btn.textContent = doneToday ? 'Again' : 'Start';
     }
 
     // ── Learn: daily streak dates ──
@@ -4040,7 +4411,7 @@ const MIDDLE_C   = 60;  // C4
       state.learnRun = {
         kind, unitIdx: state.learnUnitIdx,
         len: kind === 'boss' ? BOSS_QUESTIONS : DAILY_QUESTIONS,
-        idx: 0, correct: 0, xp: 0,
+        idx: 0, correct: 0, xp: 0, results: [], resultsShown: false,
         lives: kind === 'boss' ? BOSS_LIVES : null,
         timed: kind === 'boss',
         begun: false, ended: false, won: false, bonus: 0,
@@ -4051,6 +4422,7 @@ const MIDDLE_C   = 60;  // C4
     function abandonRun() {
       cancelAnimationFrame(runTimerRaf);
       state.learnRun = null;
+      document.body.classList.remove('learn-focus');
       stopSinging();
     }
 
@@ -4060,7 +4432,7 @@ const MIDDLE_C   = 60;  // C4
       run.begun = true;
       const s = pickWeighted(runSources(run).map(x => [x, x.w]));
       const q = makeLearnQuestion(s.u, s.step, true);
-      document.getElementById('learn-next-btn').textContent = 'Next →';
+      document.getElementById('learn-next-btn').textContent = 'Next';
       beginRound(q);
       if (run.timed) startRunTimer(q);
       renderRunBar();
@@ -4098,15 +4470,21 @@ const MIDDLE_C   = 60;  // C4
       runTimerRaf = requestAnimationFrame(tick);
     }
 
+    const TIMER_ARC = 289;   // the ring's circumference (r = 46)
     function renderTimer() {
       const run = state.learnRun;
-      const box = document.getElementById('learn-timer');
-      box.hidden = !run || !run.timed;
-      if (box.hidden) return;
+      const ring = document.getElementById('learn-timer');
+      const txt = document.getElementById('learn-timer-text');
+      const on = !!run && run.timed && !run.ended;
+      ring.toggleAttribute('hidden', !on);
+      txt.hidden = !on;
+      if (!on) return;
       const frac = run.limit ? Math.max(0, run.left) / run.limit : 1;
-      box.querySelector('i').style.transform = `scaleX(${frac})`;
-      box.classList.toggle('low', frac < 0.25);
-      box.setAttribute('aria-valuenow', String(Math.ceil(Math.max(0, run.left) / 1000)));
+      const secs = Math.ceil(Math.max(0, run.left) / 1000);
+      ring.querySelector('.learn-timer-arc').style.strokeDashoffset = String(TIMER_ARC * (1 - frac));
+      ring.classList.toggle('low', frac < 0.25);
+      ring.setAttribute('aria-label', `${secs} seconds left`);
+      if (txt.textContent !== `${secs} s left`) txt.textContent = `${secs} s left`;
     }
 
     // Out of time: the round is answered with whatever was given (so, wrong).
@@ -4122,17 +4500,46 @@ const MIDDLE_C   = 60;  // C4
       }
     }
 
+    const HEART_SVG = (full) => `<svg viewBox="0 0 24 24" aria-hidden="true" ${full
+      ? 'fill="#ef4444"' : 'fill="none" stroke="#4b5563" stroke-width="2"'}><path d="M12 21s-7.5-4.6-9.5-9.2C1.2 8.6 3.2 5 6.6 5c2 0 3.4 1.1 4.4 2.5C12 6.1 13.4 5 15.4 5c3.4 0 5.4 3.6 4.1 6.8C19.5 16.4 12 21 12 21z"/></svg>`;
+
+    // Focus mode: while a run is on (until its results card), the run's own
+    // header and a segment per question replace the app chrome and steps.
     function renderRunBar() {
       const run = state.learnRun;
-      const bar = document.getElementById('learn-run-bar');
-      bar.hidden = !run;
-      if (!run) return;
-      document.getElementById('learn-lives').textContent = run.lives == null ? ''
-        : '❤️'.repeat(Math.max(0, run.lives)) + '🖤'.repeat(BOSS_LIVES - Math.max(0, run.lives));
-      const n = Math.min(run.len, run.idx + (state.quizAnswered ? 0 : 1));
-      document.getElementById('learn-run-count').textContent =
-        `${run.kind === 'boss' ? '⚔️ ' + UNIT_BOSSES[LEARN_UNITS[run.unitIdx].id] : '🔁 Daily mix'} · ${n}/${run.len}`;
+      const focus = !!run && !run.resultsShown && state.mode === 'learn';
+      document.body.classList.toggle('learn-focus', focus);
+      document.getElementById('learn-bar').hidden = focus;
+      document.getElementById('learn-run-bar').hidden = !focus;
       renderTimer();
+      if (!focus) return;
+      const n = Math.min(run.len, run.idx + (state.quizAnswered ? 0 : 1));
+      const boss = run.kind === 'boss';
+      document.getElementById('learn-run-kicker').textContent =
+        boss ? `Boss · question ${n} of ${run.len}` : `Question ${n} of ${run.len}`;
+      document.getElementById('learn-run-count').textContent =
+        boss ? UNIT_BOSSES[LEARN_UNITS[run.unitIdx].id] : 'Daily mix';
+      const lives = document.getElementById('learn-lives');
+      lives.innerHTML = run.lives == null ? ''
+        : Array.from({ length: BOSS_LIVES }, (_, i) => HEART_SVG(i < run.lives)).join('');
+      lives.setAttribute('aria-label', run.lives == null ? '' : `${Math.max(0, run.lives)} of ${BOSS_LIVES} lives left`);
+      const strip = document.getElementById('learn-steps');
+      strip.hidden = false;
+      strip.className = 'learn-steps is-run';
+      strip.style.setProperty('--n', run.len);
+      strip.setAttribute('aria-label', `${run.correct} right of ${run.idx} answered`);
+      strip.innerHTML = Array.from({ length: run.len }, (_, i) => {
+        const r = run.results[i];
+        return `<span class="run-seg${r === true ? ' hit' : r === false ? ' miss' : i === run.idx ? ' now' : ''}"></span>`;
+      }).join('');
+    }
+
+    // ✕ in the run header: leave the boss (back to its card) or the mix.
+    function quitRun() {
+      const daily = state.learnDaily;
+      abandonRun();
+      if (daily) leaveDaily();
+      else viewLearnStep('boss');
     }
 
     function recordRunResult(correct) {
@@ -4140,6 +4547,7 @@ const MIDDLE_C   = 60;  // C4
       const q = state.quizQuestion;
       cancelAnimationFrame(runTimerRaf);
       run.idx++;
+      run.results.push(!!correct);
       if (correct) run.correct++;
       const fb = qEl('feedback');
       if (state.timedOut) fb.textContent = '⏱ Time’s up! ' + fb.textContent;
@@ -4150,9 +4558,10 @@ const MIDDLE_C   = 60;  // C4
         if (run.lives > 0) playSting('life');
       }
       if (run.lives === 0 || run.idx >= run.len) finishRun();
-      document.getElementById('learn-next-btn').textContent = run.ended ? 'See results →' : 'Next →';
+      document.getElementById('learn-next-btn').textContent = run.ended ? 'See results' : 'Next';
       appendXpPop(gained);
       showFact(q, unitById(q.unitId));
+      showLearnResult();
       state.learnLastQ = { unitId: q.unitId, q };
       renderRunBar();
       saveProgress();
@@ -4458,6 +4867,7 @@ const MIDDLE_C   = 60;  // C4
         state.learnLastQ = { unitId: u.id, q };
         qEl('feedback').textContent += '  (Hinted: practice only, not counted.)';
         showFact(q, u);
+        showLearnResult();
         return;
       }
       const step = state.learnStep;
@@ -4478,11 +4888,12 @@ const MIDDLE_C   = 60;  // C4
         state.learnJustPassed = true;
         const fb = qEl('feedback');
         fb.textContent += up.step === 'play' ? '  Your ear has it — now play it!' : '  Step complete!';
-        document.getElementById('learn-next-btn').textContent = 'Continue →';
+        document.getElementById('learn-next-btn').textContent = 'Continue';
         showBanner(`${LEARN_STEP_LABELS[step]} ✓ — next: ${LEARN_STEP_LABELS[up.step]}`);
       }
       appendXpPop(gained);
       showFact(q, u);
+      showLearnResult();
       saveProgress();
       renderLearnMeter();
       renderLearnSteps();
@@ -4494,7 +4905,7 @@ const MIDDLE_C   = 60;  // C4
     function learnNext() {
       const run = state.learnRun;
       if (run) {
-        if (run.ended) renderLearn();
+        if (run.ended) { run.resultsShown = true; renderLearn(); }
         else startRunRound();
         return;
       }
@@ -4558,20 +4969,30 @@ const MIDDLE_C   = 60;  // C4
       renderLearnUnits();
       const run = state.learnRun;
       const runLive = !!run && !run.ended;
-
-      if (state.learnDaily) {
-        document.getElementById('learn-title').textContent = '🔁 Daily mix';
-        document.getElementById('learn-goal').textContent =
-          'Ten mixed questions from the units you have started. No timer, no lives.';
-        document.getElementById('learn-steps').innerHTML = '';
-      } else {
-        document.getElementById('learn-title').textContent = `${state.learnUnitIdx + 1}. ${u.title}`;
-        document.getElementById('learn-goal').textContent = u.goal;
-        renderLearnSteps();
-      }
-
       const inRound = runLive || (!state.learnDaily && (state.learnStep === 'hear' || state.learnStep === 'play'));
       const onCard = !inRound && (state.learnDaily || state.learnStep === 'boss');
+
+      document.getElementById('learn-progress-row').hidden = runLive || !inRound;
+      const kicker = document.getElementById('learn-kicker');
+      const goal = document.getElementById('learn-goal');
+      if (state.learnDaily) {
+        kicker.textContent = 'Review';
+        document.getElementById('learn-title').textContent = 'Daily mix';
+        goal.textContent = 'Ten mixed questions from the units you have started. No timer, no lives.';
+        goal.hidden = runLive;
+        document.getElementById('learn-steps').hidden = !runLive;
+      } else {
+        kicker.textContent = `Unit ${state.learnUnitIdx + 1} of ${LEARN_UNITS.length}`;
+        document.getElementById('learn-title').textContent = u.title;
+        // The goal shows until the step has its first answer, then steps aside.
+        const st = inRound ? unitProgress(u.id)[state.learnStep] : null;
+        goal.textContent = u.goal;
+        goal.hidden = runLive || !(st && st.total === 0);
+        document.getElementById('learn-steps').hidden = false;
+        if (!runLive) renderLearnSteps();
+      }
+      renderRunBar();
+
       document.getElementById('learn-round').hidden = !inRound;
       document.getElementById('learn-card').hidden = !onCard;
       document.getElementById('learn-why').hidden = inRound || onCard;
@@ -4590,68 +5011,118 @@ const MIDDLE_C   = 60;  // C4
       }
     }
 
+    const UNIT_ICONS = {
+      done:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>',
+      current: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.6" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="#f59e0b" stroke="none"/></svg>',
+      open:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>',
+      locked:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+    };
+
+    // The path sheet's unit list: status, name, and where each one is up to.
     function renderLearnUnits() {
-      const row = document.getElementById('learn-units');
-      row.innerHTML = '';
+      const list = document.getElementById('learn-units');
+      list.innerHTML = '';
       LEARN_UNITS.forEach((u, i) => {
-        const done = unitProgress(u.id).step === 'done';
+        const step = unitProgress(u.id).step;
+        const done = step === 'done';
         const locked = unitLocked(i);
+        const current = i === progress.learn.unitIdx && !done;
+        const li = document.createElement('li');
         const b = document.createElement('button');
         b.className = 'learn-unit' +
           (done ? ' is-done' : '') +
           (locked ? ' is-locked' : '') +
-          (i === progress.learn.unitIdx && !done ? ' is-current' : '') +
+          (current ? ' is-current' : '') +
           (i === state.learnUnitIdx && !state.learnDaily ? ' is-viewing' : '');
         b.dataset.unit = u.id;
         b.disabled = locked;
-        b.textContent = `${locked ? '🔒 ' : ''}${i + 1}. ${u.title}${done ? ' ✓' : ''}`;
-        b.addEventListener('click', () => viewLearnUnit(i));
-        row.appendChild(b);
+        const status = done ? 'Done' : locked ? 'Locked' : current ? 'In progress' : 'Open';
+        b.setAttribute('aria-label', `${i + 1}. ${u.title}: ${status}`);
+        const meta = done ? 'Boss beaten' : locked ? '' : step === 'boss' ? 'Boss ready'
+          : `${LEARN_STEP_LABELS[step]}`;
+        b.innerHTML = UNIT_ICONS[done ? 'done' : locked ? 'locked' : current ? 'current' : 'open'] +
+          `<span class="learn-unit-name"></span><span class="learn-unit-meta"></span>`;
+        b.querySelector('.learn-unit-name').textContent = `${i + 1}. ${u.title}`;
+        b.querySelector('.learn-unit-meta').textContent = meta;
+        b.addEventListener('click', () => { closeSheets(); viewLearnUnit(i); });
+        li.appendChild(b);
+        list.appendChild(li);
       });
-      const cur = row.children[state.learnUnitIdx];
-      if (cur) row.scrollLeft = Math.max(0, cur.offsetLeft - row.offsetLeft - 24);
     }
 
+    // How far through a hear/play step: right answers in the window, out of
+    // the LEARN_PASS_MIN needed.
+    function stepFill(u, s) {
+      const st = unitProgress(u.id)[s];
+      if (!st) return 0;
+      return Math.min(1, st.recent.slice(-LEARN_PASS_WINDOW).filter(Boolean).length / LEARN_PASS_MIN);
+    }
+
+    // The steps as one segmented bar; done steps fill green, the current one
+    // fills amber as right answers come in.
     function renderLearnSteps() {
       const u = LEARN_UNITS[state.learnUnitIdx];
       const frontier = stepIndex(u, unitProgress(u.id).step);
       const box = document.getElementById('learn-steps');
+      box.className = 'learn-steps';
       box.innerHTML = '';
-      unitSteps(u).forEach((s, i) => {
-        if (i) {
-          const arrow = document.createElement('span');
-          arrow.className = 'learn-step-arrow';
-          arrow.textContent = '→';
-          box.appendChild(arrow);
-        }
+      const steps = unitSteps(u);
+      box.style.setProperty('--n', steps.length);
+      steps.forEach((s, i) => {
         const b = document.createElement('button');
         b.className = 'learn-step' +
           (i < frontier ? ' is-done' : '') +
           (s === state.learnStep ? ' is-viewing' : '');
         b.dataset.step = s;
         b.disabled = i > frontier;
-        b.textContent = LEARN_STEP_LABELS[s] + (i < frontier ? ' ✓' : '');
+        const fill = i < frontier ? 1 : i === frontier && (s === 'hear' || s === 'play') ? stepFill(u, s) : 0;
+        b.innerHTML = `<span class="learn-step-bar"><i style="width:${Math.round(fill * 100)}%"></i></span><span></span>`;
+        b.lastChild.textContent = LEARN_STEP_LABELS[s] + (i < frontier ? ' ✓' : '');
+        b.setAttribute('aria-label', `${LEARN_STEP_LABELS[s]}${i < frontier ? ', done' : i > frontier ? ', locked' : ''}`);
         b.addEventListener('click', () => viewLearnStep(s));
         box.appendChild(b);
       });
     }
 
-    // Last-10 answers as dots, plus how many are right.
+    // One line under the steps: where this step stands.
     function renderLearnMeter() {
       const el = document.getElementById('learn-meter');
       const step = state.learnStep;
       if (state.learnRun || (step !== 'hear' && step !== 'play')) { el.innerHTML = ''; return; }
-      const stats = unitProgress(LEARN_UNITS[state.learnUnitIdx].id)[step];
-      const recent = stats.recent.slice(-LEARN_PASS_WINDOW);
-      let html = '';
-      for (let i = 0; i < LEARN_PASS_WINDOW; i++) {
-        const r = recent[i];
-        html += `<span class="learn-dot${r === 1 ? ' hit' : r === 0 ? ' miss' : ''}"></span>`;
+      const u = LEARN_UNITS[state.learnUnitIdx];
+      const stats = unitProgress(u.id)[step];
+      const hits = stats.recent.slice(-LEARN_PASS_WINDOW).filter(Boolean).length;
+      const label = `<b>${LEARN_STEP_LABELS[step]}</b>`;
+      if (stepIndex(u, unitProgress(u.id).step) > stepIndex(u, step)) {
+        el.innerHTML = `${label} · practice`;
+      } else if (hits >= LEARN_PASS_MIN && stats.total < LEARN_PASS_WINDOW) {
+        el.innerHTML = `${label} · ${LEARN_PASS_WINDOW - stats.total} more to go`;
+      } else {
+        el.innerHTML = `${label} · ${Math.min(hits, LEARN_PASS_MIN)} of ${LEARN_PASS_MIN} right to pass`;
       }
-      const hits = recent.filter(Boolean).length;
-      html += `<span class="learn-meter-text">${hits}/${LEARN_PASS_WINDOW}</span>`;
-      el.innerHTML = html;
       el.title = `Get ${LEARN_PASS_MIN} of your last ${LEARN_PASS_WINDOW} right to move on`;
+    }
+
+    // ── Learn: sheets ──
+
+    let sheetReturnFocus = null;
+    function openSheet(id) {
+      closeSheets();
+      if (id === 'learn-path-sheet') renderLearnUnits();
+      sheetReturnFocus = document.activeElement;
+      document.getElementById('learn-sheet-backdrop').hidden = false;
+      const sheet = document.getElementById(id);
+      sheet.hidden = false;
+      const first = sheet.querySelector('[data-close-sheet]');
+      if (first) first.focus();
+    }
+
+    function closeSheets() {
+      const open = document.querySelector('.sheet:not([hidden])');
+      document.querySelectorAll('.sheet').forEach(sh => { sh.hidden = true; });
+      document.getElementById('learn-sheet-backdrop').hidden = true;
+      if (open && sheetReturnFocus && document.contains(sheetReturnFocus)) sheetReturnFocus.focus();
+      sheetReturnFocus = null;
     }
 
     // Songs whose chords are all among the chord types learned so far.
@@ -4826,6 +5297,7 @@ const MIDDLE_C   = 60;  // C4
         abandonRun();
         state.learnDaily = false;
         releaseMic();
+        closeSheets();
       }
       state.mode = mode;
       state.ivNotes = [];
@@ -4937,8 +5409,19 @@ const MIDDLE_C   = 60;  // C4
       document.getElementById('learn-got-it').addEventListener('click', learnGotIt);
       document.getElementById('learn-show-me').addEventListener('click', learnShowMe);
       document.getElementById('learn-reset').addEventListener('click', () => {
-        if (confirm('Reset all progress? This clears the Learn path and your Quiz level.')) resetProgress();
+        if (confirm('Reset all progress? This clears the Learn path and your Quiz level.')) {
+          closeSheets();
+          resetProgress();
+        }
       });
+      document.getElementById('learn-unit-btn').addEventListener('click', () => openSheet('learn-path-sheet'));
+      document.getElementById('learn-settings-btn').addEventListener('click', () => openSheet('learn-settings-sheet'));
+      document.getElementById('learn-sheet-backdrop').addEventListener('click', closeSheets);
+      document.querySelectorAll('[data-close-sheet]').forEach(b => b.addEventListener('click', closeSheets));
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.querySelector('.sheet:not([hidden])')) closeSheets();
+      });
+      document.getElementById('learn-run-quit').addEventListener('click', quitRun);
 
       // Instrument picker (grouped by family) and the Learn "Mix instruments" toggle
       const instrumentSel = document.getElementById('instrument-select');
@@ -4955,10 +5438,10 @@ const MIDDLE_C   = 60;  // C4
       mixCb.addEventListener('change', () => setLearnMix(mixCb.checked));
 
       // Learn game layer: daily mix, sound effects, singing
-      document.getElementById('learn-daily-btn').addEventListener('click', async () => {
-        await ensureAudioStarted();
-        if (state.learnDaily) leaveDaily();
-        else enterDaily();
+      document.getElementById('learn-daily-btn').addEventListener('click', () => {
+        closeSheets();
+        ensureAudioStarted();   // this tap unlocks audio; the mix needn't wait for it
+        enterDaily();
       });
       const sfxCb = document.getElementById('learn-sfx');
       sfxCb.checked = progress.settings.sfx;
@@ -5013,6 +5496,7 @@ const MIDDLE_C   = 60;  // C4
             const q = { kind: 'interval', mode: down ? 'descending' : 'ascending', semis,
                         low, high: low + semis, midis: down ? [low + semis, low] : [low, low + semis] };
             renderIntervalRefs(q, qEl('refs'));
+            if (state.mode === 'learn') document.getElementById('learn-result').hidden = false;
           },
           // What the current interval question's prompt plays (null otherwise).
           promptEvents:    () => (state.quizQuestion && state.quizQuestion.kind === 'interval'
@@ -5082,7 +5566,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610272131';
+        const SW_VERSION = '2610272330';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }

@@ -6,7 +6,7 @@
 const { launch, run, assert, PROGRESS_KEY } = require('./_helpers');
 
 run(async () => {
-  const { browser, page, errors, open, reload, mt } = await launch();
+  const { browser, page, errors, open, reload, mt, pickUnit } = await launch();
 
   // The sandbox can't reach YouTube; serve an empty page for the embed so the
   // spec checks our wiring, not the network.
@@ -52,7 +52,10 @@ run(async () => {
   assert((await mt(() => window.__musicTheory.currentQuestion().kind)) === 'interval', 'unit 2 hear round is an interval question');
   assert(await visible('#learn-hint-btn'), 'Hint button shows in an interval hear round');
   assert(!(await visible('#learn-refs')), 'song card is hidden before hinting or answering');
-  assert(await visible('#learn-keyctx-row'), '"Play the key first" toggle shows in an interval round');
+  await page.click('#learn-settings-btn');
+  assert(await visible('#learn-keyctx'), '"Play the key first" is in the Learn settings sheet');
+  await page.click('#learn-settings-sheet [data-close-sheet]');
+  assert(!(await visible('#learn-settings-sheet')), 'Done closes the settings sheet');
 
   // ── Hint: shows the songs, hides itself, and the round does not count ──
   assert(await mt(() => window.__musicTheory.useHint()), 'useHint() succeeds on an interval hear round');
@@ -123,7 +126,9 @@ run(async () => {
   // ── Key context: off plays two notes, on plays I–IV–V–I first ──
   let ev = await mt(() => window.__musicTheory.promptEvents());
   assert(ev && ev.length === 2, 'without key context the prompt is two notes, got ' + (ev && ev.length));
+  await page.click('#learn-settings-btn');          // the toggle lives in the settings sheet
   await page.locator('#learn-keyctx').check();
+  await page.click('#learn-settings-sheet [data-close-sheet]');
   assert((await mt(() => window.__musicTheory.progress.settings.keyContext)) === true, 'toggle saves the setting');
   ev = await mt(() => window.__musicTheory.promptEvents());
   assert(ev.length === 6, 'with key context the prompt is 4 chords + 2 notes, got ' + ev.length);
