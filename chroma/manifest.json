@@ -1,0 +1,31 @@
+{
+  "id": "/chroma/",
+  "name": "Chroma — See the Music",
+  "short_name": "Chroma",
+  "description": "Listens through the microphone and turns music into colour, using music theory and colour theory, so deaf and hard-of-hearing people can enjoy music visually.",
+  "start_url": "/chroma/",
+  "scope": "/chroma/",
+  "display": "standalone",
+  "background_color": "#0b0b14",
+  "theme_color": "#0b0b14",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/img/chroma-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/chroma-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["music", "entertainment", "accessibility"],
+  "lang": "en-US",
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

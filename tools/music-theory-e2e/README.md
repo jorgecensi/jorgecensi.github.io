@@ -36,7 +36,16 @@ jekyll binary".
   on the resulting controller change. `_helpers.js` waits for navigations to
   go quiet before driving the page (same trick as auto-runner-e2e).
 - `specs/_helpers.js` is shared plumbing (launch, error collection, `open()`,
-  `reload()`); it is not a spec and `run.sh` ignores it.
+  `reload()`, and `pickUnit(id)`, which opens a Learn unit through the path
+  sheet the way a learner does); it is not a spec and `run.sh` ignores it.
+- **Where Learn's controls live**: the unit list and the Daily mix button are
+  in the path sheet (`#learn-path-sheet`, opened by `#learn-unit-btn`); Mix
+  instruments, Play the key first, Sing answers, Sound effects and Reset are
+  in the settings sheet (`#learn-settings-sheet`, opened by
+  `#learn-settings-btn`). Both close with `[data-close-sheet]` or Escape. A
+  spec must open a sheet before clicking anything in it. During a boss or
+  daily run, `body.learn-focus` hides the app header and tabs, and
+  `#learn-run-quit` leaves the run.
 
 ## The `?debug=1` API
 
@@ -49,30 +58,91 @@ Only when the URL has `?debug=1`, `music-theory/index.html` exposes
   (or defaults).
 - `units` - `[{ id, title, steps: ['hear','play','why'] }]` in order. Ids:
   `pulse`, `perfect-intervals`, `thirds`, `major-minor-chords`,
-  `all-intervals`, `major-scale`, `dominant-7th`, `minor-and-modes`.
+  `seconds`, `sixths`, `sevenths`, `all-intervals`, `major-scale`,
+  `dominant-7th`, `minor-and-modes`.
   (`pulse` has no play step.)
 - `currentQuestion()` - the active learn/quiz question (`answer` for button
   rounds, `answerPcs` Set for keyboard rounds).
 - `answerCorrect()` / `answerWrong()` - answer the current learn round;
   `answerCorrect()` then advances after 0 ms (so specs `waitForTimeout(~30)`).
-- `gotIt()` - completes the current `why` step.
+- `gotIt()` - completes the current `why` step and opens the unit's boss
+  (`step: 'boss'`). On a finished unit it goes back to the frontier instead.
 - `switchMode(mode)` - same as tapping a tab (`learn`, `scales`, `chords`,
   `intervals`, `quiz`).
-- `resetProgress()` - clears storage and state (no `confirm()`).
+- `resetProgress()` - clears storage and state (no `confirm()`). The
+  `settings` object is kept, since it is a preference rather than progress.
+- `useHint()` - the Learn Hint button: marks the current interval hear round
+  as hinted (it then does not count towards passing) and shows the song card.
+  Returns `false` outside an unanswered interval round.
+- `setKeyContext(on)` - the "Play the key first" setting.
+- `instrument` (getter) - the instrument sounding now (a Learn round's random
+  pick, or the picker's choice). `instrumentIds` lists every id.
+- `chooseInstrument(id)` - same as the header picker (an id or `'random'`).
+- `setLearnMix(on)` - the Learn "Mix instruments" toggle.
+- `loadInstrument(id)` - resolves `true` once that instrument's samples have
+  loaded, `false` if they failed.
+- `instrumentRange(id)` - `[lo, hi]` MIDI notes a random pick will use it for.
+- `playChord(midis)` - plays through the active instrument, so specs can
+  exercise each sound without the keyboard.
+- `promptEvents()` - what the current interval question's prompt plays:
+  2 events normally, 6 (four I–IV–V–I triads, then the two notes) with key
+  context on. `null` for other question kinds.
+- `intervalRefs` - the `INTERVAL_REFS` table (`up`/`down` by semitones).
+- `showRefs(dir, semis)` - render the song card for that interval into the
+  visible panel (used to test entries the random rounds rarely reach).
+
+Learn game layer:
+
+- `forceVariant(v)` - serve only variant `v` in Learn rounds (`'standard'`,
+  `'song'`, `'odd'`, `'wrong-note'`, `'count'`, `'blind'`, `'phrase'`,
+  `'complete'`, `'missing'`), or `null` for the random mix. A variant the unit
+  can't serve falls back to the mix. Specs that rely on the standard round
+  (the interval Hint only exists there) pin `'standard'`.
+- `variantsFor(unitId, step)` - the variants that unit's step can serve.
+- `viewStep(step)` - same as tapping a step (`hear`, `play`, `why`, `boss`).
+- `run` (getter) - the active boss or daily run, or `null`: `{ kind, idx, len,
+  correct, lives, timed, ended, won, xp, bonus, limit, left }` (`limit`/`left`
+  in ms, boss only).
+- `combo` (getter) - right answers in a row this session.
+- `startBoss()` - same as the boss card's Fight button (on a `boss` step).
+- `playBoss(misses = 0)` - play a whole boss run (the first `misses` answers
+  wrong, the rest right) and land on its results card, like tapping through.
+- `expireTimer()` - run the current boss question out of time.
+- `startDaily()` / `leaveDaily()` - the Daily mix button.
+- `setToday('YYYY-MM-DD')` - judge the day streak against this local date.
+- `setSfx(on)` - the Sound effects setting.
+- `setSing(on, askMic = false)` - sing mode; by default without asking for
+  the microphone. `sing(midi)` judges a sung note in the current sing round,
+  `singRound(root, semis)` begins a sing round on fixed notes, and
+  `singStatus()` reports `{ listening, mic, note }`.
+- `detectPitch(freq)` - runs the pitch detector on a generated sine.
 
 Persistence blob (`music-theory-progress-v1`):
-`{ v: 1, quiz: { level, streak, majorScaleRootsDone }, learn: { unitIdx,
-units: { [id]: { step: 'hear'|'play'|'why'|'done', hear: { correct, total,
-recent }, play: { ... } } } } }`.
+`{ v: 1, quiz: { level, streak, majorScaleRootsDone }, learn: { unitIdx, layout,
+xp, bestCombo, units: { [id]: { step: 'hear'|'play'|'why'|'boss'|'done',
+hear: { correct, total, recent }, play: { ... } } } },
+daily: { last: 'YYYY-MM-DD'|null, streak, best },
+settings: { keyContext, instrument, learnMix, sfx, sing } }`.
+`instrument` is an instrument id or `'random'`; `learnMix` and `sfx` default
+to `true`, `sing` to `false`. Every newer field is optional, so older saves
+load unchanged (`v` stays 1).
 
 Step rule: a hear/play step passes when `total >= 10` and the last 10 answers
-(`recent`) contain >= 8 correct. Passing `why` (`gotIt()`) marks the unit
-done and increments `unitIdx`.
+(`recent`) contain >= 8 correct. Passing `why` (`gotIt()`) opens the boss.
+Beating the boss (10 questions, 3 lives, a timer each) marks the unit done and
+moves `unitIdx` to the next unfinished unit; losing leaves it on `boss`.
+Boss and daily answers earn XP and combos but don't touch the step stats.
 
 ## What each spec covers
 
+- **instruments.spec.js** - every self-hosted sample set loads and plays a
+  chord; Learn with "Mix instruments" varies the sound across rounds and only
+  picks instruments whose range covers the question's notes; explore tabs and
+  Quiz follow the picker, and its Random option varies Quiz rounds; with mixing
+  off Learn uses the picker; both settings persist across reload and reset; an
+  unknown saved instrument falls back to piano.
 - **smoke.spec.js** - loads with `?debug=1`, no page errors, debug API
-  present, Learn is the active tab with `#panel-learn` visible, the 8 unit ids
+  present, Learn is the active tab with `#panel-learn` visible, the 11 unit ids
   in order, `switchMode('scales')` shows `#panel-scales`.
 - **learn-flow.spec.js** - unit 1 hear (10 correct) -> why -> `gotIt()` ->
   unit 2; unit 2's hear threshold (3 wrong then correct: passes at the 11th
@@ -80,4 +150,27 @@ done and increments `unitIdx`.
   2's play step; reload and check `unitIdx === 2` and that the DOM marks
   `[data-unit="thirds"]` active.
 - **persistence.spec.js** - the free-play Quiz level (`#quiz-level-btn`)
-  survives a reload; the stored progress blob parses and has `v === 1`.
+  survives a reload; the stored progress blob parses and has `v === 1`. A
+  `unitIdx` past the end clamps to the last unit. Progress saved before the
+  2nds/6ths/7ths units existed (no `layout`) maps by unit id to the first
+  unfinished unit; finished units stay open past the frontier, and finishing
+  the new units moves the frontier past units already done.
+- **learn-game.spec.js** - every unit and step serves each of its variants
+  with a valid question (answer among the choices, every prompt note listed,
+  and variant-specific checks such as the wrong-note scale differing in one
+  degree), and records answers; unforced rounds mix variants; a fact shows
+  after answering; combo multiplier XP, best combo and XP persistence; the
+  boss intro, lives, timer, time-out, loss and win (unlocking the next unit,
+  bonus once), and that a later boss draws on earlier units; the daily mix
+  (locked until a Hear step passes, no lives or timer, streak growth, reset
+  after a gap, best kept, bonus once a day); sing rounds (any octave, wrong
+  note, keyboard fallback, toggle off) and the pitch detector; and, in a
+  second browser with Chromium's fake microphone playing a steady G4 WAV,
+  that holding G is heard as right for a 5th above C and wrong for a 4th.
+- **interval-hints.spec.js** - every `INTERVAL_REFS` tune contains its own
+  interval as a 0 -> ±n step and every video id is well formed; the Learn
+  Hint button shows the song card and makes the round not count; the song
+  card appears after answering, and Watch embeds the video only on demand
+  (YouTube is stubbed with `page.route`); the key-context setting changes the
+  prompt, survives a reload and a progress reset; the free-play Intervals quiz
+  shows the toggle and the song card.

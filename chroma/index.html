@@ -1,0 +1,2533 @@
+---
+layout: null
+permalink: /chroma/
+---
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Chroma">
+    <meta name="theme-color" content="#0b0b14">
+    <meta name="description" content="Chroma listens through the microphone and turns music into colour, so deaf and hard-of-hearing people can enjoy music visually.">
+    <title>Chroma — See the Music</title>
+    <link rel="manifest" href="/chroma/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/chroma-icon-192.png">
+    <link rel="apple-touch-icon" href="/img/chroma-icon-192.png">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #0b0b14;
+            --panel:     rgba(16, 16, 30, 0.92);
+            --glass:     rgba(8, 8, 18, 0.45);
+            --border:    rgba(255, 255, 255, 0.10);
+            --text:      #f1f1fb;
+            --text-dim:  #a6a6c4;
+            --accent:    #ff8f6b;
+            --safe-top:    env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left:   env(safe-area-inset-left, 0px);
+            --safe-right:  env(safe-area-inset-right, 0px);
+        }
+
+        html, body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #stage {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        button { font: inherit; color: inherit; cursor: pointer; }
+
+        /* ── HUD (what is playing, in words) ─────────────────────────── */
+        #hud {
+            position: fixed;
+            top: calc(12px + var(--safe-top));
+            left: calc(12px + var(--safe-left));
+            right: calc(12px + var(--safe-right));
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            pointer-events: none;
+            transition: opacity 0.4s;
+        }
+        #hud.off { opacity: 0; }
+        .pill {
+            background: var(--glass);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 10px 14px;
+            min-width: 0;
+        }
+        #chord-name {
+            font-size: clamp(30px, 9vw, 52px);
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+        }
+        #chord-long { font-size: 13px; color: var(--text-dim); margin-top: 4px; white-space: nowrap; }
+        .hud-right { text-align: right; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+        .hud-line { font-size: 14px; font-weight: 600; white-space: nowrap; }
+        .hud-line small { color: var(--text-dim); font-weight: 500; }
+        .meter { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); }
+        .meter .bar { width: 64px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
+        .meter .bar i { display: block; height: 100%; width: 0%; border-radius: 3px; background: #fff; transition: width 0.12s linear; }
+
+        /* ── Bottom: colour key + controls ───────────────────────────── */
+        #bottom {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 0 calc(12px + var(--safe-right)) calc(14px + var(--safe-bottom)) calc(12px + var(--safe-left));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+        }
+        #controls {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+            transition: opacity 0.4s, transform 0.4s;
+        }
+        #controls.hidden { opacity: 0; transform: translateY(8px); pointer-events: none; }
+        .ctl {
+            min-width: 48px;
+            height: 48px;
+            padding: 0 14px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            font-size: 15px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .ctl:active { transform: scale(0.96); }
+        .ctl.primary { background: rgba(255,255,255,0.92); color: #111; border-color: transparent; }
+
+        #legend {
+            display: flex;
+            gap: 4px;
+            pointer-events: none;
+            transition: opacity 0.4s;
+        }
+        #legend.off { display: none; }
+        .sw {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            transition: transform 0.12s, box-shadow 0.12s;
+        }
+
+        /* ── Overlays (start / settings / about) ─────────────────────── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: calc(20px + var(--safe-top)) calc(16px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(16px + var(--safe-left));
+            background: rgba(5, 5, 12, 0.55);
+            overflow-y: auto;
+        }
+        .overlay.show { display: flex; }
+        .card {
+            width: 100%;
+            max-width: 460px;
+            margin: auto;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 22px 20px;
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+        }
+        .card h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+        .card h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+        .card h3 { font-size: 15px; font-weight: 700; margin: 18px 0 6px; }
+        .card p, .card li { font-size: 15px; line-height: 1.5; color: var(--text-dim); }
+        .card p + p { margin-top: 8px; }
+        .card ul { padding-left: 18px; }
+        .card strong { color: var(--text); }
+        .tagline { margin: 6px 0 16px; font-size: 17px !important; }
+        .big-btn {
+            width: 100%;
+            height: 54px;
+            margin-top: 18px;
+            border: none;
+            border-radius: 27px;
+            background: linear-gradient(90deg, #ff6b6b, #ffb36b, #e7e06b, #6be08c, #6bc8e0, #8d7bff, #e06bd2);
+            color: #111;
+            font-size: 17px;
+            font-weight: 800;
+        }
+        .ghost-btn {
+            width: 100%;
+            height: 46px;
+            margin-top: 10px;
+            border-radius: 23px;
+            border: 1px solid var(--border);
+            background: transparent;
+            font-size: 15px;
+            font-weight: 600;
+        }
+.demo-row { display: flex; gap: 8px; }
+        .demo-row .ghost-btn { flex: 1; }
+        .fineprint { font-size: 13px !important; margin-top: 14px; }
+        .error { color: #ffb4a6 !important; margin-top: 12px; display: none; }
+        .error.show { display: block; }
+
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .row:last-of-type { border-bottom: none; }
+        .row label { font-size: 15px; font-weight: 600; }
+        .row .hint { display: block; font-size: 12px; color: var(--text-dim); font-weight: 400; margin-top: 2px; }
+        .seg { display: flex; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 3px; }
+        .seg button { border: none; background: none; padding: 8px 9px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--text-dim); }
+        .seg button.on { background: rgba(255,255,255,0.92); color: #111; }
+        input[type="range"] { width: 140px; accent-color: var(--accent); }
+        .toggle { position: relative; width: 50px; height: 30px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle span { position: absolute; inset: 0; border-radius: 15px; background: rgba(255,255,255,0.15); transition: background 0.2s; }
+        .toggle span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+        .toggle input:checked + span { background: #5ad17d; }
+        .toggle input:checked + span::after { transform: translateX(20px); }
+
+        .map-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+        .map-table td { font-size: 14px; line-height: 1.4; color: var(--text-dim); padding: 7px 0; vertical-align: top; border-bottom: 1px solid var(--border); }
+        .map-table td:first-child { color: var(--text); font-weight: 600; padding-right: 12px; white-space: nowrap; }
+        .wheel-key { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+        .chip-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .chip { border-radius: 10px; padding: 6px 10px; font-size: 13px; font-weight: 700; color: #111; }
+
+        #update-banner {
+            position: fixed;
+            top: calc(10px + var(--safe-top));
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 10px;
+            align-items: center;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 8px 12px;
+            font-size: 14px;
+            z-index: 10;
+        }
+        #update-banner.show { display: flex; }
+        #update-banner button { border: none; background: #fff; color: #111; border-radius: 9px; padding: 6px 10px; font-weight: 700; }
+    </style>
+</head>
+
+<body>
+    <canvas id="stage" aria-hidden="true"></canvas>
+
+    <div id="hud" class="off">
+        <div class="pill">
+            <div id="chord-name">—</div>
+            <div id="chord-long">waiting for sound</div>
+        </div>
+        <div class="pill hud-right">
+            <div class="hud-line"><small>Key</small> <span id="key-name">…</span></div>
+            <div class="hud-line"><small>Note</small> <span id="note-name">—</span></div>
+            <div class="hud-line" id="part-line"><small>Part</small> <span id="part-name">—</span></div>
+            <div class="meter">loud <span class="bar"><i id="m-loud"></i></span></div>
+            <div class="meter">tense <span class="bar"><i id="m-tense"></i></span></div>
+            <div class="meter" id="beat-meter">beat <span class="bar"><i id="m-beat"></i></span></div>
+        </div>
+    </div>
+
+    <div id="bottom">
+        <div id="legend" aria-hidden="true"></div>
+        <div id="controls" class="hidden">
+            <button class="ctl primary" id="btn-listen" aria-label="Stop listening">■ Stop</button>
+            <button class="ctl" id="btn-mode" aria-label="Change visual mode">Aurora</button>
+            <button class="ctl" id="btn-settings" aria-label="Settings">⚙︎</button>
+            <button class="ctl" id="btn-about" aria-label="How it works">?</button>
+            <button class="ctl" id="btn-full" aria-label="Full screen">⛶</button>
+        </div>
+    </div>
+
+    <!-- Start -->
+    <div class="overlay show" id="start">
+        <div class="card">
+            <h1>Chroma</h1>
+            <p class="tagline">See the music. Chroma listens and paints what it hears: every note, chord and beat becomes colour, light and movement.</p>
+            <p>Put your phone near the music: a speaker, a band, a friend singing. Each note has its own colour. Happy chords glow bright, sad chords go deep, tense chords clash, and every beat sends out a ripple.</p>
+            <button class="big-btn" id="btn-start">Start listening</button>
+            <div class="demo-row">
+                <button class="ghost-btn" id="btn-demo">Demo: band</button>
+                <button class="ghost-btn" id="btn-demo-edm">Demo: electronic</button>
+            </div>
+            <p class="error" id="mic-error"></p>
+            <p class="fineprint">🔒 Sound is analysed on your device. Nothing is recorded or sent anywhere.<br>
+            ⚡ Flashes are limited to 3 per second. Turn on <strong>Calm mode</strong> in settings for gentler light.</p>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="overlay" id="settings">
+        <div class="card">
+            <h2>Settings</h2>
+            <div class="row">
+                <label>Visual</label>
+                <div class="seg" id="mode-seg">
+                    <button data-mode="aurora">Aurora</button>
+                    <button data-mode="wheel">Wheel</button>
+                    <button data-mode="wash">Wash</button>
+                    <button data-mode="hands">Hands</button>
+                </div>
+            </div>
+            <div class="row">
+                <label for="sens">Sensitivity<span class="hint">Raise it for quiet music</span></label>
+                <input type="range" id="sens" min="0.5" max="3" step="0.1">
+            </div>
+            <div class="row">
+                <label for="opt-calm">Calm mode<span class="hint">Softer beats, no bright pulses</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-calm"><span></span></label>
+            </div>
+            <div class="row">
+                <label>Focus<span class="hint">Follow only some kinds of sound</span></label>
+                <div class="seg" id="focus-seg">
+                    <button data-focus="all">All</button>
+                    <button data-focus="held">Held</button>
+                    <button data-focus="fading">Fading</button>
+                </div>
+            </div>
+            <div class="row">
+                <label for="opt-drums">Show drums<span class="hint">Turn off to see only the notes</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-drums"><span></span></label>
+            </div>
+            <div class="row" id="row-vibrate">
+                <label for="opt-vibrate">Feel the beat<span class="hint">Vibrates on kick drums (Android)</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-vibrate"><span></span></label>
+            </div>
+            <div class="row">
+                <label for="opt-labels">Show words<span class="hint">Chord, key, note and meters</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-labels"><span></span></label>
+            </div>
+            <div class="row">
+                <label for="opt-legend">Colour key<span class="hint">The 12 note colours along the bottom</span></label>
+                <label class="toggle"><input type="checkbox" id="opt-legend"><span></span></label>
+            </div>
+            <button class="big-btn" data-close>Done</button>
+        </div>
+    </div>
+
+    <!-- About -->
+    <div class="overlay" id="about">
+        <div class="card">
+            <h2>How sound becomes colour</h2>
+            <p>Chroma follows musical rules, so the same music always gives the same colours. With practice you can learn to <em>read</em> a song from its colours.</p>
+
+            <h3>Every note has a colour</h3>
+            <p>The 12 notes go round the colour wheel in the order of the <strong>circle of fifths</strong>, the order musicians use to show which notes sound good together. C is red, G is orange, D is yellow, and so on. This is close to the colours the composer Alexander Scriabin gave to keys.</p>
+            <div class="wheel-key" id="about-wheel"></div>
+            <p style="margin-top:8px">Notes that sound good together (a fifth apart) are neighbouring colours. The clashing tritone sits opposite, on the complementary colour.</p>
+
+            <h3>Chords set the mood</h3>
+            <table class="map-table">
+                <tr><td>Major</td><td>Bright and warm. Happy, open sound.</td></tr>
+                <tr><td>Minor</td><td>Deeper and darker. Sad or serious sound.</td></tr>
+                <tr><td>Seventh</td><td>Rich, with a clashing edge. Wants to move on.</td></tr>
+                <tr><td>Major 7th</td><td>Soft pastel. Dreamy.</td></tr>
+                <tr><td>Diminished</td><td>Murky and grey. Tense, spooky.</td></tr>
+                <tr><td>Augmented</td><td>Over-bright and unstable. Floating, strange.</td></tr>
+                <tr><td>Sus</td><td>Airy and pale. Waiting to resolve.</td></tr>
+            </table>
+            <div class="chip-row" id="about-chords"></div>
+            <p style="margin-top:8px">A major chord's notes lean towards the warm side of its root colour. A minor chord's notes lean towards the cool side.</p>
+
+            <h3>The rest of the music</h3>
+            <table class="map-table">
+                <tr><td>Key</td><td>The background colour. It is the song's home note and changes slowly.</td></tr>
+                <tr><td>Loudness</td><td>Brightness and size. Quiet music glows softly; loud music fills the screen.</td></tr>
+                <tr><td>Drums</td><td>Kept apart from the notes. Drums have no pitch, so they have no note colour: they show as white light. Kick drums pulse up from the bottom (and vibrate, if you turn that on), snares ring from the centre, and hi-hats give a few sparks. Drum hits don't change the note colours. To see only the notes, turn off <strong>Show drums</strong>.</td></tr>
+                <tr><td>Melody</td><td>A glowing ribbon. High notes are higher on the screen and lighter in colour.</td></tr>
+                <tr><td>Tension</td><td>Clashing notes add the opposite colour and make the shapes shake. When the music resolves, it calms down.</td></tr>
+                <tr><td>Bright sounds</td><td>High instruments make sparkles.</td></tr>
+            </table>
+
+            <h3>The kind of sound</h3>
+            <p>Chroma also notices what kind of sound each note has. The colour still says which note it is; the <strong>shape</strong> shows the kind of sound.</p>
+            <table class="map-table">
+                <tr><td>Fading</td><td>Struck or plucked: piano, guitar, harp, synth plucks. Crisp shapes with a thin ring; in Hands, bars that fade along their length.</td></tr>
+                <tr><td>Held</td><td>Sustained: voice, violin, flute, organ, pads. Soft glowing shapes and solid bars.</td></tr>
+                <tr><td>Moving</td><td>A wobble in the sound: a singer's vibrato, or a wobble bass. The shape pulses at the same speed, and bars get wavy edges.</td></tr>
+                <tr><td>Bright or soft</td><td>Bright, buzzy sounds (trumpet, saw synths) get sharper edges and a highlight. Soft, pure sounds (flute, sine) stay hazy.</td></tr>
+            </table>
+            <p style="margin-top:8px">To follow only one kind, use <strong>Focus</strong> in settings: <strong>Held</strong> to follow just the singer or the pads, <strong>Fading</strong> for just the piano or guitar.</p>
+
+            <h3>The shape of the song</h3>
+            <table class="map-table">
+                <tr><td>Build-up</td><td>The music gets brighter and busier (rising sweeps, faster drums). The shapes are pulled into the middle, the edges darken and the centre glows. It builds slowly, with no flashing.</td></tr>
+                <tr><td>Drop</td><td>The beat comes back hard after a pause. One big bloom of colour.</td></tr>
+                <tr><td>Breakdown</td><td>The drums stop and the music carries on. Everything slows down and gets wide and soft.</td></tr>
+                <tr><td>Pumping</td><td>In dance music, everything ducks on each kick drum. The shapes squeeze in on each kick and swell back.</td></tr>
+            </table>
+            <p style="margin-top:8px">The word under <strong>Part</strong> at the top says which part of the song it is.</p>
+
+            <h3>Visuals</h3>
+            <ul>
+                <li><strong>Aurora</strong>: soft, moving light. Each note has its own place, so calm chords bunch together and clashing chords spread apart.</li>
+                <li><strong>Wheel</strong>: the circle of fifths, with chord shapes drawn on it. Good for learning.</li>
+                <li><strong>Wash</strong>: the whole screen in one colour. Calm and easy to follow from the corner of your eye.</li>
+                <li><strong>Hands</strong>: every note as a coloured bar with its name, moving from right to left. The high part (a pianist's right hand, or the melody) is on top. The low part (the left hand, or the bass) is below, and the drums run between them. The line between the two parts moves to the biggest gap between the notes.</li>
+            </ul>
+
+            <h3>Tips</h3>
+            <ul>
+                <li>Put the phone close to the speaker or instrument.</li>
+                <li>If the colours hardly move, raise <strong>Sensitivity</strong>.</li>
+                <li>Install Chroma on your home screen. It works offline.</li>
+            </ul>
+            <button class="big-btn" data-close>Got it</button>
+        </div>
+    </div>
+
+    <div id="update-banner">A new version of Chroma is ready <button id="update-btn">Update</button></div>
+
+    <script>
+    (() => {
+        'use strict';
+
+        const DEBUG = new URLSearchParams(location.search).has('debug');
+
+        // ─── Music theory ────────────────────────────────────────────────
+        const NOTE_NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+
+        // Position of a pitch class on the circle of fifths (C=0, G=1, D=2, …).
+        // A perfect fifth is 7 semitones, and 7 is its own inverse mod 12.
+        const fifthsPos = (pc) => (pc * 7) % 12;
+        const pcFromFifths = (j) => (j * 7) % 12;
+
+        // Each fifth is one 30° step on the OKLCH hue wheel, starting from
+        // OKLCH red (≈29°): C red, G orange, D amber, A lime, E green, …
+        // OKLCH is perceptually uniform, so every step looks like the same
+        // amount of change.
+        const HUE_C = 29;
+        const pcHue = (pc) => (HUE_C + fifthsPos(pc) * 30) % 360;
+
+        // Chord qualities. Lightness (L) and chroma (C) carry the "mood";
+        // the hue always comes from the root.
+        const QUALITIES = [
+            { id: 'maj',  suffix: '',     long: 'major',            iv: [0, 4, 7],     L: 0.80, C: 0.17, tension: 0.05, bias: 1.00 },
+            { id: 'min',  suffix: 'm',    long: 'minor',            iv: [0, 3, 7],     L: 0.60, C: 0.15, tension: 0.18, bias: 1.00 },
+            { id: '7',    suffix: '7',    long: 'dominant 7th',     iv: [0, 4, 7, 10], L: 0.72, C: 0.18, tension: 0.55, bias: 0.985 },
+            { id: 'maj7', suffix: 'maj7', long: 'major 7th',        iv: [0, 4, 7, 11], L: 0.86, C: 0.11, tension: 0.28, bias: 0.985 },
+            { id: 'm7',   suffix: 'm7',   long: 'minor 7th',        iv: [0, 3, 7, 10], L: 0.64, C: 0.12, tension: 0.30, bias: 0.985 },
+            { id: 'dim',  suffix: '°',    long: 'diminished',       iv: [0, 3, 6],     L: 0.48, C: 0.07, tension: 0.80, bias: 0.97 },
+            { id: 'aug',  suffix: '+',    long: 'augmented',        iv: [0, 4, 8],     L: 0.86, C: 0.20, tension: 0.70, bias: 0.97 },
+            { id: 'sus4', suffix: 'sus4', long: 'suspended 4th',    iv: [0, 5, 7],     L: 0.76, C: 0.09, tension: 0.35, bias: 0.97 },
+        ];
+        const NOTE_LOOK = { L: 0.72, C: 0.16 };
+
+        // Dissonance by interval class (unison … tritone), roughly following
+        // the usual consonance ranking: m2/M7 worst, tritone next, M2/m7, then
+        // thirds/sixths, with fourths/fifths the smoothest.
+        const IC_DISS = [0, 1.0, 0.55, 0.2, 0.15, 0.05, 0.85];
+
+        // Krumhansl–Kessler key profiles.
+        const KK_MAJOR = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+        const KK_MINOR = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+
+        function chordTemplates() {
+            const list = [];
+            for (let root = 0; root < 12; root++) {
+                for (const q of QUALITIES) {
+                    const v = new Array(12).fill(0);
+                    for (const i of q.iv) v[(root + i) % 12] = 1;
+                    const n = Math.sqrt(q.iv.length);
+                    list.push({ root, q, v: v.map((x) => x / n), pcs: q.iv.map((i) => (root + i) % 12) });
+                }
+            }
+            return list;
+        }
+        const TEMPLATES = chordTemplates();
+
+        // Cosine similarity against every template; a matching bass note
+        // breaks ties between inversions / relative chords (C6 vs Am7).
+        function detectChord(chroma, bassPc = -1) {
+            let norm = 0;
+            for (let i = 0; i < 12; i++) norm += chroma[i] * chroma[i];
+            norm = Math.sqrt(norm);
+            if (norm < 1e-9) return null;
+            let best = null, bestScore = -1;
+            for (const t of TEMPLATES) {
+                let dot = 0;
+                for (let i = 0; i < 12; i++) dot += chroma[i] * t.v[i];
+                let score = (dot / norm) * t.q.bias;
+                if (t.root === bassPc) score *= 1.05;
+                if (score > bestScore) { bestScore = score; best = t; }
+            }
+            return { root: best.root, q: best.q, pcs: best.pcs, score: bestScore };
+        }
+
+        function pearson(a, b) {
+            let ma = 0, mb = 0;
+            for (let i = 0; i < 12; i++) { ma += a[i]; mb += b[i]; }
+            ma /= 12; mb /= 12;
+            let num = 0, da = 0, db = 0;
+            for (let i = 0; i < 12; i++) {
+                const x = a[i] - ma, y = b[i] - mb;
+                num += x * y; da += x * x; db += y * y;
+            }
+            return da && db ? num / Math.sqrt(da * db) : 0;
+        }
+
+        function detectKey(chroma) {
+            let best = null;
+            for (let tonic = 0; tonic < 12; tonic++) {
+                for (const [mode, prof] of [['major', KK_MAJOR], ['minor', KK_MINOR]]) {
+                    const rot = new Array(12);
+                    for (let i = 0; i < 12; i++) rot[(tonic + i) % 12] = prof[i];
+                    const r = pearson(chroma, rot);
+                    if (!best || r > best.r) best = { tonic, mode, r };
+                }
+            }
+            return best;
+        }
+
+        function roughness(chroma) {
+            let num = 0, den = 0;
+            for (let i = 0; i < 12; i++) {
+                for (let j = i + 1; j < 12; j++) {
+                    const w = chroma[i] * chroma[j];
+                    if (w <= 0) continue;
+                    let ic = j - i; if (ic > 6) ic = 12 - ic;
+                    num += w * IC_DISS[ic];
+                    den += w;
+                }
+            }
+            return den > 0 ? num / den : 0;
+        }
+
+        // ─── Colour (OKLCH → sRGB with gamut mapping) ────────────────────
+        function oklchLinear(L, C, h) {
+            const hr = h * Math.PI / 180;
+            const a = C * Math.cos(hr), b = C * Math.sin(hr);
+            const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+            const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+            const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+            const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+            return [
+                 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+                -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+                -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+            ];
+        }
+        const inGamut = (c) => c[0] >= -1e-4 && c[0] <= 1.0001 && c[1] >= -1e-4 && c[1] <= 1.0001 && c[2] >= -1e-4 && c[2] <= 1.0001;
+        const encode = (x) => {
+            x = Math.min(1, Math.max(0, x));
+            return Math.round(255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055));
+        };
+        const rgbCache = new Map();
+        // Reduce chroma (keeping lightness and hue) until the colour fits sRGB.
+        function oklchToRgb(L, C, h) {
+            L = Math.min(1, Math.max(0, L));
+            h = ((h % 360) + 360) % 360;
+            const key = ((L * 200) | 0) * 1e6 + ((C * 400) | 0) * 1e3 + (h | 0);
+            const hit = rgbCache.get(key);
+            if (hit) return hit;
+            let lin = oklchLinear(L, C, h);
+            if (!inGamut(lin)) {
+                let lo = 0, hi = C;
+                for (let i = 0; i < 10; i++) {
+                    const mid = (lo + hi) / 2;
+                    if (inGamut(oklchLinear(L, mid, h))) lo = mid; else hi = mid;
+                }
+                lin = oklchLinear(L, lo, h);
+            }
+            const rgb = [encode(lin[0]), encode(lin[1]), encode(lin[2])];
+            if (rgbCache.size > 20000) rgbCache.clear();
+            rgbCache.set(key, rgb);
+            return rgb;
+        }
+        const col = (L, C, h, a = 1) => {
+            const [r, g, b] = oklchToRgb(L, C, h);
+            return `rgba(${r},${g},${b},${a})`;
+        };
+        const hueLerp = (a, b, t) => {
+            const d = ((b - a + 540) % 360) - 180;
+            return (a + d * t + 360) % 360;
+        };
+        const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+        const ease = (dt, tau) => 1 - Math.exp(-dt / tau);
+
+        // ─── Settings ────────────────────────────────────────────────────
+        const SETTINGS_KEY = 'chroma-settings-v1';
+        const settings = { mode: 'aurora', sensitivity: 1, calm: false, focus: 'all', drums: true, vibrate: true, labels: true, legend: true };
+        try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (_) {}
+        const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {} };
+        const canVibrate = typeof navigator.vibrate === 'function';
+
+        // ─── Audio ───────────────────────────────────────────────────────
+        const A = {
+            ctx: null, input: null, big: null, small: null,
+            source: null,       // 'mic' | 'demo' | 'tones'
+            stream: null, stopSource: null,
+        };
+
+        function ensureContext() {
+            if (A.ctx) return A.ctx;
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            const ctx = new Ctx();
+            A.ctx = ctx;
+            A.input = ctx.createGain();
+            // Long window for pitch (≈ 3 Hz bins), short window for beats.
+            A.big = ctx.createAnalyser();
+            A.big.fftSize = 16384;
+            A.big.smoothingTimeConstant = 0;
+            A.big.minDecibels = -120;
+            A.big.maxDecibels = 0;
+            A.small = ctx.createAnalyser();
+            A.small.fftSize = 2048;
+            A.small.smoothingTimeConstant = 0;
+            // Medium window (≈85 ms, ≈12 Hz bins) for per-note timbre: quick
+            // enough for vibrato, fine enough to keep neighbouring notes'
+            // partials apart.
+            A.mid = ctx.createAnalyser();
+            A.mid.fftSize = 4096;
+            A.mid.smoothingTimeConstant = 0;
+            A.input.connect(A.big);
+            A.input.connect(A.small);
+            A.input.connect(A.mid);
+            // Some browsers only pull analysers that reach the destination.
+            const mute = ctx.createGain();
+            mute.gain.value = 0;
+            A.big.connect(mute);
+            A.small.connect(mute);
+            A.mid.connect(mute);
+            mute.connect(ctx.destination);
+            initBuffers();
+            return ctx;
+        }
+
+        function stopSource() {
+            if (A.stopSource) { try { A.stopSource(); } catch (_) {} }
+            A.stopSource = null;
+            A.source = null;
+        }
+
+        async function startMic() {
+            const ctx = ensureContext();
+            await ctx.resume();
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+            });
+            stopSource();
+            const node = ctx.createMediaStreamSource(stream);
+            node.connect(A.input);
+            A.source = 'mic';
+            A.stopSource = () => {
+                node.disconnect();
+                stream.getTracks().forEach((t) => t.stop());
+            };
+        }
+
+        // A short song (I–V–vi–IV, then a ii–V–I with a secondary dominant)
+        // so people can see what Chroma does without any music around.
+        const DEMO_BARS = [
+            [0, 'maj'], [7, 'maj'], [9, 'min'], [5, 'maj'],
+            [2, 'm7'], [7, '7'], [0, 'maj7'], [4, '7'],
+            [9, 'min'], [5, 'maj'], [11, 'dim'], [7, 'sus4'],
+            [7, '7'], [0, 'maj'], [8, 'aug'], [0, 'maj'],
+        ];
+        // The electronic demo: Am–F–C–G, in four 4-bar sections.
+        const EDM_BARS = [[9, 'min'], [5, 'maj'], [0, 'maj'], [7, 'maj']];
+        const EDM_SECTIONS = ['groove', 'groove', 'groove', 'groove', 'break', 'break', 'break', 'break',
+            'build', 'build', 'build', 'build', 'drop', 'drop', 'drop', 'drop'];
+
+        // Shared synth voices for the demos (and the test helper below).
+        function demoKit(ctx, dest) {
+            const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+            const nd = noise.getChannelData(0);
+            for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+            const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+            const kit = {
+                mtof, noise,
+                // A held or struck tone. env 'hold' keeps its level; 'fade'
+                // decays like a piano or a pluck (tau = decay time constant).
+                tone(o) {
+                    const { type = 'sine', midi, t, dur, gain, env = 'hold', tau = 0.4, out = dest, vibrato = 0, vibRate = 5.5, cutoff = 0 } = o;
+                    const osc = ctx.createOscillator(), g = ctx.createGain();
+                    osc.type = type; osc.frequency.value = mtof(midi);
+                    g.gain.setValueAtTime(0, t);
+                    g.gain.linearRampToValueAtTime(gain, t + (env === 'fade' ? 0.005 : 0.06));
+                    if (env === 'fade') g.gain.setTargetAtTime(0.0001, t + 0.01, tau);
+                    else { g.gain.setValueAtTime(gain, t + dur * 0.85); g.gain.linearRampToValueAtTime(0, t + dur); }
+                    let node = osc;
+                    if (cutoff) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff; osc.connect(f); node = f; }
+                    node.connect(g); g.connect(out);
+                    if (vibrato) {
+                        const lfo = ctx.createOscillator(), lg = ctx.createGain();
+                        lfo.frequency.value = vibRate;
+                        lg.gain.value = mtof(midi) * (Math.pow(2, vibrato / 1200) - 1);
+                        lfo.connect(lg); lg.connect(osc.frequency);
+                        lfo.start(t); lfo.stop(t + dur + 0.05);
+                    }
+                    osc.start(t); osc.stop(t + dur + 0.05);
+                },
+                kick(t, gain = 1) {
+                    const o = ctx.createOscillator(), g = ctx.createGain();
+                    o.frequency.setValueAtTime(150, t);
+                    o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
+                    g.gain.setValueAtTime(gain, t);
+                    g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                    o.connect(g); g.connect(dest);
+                    o.start(t); o.stop(t + 0.32);
+                },
+                noiseHit(t, type, freq, gain, len) {
+                    const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+                    src.buffer = noise; f.type = type; f.frequency.value = freq; f.Q.value = 0.7;
+                    g.gain.setValueAtTime(gain, t);
+                    g.gain.exponentialRampToValueAtTime(0.001, t + len);
+                    src.connect(f); f.connect(g); g.connect(dest);
+                    src.start(t, Math.random()); src.stop(t + len + 0.02);
+                },
+                hat(t, gain = 0.18) { kit.noiseHit(t, 'highpass', 7000, gain, 0.06); },
+                snare(t, gain = 0.5) { kit.noiseHit(t, 'bandpass', 1800, gain, 0.16); },
+                // Sidechain: duck a bus on each kick and let it swell back.
+                pump(param, t, depth = 0.8) {
+                    param.setValueAtTime(1, t);
+                    param.linearRampToValueAtTime(1 - depth, t + 0.015);   // a compressor's attack
+                    param.linearRampToValueAtTime(1, t + 0.4);
+                },
+            };
+            return kit;
+        }
+
+        // song: 'band' (singer over piano, bass and drums, chords in
+        // DEMO_BARS) or 'edm' (EDM_BARS / EDM_SECTIONS). parts ({ harmony,
+        // drums }) lets tests play only some layers of the band song.
+        async function startDemo(opts = {}) {
+            const song = opts.song || 'band';
+            const parts = { harmony: true, drums: true, ...(opts.parts || opts) };
+            const ctx = ensureContext();
+            await ctx.resume();
+            stopSource();
+            const master = ctx.createGain();
+            master.gain.value = 0.8;
+            master.connect(A.input);
+            const out = ctx.createGain();
+            out.gain.value = 0.35;
+            master.connect(out);
+            out.connect(ctx.destination);
+            const kit = demoKit(ctx, master);
+
+            const beat = 0.5;                       // 120 bpm
+            const bar = beat * 4;
+            const qById = Object.fromEntries(QUALITIES.map((q) => [q.id, q]));
+            const t0 = ctx.currentTime + 0.1;
+            let nextBar = 0;
+            const voiced = (root, iv) => { let m = 60 + ((root + iv) % 12); if (m > 66) m -= 12; return m; };
+
+            const bandBar = (n, t) => {
+                const [root, qid] = DEMO_BARS[n % DEMO_BARS.length];
+                const q = qById[qid];
+                if (parts.drums) {
+                    for (let b = 0; b < 4; b++) {
+                        kit.kick(t + b * beat);
+                        if (b % 2) kit.snare(t + b * beat);
+                        kit.hat(t + b * beat + beat / 2);
+                    }
+                }
+                if (!parts.harmony) return;
+                // Singer: held notes with vibrato (a half note, two quarters),
+                // ending on the chord's top note (its 7th, if it has one).
+                const tones = q.iv.map((iv) => 72 + ((root + iv) % 12));
+                const line = [[tones[2], 0, 2], [tones[1], 2, 1], [tones[tones.length - 1] === tones[2] ? tones[0] : tones[tones.length - 1], 3, 1]];
+                // Piano: the chord struck on beats 1 and 3, fading, leaving
+                // out the note the singer holds as it strikes (as a pianist
+                // would).
+                for (const s of [0, 2]) {
+                    const sung = line.filter(([, at, len]) => at <= s && at + len > s).map(([m]) => m % 12);
+                    for (const iv of q.iv) {
+                        if (sung.includes((root + iv) % 12)) continue;
+                        kit.tone({ type: 'triangle', midi: voiced(root, iv), t: t + s * beat, dur: 2 * beat, gain: 0.09, env: 'fade', tau: 0.45 });
+                    }
+                }
+                kit.tone({ type: 'sine', midi: 36 + root, t, dur: bar - 0.05, gain: 0.28 });
+                for (const [midi, at, len] of line) {
+                    kit.tone({ type: 'sawtooth', cutoff: 1600, midi, t: t + at * beat, dur: len * beat - 0.04, gain: 0.12, vibrato: 30, vibRate: 5.5 });
+                }
+            };
+
+            // Electronic: groove, breakdown, build-up, drop.
+            const padBus = ctx.createGain();
+            const padFilter = ctx.createBiquadFilter();
+            padFilter.type = 'lowpass'; padFilter.frequency.value = 2000;
+            padBus.connect(padFilter); padFilter.connect(master);
+            const edmBar = (n, t) => {
+                const sec = EDM_SECTIONS[n % EDM_SECTIONS.length];
+                const [root, qid] = EDM_BARS[n % EDM_BARS.length];
+                const q = qById[qid];
+                const loud = sec === 'drop' ? 1.15 : 1;
+                // Pad: held saws through a filter; pumped by the kick in the
+                // groove and the drop, opening up through the build.
+                for (const iv of q.iv) {
+                    for (const det of [-8, 8]) {
+                        kit.tone({ type: 'sawtooth', midi: voiced(root, iv) + det / 100, t, dur: bar, gain: 0.03 * loud, out: padBus });
+                    }
+                }
+                const pf = padFilter.frequency;
+                pf.cancelScheduledValues(t);
+                if (sec === 'build') {
+                    const k = (n % 4) / 4;
+                    pf.setValueAtTime(400 + 7600 * k * k, t);
+                    pf.linearRampToValueAtTime(400 + 7600 * ((k + 0.25) ** 2), t + bar);
+                } else pf.setValueAtTime(sec === 'break' ? 1200 : 2400, t);
+                if (sec === 'groove' || sec === 'drop') {
+                    for (let b = 0; b < 4; b++) {
+                        kit.kick(t + b * beat, loud);
+                        kit.pump(padBus.gain, t + b * beat);
+                        if (b % 2) kit.snare(t + b * beat, 0.4);
+                        kit.hat(t + b * beat + beat / 2);
+                    }
+                    // Wobble bass: a saw whose filter opens and closes with a 4 Hz LFO.
+                    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+                    const lfo = ctx.createOscillator(), lg = ctx.createGain();
+                    o.type = 'sawtooth'; o.frequency.value = kit.mtof(33 + root);
+                    f.type = 'lowpass'; f.frequency.value = 500; f.Q.value = 6;
+                    lfo.frequency.value = 4; lg.gain.value = 420;
+                    lfo.connect(lg); lg.connect(f.frequency);
+                    g.gain.setValueAtTime(0.22 * loud, t); g.gain.setValueAtTime(0.22 * loud, t + bar - 0.05); g.gain.linearRampToValueAtTime(0, t + bar);
+                    o.connect(f); f.connect(g); g.connect(master);
+                    o.start(t); o.stop(t + bar); lfo.start(t); lfo.stop(t + bar);
+                    // Pluck arpeggio: short fading notes.
+                    for (let k = 0; k < 8; k++) {
+                        const iv = q.iv[k % q.iv.length];
+                        kit.tone({ type: 'square', cutoff: 2500, midi: 72 + ((root + iv) % 12) + (k >= 4 ? 12 : 0), t: t + k * beat / 2, dur: 0.4, gain: 0.05, env: 'fade', tau: 0.08 });
+                    }
+                } else {
+                    padBus.gain.cancelScheduledValues(t);
+                    padBus.gain.setValueAtTime(1, t);
+                }
+                if (sec === 'build') {
+                    // Snare roll that speeds up, and a rising noise sweep.
+                    const k = n % 4;
+                    const step = [beat, beat / 2, beat / 4, beat / 8][k];
+                    for (let x = 0; x < bar - 1e-6; x += step) kit.snare(t + x, 0.12 + 0.1 * k);
+                    const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+                    src.buffer = kit.noise; src.loop = true;
+                    f.type = 'bandpass'; f.Q.value = 2;
+                    f.frequency.setValueAtTime(500 * Math.pow(2, k), t);
+                    f.frequency.exponentialRampToValueAtTime(500 * Math.pow(2, k + 1), t + bar);
+                    g.gain.setValueAtTime(0.03 + 0.04 * k, t);
+                    g.gain.linearRampToValueAtTime(0.07 + 0.04 * k, t + bar);
+                    src.connect(f); f.connect(g); g.connect(master);
+                    src.start(t); src.stop(t + bar);
+                }
+            };
+
+            const scheduleBar = (n) => (song === 'edm' ? edmBar : bandBar)(n, t0 + n * bar);
+            const timer = setInterval(() => {
+                while (t0 + nextBar * bar < ctx.currentTime + 0.6) scheduleBar(nextBar++);
+            }, 100);
+            while (t0 + nextBar * bar < ctx.currentTime + 0.6) scheduleBar(nextBar++);
+
+            A.source = 'demo';
+            A.demo = { t0, bar, song };
+            A.stopSource = () => {
+                A.demo = null;
+                clearInterval(timer);
+                out.gain.setValueAtTime(0, ctx.currentTime);
+                master.disconnect();
+            };
+        }
+
+        // Debug/test helper: steady tones straight into the analysers (silent).
+        async function playTones(freqs, type = 'triangle') {
+            const ctx = ensureContext();
+            await ctx.resume();
+            stopSource();
+            const g = ctx.createGain();
+            g.gain.value = 0.25;
+            g.connect(A.input);
+            const oscs = freqs.map((f) => {
+                const o = ctx.createOscillator();
+                o.type = type; o.frequency.value = f;
+                o.connect(g); o.start();
+                return o;
+            });
+            A.source = 'tones';
+            A.stopSource = () => { oscs.forEach((o) => o.stop()); g.disconnect(); };
+        }
+
+        // Debug/test helper: repeating voices with a chosen timbre (silent).
+        // Each voice: { midi, type, gain, env: 'hold'|'fade', every (s, for
+        // fading voices), vibrato (cents), wobble (0..1 filter wobble),
+        // wobRate (Hz), pump (duck on each kick) }. kicks: a kick every beat.
+        async function playVoices(voices, { kicks = false } = {}) {
+            const ctx = ensureContext();
+            await ctx.resume();
+            stopSource();
+            const bus = ctx.createGain();
+            bus.gain.value = 0.8;
+            bus.connect(A.input);
+            const kit = demoKit(ctx, bus);
+            const pumpBus = ctx.createGain();
+            pumpBus.connect(bus);
+            const holds = [];
+            const t0 = ctx.currentTime + 0.05;
+            for (const v of voices) {
+                if (v.env === 'fade') continue;
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.type = v.type || 'sine'; o.frequency.value = kit.mtof(v.midi);
+                g.gain.value = v.gain || 0.2;
+                if (v.vibrato) {
+                    const lfo = ctx.createOscillator(), lg = ctx.createGain();
+                    lfo.frequency.value = v.vibRate || 5.5;
+                    lg.gain.value = kit.mtof(v.midi) * (Math.pow(2, v.vibrato / 1200) - 1);
+                    lfo.connect(lg); lg.connect(o.frequency); lfo.start(t0); holds.push(lfo);
+                }
+                let src = o;
+                if (v.wobble) {
+                    // A wobble bass: a low-pass filter swept by an LFO.
+                    const f = ctx.createBiquadFilter(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+                    f.type = 'lowpass'; f.Q.value = 4; f.frequency.value = 900;
+                    lfo.frequency.value = v.wobRate || 4;
+                    lg.gain.value = 800 * v.wobble;
+                    lfo.connect(lg); lg.connect(f.frequency); lfo.start(t0); holds.push(lfo);
+                    o.connect(f); src = f;
+                }
+                src.connect(g); g.connect(v.pump ? pumpBus : bus);
+                o.start(t0); holds.push(o);
+            }
+            let next = t0;
+            const tick = () => {
+                while (next < ctx.currentTime + 0.6) {
+                    if (kicks) { kit.kick(next); kit.pump(pumpBus.gain, next); }
+                    for (const v of voices) {
+                        if (v.env !== 'fade') continue;
+                        const every = v.every || 1;
+                        if (Math.abs(((next - t0) / every) - Math.round((next - t0) / every)) < 1e-3) {
+                            kit.tone({ type: v.type || 'triangle', midi: v.midi, t: next, dur: every, gain: v.gain || 0.25, env: 'fade', tau: v.tau || 0.35 });
+                        }
+                    }
+                    next += 0.5;
+                }
+            };
+            tick();
+            const timer = setInterval(tick, 100);
+            A.source = 'tones';
+            A.stopSource = () => { clearInterval(timer); holds.forEach((o) => o.stop()); bus.disconnect(); };
+        }
+
+        // ─── Analysis ────────────────────────────────────────────────────
+        let bigDb, smallDb, smallTime, binHz, smallBinHz, midDb, midBinHz;
+        // Harmonic/percussive separation (median filtering, Fitzgerald 2010):
+        // steady tones are smooth along time, drum hits are smooth along
+        // frequency. HP_T frames of history, HP_F bins across.
+        const HP_T = 13, HP_F = 13;
+        const PROM_W = 16;                       // ±bins for a peak's local median
+        const promTmp = new Float32Array(2 * PROM_W + 1);
+        const HP = { K: 0, hist: [], pos: 0, filled: 0, cur: null, prevP: null, tmp: new Float32Array(Math.max(HP_T, HP_F)) };
+        function initBuffers() {
+            bigDb = new Float32Array(A.big.frequencyBinCount);
+            smallDb = new Float32Array(A.small.frequencyBinCount);
+            smallTime = new Float32Array(A.small.fftSize);
+            binHz = A.ctx.sampleRate / A.big.fftSize;
+            smallBinHz = A.ctx.sampleRate / A.small.fftSize;
+            midDb = new Float32Array(A.mid.frequencyBinCount);
+            midBinHz = A.ctx.sampleRate / A.mid.fftSize;
+            HP.K = Math.min(smallDb.length - 1, Math.floor(10000 / smallBinHz));
+            HP.hist = Array.from({ length: HP_T }, () => new Float32Array(HP.K));
+            HP.pos = 0; HP.filled = 0;
+            HP.cur = new Float32Array(HP.K);
+            HP.harm = new Float32Array(HP.K);   // this frame's harmonic part, per bin
+            HP.prevP = new Float32Array(HP.K);
+        }
+
+        function median(a, n) {
+            for (let i = 1; i < n; i++) {
+                const v = a[i];
+                let j = i - 1;
+                while (j >= 0 && a[j] > v) { a[j + 1] = a[j]; j--; }
+                a[j + 1] = v;
+            }
+            return a[n >> 1];
+        }
+
+        // Everything the visuals read. Smoothed values live here too.
+        const M = {
+            now: 0,
+            level: 0, db: -100, floor: -70, peak: -30,
+            chromaRaw: new Array(12).fill(0),
+            chroma: new Array(12).fill(0),       // fast-smoothed (visuals)
+            chordChroma: new Array(12).fill(0),  // for chord detection
+            keyChroma: new Array(12).fill(0),    // long-term, for the key
+            keyEnergy: 0,
+            bassPc: -1,
+            melody: null,                         // { midi, pc } or null
+            chord: null, chordCand: null, chordCandSince: 0, silentSince: 0,
+            key: null, keyCheckAt: 0,
+            tension: 0, rough: 0,
+            bass: 0, mid: 0, treble: 0, centroid: 0,
+            perc: 0,                              // share of energy that is drums (smoothed)
+            // Notes with octaves, tracked over time, and the low/high split.
+            track: new Map(), segments: [], split: 60, noteOnCount: 0,
+            // Drum hits: { t, type: 'kick'|'snare'|'hat', s }.
+            pFlux: [], kFlux: [], lastDrum: 0, lastKick: 0, drums: [], drumCount: { kick: 0, snare: 0, hat: 0 }, beatGlow: 0,
+            // Sidechain pumping: how far the notes dip after each kick (0..1).
+            pump: 0, pumpDips: [], pumpWatch: null, hHist: [], kickTimes: [], kickPeriod: 0,
+            // Song shape: 'normal' | 'build' | 'break' | 'drop', from 10 Hz history.
+            section: 'normal', sectionSince: 0, buildScore: 0, drops: 0, shape: [], shapeAt: 0, fullCentroid: 0,
+            famChroma: new Array(12).fill(0),     // chroma of the focused sound family
+        };
+
+        function analyse(now, dt) {
+            if (!A.ctx || !A.source) return;
+            M.now = now;
+            A.big.getFloatFrequencyData(bigDb);
+            A.small.getFloatFrequencyData(smallDb);
+            A.small.getFloatTimeDomainData(smallTime);
+            A.mid.getFloatFrequencyData(midDb);
+
+            // Loudness with an adaptive floor and ceiling, so a quiet room and
+            // a loud concert both use the whole brightness range.
+            let sum = 0;
+            for (let i = 0; i < smallTime.length; i++) sum += smallTime[i] * smallTime[i];
+            const db = 10 * Math.log10(sum / smallTime.length + 1e-12);
+            M.db = db;
+            if (db < M.floor) M.floor = db; else M.floor += Math.min(db - M.floor, 0.5 * dt);
+            if (db > M.peak) M.peak = db; else M.peak -= 2.5 * dt;
+            M.floor = Math.max(M.floor, -90);
+            M.floor = Math.min(M.floor, M.peak - 24);
+            M.peak = Math.max(M.peak, M.floor + 24);
+            const gate = M.floor + 5;
+            let level = clamp((db - gate) / (M.peak - gate)) * settings.sensitivity;
+            if (db < -80) level = 0;
+            level = clamp(level);
+            M.level += (level - M.level) * ease(dt, level > M.level ? 0.03 : 0.25);
+
+            const percNow = separate(now, dt);
+            M.percNow = percNow;
+
+            // Spectral peaks between ~55 Hz and ~4.2 kHz. Only peaks standing
+            // well clear of their surroundings count: a held note is a narrow
+            // spike, while drum noise (randomly spiky) and pitch sweeps (a
+            // kick drum's broad hump) never rise 15 dB above the local median.
+            const kLo = Math.max(PROM_W, Math.floor(55 / binHz));
+            const kHi = Math.min(bigDb.length - PROM_W - 1, Math.ceil(4200 / binHz));
+            let maxDb = -Infinity;
+            for (let k = kLo; k <= kHi; k++) if (bigDb[k] > maxDb) maxDb = bigDb[k];
+            const thr = Math.max(maxDb - 40, -100);
+            const raw = M.chromaRaw;
+            raw.fill(0);
+            const peaks = [];
+            // A note already sounding only has to clear 8 dB, so a drum hit
+            // landing on top of it doesn't cut it off.
+            const held = [];
+            for (const t of M.track.values()) if (t.on && t.f) held.push(t.f);
+            for (let k = kLo; k <= kHi; k++) {
+                const b = bigDb[k];
+                if (b < thr || b < bigDb[k - 1] || b <= bigDb[k + 1]) continue;
+                for (let j = 0; j <= 2 * PROM_W; j++) promTmp[j] = bigDb[k - PROM_W + j];
+                const fk = k * binHz;
+                const need = held.some((f) => Math.abs(f - fk) < f * 0.02) ? 8 : 15;
+                if (b - median(promTmp, 2 * PROM_W + 1) < need) continue;
+                const a = bigDb[k - 1], c = bigDb[k + 1];
+                const den = a - 2 * b + c;
+                const p = den ? 0.5 * (a - c) / den : 0;
+                const f = (k + p) * binHz;
+                const pdb = b - 0.25 * (a - c) * p;
+                peaks.push({ f, db: pdb, mag: Math.pow(10, pdb / 20), midi: 69 + 12 * Math.log2(f / 440) });
+            }
+            for (let i = 0; i < peaks.length; i++) {
+                const pk = peaks[i];
+                // Overtones that aren't octaves (3rd harmonic = a fifth, 5th =
+                // a major third) would add notes nobody played: damp any peak
+                // sitting on a harmonic of a stronger, lower peak.
+                let hw = 1;
+                for (let j = 0; j < i && hw === 1; j++) {
+                    const lo = peaks[j];
+                    if (lo.mag < 0.5 * pk.mag) continue;
+                    const ratio = pk.f / lo.f, h = Math.round(ratio);
+                    if (h >= 3 && h <= 8 && (h & (h - 1)) !== 0 && Math.abs(ratio - h) < 0.025 * h) hw = 0.2;
+                }
+                const nearest = Math.round(pk.midi);
+                const w = Math.cos((pk.midi - nearest) * Math.PI);
+                const fw = pk.f > 1000 ? Math.sqrt(1000 / pk.f) : 1;
+                // Log (dB) compression keeps a loud bass from drowning the
+                // chord tones above it.
+                raw[((nearest % 12) + 12) % 12] += clamp((pk.db - thr) / 40) * w * fw * hw;
+            }
+            let rmax = 0;
+            for (let i = 0; i < 12; i++) rmax = Math.max(rmax, raw[i]);
+            if (rmax > 0) for (let i = 0; i < 12; i++) raw[i] /= rmax;
+            const audible = M.level > 0.04 && rmax > 0;
+
+            // While a drum hits, hold the note colours still instead of letting
+            // the hit smear into them.
+            const hold = clamp(1 - 1.6 * percNow);
+            for (let i = 0; i < 12; i++) {
+                const target = audible ? raw[i] : 0;
+                M.chroma[i] += (target - M.chroma[i]) * ease(dt, target > M.chroma[i] ? 0.05 : 0.3) * (audible ? hold : 1);
+                // Rise fast, fade more slowly: a struck chord (piano, guitar)
+                // still sounds like that chord as its notes die away.
+                if (audible) M.chordChroma[i] += (raw[i] - M.chordChroma[i]) * ease(dt, raw[i] > M.chordChroma[i] ? 0.1 : 0.35) * hold;
+            }
+
+            // Notes are judged against the loudest *sharp* peak, so a kick
+            // drum's broad hump can't push held notes under the threshold.
+            const peakMaxDb = peaks.reduce((m, p) => Math.max(m, p.db), -Infinity);
+            trackNotes(peaks, peakMaxDb, audible, now, dt);
+
+            // Bass note: the lowest strong peak.
+            const peakMax = peaks.reduce((m, p) => Math.max(m, p.mag), 0);
+            M.bassPc = -1;
+            for (const p of peaks) {
+                if (p.f > 300) break;
+                if (p.mag > 0.25 * peakMax) { M.bassPc = ((Math.round(p.midi) % 12) + 12) % 12; break; }
+            }
+
+            // Melody: the peak whose harmonics explain the most energy.
+            M.melody = null;
+            if (audible && peaks.length) {
+                // Melody sits above the bass line.
+                const cands = peaks.filter((p) => p.f > 160 && p.f < 2000)
+                    .sort((x, y) => y.mag - x.mag).slice(0, 8);
+                const magNear = (freq) => {
+                    let m = 0;
+                    for (const p of peaks) if (Math.abs(p.f - freq) < freq * 0.03 && p.mag > m) m = p.mag;
+                    return m;
+                };
+                let best = null, bestS = 0, total = 0;
+                for (const p of peaks) total += p.mag;
+                for (const c of cands) {
+                    let s = 0;
+                    for (let h = 1; h <= 5; h++) s += magNear(c.f * h) / Math.sqrt(h);
+                    if (s > bestS) { bestS = s; best = c; }
+                }
+                if (best && bestS / total > 0.3) {
+                    M.melody = { midi: best.midi, pc: ((Math.round(best.midi) % 12) + 12) % 12 };
+                }
+            }
+
+            // Chord (with a short hold so it doesn't flicker).
+            if (audible) {
+                M.silentSince = now;
+                const sorted = [...M.chordChroma].sort((a, b) => b - a);
+                let cand;
+                if (sorted[1] < 0.4 * sorted[0]) {
+                    const pc = M.chordChroma.indexOf(sorted[0]);
+                    cand = { kind: 'note', root: pc, pcs: [pc], q: null, score: 1 };
+                } else {
+                    const c = detectChord(M.chordChroma, M.bassPc);
+                    cand = c && c.score > 0.72 ? { kind: 'chord', ...c } : null;
+                }
+                const same = (x, y) => x && y && x.root === y.root && x.kind === y.kind && x.q === y.q;
+                if (cand && !same(cand, M.chord)) {
+                    if (!same(cand, M.chordCand)) { M.chordCand = cand; M.chordCandSince = now; }
+                    else if (now - M.chordCandSince > 0.15 || !M.chord) M.chord = cand;
+                } else {
+                    M.chordCand = null;
+                }
+
+                // Key: a slow average of what's been heard.
+                const k = ease(dt, 8);
+                for (let i = 0; i < 12; i++) M.keyChroma[i] += (M.chordChroma[i] * M.level - M.keyChroma[i]) * k;
+                M.keyEnergy += (M.level - M.keyEnergy) * k;
+            } else if (now - M.silentSince > 2.5) {
+                M.chord = null;
+                M.chordCand = null;
+            }
+            if (now > M.keyCheckAt && M.keyEnergy > 0.03) {
+                M.keyCheckAt = now + 0.3;
+                const k = detectKey(M.keyChroma);
+                if (k && k.r > 0.45) {
+                    if (!M.key) M.key = k;
+                    else if (k.tonic !== M.key.tonic || k.mode !== M.key.mode) {
+                        const cur = detectKeyScore(M.keyChroma, M.key);
+                        if (k.r > cur + 0.04) M.key = k;
+                    } else M.key = k;
+                }
+            }
+
+            // Tension: interval roughness plus the chord type's own tension.
+            M.rough += (roughness(M.chroma) - M.rough) * ease(dt, 0.2);
+            const qT = M.chord && M.chord.q ? M.chord.q.tension : 0;
+            const tTarget = M.level > 0.04 ? clamp(0.45 * qT + 0.55 * clamp((M.rough - 0.12) / 0.45)) : 0;
+            M.tension += (tTarget - M.tension) * ease(dt, 0.3);
+            M.beatGlow = Math.max(0, M.beatGlow - dt * 4);
+            structure(now);
+
+            // With a Focus set, the visuals follow only that family's notes.
+            const fam = new Array(12).fill(0);
+            if (settings.focus !== 'all') {
+                for (const t of M.track.values()) {
+                    if (!t.on || !inFocus(t.seg)) continue;
+                    fam[t.pc] = Math.max(fam[t.pc], 0.4 + 0.6 * t.s);
+                }
+            }
+            for (let i = 0; i < 12; i++) M.famChroma[i] += (fam[i] - M.famChroma[i]) * ease(dt, fam[i] > M.famChroma[i] ? 0.05 : 0.3);
+        }
+
+        // Focus: 'held' shows sustained sounds (pads, voice, strings), 'fading'
+        // struck and plucked ones (piano, guitar, plucks). A note not yet
+        // judged (or too short to judge) shows in both.
+        function inFocus(seg) {
+            if (settings.focus === 'held') return seg.env !== 'fade';
+            if (settings.focus === 'fading') return seg.env !== 'hold';
+            return true;
+        }
+        const visChroma = () => (settings.focus === 'all' ? M.chroma : M.famChroma);
+
+        // Splits the short-window spectrum into harmonic (notes) and
+        // percussive (drums) parts. Bands and brightness come from the
+        // harmonic part only; drum hits are detected on the percussive part
+        // and sorted into kick / snare / hi-hat by where their energy sits.
+        // Returns this frame's percussive share of the energy (0..1).
+        function separate(now, dt) {
+            const K = HP.K, cur = HP.cur, tmp = HP.tmp;
+            for (let k = 0; k < K; k++) cur[k] = Math.pow(10, smallDb[k] / 20);
+            HP.hist[HP.pos].set(cur);
+            HP.pos = (HP.pos + 1) % HP_T;
+            HP.filled = Math.min(HP.filled + 1, HP_T);
+            const half = HP_F >> 1;
+            let spread = 0, spreadN = 0, fNum = 0, fDen = 0;
+            let hE = 0, pE = 0, hLow = 0, pLow = 0, pMid = 0, pHigh = 0, pFlux = 0, lowFlux = 0;
+            let bass = 0, mid = 0, treble = 0, cNum = 0, cDen = 0;
+            for (let k = 1; k < K; k++) {
+                for (let t = 0; t < HP.filled; t++) tmp[t] = HP.hist[t][k];
+                const h = median(tmp, HP.filled);
+                let n = 0;
+                for (let j = Math.max(1, k - half); j <= Math.min(K - 1, k + half); j++) tmp[n++] = cur[j];
+                const p = median(tmp, n);
+                const h2 = h * h, p2 = p * p, den = h2 + p2 + 1e-20;
+                const hm = cur[k] * h2 / den, pm = cur[k] * p2 / den;   // soft (Wiener) masks
+                HP.harm[k] = hm;
+                const f = k * smallBinHz;
+                const hp = hm * hm, pp = pm * pm;
+                hE += hp; pE += pp;
+                if (f < 150) { pLow += pp; hLow += hp; } else if (f < 3000) pMid += pp; else pHigh += pp;
+                if (f < 250) bass += hp; else if (f < 2000) mid += hp; else treble += hp;
+                cNum += f * hm; cDen += hm;
+                fNum += f * cur[k]; fDen += cur[k];
+                const lp = Math.log1p(1000 * pm);
+                const d = lp - HP.prevP[k];
+                if (d > 0) { if (f < 150) lowFlux += d; else pFlux += d; }
+                // How much of 150 Hz–8 kHz changed at once.
+                if (f >= 150 && f < 8000) { spreadN++; if (d > 0.05) spread++; }
+                HP.prevP[k] = lp;
+            }
+            const tot = hE + pE + 1e-12;
+            const percNow = pE / tot;
+            M.perc += (percNow - M.perc) * ease(dt, 0.3);
+            const hTot = bass + mid + treble + 1e-12;
+            const hLevel = M.level * (1 - percNow);
+            const sm = ease(dt, 0.08);
+            M.bass += (bass / hTot * hLevel - M.bass) * sm;
+            M.mid += (mid / hTot * hLevel - M.mid) * sm;
+            M.treble += (clamp(Math.sqrt(treble / hTot) * 1.5) * hLevel - M.treble) * sm;
+            M.centroid += ((cDen ? cNum / cDen : 0) - M.centroid) * sm;
+            M.fullCentroid += ((fDen ? fNum / fDen : 0) - M.fullCentroid) * ease(dt, 0.3);
+
+            // Pumping: the notes' (harmonic, above 150 Hz) level just before
+            // a kick, against its lowest point in the 0.3 s after it.
+            const hHighDb = 10 * Math.log10(Math.max(hE - hLow, 1e-12));
+            M.hHist.push({ t: now, db: hHighDb });
+            while (M.hHist.length && now - M.hHist[0].t > 0.6) M.hHist.shift();
+            const w = M.pumpWatch;
+            if (w) {
+                w.min = Math.min(w.min, hHighDb);
+                if (now - w.t > 0.3) {
+                    M.pumpDips.push(w.pre - w.min);
+                    if (M.pumpDips.length > 8) M.pumpDips.shift();
+                    const sorted = [...M.pumpDips].sort((a, b) => a - b);
+                    M.pump = M.pumpDips.length >= 3 ? clamp((sorted[sorted.length >> 1] - 2) / 6) : 0;
+                    M.pumpWatch = null;
+                }
+            }
+            if (now - M.lastKick > 3) M.pump = Math.max(0, M.pump - dt * 0.3);
+
+            // A kick lives in a few low bins, so it gets its own detector;
+            // otherwise the broadband snares and hats would drown it out.
+            // A drum's change is spread across the spectrum (noise); a chord
+            // starting at once changes only its notes' harmonics. In tests,
+            // drums spread over ≥ 21% of the bins and chord attacks ≤ 8%.
+            const spreadOk = spread / Math.max(1, spreadN) >= 0.15;
+            const drum = (type, s) => {
+                M.drumCount[type]++;
+                M.drums.push({ t: now, type, s });
+                emitDrum(type, s);
+            };
+            const kick = detectOnset(M.kFlux, lowFlux, now, 0.15, M.lastKick);
+            // A new bass note also brings low-end change; a kick is mostly percussive.
+            if (kick > 0 && M.level > 0.05 && pLow > hLow && spreadOk) {
+                M.lastKick = now;
+                drum('kick', kick);
+                const before = M.hHist.filter((h) => now - h.t > 0.02 && now - h.t < 0.15);
+                if (before.length) M.pumpWatch = { t: now, pre: before.reduce((a, h) => a + h.db, 0) / before.length, min: Infinity };
+                M.kickTimes.push(now);
+                if (M.kickTimes.length > 9) M.kickTimes.shift();
+                const iv = M.kickTimes.slice(1).map((x, i) => x - M.kickTimes[i]).filter((x) => x < 1.5).sort((a, b) => a - b);
+                M.kickPeriod = iv.length >= 3 ? iv[iv.length >> 1] : 0;
+            }
+            const hit = detectOnset(M.pFlux, pFlux, now, 0.09, M.lastDrum);
+            // Note attacks (a piano hammer) are a little percussive too; a drum is mostly so.
+            if (hit > 0 && M.level > 0.05 && percNow > 0.3 && spreadOk) {
+                M.lastDrum = now;
+                drum(pHigh > 1.5 * pMid ? 'hat' : 'snare', hit);
+            }
+            while (M.drums.length && now - M.drums[0].t > 8) M.drums.shift();
+            return percNow;
+        }
+
+        // Notes with octaves. Walk the sharp peaks from low to high; a peak
+        // on a whole-number multiple of a lower note (and no louder than it)
+        // is that note's overtone, not a new note. A note must last 70 ms
+        // before it shows and stays for 120 ms after it fades, so short
+        // flickers never reach the screen.
+        function trackNotes(peaks, maxDb, audible, now, dt) {
+            const found = [];
+            if (audible) {
+                const noteThr = maxDb - 30;
+                // Notes already sounding count as fundamentals too, so their
+                // overtones don't pop up as notes in a frame where the note
+                // itself dips (a sidechain, a kick on top).
+                const anchors = [];
+                for (const t of M.track.values()) if (t.on && t.f) anchors.push({ f: t.f, db: t.db, anchor: true });
+                for (const pk of peaks) {
+                    if (pk.db < noteThr) continue;
+                    const near = Math.round(pk.midi);
+                    // Above C7, a peak is far more often a high overtone of a
+                    // lower note than a note; above 1 kHz it must be loud.
+                    if (near > 96 || (pk.f > 1000 && pk.db < maxDb - 20)) continue;
+                    // ±45 cents: vibrato splits a sung note into two peaks either
+                    // side of its pitch.
+                    if (Math.abs(pk.midi - near) > 0.45) continue;
+                    let overtone = false;
+                    const hasPeak = (freq) => peaks.some((p) => Math.abs(p.f - freq) < freq * 0.02 && p.db > noteThr - 10);
+                    for (const n of found.concat(anchors)) {
+                        if (n.anchor && Math.abs(pk.f / n.f - 1) < 0.02) continue;   // itself
+                        const r = pk.f / n.f, h = Math.round(r);
+                        // An octave may be as loud as its fundamental; higher
+                        // overtones must be clearly quieter, or it was played.
+                        const quieter = h === 2 ? pk.db <= n.db + 3 : pk.db <= n.db - 4;
+                        if (h < 2 || h > 10 || Math.abs(r - h) >= 0.03 * h || !quieter) continue;
+                        // And the lower note must really have overtones around
+                        // there: one or two harmonics either side. A sine bass
+                        // has none, so a melody note 6× above it is a note (and
+                        // a piano an octave above the bass doesn't change that).
+                        if (h >= 3 && ![h - 2, h - 1, h + 1, h + 2].some((j) => j >= 2 && hasPeak(n.f * j))) continue;
+                        overtone = true; break;
+                    }
+                    if (!overtone && !found.some((n) => n.midi === near)) {
+                        found.push({ midi: near, f: pk.f, db: pk.db, s: clamp((pk.db - noteThr) / 30), bright: overtoneShare(peaks, pk) });
+                    }
+                }
+                // Vibrato splits a note into two peaks (its swing's ends); peaks
+                // less than ¾ of a semitone apart are one note, at their
+                // level-weighted middle.
+                found.sort((a, b) => a.f - b.f);
+                for (let i = 0; i + 1 < found.length; i++) {
+                    const a = found[i], b = found[i + 1];
+                    const gap = 12 * Math.log2(b.f / a.f);
+                    if (gap >= 0.75) continue;
+                    const wa = Math.pow(10, a.db / 20), wb = Math.pow(10, b.db / 20);
+                    const midi = (wa * (69 + 12 * Math.log2(a.f / 440)) + wb * (69 + 12 * Math.log2(b.f / 440))) / (wa + wb);
+                    const keep = wa >= wb ? a : b;
+                    keep.f = 440 * Math.pow(2, (midi - 69) / 12);
+                    keep.midi = Math.round(midi);
+                    found.splice(wa >= wb ? i + 1 : i, 1);
+                    i--;
+                }
+                // (merging can land two on the same note)
+                for (let i = found.length - 1; i > 0; i--) if (found.slice(0, i).some((n) => n.midi === found[i].midi)) found.splice(i, 1);
+                found.sort((a, b) => b.db - a.db);
+                found.length = Math.min(found.length, 10);
+            }
+            const T = M.track;
+            // Every note sounding now (found this frame or still held), for
+            // the timbre measurements to steer clear of each other.
+            const sounding = found.slice();
+            for (const t of T.values()) if (t.on && t.f && !found.some((n) => n.midi === t.midi)) sounding.push({ midi: t.midi, f: t.f });
+            for (const n of found) {
+                let t = T.get(n.midi);
+                if (!t) { t = { midi: n.midi, pc: ((n.midi % 12) + 12) % 12, first: now, on: false, seg: null }; T.set(n.midi, t); }
+                t.last = now;
+                t.s = n.s;
+                t.f = n.f;
+                t.db = n.db;
+                sampleTimbre(t, n, now, sounding, peaks);
+            }
+            for (const t of [...T.values()]) {
+                if (!t.on && t.last === now && now - t.first >= 0.07) {
+                    t.on = true;
+                    t.seg = { midi: t.midi, pc: t.pc, t0: now, t1: 0, s: t.s, hand: t.midi < M.split ? 'L' : 'R', env: '?', move: 0, moveRate: 0, bright: t.bright || 0 };
+                    M.segments.push(t.seg);
+                    M.noteOnCount++;
+                }
+                if (t.on) {
+                    t.seg.s = Math.max(t.seg.s, t.s);
+                    judgeTimbre(t, now, dt, false);
+                }
+                // An established note rides over a short dropout (a kick, a
+                // sidechain dip); a new one must be steady.
+                if (now - t.last > (t.on && now - t.first > 0.5 ? 0.22 : 0.18)) {
+                    if (t.on) { judgeTimbre(t, now, dt, true); t.seg.t1 = now; }
+                    T.delete(t.midi);
+                }
+            }
+            // The split follows the widest gap between sounding notes, slowly,
+            // so a hand's notes don't jump lanes.
+            const on = [...T.values()].filter((t) => t.on).map((t) => t.midi).sort((a, b) => a - b);
+            if (on.length >= 2) {
+                let gap = 0, at = -1;
+                for (let i = 0; i + 1 < on.length; i++) if (on[i + 1] - on[i] > gap) { gap = on[i + 1] - on[i]; at = i; }
+                if (gap >= 5) M.split += ((on[at] + on[at + 1]) / 2 - M.split) * ease(dt, 0.6);
+            }
+            M.split = clamp(M.split, 43, 77);
+            while (M.segments.length && M.segments[0].t1 && now - M.segments[0].t1 > 8) M.segments.shift();
+            if (M.segments.length > 400) M.segments.splice(0, M.segments.length - 400);
+        }
+
+        // ─── Timbre ──────────────────────────────────────────────────────
+        // Share of a note's energy in its overtones (2nd–8th harmonics):
+        // ~0 for a pure, soft tone (flute, sine), ~0.7+ for a bright, buzzy
+        // one (brass, saw synth).
+        function overtoneShare(peaks, pk) {
+            let over = 0;
+            for (let h = 2; h <= 8; h++) {
+                const target = pk.f * h;
+                let m = 0;
+                for (const p of peaks) if (Math.abs(p.f - target) < target * 0.02 && p.mag > m) m = p.mag;
+                over += m;
+            }
+            return over / (over + pk.mag);
+        }
+
+        // Per frame, per note: its level (long window) for fade/hold and,
+        // from the medium window, its brightness and the exact pitch and
+        // loudness of its clearest harmonic, for movement. Harmonics that
+        // land near another note's partial (up to its 16th) are skipped,
+        // since they would mix the two notes: within 2 bins, or within 6
+        // when the neighbour is at least 30% as loud (the pitch is read over
+        // ±2 bins, a strong partial leaks about 3 bins further, and vibrato
+        // moves it ~1 more).
+        const midMag = (freq) => {
+            const kc = Math.round(freq / midBinHz);
+            let m = 0;
+            for (let k = kc - 1; k <= kc + 1; k++) if (k >= 1 && k < midDb.length) m += Math.pow(10, midDb[k] / 20);
+            return m;
+        };
+        function sampleTimbre(t, n, now, found, peaks) {
+            if (!t.hist) t.hist = [];
+            // (A note with no overtones near there, like a sine bass, can't
+            // collide above its fundamental.)
+            const real = (f) => peaks.some((p) => Math.abs(p.f - f) < f * 0.02);
+            const clash = (freq, bins, mine = 0) => found.some((o) => {
+                if (o === n || o.midi === n.midi) return false;
+                const h = Math.round(freq / o.f);
+                if (h < 1 || h > 16) return false;
+                if (h >= 2 && ![h - 2, h - 1, h + 1, h + 2].some((j) => j >= 2 && real(o.f * j))) return false;
+                const d = Math.abs(freq - h * o.f) / midBinHz;
+                return d < bins || (mine > 0 && d < 6 && midMag(h * o.f) > 0.3 * mine);
+            });
+            const fund = midMag(n.f);
+            let over = 0, all = 0, h = 0, hMag = 0, clear = 0, keep = false;
+            for (let k = 1; k <= 8; k++) {
+                const target = n.f * k;
+                if (target > 9000) continue;
+                const m = midMag(target);
+                if (clash(target, 2, m)) continue;
+                all += m;
+                if (k > 1) over += m;
+                if (m > 0.02 * fund) clear++;
+                // For movement: the highest clear harmonic below 2.5 kHz that
+                // is really there (a triangle wave or clarinet has no even
+                // ones; a sine has none), with its own peak in the long window.
+                const ownPeak = k === 1 || peaks.some((p) => Math.abs(p.f - target) < target * 0.02 && p.db > n.db - 25);
+                if (ownPeak && target >= 150 && target < 2500 && m > 0.06 * Math.max(fund, hMag)) {
+                    h = k; hMag = m;
+                    if (k === t.h) keep = true;
+                }
+            }
+            // Stay on the same harmonic while it stays usable, so the pitch
+            // series isn't stitched from different partials.
+            if (keep) h = t.h;
+            t.h = h;
+            const own = all > 0 && !clash(n.f, 2, fund);
+            // Frames with a drum sounding carry its noise into every band;
+            // they are left out of brightness, and of the brightness and
+            // loudness wobble.
+            const drum = M.percNow > 0.2 || now - M.lastKick < 0.15 || now - M.lastDrum < 0.12;
+            const bright = own && !drum ? over / all : null;
+            // A brightness wobble needs at least 4 clear partials to be
+            // trusted (a lone bass line has them; a note inside a chord
+            // rarely does).
+            const br = own && clear >= 4 ? over / all : null;
+            if (t.bright === undefined) t.bright = bright !== null ? bright : n.bright;
+            if (bright !== null) t.bright += (bright - t.bright) * 0.1;
+            let cents = null, band = null;
+            if (h) {
+                const fc = n.f * h, kc = Math.round(fc / midBinHz);
+                let sw = 0, sk = 0;
+                for (let k = kc - 2; k <= kc + 2; k++) {
+                    if (k < 1 || k >= midDb.length) continue;
+                    const m = Math.pow(10, midDb[k] / 20);
+                    sw += m; sk += k * m;
+                }
+                if (sw > 0) { cents = 1200 * Math.log2((sk / sw) * midBinHz / fc); band = 20 * Math.log10(sw); }
+            }
+            // The note's own level for fade/hold, from the medium window (the
+            // long one smears a vibrato note more as it fills, which looks
+            // like a fade), skipping drum frames and shared fundamentals.
+            const lvl = !drum && !clash(n.f, 2, fund) && fund > 0 ? 20 * Math.log10(fund) : null;
+            t.hist.push({ t: now, db: n.db, lvl, cents, fc: h ? n.f * h : 0, band, br, kick: drum });
+            while (t.hist.length && now - t.hist[0].t > 1.6) t.hist.shift();
+        }
+
+        // Residual of a series after removing its straight-line trend:
+        // { depth (std dev), rate (Hz, from zero crossings) }.
+        function wobble(pts) {
+            const n = pts.length;
+            if (n < 12) return { depth: 0, rate: 0 };
+            let mt = 0, mv = 0;
+            for (const p of pts) { mt += p.t; mv += p.v; }
+            mt /= n; mv /= n;
+            let num = 0, den = 0;
+            for (const p of pts) { num += (p.t - mt) * (p.v - mv); den += (p.t - mt) ** 2; }
+            const slope = den ? num / den : 0;
+            const res = pts.map((p) => p.v - (mv + slope * (p.t - mt)));
+            let ss = 0;
+            for (const r of res) ss += r * r;
+            const depth = Math.sqrt(ss / n);
+            // Count crossings with hysteresis (±0.4·depth), so small jitter
+            // on top of a slow swing doesn't inflate the rate.
+            let cross = 0, side = 0;
+            for (const r of res) {
+                const sd = r > 0.4 * depth ? 1 : r < -0.4 * depth ? -1 : 0;
+                if (sd && sd !== side) { if (side) cross++; side = sd; }
+            }
+            const span = pts[n - 1].t - pts[0].t;
+            return { depth, rate: span > 0 ? cross / 2 / span : 0 };
+        }
+
+        // Slope (dB/s) of a note's medium-window level over some frames.
+        function wobbleSlope(pts) {
+            let mt = 0, mv = 0;
+            for (const p of pts) { mt += p.t; mv += p.lvl; }
+            mt /= pts.length; mv /= pts.length;
+            let num = 0, den = 0;
+            for (const p of pts) { num += (p.t - mt) * (p.lvl - mv); den += (p.t - mt) ** 2; }
+            return den ? num / den : 0;
+        }
+
+        // Fade or hold: after the attack, does the level only fall (piano,
+        // pluck), or does it hold or go up and down (pad, voice, a pad
+        // pumped by a sidechain)? Decided once, 0.9 s into the note (long
+        // enough to span a pumping cycle), or when the note ends.
+        // Movement: a regular 1.5–12 Hz wobble in pitch (vibrato), in
+        // brightness (a filter wobble: wobble bass, wah), or, when nothing is
+        // pumping, in loudness (tremolo), updated live. A sidechain ducks
+        // every overtone together, so it never changes the brightness.
+        function judgeTimbre(t, now, dt, ending) {
+            const seg = t.seg, hist = t.hist || [];
+            seg.bright = t.bright || 0;
+            const age = now - t.first;
+            if (seg.env === '?' && (age >= 0.9 || ending)) {
+                // Skip the attack (the long window is still filling) and, at
+                // the end, the window draining after the note stopped.
+                const from = t.first + 0.15, to = ending ? now - 0.35 : now;
+                let pts = hist.filter((p) => p.t >= from && p.t <= to && p.lvl !== null).map((p) => ({ t: p.t, db: p.lvl }));
+                if (pts.length < 8) pts = hist.filter((p) => p.t >= t.first + 0.3 && p.t <= to);
+                if (pts.length < 8 || pts[pts.length - 1].t - pts[0].t < 0.15) seg.env = 'short';
+                else {
+                    // Fit a line to the level. Fading means falling steadily
+                    // (≥ 6 dB/s) *and* the fall clearly exceeds the scatter
+                    // around the line: a sidechain dip comes back up, a piano
+                    // note doesn't.
+                    const n = pts.length;
+                    let mt = 0, mv = 0;
+                    for (const p of pts) { mt += p.t; mv += p.db; }
+                    mt /= n; mv /= n;
+                    let num = 0, den = 0;
+                    for (const p of pts) { num += (p.t - mt) * (p.db - mv); den += (p.t - mt) ** 2; }
+                    const slope = den ? num / den : 0;
+                    let ss = 0;
+                    for (const p of pts) ss += (p.db - (mv + slope * (p.t - mt))) ** 2;
+                    const scatter = Math.sqrt(ss / n);
+                    const drop = -slope * (pts[n - 1].t - pts[0].t);
+                    // A note with vibrato is a held one (bowed, blown, sung):
+                    // struck and plucked notes rarely have it.
+                    seg.env = -slope > (M.pump > 0.3 ? 10 : 6) && drop > 2.5 * scatter && seg.move < 0.5 ? 'fade' : 'hold';
+                }
+            }
+            if (age < 0.4) return;
+            const recent = hist.filter((p) => now - p.t < 0.8);
+            const pc = wobble(recent.filter((p) => p.cents !== null && !p.kick).map((p) => ({ t: p.t, v: p.cents })));
+            const am = wobble(recent.filter((p) => p.band !== null && !p.kick).map((p) => ({ t: p.t, v: p.band })));
+            // A filter wobble rides on a held sound. As a struck note dies
+            // away its quiet upper overtones sink into the background and its
+            // brightness drifts, so brightness (and loudness) only count
+            // while the level holds (falling by less than 6 dB/s) and the
+            // note hasn't been judged a fading one. Pitch vibrato always counts.
+            const lv = recent.filter((p) => p.lvl !== null);
+            const steady = seg.env !== 'fade' && lv.length >= 8 && wobbleSlope(lv) > -6;
+            const bw = steady ? wobble(recent.filter((p) => p.br !== null && !p.kick).map((p) => ({ t: p.t, v: p.br }))) : { depth: 0, rate: 0 };
+            let move = 0, rate = 0;
+            const take = (m, r) => { if (m > move) { move = m; rate = r; } };
+            // Pitch wobble must also be resolvable: at least 0.15 of a bin
+            // (a low note's few cents are measurement noise).
+            const fcs = recent.filter((p) => p.cents !== null && !p.kick);
+            const fc = fcs.length ? fcs.reduce((a, p) => a + p.fc, 0) / fcs.length : 0;
+            const bins = pc.depth * fc * Math.LN2 / 1200 / midBinHz;
+            if (pc.rate > 2.5 && pc.rate < 12 && bins > 0.15) take(clamp((pc.depth - 4) / 12), pc.rate);
+            if (bw.rate > 2.5 && bw.rate < 12) take(clamp((bw.depth - 0.03) / 0.08), bw.rate);
+            if (am.rate > 2.5 && am.rate < 12 && M.pump < 0.3 && steady) take(clamp((am.depth - 1.5) / 4), am.rate);
+            seg.move += (move - seg.move) * ease(dt, 0.3);
+            if (rate) seg.moveRate = rate;
+        }
+
+        // ─── Song shape ──────────────────────────────────────────────────
+        // Watches the last ~10 s at 10 Hz. A build-up is brightness (filters
+        // opening, a rising noise sweep) and drum density climbing for
+        // seconds; a drop is the kick coming back hard after it was gone; a
+        // breakdown is the drums gone while the music carries on.
+        function structure(now) {
+            if (now < M.shapeAt) return;
+            M.shapeAt = now + 0.1;
+            const hits = M.drums.filter((d) => now - d.t < 0.1).length;
+            M.shape.push({ t: now, level: M.level, bright: Math.log2(Math.max(M.fullCentroid, 50)), hits, kick: now - M.lastKick < 0.1 });
+            while (M.shape.length && now - M.shape[0].t > 12) M.shape.shift();
+            const S = M.shape;
+            const span = (a, b) => S.filter((p) => now - p.t >= a && now - p.t < b);
+            const slope = (pts, key) => {
+                if (pts.length < 10) return 0;
+                let mt = 0, mv = 0;
+                for (const p of pts) { mt += p.t; mv += p[key]; }
+                mt /= pts.length; mv /= pts.length;
+                let num = 0, den = 0;
+                for (const p of pts) { num += (p.t - mt) * (p[key] - mv); den += (p.t - mt) ** 2; }
+                return den ? num / den : 0;
+            };
+            const last6 = span(0, 6);
+            const rateNow = span(0, 1.5).reduce((a, p) => a + p.hits, 0) / 1.5;
+            const rateThen = span(4, 6).reduce((a, p) => a + p.hits, 0) / 2;
+            const brightUp = clamp(slope(last6, 'bright') / 0.12);        // octaves per second
+            const denser = clamp((rateNow - rateThen) / 4);
+            const louder = clamp(slope(last6, 'level') / 0.04);
+            // Trends need 6 s of history: the start of a song isn't a build-up.
+            const score = M.level > 0.05 && S.length && now - S[0].t > 6.5 ? 0.55 * brightUp + 0.3 * denser + 0.15 * louder : 0;
+            M.buildScore += (score - M.buildScore) * 0.15;
+
+            const kickNow = span(0, 0.6).some((p) => p.kick);
+            const gap = span(0.6, 3.6);
+            const kickGap = gap.length >= 25 && !gap.some((p) => p.kick) && gap.every((p) => p.level > 0.03);
+            // Drums gone: at most one stray hit in 3 s (a chord change can
+            // occasionally pass for one).
+            const drumsGone = span(0, 3).reduce((a, p) => a + p.hits, 0) <= 1 && M.level > 0.05;
+            const hadDrums = M.drumCount.kick + M.drumCount.snare > 4;
+            const set = (sec) => { if (M.section !== sec) { M.section = sec; M.sectionSince = now; } };
+
+            if (kickNow && kickGap && S.length > 60) {
+                if (M.section !== 'drop') { M.drops++; onDrop(); }
+                set('drop');
+            } else if (M.section === 'drop' && now - M.sectionSince < 6) {
+                // A drop is a moment: hold it for a few seconds.
+            } else if (M.buildScore > 0.45 || (M.section === 'build' && M.buildScore > 0.25)) {
+                set('build');
+            } else if (drumsGone && hadDrums) {
+                set('break');
+            } else {
+                set('normal');
+            }
+        }
+
+        function detectKeyScore(chroma, key) {
+            const prof = key.mode === 'major' ? KK_MAJOR : KK_MINOR;
+            const rot = new Array(12);
+            for (let i = 0; i < 12; i++) rot[(key.tonic + i) % 12] = prof[i];
+            return pearson(chroma, rot);
+        }
+
+        // Adaptive threshold on a short history: mean + 1.5·σ.
+        function detectOnset(hist, value, now, refractory, last) {
+            hist.push(value);
+            if (hist.length > 45) hist.shift();
+            if (hist.length < 10) return 0;
+            let mean = 0;
+            for (const v of hist) mean += v;
+            mean /= hist.length;
+            let v2 = 0;
+            for (const v of hist) v2 += (v - mean) * (v - mean);
+            const sd = Math.sqrt(v2 / hist.length);
+            const thr = mean + 1.5 * sd + 1;
+            if (value > thr && now - last > refractory) return clamp((value - thr) / (thr + 1e-6) + 0.3);
+            return 0;
+        }
+
+        // ─── Visual state ────────────────────────────────────────────────
+        const canvas = document.getElementById('stage');
+        const g = canvas.getContext('2d');
+        let W = 0, H = 0, DPR = 1;
+        function resize() {
+            DPR = Math.min(2, window.devicePixelRatio || 1);
+            W = window.innerWidth; H = window.innerHeight;
+            canvas.width = Math.round(W * DPR);
+            canvas.height = Math.round(H * DPR);
+            g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Smoothed colours.
+        const V = {
+            chordHue: HUE_C, chordL: 0.6, chordC: 0.1,
+            keyHue: 280, keyL: 0.16, keyC: 0.02,
+            rot: 0, time: 0,
+            flash: 0, lastFlash: -10,
+            ripples: [], sparks: [], trail: [],
+            idle: true,
+            build: 0, brk: 0, drop: 0, squeeze: 0,
+            // Per pitch class, the timbre of its sounding notes (smoothed).
+            pcT: Array.from({ length: 12 }, () => ({ fade: 0, move: 0, rate: 0, bright: 0 })),
+        };
+
+        function chordLook() {
+            const c = M.chord;
+            if (!c) return null;
+            if (c.kind === 'note') return { hue: pcHue(c.root), L: NOTE_LOOK.L, C: NOTE_LOOK.C };
+            return { hue: pcHue(c.root), L: c.q.L, C: c.q.C };
+        }
+
+        // Drums have no pitch, so they get no note colour: they show as
+        // near-white light, tinted only by the key. Kicks rise from the
+        // bottom, snares ring from the centre, hi-hats are a few sparks.
+        function emitDrum(type, strength) {
+            M.beatGlow = Math.max(M.beatGlow, type === 'hat' ? 0.4 : 1);
+            if (!settings.drums) return;
+            if (type === 'hat') {
+                if (!settings.calm) for (let i = 0; i < 3; i++) spawnSpark(true);
+                return;
+            }
+            if (type === 'snare') {
+                const maxR = Math.min(W, H) * (settings.calm ? 0.3 : 0.45);
+                V.ripples.push({ t: 0, life: 0.8, hue: V.keyHue, L: 0.88, C: 0.03, s: strength, x: W / 2, y: H / 2, maxR, kick: false });
+            } else {
+                V.ripples.push({ t: 0, life: 0.9, hue: V.keyHue, L: 0.85, C: 0.04, s: strength, x: W / 2, y: H + 20, maxR: H * 0.9, kick: true });
+                // Sidechain pumping: the whole scene ducks with the kick.
+                if (M.pump > 0.25) V.squeeze = Math.max(V.squeeze, M.pump);
+                // Full-screen pulses are capped at 3 per second (WCAG 2.3.1).
+                if (V.time - V.lastFlash >= 0.34) {
+                    V.lastFlash = V.time;
+                    V.flash = (settings.calm ? 0.06 : 0.18) * (0.5 + 0.5 * strength);
+                }
+                if (settings.vibrate && canVibrate && A.source) {
+                    try { navigator.vibrate(Math.round(25 + 35 * strength)); } catch (_) {}
+                }
+            }
+            if (V.ripples.length > 24) V.ripples.shift();
+        }
+
+        // The drop: one big bloom in the chord colour. It still goes through
+        // the 3-per-second flash cap.
+        function onDrop() {
+            V.drop = 1;
+            const look = chordLook() || { hue: V.chordHue, L: 0.8, C: 0.15 };
+            V.ripples.push({ t: 0, life: 1.6, hue: look.hue, L: look.L, C: look.C + 0.03, s: 1, x: W / 2, y: H / 2, maxR: Math.hypot(W, H) * 0.7, kick: true });
+            if (V.time - V.lastFlash >= 0.34) {
+                V.lastFlash = V.time;
+                V.flash = settings.calm ? 0.12 : 0.3;
+            }
+        }
+
+        function updateVisualState(dt) {
+            V.time += dt;
+            // Song shape and pumping.
+            V.build += ((M.section === 'build' ? clamp(0.4 + M.buildScore) : 0) - V.build) * ease(dt, 0.8);
+            V.brk += ((M.section === 'break' ? 1 : 0) - V.brk) * ease(dt, 1.5);
+            V.drop = Math.max(0, V.drop - dt / 1.8);
+            V.squeeze = Math.max(0, V.squeeze - dt * 3);
+            // Timbre per pitch class, from the notes sounding now.
+            const agg = Array.from({ length: 12 }, () => ({ n: 0, fade: 0, move: 0, rate: 0, bright: 0 }));
+            for (const t of M.track.values()) {
+                if (!t.on) continue;
+                const a = agg[t.pc], sg = t.seg;
+                a.n++;
+                a.fade += sg.env === 'fade' ? 1 : 0;
+                if (sg.move > a.move) { a.move = sg.move; a.rate = sg.moveRate; }
+                a.bright += sg.bright;
+            }
+            for (let pc = 0; pc < 12; pc++) {
+                const a = agg[pc], v = V.pcT[pc];
+                if (!a.n) continue;
+                const k = ease(dt, 0.3);
+                v.fade += (a.fade / a.n - v.fade) * k;
+                v.move += (a.move - v.move) * k;
+                v.bright += (a.bright / a.n - v.bright) * k;
+                if (a.rate) v.rate = a.rate;
+            }
+            const look = chordLook();
+            if (look) {
+                const k = ease(dt, 0.25);
+                V.chordHue = hueLerp(V.chordHue, look.hue, k);
+                V.chordL += (look.L - V.chordL) * k;
+                V.chordC += (look.C - V.chordC) * k;
+            }
+            const key = M.key;
+            const kk = ease(dt, 1.5);
+            if (key) {
+                V.keyHue = hueLerp(V.keyHue, pcHue(key.tonic), kk);
+                V.keyL += ((key.mode === 'major' ? 0.24 : 0.17) - V.keyL) * kk;
+                V.keyC += ((key.mode === 'major' ? 0.07 : 0.06) - V.keyC) * kk;
+            } else {
+                V.keyL += (0.16 - V.keyL) * kk;
+                V.keyC += (0.03 - V.keyC) * kk;
+            }
+            V.rot += dt * (0.03 + 0.25 * M.tension * M.level) * (1 + 1.5 * V.build) * (1 - 0.5 * V.brk);
+            V.flash = Math.max(0, V.flash - dt * 1.2);
+
+            for (const r of V.ripples) r.t += dt;
+            V.ripples = V.ripples.filter((r) => r.t < r.life);
+
+            // Sparkles for bright, high sounds.
+            const rate = 70 * M.treble * (0.4 + clamp(M.centroid / 4000)) * (1 - 0.7 * V.brk);
+            let n = rate * dt;
+            while (n > 0) {
+                if (Math.random() < n) spawnSpark();
+                n -= 1;
+            }
+            for (const s of V.sparks) { s.t += dt; s.y -= s.vy * dt; s.x += s.vx * dt; }
+            V.sparks = V.sparks.filter((s) => s.t < s.life);
+
+            if (M.melody && M.level > 0.08) {
+                V.trail.push({ t: V.time, midi: M.melody.midi, pc: M.melody.pc, lvl: M.level });
+            }
+            V.trail = V.trail.filter((p) => V.time - p.t < 2.6);
+        }
+
+        function activePcs(min = 0.2) {
+            const out = [];
+            const ch = visChroma();
+            for (let pc = 0; pc < 12; pc++) if (ch[pc] > min) out.push(pc);
+            return out;
+        }
+
+        // drum: a hi-hat spark (no pitch, so no note colour).
+        function spawnSpark(drum = false) {
+            if (V.sparks.length > 220) return;
+            const pcs = activePcs(0.3);
+            const pc = pcs.length ? pcs[(Math.random() * pcs.length) | 0] : -1;
+            V.sparks.push({
+                x: Math.random() * W, y: H * (drum ? 0.1 + 0.25 * Math.random() : 0.15 + 0.7 * Math.random()),
+                vx: (Math.random() - 0.5) * 20, vy: 10 + Math.random() * 30,
+                r: 1 + Math.random() * 2.4,
+                hue: drum ? V.keyHue : pc >= 0 ? pcHue(pc) : V.chordHue,
+                C: drum ? 0.02 : 0.08,
+                t: 0, life: drum ? 0.35 : 0.5 + Math.random() * 0.8,
+            });
+        }
+
+        // Pitch height → screen height and lightness (higher = lighter).
+        const midiY = (midi) => H * (0.88 - 0.76 * clamp((midi - 36) / 60));
+        const midiL = (midi) => 0.55 + 0.35 * clamp((midi - 36) / 60);
+
+        // ─── Drawing ─────────────────────────────────────────────────────
+        function drawBackground() {
+            const cx = W / 2, cy = H / 2, R = Math.hypot(W, H) / 2;
+            const grad = g.createRadialGradient(cx, cy * 0.9, 0, cx, cy, R);
+            grad.addColorStop(0, col(V.keyL, V.keyC, V.keyHue));
+            grad.addColorStop(1, col(V.keyL * 0.45, V.keyC * 0.6, V.keyHue));
+            g.globalCompositeOperation = 'source-over';
+            g.fillStyle = grad;
+            g.fillRect(0, 0, W, H);
+        }
+
+        // crisp 0..1: 0 is a soft haze, 1 a solid core with a short edge.
+        function glow(x, y, r, L, C, h, a, crisp = 0) {
+            if (r <= 0 || a <= 0.003) return;
+            const grad = g.createRadialGradient(x, y, 0, x, y, r);
+            grad.addColorStop(0, col(L, C, h, a));
+            grad.addColorStop(0.15 + 0.45 * crisp, col(L, C, h, a * (0.45 + 0.45 * crisp)));
+            grad.addColorStop(1, col(L, C, h, 0));
+            g.fillStyle = grad;
+            g.beginPath();
+            g.arc(x, y, r, 0, Math.PI * 2);
+            g.fill();
+        }
+
+        function drawTensionHalo() {
+            if (M.tension < 0.05) return;
+            const h = (V.chordHue + 180) % 360;   // complementary = clash
+            const a = 0.45 * M.tension * (0.3 + 0.7 * M.level);
+            const R = Math.hypot(W, H) / 2;
+            const grad = g.createRadialGradient(W / 2, H / 2, R * 0.45, W / 2, H / 2, R);
+            grad.addColorStop(0, col(0.6, 0.15, h, 0));
+            grad.addColorStop(1, col(0.6, 0.15, h, a));
+            g.fillStyle = grad;
+            g.fillRect(0, 0, W, H);
+        }
+
+        function drawBassGlow() {
+            if (M.bass < 0.02) return;
+            const h = M.bassPc >= 0 ? pcHue(M.bassPc) : V.chordHue;
+            const hh = H * (0.25 + 0.35 * M.bass);
+            const grad = g.createLinearGradient(0, H, 0, H - hh);
+            grad.addColorStop(0, col(0.55, 0.16, h, 0.7 * M.bass + 0.1));
+            grad.addColorStop(1, col(0.55, 0.16, h, 0));
+            g.fillStyle = grad;
+            g.fillRect(0, H - hh, W, hh);
+        }
+
+        function drawRipples() {
+            for (const r of V.ripples) {
+                const p = r.t / r.life;
+                const rad = r.maxR * (1 - Math.pow(1 - p, 2.2));
+                const a = (1 - p) * (settings.calm ? 0.35 : 0.7) * (0.4 + 0.6 * r.s);
+                g.lineWidth = (r.kick ? 18 : 8) * (1 - p) + 1;
+                g.strokeStyle = col(r.L + 0.08, r.C, r.hue, a);
+                g.beginPath();
+                g.arc(r.x, r.y, rad, 0, Math.PI * 2);
+                g.stroke();
+            }
+        }
+
+        function drawSparks() {
+            for (const s of V.sparks) {
+                const a = Math.sin(Math.PI * s.t / s.life);
+                g.fillStyle = col(0.93, s.C, s.hue, a);
+                g.beginPath();
+                g.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                g.fill();
+            }
+        }
+
+        function drawTrail() {
+            const pts = V.trail;
+            if (pts.length < 2) return;
+            const headX = W * 0.85, speed = W * 0.3;
+            g.lineCap = 'round';
+            for (let i = 1; i < pts.length; i++) {
+                const p0 = pts[i - 1], p1 = pts[i];
+                // A gap (the melody stopped) or a big leap: start a new stroke.
+                if (p1.t - p0.t > 0.2 || Math.abs(p1.midi - p0.midi) > 9) continue;
+                const age = V.time - p1.t;
+                const a = clamp(1 - age / 2.6) * 0.9;
+                g.strokeStyle = col(midiL(p1.midi), 0.17, pcHue(p1.pc), a);
+                g.lineWidth = 3 + 14 * p1.lvl * (1 - age / 2.6);
+                g.beginPath();
+                g.moveTo(headX - (V.time - p0.t) * speed, midiY(p0.midi));
+                g.lineTo(headX - age * speed, midiY(p1.midi));
+                g.stroke();
+            }
+            const last = pts[pts.length - 1];
+            if (V.time - last.t < 0.15) {
+                glow(headX, midiY(last.midi), 22 + 40 * last.lvl, midiL(last.midi), 0.17, pcHue(last.pc), 0.9);
+            }
+        }
+
+        function drawAurora() {
+            const cx = W / 2, cy = H * 0.47, S = Math.min(W, H);
+            g.globalCompositeOperation = 'screen';
+            drawBassGlow();
+            const ch = visChroma();
+            const squeeze = 1 - 0.22 * V.squeeze, bloom = 1 + 0.35 * V.drop;
+            // Central wash in the chord colour (wider and calmer in a breakdown).
+            glow(cx, cy, S * (0.45 + 0.35 * M.level) * (1 + 0.4 * V.brk) * squeeze * bloom, V.chordL, V.chordC, V.chordHue, 0.25 + 0.45 * M.level);
+            // One orb per sounding note, at its own place on the circle of
+            // fifths: consonant chords cluster, dissonant ones spread out.
+            // A build-up draws them in towards the centre.
+            const R = S * 0.27 * (1 - 0.35 * V.build);
+            const shake = M.tension * M.level * S * 0.035;
+            for (let pc = 0; pc < 12; pc++) {
+                const e = ch[pc];
+                if (e < 0.06) continue;
+                const tb = V.pcT[pc];
+                const ang = -Math.PI / 2 + fifthsPos(pc) * Math.PI / 6 + V.rot;
+                const wob = V.time * (0.4 + pc * 0.03);
+                const x = cx + Math.cos(ang) * R + Math.sin(wob + pc) * S * 0.04 + (Math.random() - 0.5) * shake;
+                const y = cy + Math.sin(ang) * R + Math.cos(wob * 1.3 + pc) * S * 0.04 + (Math.random() - 0.5) * shake;
+                // Timbre: moving sounds pulse at their own rate; fading
+                // (struck, plucked) sounds are crisp with a thin ring; bright
+                // sounds have sharper edges, soft ones stay hazy.
+                const pulse = 1 + 0.14 * tb.move * Math.sin(2 * Math.PI * (tb.rate || 5) * V.time);
+                const r = S * (0.08 + 0.26 * e) * (0.45 + 0.75 * M.level) * pulse * squeeze * bloom;
+                const a = clamp(0.9 * e * (0.35 + 0.65 * M.level));
+                const crisp = clamp(Math.max(0.8 * tb.fade, 0.7 * tb.bright - 0.1));
+                glow(x, y, r, V.chordL, V.chordC + 0.02, pcHue(pc), a, crisp);
+                if (tb.fade > 0.3) {
+                    g.strokeStyle = col(Math.min(0.95, V.chordL + 0.1), V.chordC, pcHue(pc), a * 0.6 * tb.fade);
+                    g.lineWidth = 1.5;
+                    g.beginPath(); g.arc(x, y, r * 0.55, 0, Math.PI * 2); g.stroke();
+                }
+            }
+            drawTensionHalo();
+            drawRipples();
+            drawTrail();
+            drawSparks();
+        }
+
+        function drawWheel() {
+            const cx = W / 2, cy = H * 0.5, S = Math.min(W, H * 0.8);
+            const R = S * 0.42, R0 = S * 0.17;
+            g.globalCompositeOperation = 'source-over';
+            const seg = Math.PI / 6;
+            for (let j = 0; j < 12; j++) {
+                const pc = pcFromFifths(j);
+                const e = visChroma()[pc];
+                const a0 = -Math.PI / 2 + (j - 0.5) * seg + 0.02, a1 = a0 + seg - 0.04;
+                const out = R * (0.84 + 0.16 * e * (0.5 + 0.5 * M.level));
+                g.fillStyle = col(0.32, 0.06, pcHue(pc), 0.9);
+                g.beginPath(); g.arc(cx, cy, out, a0, a1); g.arc(cx, cy, R0, a1, a0, true); g.closePath(); g.fill();
+                if (e > 0.02) {
+                    g.fillStyle = col(V.chordL, V.chordC + 0.03, pcHue(pc), clamp(e * (0.3 + 0.7 * M.level) * 1.1));
+                    g.beginPath(); g.arc(cx, cy, out, a0, a1); g.arc(cx, cy, R0, a1, a0, true); g.closePath(); g.fill();
+                }
+                const am = (a0 + a1) / 2, lr = (R0 + out) / 2 + R * 0.05;
+                g.fillStyle = e > 0.5 && V.chordL > 0.6 ? 'rgba(10,10,20,0.85)' : 'rgba(255,255,255,0.85)';
+                g.font = `700 ${Math.round(S * 0.042)}px -apple-system, Segoe UI, sans-serif`;
+                g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.fillText(NOTE_NAMES[pc], cx + Math.cos(am) * lr, cy + Math.sin(am) * lr);
+            }
+            // Chord shape: major and minor triads are mirror images.
+            const c = M.chord;
+            if (c && c.kind === 'chord' && M.level > 0.03) {
+                g.strokeStyle = col(0.95, 0.05, V.chordHue, 0.9);
+                g.fillStyle = col(V.chordL, V.chordC, V.chordHue, 0.35);
+                g.lineWidth = 3;
+                g.lineJoin = 'round';
+                g.beginPath();
+                const pts = [...c.pcs].sort((a, b) => fifthsPos(a) - fifthsPos(b));
+                pts.forEach((pc, i) => {
+                    const ang = -Math.PI / 2 + fifthsPos(pc) * seg;
+                    const x = cx + Math.cos(ang) * R0 * 0.92, y = cy + Math.sin(ang) * R0 * 0.92;
+                    if (i) g.lineTo(x, y); else g.moveTo(x, y);
+                });
+                g.closePath(); g.fill(); g.stroke();
+            }
+            g.globalCompositeOperation = 'screen';
+            glow(cx, cy, R0 * (0.8 + 0.6 * M.level), V.chordL, V.chordC, V.chordHue, 0.25 + 0.6 * M.level);
+            drawTensionHalo();
+            drawRipples();
+        }
+
+        function drawWash() {
+            // The strongest notes, blended as a slow-turning gradient.
+            const pcs = [];
+            for (let pc = 0; pc < 12; pc++) pcs.push([pc, visChroma()[pc]]);
+            pcs.sort((a, b) => b[1] - a[1]);
+            const top = pcs.filter((p) => p[1] > 0.15).slice(0, 4);
+            g.globalCompositeOperation = 'source-over';
+            const vis = 0.25 + 0.75 * M.level;
+            if (top.length) {
+                const ang = V.rot * 2;
+                const dx = Math.cos(ang) * W / 2, dy = Math.sin(ang) * H / 2;
+                const grad = g.createLinearGradient(W / 2 - dx, H / 2 - dy, W / 2 + dx, H / 2 + dy);
+                const order = top.sort((a, b) => fifthsPos(a[0]) - fifthsPos(b[0]));
+                order.forEach(([pc], i) => {
+                    grad.addColorStop(order.length === 1 ? 0.5 : i / (order.length - 1),
+                        col(V.chordL * (0.35 + 0.65 * vis), V.chordC * vis, pcHue(pc)));
+                });
+                g.fillStyle = grad;
+                g.globalAlpha = clamp(0.2 + 0.8 * M.level);
+                g.fillRect(0, 0, W, H);
+                g.globalAlpha = 1;
+            }
+            g.globalCompositeOperation = 'screen';
+            drawBassGlow();
+            drawTensionHalo();
+        }
+
+        function drawIdle() {
+            // Before listening: the colour wheel slowly breathing.
+            const cx = W / 2, cy = H / 2, S = Math.min(W, H);
+            g.globalCompositeOperation = 'screen';
+            for (let j = 0; j < 12; j++) {
+                const pc = pcFromFifths(j);
+                const ang = -Math.PI / 2 + j * Math.PI / 6 + V.time * 0.05;
+                const br = 0.5 + 0.5 * Math.sin(V.time * 0.8 - j * 0.5);
+                glow(cx + Math.cos(ang) * S * 0.32, cy + Math.sin(ang) * S * 0.32, S * (0.16 + 0.05 * br), 0.7, 0.15, pcHue(pc), 0.35 + 0.25 * br);
+            }
+        }
+
+        // Two lanes, like a scrolling piano roll: the high part (right hand)
+        // on top, the low part (left hand) below, and the drums on their own
+        // strip between them. Time runs right to left; "now" is the line.
+        function drawHands() {
+            const now = M.now;
+            const top = H * 0.2, bottom = H * (settings.legend ? 0.84 : 0.9);
+            const strip = settings.drums ? Math.max(26, H * 0.045) : 8;
+            const midY = (top + bottom) / 2;
+            const lanes = [
+                // Fixed pitch ranges (they overlap), so bars never move when
+                // the split does: high C3–E8, low C1–C5.
+                { hand: 'R', y0: top, y1: midY - strip / 2, lo: 48, hi: 100, label: 'High · right hand' },
+                { hand: 'L', y0: midY + strip / 2, y1: bottom, lo: 24, hi: 72, label: 'Low · left hand' },
+            ];
+            const nowX = W * 0.8, pps = W / 4.5;
+            const xAt = (t) => nowX - (now - t) * pps;
+            g.globalCompositeOperation = 'source-over';
+
+            for (const ln of lanes) {
+                const h = ln.y1 - ln.y0;
+                g.fillStyle = 'rgba(0,0,0,0.22)';
+                roundRect(12, ln.y0, W - 24, h, 14); g.fill();
+                ln.yOf = (midi) => ln.y1 - 10 - (h - 20) * clamp((midi - ln.lo) / (ln.hi - ln.lo));
+                ln.barH = clamp((h - 20) / (ln.hi - ln.lo) * 2.6, 12, 20);
+            }
+
+            g.save();
+            g.beginPath(); g.rect(12, 0, W - 24, H); g.clip();
+            g.font = '700 11px -apple-system, Segoe UI, sans-serif';
+            g.textBaseline = 'middle';
+            for (const seg of M.segments) {
+                if (!inFocus(seg)) continue;
+                const x1 = seg.t1 ? xAt(seg.t1) : nowX;
+                if (x1 < 0) continue;
+                const x0 = xAt(seg.t0);
+                const ln = seg.hand === 'L' ? lanes[1] : lanes[0];
+                const y = ln.yOf(seg.midi), bh = ln.barH;
+                const L = midiL(seg.midi), a = 0.45 + 0.55 * seg.s;
+                drawSegBar(seg, x0, Math.max(x0 + bh, x1), y, bh, L, a, now);
+                if (!seg.t1) glow(nowX, y, bh * 2.2, L, 0.16, pcHue(seg.pc), 0.6);
+                if (x1 - x0 > 30) {
+                    g.fillStyle = L > 0.65 ? 'rgba(10,10,20,0.85)' : 'rgba(255,255,255,0.9)';
+                    g.fillText(NOTE_NAMES[seg.pc] + (Math.floor(seg.midi / 12) - 1), x0 + 5, y + 0.5);
+                }
+            }
+
+            // Drums: kick = filled dot, snare = ring, hi-hat = small dot.
+            if (settings.drums) {
+                const r0 = strip / 2;
+                g.lineWidth = 2;
+                for (const d of M.drums) {
+                    const x = xAt(d.t);
+                    if (x < 24) continue;
+                    const age = now - d.t;
+                    const a = age < 0.15 ? 0.95 : 0.55;
+                    const c = col(0.92, 0.02, V.keyHue, a);
+                    g.beginPath();
+                    if (d.type === 'kick') { g.fillStyle = c; g.arc(x, midY, r0 * 0.55, 0, Math.PI * 2); g.fill(); }
+                    else if (d.type === 'snare') { g.strokeStyle = c; g.arc(x, midY, r0 * 0.45, 0, Math.PI * 2); g.stroke(); }
+                    else { g.fillStyle = c; g.arc(x, midY - r0 * 0.6, 2, 0, Math.PI * 2); g.fill(); }
+                    if (age < 0.25 && d.type === 'kick') glow(x, midY, r0 * 2, 0.9, 0.03, V.keyHue, 0.4 * (1 - age / 0.25));
+                }
+            }
+            g.restore();
+
+            // Lane labels on top of the bars.
+            g.font = '600 12px -apple-system, Segoe UI, sans-serif';
+            g.textAlign = 'left'; g.textBaseline = 'middle';
+            for (const ln of lanes) {
+                const tw = g.measureText(ln.label).width;
+                g.fillStyle = 'rgba(0,0,0,0.45)';
+                roundRect(20, ln.y0 + 6, tw + 16, 20, 10); g.fill();
+                g.fillStyle = 'rgba(255,255,255,0.75)';
+                g.fillText(ln.label, 28, ln.y0 + 16.5);
+            }
+
+            g.fillStyle = 'rgba(255,255,255,0.25)';
+            g.fillRect(nowX - 0.5, top, 1, bottom - top);
+        }
+
+        // A note bar, shaped by its timbre: held = solid; fading = bright at
+        // the strike, dimming along its length; moving = wavy edges at its
+        // own rate; bright = a crisp highlight; soft = a light haze around it.
+        function drawSegBar(seg, x0, x1, y, bh, L, a, now) {
+            const hue = pcHue(seg.pc);
+            const fading = seg.env === 'fade';
+            if (seg.bright < 0.25) {
+                g.fillStyle = col(L, 0.12, hue, a * 0.25);
+                roundRect(x0 - 3, y - bh / 2 - 3, x1 - x0 + 6, bh + 6, bh / 2 + 3); g.fill();
+            }
+            if (fading) {
+                const gr = g.createLinearGradient(x0, 0, x1, 0);
+                gr.addColorStop(0, col(L, 0.17, hue, a));
+                gr.addColorStop(1, col(L, 0.17, hue, a * 0.15));
+                g.fillStyle = gr;
+            } else {
+                g.fillStyle = col(L, 0.16, hue, seg.env === 'hold' ? a : a * 0.8);
+            }
+            if (seg.move > 0.4) {
+                // Wavy edges: amplitude from the movement depth, one wave per
+                // wobble cycle (bars scroll at 4.5 s per screen width).
+                const amp = bh * 0.28 * seg.move, wl = Math.max(6, (W / 4.5) / (seg.moveRate || 5));
+                g.beginPath();
+                for (let x = x0; x <= x1; x += 2) g.lineTo(x, y - bh / 2 + amp * Math.sin((x - x0) / wl * Math.PI * 2));
+                for (let x = x1; x >= x0; x -= 2) g.lineTo(x, y + bh / 2 - amp * Math.sin((x - x0) / wl * Math.PI * 2));
+                g.closePath(); g.fill();
+            } else {
+                roundRect(x0, y - bh / 2, x1 - x0, bh, bh / 2); g.fill();
+            }
+            if (seg.bright > 0.5) {
+                g.fillStyle = `rgba(255,255,255,${(0.5 * (seg.bright - 0.5) * 2 * a).toFixed(3)})`;
+                g.fillRect(x0 + bh / 2, y - bh / 2 + 2, Math.max(0, x1 - x0 - bh), 2);
+            }
+        }
+
+        function roundRect(x, y, w, h, r) {
+            r = Math.min(r, w / 2, h / 2);
+            g.beginPath();
+            g.moveTo(x + r, y);
+            g.arcTo(x + w, y, x + w, y + h, r);
+            g.arcTo(x + w, y + h, x, y + h, r);
+            g.arcTo(x, y + h, x, y, r);
+            g.arcTo(x, y, x + w, y, r);
+            g.closePath();
+        }
+
+        // Build-up: the edges darken and the centre brightens, steadily (no
+        // flashing). The drop's bloom is a ripple and a capped flash.
+        function drawShape() {
+            if (V.build < 0.02) return;
+            const R = Math.hypot(W, H) / 2;
+            g.globalCompositeOperation = 'source-over';
+            const v = g.createRadialGradient(W / 2, H / 2, R * (0.55 - 0.3 * V.build), W / 2, H / 2, R);
+            v.addColorStop(0, 'rgba(0,0,0,0)');
+            v.addColorStop(1, `rgba(0,0,0,${(0.6 * V.build).toFixed(3)})`);
+            g.fillStyle = v;
+            g.fillRect(0, 0, W, H);
+            g.globalCompositeOperation = 'screen';
+            glow(W / 2, H / 2, Math.min(W, H) * 0.35, 0.85, 0.06, V.chordHue, 0.3 * V.build);
+            g.globalCompositeOperation = 'source-over';
+        }
+
+        function drawFlash() {
+            if (V.flash <= 0.002) return;
+            g.globalCompositeOperation = 'screen';
+            g.fillStyle = col(0.9, 0.03, V.keyHue, V.flash);
+            g.fillRect(0, 0, W, H);
+        }
+
+        function draw() {
+            g.globalCompositeOperation = 'source-over';
+            drawBackground();
+            if (!A.source) drawIdle();
+            else if (settings.mode === 'wheel') drawWheel();
+            else if (settings.mode === 'wash') drawWash();
+            else if (settings.mode === 'hands') drawHands();
+            else drawAurora();
+            if (A.source) drawShape();
+            if (settings.mode !== 'hands') drawFlash();
+            g.globalCompositeOperation = 'source-over';
+        }
+
+        // ─── HUD ─────────────────────────────────────────────────────────
+        const $ = (id) => document.getElementById(id);
+        const hud = $('hud'), legend = $('legend');
+        const legendCells = [];
+        for (let j = 0; j < 12; j++) {
+            const pc = pcFromFifths(j);
+            const d = document.createElement('div');
+            d.className = 'sw';
+            d.textContent = NOTE_NAMES[pc];
+            const [r, gg, b] = oklchToRgb(0.74, 0.15, pcHue(pc));
+            d.style.background = `rgb(${r},${gg},${b})`;
+            d.style.color = '#111';
+            legend.appendChild(d);
+            legendCells[pc] = d;
+            const a = d.cloneNode(true);
+            $('about-wheel').appendChild(a);
+        }
+        // Example chords on C in the About page.
+        for (const q of QUALITIES) {
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.textContent = 'C' + q.suffix;
+            const [r, gg, b] = oklchToRgb(q.L, q.C, pcHue(0));
+            chip.style.background = `rgb(${r},${gg},${b})`;
+            chip.style.color = q.L > 0.6 ? '#111' : '#fff';
+            $('about-chords').appendChild(chip);
+        }
+
+        let hudAt = 0;
+        function updateHud(now) {
+            if (now - hudAt < 0.08) return;
+            hudAt = now;
+            const show = settings.labels && !!A.source;
+            hud.classList.toggle('off', !show);
+            legend.classList.toggle('off', !settings.legend || settings.mode === 'wheel' || !A.source);
+            for (let pc = 0; pc < 12; pc++) {
+                const e = visChroma()[pc] * (0.3 + 0.7 * M.level);
+                legendCells[pc].style.transform = `scale(${1 + 0.35 * e}) translateY(${-6 * e}px)`;
+                legendCells[pc].style.boxShadow = e > 0.2 ? `0 0 ${Math.round(16 * e)}px rgba(255,255,255,${(0.6 * e).toFixed(2)})` : 'none';
+            }
+            if (!show) return;
+            const c = M.chord;
+            if (c && c.kind === 'chord') {
+                $('chord-name').textContent = NOTE_NAMES[c.root] + c.q.suffix;
+                $('chord-long').textContent = `${NOTE_NAMES[c.root]} ${c.q.long} chord`;
+            } else if (c && c.kind === 'note') {
+                $('chord-name').textContent = NOTE_NAMES[c.root];
+                $('chord-long').textContent = 'single note';
+            } else {
+                $('chord-name').textContent = '—';
+                $('chord-long').textContent = M.level > 0.04 ? 'listening…' : 'quiet';
+            }
+            $('key-name').textContent = M.key ? `${NOTE_NAMES[M.key.tonic]} ${M.key.mode}` : '…';
+            $('part-name').textContent = { normal: '—', build: 'build-up ↑', drop: 'drop!', break: 'breakdown' }[M.section];
+            const mel = M.melody;
+            $('note-name').textContent = mel ? NOTE_NAMES[mel.pc] + (Math.floor(Math.round(mel.midi) / 12) - 1) : '—';
+            $('m-loud').style.width = `${Math.round(M.level * 100)}%`;
+            $('m-tense').style.width = `${Math.round(M.tension * 100)}%`;
+            $('m-beat').style.width = `${Math.round(M.beatGlow * 100)}%`;
+            const [r, gg, b] = oklchToRgb(V.chordL, V.chordC, V.chordHue);
+            $('chord-name').style.color = `rgb(${r},${gg},${b})`;
+        }
+
+        // ─── Loop ────────────────────────────────────────────────────────
+        let last = performance.now();
+        let manual = false;
+        function frame(nowMs) {
+            const dt = Math.min(0.1, Math.max(0.001, (nowMs - last) / 1000));
+            last = nowMs;
+            step(nowMs / 1000, dt);
+            if (!manual) requestAnimationFrame(frame);
+        }
+        function step(now, dt) {
+            analyse(now, dt);
+            updateVisualState(dt);
+            draw();
+            updateHud(now);
+        }
+        requestAnimationFrame(frame);
+
+        // ─── UI ──────────────────────────────────────────────────────────
+        const MODES = ['aurora', 'wheel', 'wash', 'hands'];
+        const MODE_LABEL = { aurora: 'Aurora', wheel: 'Wheel', wash: 'Wash', hands: 'Hands' };
+        const controls = $('controls');
+        let hideTimer = 0;
+
+        function poke() {
+            controls.classList.remove('hidden');
+            clearTimeout(hideTimer);
+            const anyOpen = document.querySelector('.overlay.show');
+            if (A.source && !anyOpen) hideTimer = setTimeout(() => controls.classList.add('hidden'), 4000);
+        }
+        ['pointerdown', 'pointermove', 'keydown'].forEach((ev) => window.addEventListener(ev, poke, { passive: true }));
+
+        function open(id) {
+            document.querySelectorAll('.overlay').forEach((o) => o.classList.toggle('show', o.id === id));
+            poke();
+        }
+        function closeAll() {
+            document.querySelectorAll('.overlay').forEach((o) => o.classList.remove('show'));
+            if (!A.source) open('start');
+            poke();
+        }
+        document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeAll));
+        document.querySelectorAll('.overlay').forEach((o) => o.addEventListener('click', (e) => {
+            if (e.target === o && o.id !== 'start') closeAll();
+        }));
+
+        function syncUi() {
+            $('btn-mode').textContent = MODE_LABEL[settings.mode];
+            document.querySelectorAll('#mode-seg button').forEach((b) => b.classList.toggle('on', b.dataset.mode === settings.mode));
+            document.querySelectorAll('#focus-seg button').forEach((b) => b.classList.toggle('on', b.dataset.focus === settings.focus));
+            $('sens').value = settings.sensitivity;
+            $('opt-calm').checked = settings.calm;
+            $('opt-vibrate').checked = settings.vibrate;
+            $('opt-labels').checked = settings.labels;
+            $('opt-legend').checked = settings.legend;
+            $('opt-drums').checked = settings.drums;
+            $('row-vibrate').style.display = canVibrate ? '' : 'none';
+            $('btn-listen').textContent = A.source ? '■ Stop' : '● Listen';
+            $('btn-listen').setAttribute('aria-label', A.source ? 'Stop listening' : 'Start listening');
+        }
+        function setMode(m) { settings.mode = m; saveSettings(); syncUi(); }
+
+        $('btn-mode').addEventListener('click', () => setMode(MODES[(MODES.indexOf(settings.mode) + 1) % MODES.length]));
+        document.querySelectorAll('#mode-seg button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+        document.querySelectorAll('#focus-seg button').forEach((b) => b.addEventListener('click', () => { settings.focus = b.dataset.focus; saveSettings(); syncUi(); }));
+        $('sens').addEventListener('input', (e) => { settings.sensitivity = parseFloat(e.target.value); saveSettings(); });
+        [['opt-calm', 'calm'], ['opt-drums', 'drums'], ['opt-vibrate', 'vibrate'], ['opt-labels', 'labels'], ['opt-legend', 'legend']].forEach(([id, k]) => {
+            $(id).addEventListener('change', (e) => { settings[k] = e.target.checked; saveSettings(); });
+        });
+        $('btn-settings').addEventListener('click', () => open('settings'));
+        $('btn-about').addEventListener('click', () => open('about'));
+        $('btn-full').addEventListener('click', () => {
+            const el = document.documentElement;
+            if (document.fullscreenElement) document.exitFullscreen?.();
+            else (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+        });
+
+        // Keep the screen on while listening.
+        let wakeLock = null;
+        async function lockScreen() {
+            try { if ('wakeLock' in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request('screen'); wakeLock?.addEventListener('release', () => { wakeLock = null; }); } catch (_) {}
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && A.source) lockScreen();
+        });
+
+        function resetMusic() {
+            M.chord = null; M.chordCand = null; M.key = null; M.keyEnergy = 0;
+            M.keyChroma.fill(0); M.chordChroma.fill(0);
+            M.floor = -70; M.peak = -30;
+            M.track.clear(); M.segments.length = 0; M.drums.length = 0; M.split = 60;
+            M.shape.length = 0; M.section = 'normal'; M.buildScore = 0; M.pump = 0; M.pumpDips.length = 0; M.kickTimes.length = 0; M.percNow = 0;
+        }
+
+        async function begin(kind) {
+            $('mic-error').classList.remove('show');
+            try {
+                resetMusic();
+                if (kind === 'mic') await startMic(); else await startDemo({ song: kind === 'edm' ? 'edm' : 'band' });
+                closeAll();
+                lockScreen();
+            } catch (err) {
+                const e = $('mic-error');
+                e.textContent = err && err.name === 'NotAllowedError'
+                    ? 'Chroma needs the microphone to hear the music. Allow it in your browser settings and try again.'
+                    : 'Could not start the microphone' + (err && err.message ? ': ' + err.message : '.');
+                e.classList.add('show');
+            }
+            syncUi();
+            poke();
+        }
+        $('btn-start').addEventListener('click', () => begin('mic'));
+        $('btn-demo').addEventListener('click', () => begin('demo'));
+        $('btn-demo-edm').addEventListener('click', () => begin('edm'));
+        $('btn-listen').addEventListener('click', () => {
+            if (A.source) {
+                stopSource();
+                if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+                open('start');
+            } else open('start');
+            syncUi();
+        });
+
+        syncUi();
+
+        // ─── Debug API (?debug=1) ────────────────────────────────────────
+        if (DEBUG) {
+            window.__chroma = {
+                get state() {
+                    const c = M.chord;
+                    return {
+                        source: A.source,
+                        level: M.level,
+                        chord: c ? (c.kind === 'note' ? NOTE_NAMES[c.root] : NOTE_NAMES[c.root] + c.q.suffix) : null,
+                        chordKind: c ? c.kind : null,
+                        key: M.key ? `${NOTE_NAMES[M.key.tonic]} ${M.key.mode}` : null,
+                        melody: M.melody ? NOTE_NAMES[M.melody.pc] : null,
+                        tension: M.tension,
+                        chroma: [...M.chroma],
+                        noteOns: M.noteOnCount,
+                        kicks: M.drumCount.kick,
+                        drums: { ...M.drumCount },
+                        drumHits: M.drums.map((d) => ({ t: +(d.t - M.now).toFixed(2), type: d.type })),
+                        perc: M.perc,
+                        split: M.split,
+                        // Sounding notes, low to high, with the hand they were drawn in.
+                        notes: [...M.track.values()].filter((t) => t.on).sort((a, b) => a.midi - b.midi)
+                            .map((t) => ({ midi: t.midi, name: NOTE_NAMES[t.pc] + (Math.floor(t.midi / 12) - 1), hand: t.seg.hand,
+                                env: t.seg.env, move: +t.seg.move.toFixed(2), bright: +t.seg.bright.toFixed(2) })),
+                        // Notes from the last 6 s with their final timbre.
+                        recent: M.segments.filter((sg) => !sg.t1 || M.now - sg.t1 < 6).map((sg) => ({
+                            midi: sg.midi, name: NOTE_NAMES[sg.pc] + (Math.floor(sg.midi / 12) - 1), env: sg.env,
+                            move: +sg.move.toFixed(2), rate: +sg.moveRate.toFixed(1), bright: +sg.bright.toFixed(2), len: +((sg.t1 || M.now) - sg.t0).toFixed(2) })),
+                        pump: M.pump,
+                        kickPeriod: M.kickPeriod,
+                        section: M.section,
+                        buildScore: M.buildScore,
+                        drops: M.drops,
+                        focus: settings.focus,
+                        mode: settings.mode,
+                    };
+                },
+                settings,
+                NOTE_NAMES, pcHue, detectChord, detectKey, roughness, oklchToRgb,
+                playTones, startDemo, stop: () => { stopSource(); syncUi(); },
+                setMode,
+                playVoices,
+                setFocus: (f) => { settings.focus = f; },
+                // What the demo is playing right now: { chord, intoBar } (seconds into the bar).
+                demoNow: () => {
+                    if (!A.demo) return null;
+                    const t = A.ctx.currentTime - A.demo.t0;
+                    const n = Math.max(0, Math.floor(t / A.demo.bar));
+                    const edm = A.demo.song === 'edm';
+                    const [root, qid] = edm ? EDM_BARS[n % EDM_BARS.length] : DEMO_BARS[n % DEMO_BARS.length];
+                    const q = QUALITIES.find((x) => x.id === qid);
+                    return { chord: NOTE_NAMES[root] + q.suffix, intoBar: t % A.demo.bar, bar: n,
+                        section: edm ? EDM_SECTIONS[n % EDM_SECTIONS.length] : null };
+                },
+                // Drive frames by hand (disables the rAF loop for this page load).
+                step: (n = 1, dt = 1 / 60) => {
+                    manual = true;
+                    for (let i = 0; i < n; i++) step(performance.now() / 1000, dt);
+                },
+            };
+        }
+    })();
+
+    // ─── Service worker ──────────────────────────────────────────────────
+    const SW_VERSION = '2610111039';
+
+    if ('serviceWorker' in navigator) {
+        // Only reload for an *update*, not when the first install claims the page.
+        const hadController = !!navigator.serviceWorker.controller;
+        navigator.serviceWorker.register(
+            `/chroma/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
+            { scope: '/chroma/' }
+        ).then((reg) => {
+            reg.addEventListener('updatefound', () => {
+                const w = reg.installing;
+                w.addEventListener('statechange', () => {
+                    if (w.state === 'installed' && navigator.serviceWorker.controller) {
+                        document.getElementById('update-banner').classList.add('show');
+                    }
+                });
+            });
+        }).catch(() => {});
+
+        document.getElementById('update-btn').addEventListener('click', () => {
+            navigator.serviceWorker.getRegistration('/chroma/').then((reg) => {
+                if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                else window.location.reload();
+            });
+        });
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (hadController) window.location.reload();
+        });
+    }
+    </script>
+</body>
+
+</html>

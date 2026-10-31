@@ -5,7 +5,7 @@
 const { launch, run, assert, PROGRESS_KEY } = require('./_helpers');
 
 run(async () => {
-  const { browser, page, errors, open, reload, mt } = await launch();
+  const { browser, page, errors, open, reload, mt, pickUnit } = await launch();
 
   await open();
   await mt(() => window.__musicTheory.resetProgress());
@@ -44,11 +44,19 @@ run(async () => {
   assert(s.step === 'why', 'unit 1 has no play step: expected step "why", got "' + s.step + '"');
 
   await mt(() => window.__musicTheory.gotIt());
-  assert(await unitIdx() === 1, 'gotIt() advances unitIdx to 1, got ' + await unitIdx());
+  s = await unitState('pulse');
+  assert(s.step === 'boss', 'gotIt() opens the boss step, got "' + s.step + '"');
+  assert(await unitIdx() === 0, 'the next unit stays locked until the boss is beaten, got unitIdx ' + await unitIdx());
+  assert(await mt(() => window.__musicTheory.playBoss()), 'playBoss() runs the boss from its step');
+  assert(await unitIdx() === 1, 'beating the boss advances unitIdx to 1, got ' + await unitIdx());
+  assert(await page.locator('#learn-card').isVisible(), 'the boss ends on a results card');
+  assert(/beaten/i.test(await page.textContent('#learn-card')), 'the results card says the boss is beaten');
+  await page.click('#learn-card [data-action="next-unit"]');
+  assert(await mt(() => window.__musicTheory.state.learnUnitIdx) === 1, '"Next unit" opens unit 2');
   const unit2 = await mt(() => window.__musicTheory.units[1].id);
   assert(unit2 === 'perfect-intervals', 'units[1].id is perfect-intervals, got ' + unit2);
   s = await unitState('pulse');
-  assert(s.step === 'done', 'unit 1 is marked done after gotIt(), got "' + s.step + '"');
+  assert(s.step === 'done', 'unit 1 is marked done after its boss, got "' + s.step + '"');
 
   // ── Unit 2 hear: threshold is total >= 10 AND >= 8 correct in the last 10 ──
   // Sequence W W W then C...: after answer 10 the window holds 7 correct (not
@@ -89,7 +97,8 @@ run(async () => {
   assert(s.step === 'why', 'after play passes the step is "why", got "' + s.step + '"');
 
   await mt(() => window.__musicTheory.gotIt());
-  assert(await unitIdx() === 2, 'gotIt() advances unitIdx to 2, got ' + await unitIdx());
+  assert(await mt(() => window.__musicTheory.playBoss()), 'playBoss() runs unit 2\'s boss');
+  assert(await unitIdx() === 2, 'beating unit 2\'s boss advances unitIdx to 2, got ' + await unitIdx());
 
   // ── Reload: progress persists and the DOM marks unit 3 (thirds) active ──
   await reload();
@@ -97,7 +106,7 @@ run(async () => {
   assert(await page.locator('#panel-learn').isVisible(), '#panel-learn visible after reload');
 
   const active = await page.evaluate(() => {
-    const panel = document.querySelector('#panel-learn');
+    const panel = document.querySelector('#learn-path-sheet');   // the unit list lives in the path sheet
     const el = panel.querySelector('[data-unit="thirds"]');
     if (el) return { via: 'data-unit', cls: el.className, aria: el.getAttribute('aria-current') };
     // Fallback: any active/current-looking element mentioning "Thirds".
@@ -122,7 +131,7 @@ run(async () => {
     k.dispatchEvent(new PointerEvent('pointerdown', o));
     k.dispatchEvent(new PointerEvent('pointerup', o));
   }, midi);
-  await page.click('[data-unit="perfect-intervals"]');
+  await pickUnit('perfect-intervals');
   await page.click('#learn-steps [data-step="play"]');
   const pq = await mt(() => {
     const q = window.__musicTheory.currentQuestion();
@@ -138,7 +147,7 @@ run(async () => {
   assert(s.step === 'done', 'practising a finished unit leaves it done, got "' + s.step + '"');
 
   // ── Leaving the tab right after passing a step resumes at the next step ──
-  await page.click('[data-unit="thirds"]');
+  await pickUnit('thirds');
   for (let i = 0; i < 9; i++) {
     await mt(() => window.__musicTheory.answerCorrect());
     await page.waitForTimeout(30);

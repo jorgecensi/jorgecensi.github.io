@@ -18,7 +18,10 @@ a PWA).
 - `synth/` — Web audio synthesizer (PWA)
 - `tuner/` — Instrument tuner (PWA)
 - `ding/` — Tap bell for yes/no answers (PWA)
+- `chroma/` — Turns music heard through the mic into colour, for deaf and hard-of-hearing listeners (PWA)
+- `cyber-quest/` — Cybersecurity game in three tiers, beginner to advanced: phishing and passwords, then headers/networks/crypto/malware, then web vulns, log hunting, architecture and incident response (PWA); plus **Terminal Ops**, guided command-line basics and incident labs in a simulated Linux shell
 - `music-theory/` — Music theory trainer (PWA): a guided ear-first Learn path (hear it, play it, then learn why) plus free-play scales, chords, intervals and quizzes
+- `conquerors/` — Strava-powered territory game: a heatmap of conquered ~200 m map tiles, quests to unexplored streets, levels and achievements (PWA)
 - `binary/` — Binary number trainer (PWA, also available in `pt-BR/binary/`)
 - `tennis-planner.html` — Tennis match/availability planner (PWA)
 - `squeak-the-geek.html` — Browser game (PWA)

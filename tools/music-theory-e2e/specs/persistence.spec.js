@@ -3,7 +3,7 @@
 const { launch, run, assert, PROGRESS_KEY } = require('./_helpers');
 
 run(async () => {
-  const { browser, page, errors, open, reload, mt } = await launch();
+  const { browser, page, errors, open, reload, mt, pickUnit } = await launch();
 
   await open();
   await mt(() => window.__musicTheory.resetProgress());
@@ -31,10 +31,65 @@ run(async () => {
 
   // A saved unitIdx past the last unit keeps the furthest unit unlocked
   // rather than dropping back to unit 1.
-  await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ v: 1, learn: { unitIdx: 99, units: {} } })), PROGRESS_KEY);
+  await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ v: 1, learn: { unitIdx: 99, layout: 3, units: {} } })), PROGRESS_KEY);
   const lastIdx = await mt(() => window.__musicTheory.units.length - 1);
   const clamped = await mt(() => window.__musicTheory.progress.learn.unitIdx);
   assert(clamped === lastIdx, 'unitIdx 99 loads as the last unit (' + lastIdx + '), got ' + clamped);
+
+  // Progress saved against the original 8-unit order (no `layout` field) is
+  // mapped by unit id, and the learner is sent to the first unfinished unit
+  // before it: the first unit added since (now "Beyond 4/4"), not whatever
+  // now sits at the old index.
+  const ids = await mt(() => window.__musicTheory.units.map(u => u.id));
+  const done = (id) => ({ step: 'done', hear: { correct: 10, total: 10, recent: [] }, play: { correct: 10, total: 10, recent: [] } });
+  const legacy = (unitIdx, doneIds) => page.evaluate(([k, d]) => localStorage.setItem(k, JSON.stringify(d)),
+    [PROGRESS_KEY, { v: 1, learn: { unitIdx, units: Object.fromEntries(doneIds.map(id => [id, done(id)])) } }]);
+  const loadedIdx = () => mt(() => window.__musicTheory.progress.learn.unitIdx);
+
+  // Was on "all-intervals" (old index 4) with the first four units done.
+  await legacy(4, ['pulse', 'perfect-intervals', 'thirds', 'major-minor-chords']);
+  let idx = await loadedIdx();
+  assert(ids[idx] === 'more-meters', 'old index 4 with units 1-4 done resumes at the first added unit, got ' + ids[idx]);
+
+  // Was on "dominant-7th" (old index 6) with everything before it done.
+  await legacy(6, ['pulse', 'perfect-intervals', 'thirds', 'major-minor-chords', 'all-intervals', 'major-scale']);
+  idx = await loadedIdx();
+  assert(ids[idx] === 'more-meters', 'old index 6 resumes at the first new unit it skipped, got ' + ids[idx]);
+  await reload();
+  const locked = await page.evaluate(() => [...document.querySelectorAll('.learn-unit')]
+    .filter(b => b.disabled).map(b => b.dataset.unit));
+  assert(!locked.includes('major-scale') && !locked.includes('all-intervals'),
+    'units already finished stay open past the frontier, locked: ' + locked.join(','));
+  assert(locked.includes('dominant-7th'), 'unfinished units past the frontier stay locked, locked: ' + locked.join(','));
+
+  // Finishing the new units moves the frontier past the ones already done.
+  for (const id of ['more-meters', 'seconds', 'sixths', 'sevenths']) {
+    await page.evaluate(([k, uid]) => {
+      const d = JSON.parse(localStorage.getItem(k));
+      d.learn.units[uid] = { step: 'why', hear: { correct: 10, total: 10, recent: [] }, play: { correct: 10, total: 10, recent: [] } };
+      localStorage.setItem(k, JSON.stringify(d));
+    }, [PROGRESS_KEY, id]);
+  }
+  await reload();
+  // Walk the new units' why steps in order through the UI.
+  for (const id of ['more-meters', 'seconds', 'sixths', 'sevenths']) {
+    await pickUnit(id);
+    assert(await mt(() => window.__musicTheory.gotIt()), 'gotIt() works on the ' + id + ' why step');
+    assert(await mt(() => window.__musicTheory.playBoss()), 'the ' + id + ' boss can be played after its why step');
+  }
+  idx = await loadedIdx();
+  assert(ids[idx] === 'dominant-7th', 'after the new units the frontier skips done units to dominant-7th, got ' + ids[idx]);
+
+  // Layout 2 (before "Beyond 4/4"): on "seconds" (old index 4) with the
+  // first four units done resumes at the unit inserted before it.
+  await page.evaluate(([k, d]) => localStorage.setItem(k, JSON.stringify(d)), [PROGRESS_KEY, { v: 1, learn: { unitIdx: 4, layout: 2,
+    units: Object.fromEntries(['pulse', 'perfect-intervals', 'thirds', 'major-minor-chords'].map(id => [id, done(id)])) } }]);
+  idx = await loadedIdx();
+  assert(ids[idx] === 'more-meters', 'a layout-2 save on seconds resumes at Beyond 4/4, got ' + ids[idx]);
+  await page.evaluate(([k, d]) => localStorage.setItem(k, JSON.stringify(d)), [PROGRESS_KEY, { v: 1, learn: { unitIdx: 1, layout: 2,
+    units: { pulse: done('pulse') } } }]);
+  idx = await loadedIdx();
+  assert(ids[idx] === 'perfect-intervals', 'a layout-2 save before the new unit keeps its place, got ' + ids[idx]);
 
   if (errors.length) throw new Error('console/page errors: ' + errors.join(' | '));
 
