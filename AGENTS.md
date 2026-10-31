@@ -55,6 +55,13 @@ bundle exec jekyll serve --host 0.0.0.0 --port 4000 --livereload
 - **E2E specs live in `tools/chroma-e2e/`**: run `./run.sh`. `demo-accuracy.spec.js` is the regression guard for chord detection, so run it after any change to the analysis. Read that directory's README for the `?debug=1` API.
 - **Bump `SW_VERSION`/`CACHE_VERSION` together** on any change to `chroma/{index.html,sw.js,manifest.json}`.
 
+### Conquerors app (`/conquerors`)
+
+- **Multi-file, no build step**: unlike most apps here, Conquerors is split into ES modules under `conquerors/js/` (`geo.js` tile grid and polylines, `engine.js` scoring/quests, `strava.js` OAuth and sync, `map.js` Leaflet canvas layer, `store.js` IndexedDB/localStorage, `app.js` UI). Leaflet 1.9.4 is vendored in `conquerors/vendor/leaflet/`. Source of truth for the app's history is the `jorgecensi/Conquerors` repo.
+- **Strava credentials are per device**: the user enters their own Strava API client ID and secret in the app; they're stored in `localStorage` (`conquerors.credentials`), never in the repo. The Strava app's Authorization Callback Domain must be `jorgecensi.com` (the OAuth `redirect_uri` is the page's own URL).
+- **Tests**: `node tools/conquerors-tests/engine.test.mjs` covers the game logic. There's no e2e suite; Strava and the CARTO map tiles can't be reached from cloud containers.
+- **Bump `SW_VERSION`/`CACHE_VERSION` together** on any change to `conquerors/`, and add new files to `ASSETS` in `conquerors/sw.js`. The workflow auto-bumps on merge when `conquerors/{sw.js,index.html,manifest.json}` or anything under `conquerors/js/` or `conquerors/css/` changes.
+
 ### Cyber Quest app (`/cyber-quest`)
 
 - **Single file, data-driven**: `cyber-quest/index.html` is a cybersecurity game in three tiers (`TIERS`: beginner, intermediate, advanced). All content lives in `MISSIONS` near the top of the script, in play order; each mission has a `tier`, and each question has a `kind` (`email`, `url`, `chat`, `choice` with optional `code` snippet, `lines` = tap the bad line, `order` = tap `items` in their correct order, `forge`), an `answer` (not for `order`) and an `explain` (raw HTML, so write `&lt;` for literal tags). Email red flags are `<mark class="flag" data-n="N">` spans in the email HTML, numbered to match the `flags` array; they stay unstyled until the answer is revealed. For `url` questions, `domain` must be the registered domain (it's highlighted after answering and must appear at the end of the host).
