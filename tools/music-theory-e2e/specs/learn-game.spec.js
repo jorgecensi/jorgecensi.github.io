@@ -80,6 +80,10 @@ run(async () => {
             assert(q.accept.every(m => m !== '3/4' && q.choiceIds.includes(m)),
               `${tag}: accepted meters are ${q.accept}`);
           }
+          if (v === 'video') {
+            assert(q.kind === 'meter-video' && q.video && q.video.meter === q.answer, `${tag}: answer is the recording's meter`);
+            assert(await mt(() => !!document.querySelector('#learn-video iframe')), `${tag}: the recording is embedded in the round`);
+          }
           if (v === 'song' && q.kind === 'chord-song') assert(q.answer === q.chordType, `${tag}: answer is the chord's type`);
           if (v === 'odd' && q.kind === 'odd' && id !== 'pulse' && evMidis.length === 6) {
             const d = [0, 2, 4].map(i => evMidis[i + 1] - evMidis[i]);
@@ -103,9 +107,13 @@ run(async () => {
 
           // Answering right or wrong goes through cleanly for every variant.
           const before = (await prog()).learn.units[id][step].total;
-          await mt((r) => (r ? window.__musicTheory.answerCorrect() : window.__musicTheory.answerWrong()), rep !== 1);
+          const songCards = await mt((r) => {
+            if (r) window.__musicTheory.answerCorrect(); else window.__musicTheory.answerWrong();
+            return document.querySelectorAll('#learn-refs [data-video]').length;
+          }, rep !== 1);
           await tick();
           assert((await prog()).learn.units[id][step].total === before + 1, `${tag}: the answer is recorded`);
+          if (id === 'pulse') assert(songCards > 0, `${tag}: real songs in this meter follow the answer`);
           served++;
         }
       }

@@ -1025,6 +1025,8 @@ title: Music Theory
       background: #000;
     }
     .iv-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .learn-video { display: flex; justify-content: center; width: 100%; }
+    .learn-video .iv-video { max-width: 280px; }
     .round-instrument {
       font-size: 12px;
       color: var(--accent);
@@ -1318,6 +1320,7 @@ title: Music Theory
         <span class="learn-timer-text" id="learn-timer-text" hidden></span>
         <button class="learn-link-btn" id="learn-hint-btn" hidden>💡 Hint: hear it in a song</button>
         <div class="quiz-staff" id="learn-staff" aria-hidden="true"></div>
+        <div class="learn-video" id="learn-video" hidden></div>
         <div class="quiz-options" id="learn-options"></div>
         <div class="learn-sing" id="learn-sing" hidden>
           <span aria-hidden="true">🎤</span>
@@ -1667,6 +1670,20 @@ title: Music Theory
         count: 'LON-don bridge is | FALL-ing down',
         notes: [[7,.75],[9,.25],[7,.5],[5,.5],[4,.5],[5,.5],[7,1],[2,.5],[4,.5],[5,1],[4,.5],[5,.5],[7,1],
                 [7,.75],[9,.25],[7,.5],[5,.5],[4,.5],[5,.5],[7,1],[2,1],[7,1],[4,.5],[0,1.5]] },
+    ];
+
+    // Real recordings for the pulse unit: the "Real song" round and the
+    // after-answer card. Only songs whose meter a source confirms: Musicnotes
+    // sheet music (Piano Man; When the Party's Over via Wikipedia), or
+    // Wikipedia's music section (When I Look at You, Rolling in the Deep,
+    // Firework). Much modern pop that feels "in three" is printed in 6/8 or
+    // 12/8 (Perfect, Lover, Breakaway), so it stays out of a 2-3-4 unit.
+    const METER_POP = [
+      { meter: '3/4', title: 'when the party’s over', artist: 'Billie Eilish', year: 2018, id: 'pbMwTqkKSps' },
+      { meter: '3/4', title: 'When I Look at You', artist: 'Miley Cyrus', year: 2010, id: '8wxOVn99FTE' },
+      { meter: '3/4', title: 'Piano Man', artist: 'Billy Joel', year: 1973, id: 'gxEPV4kolz0' },
+      { meter: '4/4', title: 'Rolling in the Deep', artist: 'Adele', year: 2010, id: 'rYEDA3JcQqw' },
+      { meter: '4/4', title: 'Firework', artist: 'Katy Perry', year: 2010, id: 'QGJuMBdaqIw' },
     ];
 
     const INTERVAL_NAMES = [
@@ -2911,7 +2928,8 @@ const MIDDLE_C   = 60;  // C4
     // Play any question's prompt, whichever quiz or Learn step it came from.
     function playQuestion(q) {
       if (!q) return;
-      if (q.events)                        playEvents(q.events);   // Learn variants carry their own prompt
+      if (q.video)                         showRoundVideo(q);
+      else if (q.events)                   playEvents(q.events);   // Learn variants carry their own prompt
       else if (q.kind === 'interval')      playIntervalPrompt(q, progress.settings.keyContext);
       else if (q.kind === 'interval-play' || q.kind === 'sing') playNote(q.rootMidi);
       else if (q.kind === 'chord')         q.arpeggiate ? playEvents(chordThenArpEvents(q.midis)) : playChord(q.midis);
@@ -2965,6 +2983,7 @@ const MIDDLE_C   = 60;  // C4
       const keyctx = qEl('keyctx-row');   // Learn keeps this in its settings sheet
       if (keyctx) keyctx.hidden = q.kind !== 'interval';
       if (state.mode === 'learn') {
+        clearRoundVideo();
         document.getElementById('learn-hint-btn').hidden = !intervalRef(q);
         learnRoundShown(q);
       }
@@ -3390,13 +3409,14 @@ const MIDDLE_C   = 60;  // C4
         else if (b.dataset.id === id)  b.classList.add('wrong');
       });
       const staff = qEl('staff');
-      if (staff.classList.contains('visible')) staff.innerHTML = renderMeasureSvg(q, true);
+      if (staff.classList.contains('visible') && q.rhythm) staff.innerHTML = renderMeasureSvg(q, true);
       if (q.kind === 'interval' || q.kind === 'interval-song') {
         revealIntervalKeys(q);
         renderIntervalRefs({ ...q, kind: 'interval' }, qEl('refs'));
         if (state.mode === 'learn') document.getElementById('learn-hint-btn').hidden = true;
       } else if (q.reveal) q.reveal(id);
       else if (q.kind === 'chord' || q.kind === 'scale') revealNoteKeys(q);
+      else if (q.meter && !q.rhythm) renderMeterRefs(q, qEl('refs'));
 
       const fb = qEl('feedback');
       fb.textContent = (correct ? '✓ Correct! ' : '✗ ') + q.explain;
@@ -3629,6 +3649,32 @@ const MIDDLE_C   = 60;  // C4
         const holder = document.createElement('div');
         watch.addEventListener('click', () => toggleVideo(box, holder, p));
         r.append(watch, refText(`${p.title} — ${p.artist}${p.year ? ` (${p.year})` : ''}`, `listen for ${p.cue}`), link);
+        box.append(r, holder);
+      });
+      box.hidden = false;
+    }
+
+    // After a pulse round: recordings in the same meter (a 2/4 answer gets
+    // the 4/4 ones, which also count in twos). The round's own song is left out.
+    function renderMeterRefs(q, box) {
+      box.innerHTML = '';
+      const meter = q.meter === '2/4' ? '4/4' : q.meter;
+      const songs = METER_POP.filter(p => p.meter === meter && (!q.video || p.id !== q.video.id));
+      if (!songs.length) { box.hidden = true; return; }
+      const title = document.createElement('div');
+      title.className = 'iv-refs-title';
+      title.textContent = `${meter} in real songs`;
+      box.appendChild(title);
+      songs.forEach(p => {
+        const r = document.createElement('div');
+        r.className = 'iv-ref';
+        const watch = document.createElement('button');
+        watch.className = 'play-btn secondary';
+        watch.dataset.video = p.id;
+        watch.textContent = '▶ Watch';
+        const holder = document.createElement('div');
+        watch.addEventListener('click', () => toggleVideo(box, holder, p));
+        r.append(watch, refText(`${p.title} — ${p.artist} (${p.year})`, `count ${meter === '3/4' ? 'ONE-two-three' : 'ONE-two-three-four'} along`));
         box.append(r, holder);
       });
       box.hidden = false;
@@ -4050,6 +4096,38 @@ const MIDDLE_C   = 60;  // C4
       };
     }
 
+    // "Real song": a recording plays in the round (on demand, from YouTube)
+    // and the learner names its meter. Online only, and never in a timed run.
+    function makeVideoMeterQuestion(spec) {
+      const p = pick(METER_POP.filter(x => spec.meters.includes(x.meter)));
+      const duple = p.meter !== '3/4';
+      return {
+        kind: 'meter-video', meter: p.meter, video: p,
+        events: [],
+        tag: '▶ Real song',
+        prompt: `Count along to “${p.title}” — what is the time signature?`,
+        choices: spec.meters.map(m => ({ id: m, label: m })),
+        answer: p.meter,
+        accept: duple ? spec.meters.filter(m => m !== '3/4') : [],
+        explain: `“${p.title}” is written in ${p.meter}.` +
+                 (duple ? ' Its strong beats come in twos, so 2/4 fits too.' : ' ONE-two-three: a waltz pulse.'),
+      };
+    }
+
+    // The round's recording, in place of the Play button's synth prompt.
+    function showRoundVideo(q) {
+      const box = document.getElementById('learn-video');
+      if (state.mode !== 'learn' || box.querySelector('iframe')) return;
+      box.hidden = false;
+      toggleVideo(box, box, q.video);
+    }
+
+    function clearRoundVideo() {
+      const box = document.getElementById('learn-video');
+      box.innerHTML = '';
+      box.hidden = true;
+    }
+
     // Count the bars: low accented downbeats, 2 to 4 of them.
     function makeCountQuestion(meters) {
       const meter = pick(meters);
@@ -4164,7 +4242,7 @@ const MIDDLE_C   = 60;  // C4
         interval: [['standard', 3], ['song', 1], ['odd', 1]],
         chord:    [['standard', 3], ['song', 1], ['odd', 1]],
         scale:    [['standard', 3], ['odd', 1], ['wrong-note', 1]],
-        meter:    [['standard', 1], ['song', 3], ['count', 1]],
+        meter:    [['standard', 1], ['song', 3], ['video', 1], ['count', 1]],
       },
       play: {
         interval: [['standard', 2], ['blind', 1], ['phrase', 1]],
@@ -4185,6 +4263,7 @@ const MIDDLE_C   = 60;  // C4
       if (v === 'odd') return (spec.semis || spec.types || []).length >= 2;
       if (v === 'wrong-note') return spec.type === 'scale' && spec.types.includes('Major');
       if (v === 'phrase') return phraseCandidates(spec.semis).length > 0;
+      if (v === 'video') return spec.type === 'meter' && navigator.onLine;
       return false;
     }
 
@@ -4195,9 +4274,9 @@ const MIDDLE_C   = 60;  // C4
       return pairs[pairs.length - 1][0];
     }
 
-    function chooseVariant(u, step) {
+    function chooseVariant(u, step, inRun = false) {
       const list = (LEARN_VARIANTS[step][u[step].type] || [['standard', 1]])
-        .filter(([v]) => variantAvailable(u, step, v));
+        .filter(([v]) => variantAvailable(u, step, v) && !(inRun && v === 'video'));
       if (state.forcedVariant && list.some(([v]) => v === state.forcedVariant)) return state.forcedVariant;
       return pickWeighted(list);
     }
@@ -4211,6 +4290,7 @@ const MIDDLE_C   = 60;  // C4
         case 'odd':        return makeOddOneOutQuestion(spec);
         case 'wrong-note': return makeWrongNoteQuestion();
         case 'count':      return makeCountQuestion(spec.meters);
+        case 'video':      return makeVideoMeterQuestion(spec);
         case 'blind':      return makeBlindIntervalPlayQuestion(spec.semis);
         case 'phrase':     return makePhraseQuestion(spec.semis);
         case 'complete':   return makeChordCompleteQuestion(spec);
@@ -4229,7 +4309,7 @@ const MIDDLE_C   = 60;  // C4
       } else {
         // The first few play rounds name what to build: always the standard one.
         const warmUp = step === 'play' && !inRun && unitProgress(u.id).play.total < LEARN_NAME_ROUNDS;
-        const variant = warmUp && !state.forcedVariant ? 'standard' : chooseVariant(u, step);
+        const variant = warmUp && !state.forcedVariant ? 'standard' : chooseVariant(u, step, inRun);
         q = buildVariant(u, step, variant, inRun);
         q.variant = variant;
       }
@@ -4256,6 +4336,9 @@ const MIDDLE_C   = 60;  // C4
       const tag = document.getElementById('learn-tag');
       tag.textContent = q.tag || '';
       tag.hidden = !q.tag;
+      // A recording round plays its own video, so the synth Play button goes.
+      document.querySelector('#learn-round .learn-play-wrap').style.display = q.video ? 'none' : '';
+      document.getElementById('learn-instrument').style.display = q.video ? 'none' : '';
       renderRunBar();
       renderCombo(false);
       const singBox = document.getElementById('learn-sing');
@@ -5039,6 +5122,7 @@ const MIDDLE_C   = 60;  // C4
     function viewLearnStep(step) {
       const u = LEARN_UNITS[state.learnUnitIdx];
       if (stepIndex(u, step) > stepIndex(u, unitProgress(u.id).step)) return;  // no skipping ahead
+      clearRoundVideo();
       abandonRun();
       state.learnDaily = false;
       state.learnStep = step;
@@ -5382,6 +5466,7 @@ const MIDDLE_C   = 60;  // C4
     function switchMode(mode) {
       // Leaving Learn ends a boss or daily run (they are short) and the mic.
       if (mode !== 'learn') {
+        clearRoundVideo();
         abandonRun();
         state.learnDaily = false;
         releaseMic();
@@ -5592,7 +5677,7 @@ const MIDDLE_C   = 60;  // C4
 
           // ── Learn game layer ──
           // Force one question variant for Learn rounds ('standard', 'song',
-          // 'odd', 'wrong-note', 'count', 'blind', 'phrase', 'complete',
+          // 'odd', 'wrong-note', 'count', 'video', 'blind', 'phrase', 'complete',
           // 'missing'), or null for the normal random mix. Variants a unit
           // can't serve fall back to the mix.
           forceVariant:    (v) => { state.forcedVariant = v || null; return true; },
@@ -5654,7 +5739,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610271356';
+        const SW_VERSION = '2610310907';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
