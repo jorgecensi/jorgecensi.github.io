@@ -35,7 +35,7 @@ run(async () => {
   // and each pick can reach every note the question plays.
   // (Unit 1 is rhythm only, so unlock unit 2's intervals.)
   const pulseDone = { step: 'done', hear: { correct: 10, total: 10, recent: [] }, play: { correct: 0, total: 0, recent: [] } };
-  await page.evaluate(([k, u]) => localStorage.setItem(k, JSON.stringify({ v: 1, learn: { unitIdx: 1, layout: 2, units: { pulse: u } } })),
+  await page.evaluate(([k, u]) => localStorage.setItem(k, JSON.stringify({ v: 1, learn: { unitIdx: 1, layout: 3, units: { pulse: u } } })),
     [PROGRESS_KEY, pulseDone]);
   await reload();
   for (const id of ids.filter(i => i !== 'piano')) await mt((i) => window.__musicTheory.loadInstrument(i), id);

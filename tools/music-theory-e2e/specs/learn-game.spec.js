@@ -39,7 +39,7 @@ run(async () => {
   const visible = (sel) => page.locator(sel).isVisible();
 
   // ── Variants: every unit and step serves each of its variants correctly ──
-  await save({ v: 1, learn: { unitIdx: ids.length - 1, layout: 2,
+  await save({ v: 1, learn: { unitIdx: ids.length - 1, layout: 3,
     units: Object.fromEntries(ids.map(id => [id, unit('done')])) } });
   await reload();
   await mt(() => window.__musicTheory.switchMode('learn'));
@@ -158,7 +158,7 @@ run(async () => {
   assert((await prog()).learn.xp === 60, 'XP survives a reload');
 
   // ── Boss: opens after Why, has lives and a timer, and gates the next unit ──
-  await save({ v: 1, learn: { unitIdx: 0, layout: 2, units: { pulse: unit('why') } } });
+  await save({ v: 1, learn: { unitIdx: 0, layout: 3, units: { pulse: unit('why') } } });
   await reload();
   await mt(() => window.__musicTheory.switchMode('learn'));
   assert(/boss/i.test(await page.textContent('#learn-got-it')), 'the Why button leads to the boss');
@@ -212,7 +212,7 @@ run(async () => {
   assert((await prog()).learn.unitIdx === 1, 'a rematch changes nothing else');
 
   // A later boss also draws from finished earlier units.
-  await save({ v: 1, learn: { unitIdx: 2, layout: 2, units: {
+  await save({ v: 1, learn: { unitIdx: 2, layout: 3, units: {
     pulse: unit('done'), 'perfect-intervals': unit('done'), thirds: unit('boss') } } });
   await reload();
   await mt(() => window.__musicTheory.switchMode('learn'));
@@ -233,7 +233,7 @@ run(async () => {
   await mt(() => window.__musicTheory.resetProgress());
   await mt(() => window.__musicTheory.switchMode('learn'));
   assert(await page.locator('#learn-daily-btn').isDisabled(), 'the daily mix is locked before any Hear step passes');
-  await save({ v: 1, learn: { unitIdx: 0, layout: 2, units: { pulse: unit('why') } } });
+  await save({ v: 1, learn: { unitIdx: 0, layout: 3, units: { pulse: unit('why') } } });
   await reload();
   await mt(() => window.__musicTheory.switchMode('learn'));
   // The daily mix starts from the top of the path sheet.
@@ -281,7 +281,7 @@ run(async () => {
   assert(p.daily.streak === 1 && p.daily.best === 2 && p.daily.last === '2026-10-31', 'the streak survives a reload');
 
   // ── Singing (judged without a real mic) ──
-  await save({ v: 1, learn: { unitIdx: 1, layout: 2, units: { pulse: unit('done'), 'perfect-intervals': atPlay() } } });
+  await save({ v: 1, learn: { unitIdx: 1, layout: 3, units: { pulse: unit('done'), 'perfect-intervals': atPlay() } } });
   await reload();
   await mt(() => window.__musicTheory.switchMode('learn'));
   await page.click('#learn-settings-btn');
@@ -331,7 +331,7 @@ run(async () => {
   try {
     await mic.open();
     await mic.page.evaluate(([k, b]) => localStorage.setItem(k, JSON.stringify(b)),
-      [PROGRESS_KEY, { v: 1, learn: { unitIdx: 1, layout: 2, units: { pulse: unit('done'), 'perfect-intervals': atPlay() } } }]);
+      [PROGRESS_KEY, { v: 1, learn: { unitIdx: 1, layout: 3, units: { pulse: unit('done'), 'perfect-intervals': atPlay() } } }]);
     await mic.reload();
     await mic.mt(() => window.__musicTheory.switchMode('learn'));
     await mic.mt(() => window.__musicTheory.setSing(true, true));
