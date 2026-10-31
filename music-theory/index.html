@@ -1025,6 +1025,8 @@ title: Music Theory
       background: #000;
     }
     .iv-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .learn-video { display: flex; justify-content: center; width: 100%; }
+    .learn-video .iv-video { max-width: 280px; }
     .round-instrument {
       font-size: 12px;
       color: var(--accent);
@@ -1318,6 +1320,7 @@ title: Music Theory
         <span class="learn-timer-text" id="learn-timer-text" hidden></span>
         <button class="learn-link-btn" id="learn-hint-btn" hidden>💡 Hint: hear it in a song</button>
         <div class="quiz-staff" id="learn-staff" aria-hidden="true"></div>
+        <div class="learn-video" id="learn-video" hidden></div>
         <div class="quiz-options" id="learn-options"></div>
         <div class="learn-sing" id="learn-sing" hidden>
           <span aria-hidden="true">🎤</span>
@@ -1623,6 +1626,166 @@ title: Music Theory
       ],
     };
 
+    // Tunes for the pulse unit's "Name that meter" rounds: played with no
+    // clicks, so the strong beat has to be found in the melody. All public
+    // domain. `notes` are [semitones from C, beats] (null = rest), `pickup`
+    // is how many beats come before the first downbeat, `beat` is seconds
+    // per beat and `count` shows where the strong beats fall.
+    const METER_SONGS = [
+      { name: 'Happy Birthday', meter: '3/4', pickup: 1, beat: 0.42,
+        count: 'hap-py | BIRTH-day to | YOU',
+        notes: [[-5,.75],[-5,.25],[-3,1],[-5,1],[0,1],[-1,2],[-5,.75],[-5,.25],[-3,1],[-5,1],[2,1],[0,2]] },
+      { name: 'Amazing Grace', meter: '3/4', pickup: 1, beat: 0.45,
+        count: 'a- | MA-zing | GRACE how | SWEET the | SOUND',
+        notes: [[-5,1],[0,2],[4,.5],[0,.5],[4,2],[2,1],[0,2],[-3,1],[-5,2],[-5,1],[0,2],[4,.5],[0,.5],[4,2],[2,1],[7,3]] },
+      { name: 'Silent Night', meter: '3/4', also: ['6/8'], pickup: 0, beat: 0.4,   // Gruber wrote it in 6/8
+        count: 'SI-lent | NIGHT | HO-ly | NIGHT',
+        notes: [[7,1.5],[9,.5],[7,1],[4,3],[7,1.5],[9,.5],[7,1],[4,3],[14,2],[14,1],[11,3],[12,2],[12,1],[7,3]] },
+      { name: 'Take Me Out to the Ball Game', meter: '3/4', pickup: 0, beat: 0.3,
+        count: 'TAKE me | OUT to the | BALL | GAME',
+        notes: [[0,2],[12,1],[9,1],[7,1],[4,1],[7,3],[2,3],[0,2],[12,1],[9,1],[7,1],[4,1],[7,3]] },
+      { name: 'Daisy Bell', meter: '3/4', pickup: 0, beat: 0.3,
+        count: 'DAI- | SY | DAI- | SY | GIVE me your | AN-swer | DO',
+        notes: [[12,3],[9,3],[5,3],[0,3],[2,1],[4,1],[5,1],[2,2],[5,1],[0,6]] },
+      { name: 'My Bonnie Lies Over the Ocean', meter: '3/4', pickup: 1, beat: 0.38,
+        count: 'my | BON-nie lies | O-ver the | O-cean',
+        notes: [[7,1],[16,1.5],[14,.5],[12,1],[14,1],[12,1],[9,1],[7,1],[4,4],[7,1],[16,1.5],[14,.5],[12,1],[12,1],[11,1],[12,1],[14,6]] },
+      { name: 'The Star-Spangled Banner', meter: '3/4', pickup: 1, beat: 0.42,
+        count: 'oh | SAY can you | SEE',
+        notes: [[7,.75],[4,.25],[0,1],[4,1],[7,1],[12,2],[16,.75],[14,.25],[12,1],[4,1],[6,1],[7,2],[7,.5],[7,.5],
+                [16,1.5],[14,.5],[12,1],[11,2],[9,.75],[11,.25],[12,1],[12,1],[7,1],[4,1],[0,2]] },
+      { name: 'Minuet in G', meter: '3/4', pickup: 0, beat: 0.45,
+        count: 'ONE two-and three-and | ONE two three',
+        notes: [[14,1],[7,.5],[9,.5],[11,.5],[12,.5],[14,1],[7,1],[7,1],[16,1],[12,.5],[14,.5],[16,.5],[18,.5],[19,1],[7,1],[7,1],
+                [12,1],[14,.5],[12,.5],[11,.5],[9,.5],[11,1],[12,.5],[11,.5],[9,.5],[7,.5],[6,1],[7,.5],[9,.5],[11,.5],[7,.5],[9,3]] },
+      { name: 'We Wish You a Merry Christmas', meter: '3/4', pickup: 1, beat: 0.36,
+        count: 'we | WISH you a | MER-ry | CHRIST-mas',
+        notes: [[2,1],[7,1],[7,.5],[9,.5],[7,.5],[6,.5],[4,1],[4,1],[4,1],[9,1],[9,.5],[11,.5],[9,.5],[7,.5],[6,1],[2,1],[2,1],
+                [11,1],[11,.5],[12,.5],[11,.5],[9,.5],[7,1],[4,1],[2,.5],[2,.5],[4,1],[9,1],[6,1],[7,3]] },
+      { name: 'Brahms’ Lullaby', meter: '3/4', pickup: 1, beat: 0.42,
+        count: 'lul-la- | BY, and good | NIGHT',
+        notes: [[4,.5],[4,.5],[7,2],[4,.5],[4,.5],[7,2],[4,.5],[7,.5],[12,1],[11,1.5],[9,.5],[9,1],[7,1],[2,.5],[4,.5],
+                [5,1],[2,1],[2,.5],[4,.5],[5,2],[2,.5],[5,.5],[11,.5],[9,.5],[7,1],[11,1],[12,3]] },
+      { name: 'Ode to Joy', meter: '4/4', pickup: 0, beat: 0.42,
+        count: 'JOY-ful, joy-ful, | WE a-dore thee',
+        notes: [[4,1],[4,1],[5,1],[7,1],[7,1],[5,1],[4,1],[2,1],[0,1],[0,1],[2,1],[4,1],[4,1.5],[2,.5],[2,2]] },
+      { name: 'Twinkle, Twinkle, Little Star', meter: '4/4', pickup: 0, beat: 0.4,
+        count: 'TWIN-kle, twin-kle | LIT-tle star',
+        notes: [[0,1],[0,1],[7,1],[7,1],[9,1],[9,1],[7,2],[5,1],[5,1],[4,1],[4,1],[2,1],[2,1],[0,2]] },
+      { name: 'When the Saints Go Marching In', meter: '4/4', pickup: 3, beat: 0.32,
+        count: 'oh when the | SAINTS | go march-ing | IN',
+        notes: [[0,1],[4,1],[5,1],[7,4],[null,1],[0,1],[4,1],[5,1],[7,4],[null,1],[0,1],[4,1],[5,1],[7,2],[4,2],[0,2],[4,2],[2,4]] },
+      { name: 'Frère Jacques', meter: '4/4', pickup: 0, beat: 0.4,
+        count: 'FRÈ-re Jac-ques | FRÈ-re Jac-ques',
+        notes: [[0,1],[2,1],[4,1],[0,1],[0,1],[2,1],[4,1],[0,1],[4,1],[5,1],[7,2],[4,1],[5,1],[7,2]] },
+      { name: 'Jingle Bells', meter: '4/4', pickup: 0, beat: 0.36,
+        count: 'JIN-gle bells | JIN-gle bells | JIN-gle all the | WAY',
+        notes: [[4,1],[4,1],[4,2],[4,1],[4,1],[4,2],[4,1],[7,1],[0,1.5],[2,.5],[4,4]] },
+      { name: 'Mary Had a Little Lamb', meter: '4/4', pickup: 0, beat: 0.4,
+        count: 'MA-ry had a | LIT-tle lamb',
+        notes: [[4,1],[2,1],[0,1],[2,1],[4,1],[4,1],[4,2],[2,1],[2,1],[2,2],[4,1],[7,1],[7,2],
+                [4,1],[2,1],[0,1],[2,1],[4,1],[4,1],[4,1],[4,1],[2,1],[2,1],[4,1],[2,1],[0,4]] },
+      { name: 'Old MacDonald Had a Farm', meter: '4/4', pickup: 0, beat: 0.36,
+        count: 'OLD Mac-Don-ald | HAD a farm',
+        notes: [[0,1],[0,1],[0,1],[-5,1],[-3,1],[-3,1],[-5,2],[4,1],[4,1],[2,1],[2,1],[0,3],[-5,1],
+                [0,1],[0,1],[0,1],[-5,1],[-3,1],[-3,1],[-5,2],[4,1],[4,1],[2,1],[2,1],[0,4]] },
+      { name: 'Auld Lang Syne', meter: '4/4', pickup: 1, beat: 0.45,
+        count: 'should | AULD ac-quain-tance | BE for-got',
+        notes: [[-5,1],[0,1.5],[-1,.5],[0,1],[4,1],[2,1.5],[0,.5],[2,1],[4,.5],[2,.5],[0,1.5],[0,.5],[4,1],[7,1],[9,4]] },
+      { name: 'Hot Cross Buns', meter: '4/4', pickup: 0, beat: 0.45,
+        count: 'HOT cross buns | HOT cross buns',
+        notes: [[4,1],[2,1],[0,2],[4,1],[2,1],[0,2],[0,.5],[0,.5],[0,.5],[0,.5],[2,.5],[2,.5],[2,.5],[2,.5],[4,1],[2,1],[0,2]] },
+      { name: 'Deck the Halls', meter: '4/4', pickup: 0, beat: 0.4,
+        count: 'DECK the halls with | BOUGHS of hol-ly',
+        notes: [[7,1.5],[5,.5],[4,1],[2,1],[0,1],[2,1],[4,1],[0,1],[2,.5],[4,.5],[5,.5],[2,.5],[4,1.5],[2,.5],[0,1],[-1,1],[0,2]] },
+      { name: 'O Come, All Ye Faithful', meter: '4/4', pickup: 1, beat: 0.42,
+        count: 'o | COME all ye | FAITH-ful',
+        notes: [[0,1],[0,2],[-5,1],[0,1],[2,2],[-5,2],[4,1],[2,1],[4,1],[5,1],[4,2],[2,1],[0,1]] },
+      // 6/8 tunes count in eighths: `beat` is one eighth note.
+      { name: 'Row, Row, Row Your Boat', meter: '6/8', pickup: 0, beat: 0.2,
+        count: 'ROW, row, | ROW your boat',
+        notes: [[0,3],[0,3],[0,2],[2,1],[4,3],[4,2],[2,1],[4,2],[5,1],[7,6],[12,1],[12,1],[12,1],[7,1],[7,1],[7,1],
+                [4,1],[4,1],[4,1],[0,1],[0,1],[0,1],[7,2],[5,1],[4,2],[2,1],[0,6]] },
+      { name: 'Three Blind Mice', meter: '6/8', pickup: 0, beat: 0.2,
+        count: 'THREE blind | MICE',
+        notes: [[4,3],[2,3],[0,6],[4,3],[2,3],[0,6],[7,3],[5,2],[5,1],[4,6],[7,3],[5,2],[5,1],[4,6]] },
+      { name: 'Yankee Doodle', meter: '2/4', pickup: 0, beat: 0.5,
+        count: 'YAN-kee | DOO-dle | WENT to | TOWN',
+        notes: [[0,.5],[0,.5],[2,.5],[4,.5],[0,.5],[4,.5],[2,.5],[-5,.5],[0,.5],[0,.5],[2,.5],[4,.5],[0,1],[-1,1],
+                [0,.5],[0,.5],[2,.5],[4,.5],[5,.5],[4,.5],[2,.5],[0,.5],[-1,.5],[-5,.5],[-3,.5],[-1,.5],[0,1],[0,1]] },
+      { name: 'The Entertainer', meter: '2/4', pickup: .5, beat: 0.5,
+        count: 'da-da | DA-da DA-da | DAAA',
+        notes: [[2,.25],[3,.25],[4,.25],[12,.5],[4,.25],[12,.5],[4,.25],[12,1.25],[12,.25],[14,.25],[15,.25],[16,.25],
+                [12,.25],[14,.25],[16,.5],[11,.25],[14,.5],[12,2.25]] },
+      { name: 'This Old Man', meter: '2/4', pickup: 0, beat: 0.5,
+        count: 'THIS old | MAN, he | PLAYED one',
+        notes: [[7,.5],[4,.5],[7,1],[7,.5],[4,.5],[7,1],[9,.5],[7,.5],[5,.5],[4,.5],[2,.5],[4,.5],[5,1]] },
+      { name: 'London Bridge', meter: '2/4', pickup: 0, beat: 0.5,
+        count: 'LON-don bridge is | FALL-ing down',
+        notes: [[7,.75],[9,.25],[7,.5],[5,.5],[4,.5],[5,.5],[7,1],[2,.5],[4,.5],[5,1],[4,.5],[5,.5],[7,1],
+                [7,.75],[9,.25],[7,.5],[5,.5],[4,.5],[5,.5],[7,1],[2,1],[7,1],[4,.5],[0,1.5]] },
+    ];
+
+    // Real recordings for the pulse unit: the "Real song" round and the
+    // after-answer card. Only songs whose meter a source confirms: Musicnotes
+    // sheet music (Piano Man, Come Away with Me, Happy, Moon River, Que Sera
+    // Sera, My Favorite Things, Blinding Lights, Billie Jean, Shake It Off;
+    // When the Party's Over via Wikipedia), Wikipedia's music section (When I
+    // Look at You, Take It to the Limit, Rolling in the Deep, Firework, Shape
+    // of You, Uptown Funk, Someone Like You, Viva la Vida, Levitating),
+    // MusicRadar (Kiss from a Rose) or ClassClef (Annie's Song). 2/4 is the
+    // meter of marches, polkas, galops and rags, so its songs are older: The
+    // Entertainer (Musicnotes), Hungarian Dance No. 5 (Stretta) and the
+    // Can-Can (published arrangements). The Radetzky March is printed in 2/2,
+    // so it is filed under 2/2 with Sousa (sousamusic.com lists 2/2). For the
+    // "Beyond 4/4" unit: 6/8 (We Are the Champions per Soundbrenner, A
+    // Thousand Years per Musicnotes, Earned It per Wikipedia), 12/8 (Perfect
+    // and Lover per Musicnotes, Everybody Wants to Rule the World per
+    // Wikipedia), 5/4 (Take Five per Wikipedia, the Mission: Impossible TV
+    // theme per press coverage of Schifrin) and 7/4 (Money and Solsbury Hill
+    // per Wikipedia; both have a few 4/4 bars). Older songs are here because
+    // sourced modern pop outside 4/4 is rare. Much modern pop that feels "in three" is printed in 6/8 or
+    // 12/8 (Perfect, Lover, A Thousand Years, Earned It): those belong to the
+    // "Beyond 4/4" unit, not the pulse unit's 2-3-4 choices.
+    const METER_POP = [
+      { meter: '3/4', title: 'when the party’s over', artist: 'Billie Eilish', year: 2018, id: 'pbMwTqkKSps' },
+      { meter: '3/4', title: 'When I Look at You', artist: 'Miley Cyrus', year: 2010, id: '8wxOVn99FTE' },
+      { meter: '3/4', title: 'Come Away with Me', artist: 'Norah Jones', year: 2002, id: 'lbjZPFBD6JU' },
+      { meter: '3/4', title: 'Kiss from a Rose', artist: 'Seal', year: 1994, id: 'hDd2G_V1rzc' },
+      { meter: '3/4', title: 'Piano Man', artist: 'Billy Joel', year: 1973, id: 'gxEPV4kolz0' },
+      { meter: '3/4', title: 'Take It to the Limit', artist: 'Eagles', year: 1975, id: 'SloVvZdNuXA' },
+      { meter: '3/4', title: 'Annie’s Song', artist: 'John Denver', year: 1974, id: 'RNOTF-znQyw' },
+      { meter: '3/4', title: 'My Favorite Things', artist: 'Julie Andrews', year: 1965, id: '0IagRZBvLtw' },
+      { meter: '3/4', title: 'Moon River', artist: 'Audrey Hepburn', year: 1961, id: '2g4mPCbkhJE' },
+      { meter: '3/4', title: 'Que Sera, Sera', artist: 'Doris Day', year: 1956, id: 'tV0CegHzums' },
+      { meter: '2/4', title: 'The Entertainer', artist: 'Scott Joplin', year: 1902, id: 'dSHmGiROAqk' },
+      { meter: '2/4', title: 'Hungarian Dance No. 5', artist: 'Brahms · Berliner Philharmoniker', year: 1869, id: 'QAMxkietiik' },
+      { meter: '2/4', title: 'Can-Can (Infernal Galop)', artist: 'Offenbach', year: 1858, id: 'RuPfxLWZ73Y' },
+      { meter: '2/2', title: 'The Stars and Stripes Forever', artist: 'Sousa · U.S. Marine Band', year: 1896, id: 'a-7XWhyvIpE' },
+      { meter: '2/2', title: 'Radetzky March', artist: 'Johann Strauss I', year: 1848, id: 'dif78GNjrDg' },
+      { meter: '6/8', title: 'We Are the Champions', artist: 'Queen', year: 1977, id: 'JWkUatlGBzA' },
+      { meter: '6/8', title: 'A Thousand Years', artist: 'Christina Perri', year: 2011, id: 'rtOvBOTyX00' },
+      { meter: '6/8', title: 'Earned It', artist: 'The Weeknd', year: 2014, id: 'waU75jdUnYw' },
+      { meter: '12/8', title: 'Perfect', artist: 'Ed Sheeran', year: 2017, id: '2Vv-BfVoq4g' },
+      { meter: '12/8', title: 'Lover', artist: 'Taylor Swift', year: 2019, id: '-BjZmE2gtdo' },
+      { meter: '12/8', title: 'Everybody Wants to Rule the World', artist: 'Tears for Fears', year: 1985, id: 'aGCdLKXNF3w' },
+      { meter: '5/4', title: 'Take Five', artist: 'The Dave Brubeck Quartet', year: 1959, id: 'ryA6eHZNnXY' },
+      { meter: '5/4', title: 'Mission: Impossible Theme', artist: 'Lalo Schifrin', year: 1966, id: '_1UMdc18hl8' },
+      { meter: '7/4', title: 'Money', artist: 'Pink Floyd', year: 1973, id: '-0kcet4aPpQ' },
+      { meter: '7/4', title: 'Solsbury Hill', artist: 'Peter Gabriel', year: 1977, id: '_OO2PuGz-H8' },
+      { meter: '4/4', title: 'Rolling in the Deep', artist: 'Adele', year: 2010, id: 'rYEDA3JcQqw' },
+      { meter: '4/4', title: 'Firework', artist: 'Katy Perry', year: 2010, id: 'QGJuMBdaqIw' },
+      { meter: '4/4', title: 'Happy', artist: 'Pharrell Williams', year: 2013, id: 'ZbZSe6N_BXs' },
+      { meter: '4/4', title: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars', year: 2014, id: 'OPf0YbXqDm0' },
+      { meter: '4/4', title: 'Shape of You', artist: 'Ed Sheeran', year: 2017, id: 'JGwWNGJdvx8' },
+      { meter: '4/4', title: 'Blinding Lights', artist: 'The Weeknd', year: 2019, id: '4NRXx6U8ABQ' },
+      { meter: '4/4', title: 'Levitating', artist: 'Dua Lipa ft. DaBaby', year: 2020, id: 'TUVcZfQe-Kw' },
+      { meter: '4/4', title: 'Someone Like You', artist: 'Adele', year: 2011, id: 'NxbNza9ugHI' },
+      { meter: '4/4', title: 'Shake It Off', artist: 'Taylor Swift', year: 2014, id: 'nfWlot6h_JM' },
+      { meter: '4/4', title: 'Viva la Vida', artist: 'Coldplay', year: 2008, id: 'dvgZkm1xWPE' },
+      { meter: '4/4', title: 'Billie Jean', artist: 'Michael Jackson', year: 1982, id: 'Zi_XLOBDo_Y' },
+    ];
+
     const INTERVAL_NAMES = [
       'Unison','Minor 2nd','Major 2nd','Minor 3rd','Major 3rd',
       'Perfect 4th','Tritone','Perfect 5th','Minor 6th','Major 6th',
@@ -1651,13 +1814,14 @@ const MIDDLE_C   = 60;  // C4
       {
         id: 'pulse',
         title: 'Feel the pulse',
-        goal: 'Hear where the strong beat falls — every 2, 3 or 4 beats.',
+        goal: 'Hear where the strong beat falls — every 2, 3 or 4 beats — first in clicks, then in songs.',
         hear: { type: 'meter', meters: ['2/4','3/4','4/4'] },
         play: null,
         why: [
           'Almost all music rides on a steady pulse, and your ear groups those pulses into bars by listening for the strong beat — the low click you just heard.',
           'In 2/4 the accent comes every 2 beats (a march: LEFT-right), in 3/4 every 3 (a waltz: ONE-two-three), and in 4/4 every 4, with a lighter lift on beat 3.',
           'The top number of a time signature is how many beats fill one bar; the bottom number says which note gets one beat (4 means a quarter note).',
+          'In a song there is no low click: the strong beat is where the tune leans — a longer note, a stressed word, a new chord. Tap along and count “1” where it leans.',
           'Counting “1” on every strong beat is the single most useful habit for playing along with anyone else.',
         ],
         show: null,
@@ -1704,6 +1868,20 @@ const MIDDLE_C   = 60;  // C4
           'With just major and minor triads you can already play a huge number of pop songs, like the ones below.',
         ],
         show: { mode: 'chords', type: 'Major', fromLast: true },
+      },
+      {
+        id: 'more-meters',
+        title: 'Beyond 4/4',
+        goal: 'Hear cut time, beats that split in three (6/8, 12/8) and odd meters (5/4, 7/4).',
+        hear: { type: 'meter', meters: ['2/2','3/4','4/4','6/8','12/8','5/4','7/4'] },
+        play: null,
+        why: [
+          'By ear you can hear two things about a meter: how many beats fill a bar, and whether each beat splits into two or into three. The bottom number of a time signature is only how it is written down.',
+          'That is why 2/2 (“cut time”, two half-note beats) sounds just like a brisk 2/4, and 12/8 like 6/8 with longer bars: those pairs are told apart on the page, not by the ear, so either answer counts for a song.',
+          '3/4 and 6/8 both hold six eighth notes, but they group them differently: 3/4 is ONE-two-three (three beats split in two), 6/8 is ONE-and-a TWO-and-a (two beats split in three). Listen for the lilt of a 6/8 or 12/8 ballad.',
+          'Odd meters don’t divide evenly, so they feel slightly lopsided: 5/4 is usually 3 + 2 (Take Five) and 7/4 is 4 + 3 (Money). Count the big groups first, then add them up.',
+        ],
+        show: null,
       },
       {
         id: 'seconds',
@@ -1838,6 +2016,16 @@ const MIDDLE_C   = 60;  // C4
         'Many marches are in 2/4, so you can step LEFT-right to them.',
         'The bottom number of a time signature names the beat note: 4 means a quarter note.',
         'A drummer’s “1, 2, 3, 4!” count-in is one bar of 4/4.',
+        '“Happy Birthday” is a waltz: hap-py BIRTH-day to YOU, in 3/4.',
+        'A song can start before beat 1: the first words of “When the Saints” are a pickup into “SAINTS”.',
+        'Marches, polkas and ragtime like “The Entertainer” are usually written in 2/4: a quick ONE-two.',
+      ],
+      'more-meters': [
+        'Cut time (2/2) is the usual meter for marches like “The Stars and Stripes Forever”.',
+        '“Take Five” is named after its five beats to the bar.',
+        'Most 6/8 and 12/8 songs have a rocking, swaying feel because every beat splits in three.',
+        '“Money” by Pink Floyd switches from 7/4 to 4/4 for its guitar solo.',
+        'A waltz and a 6/8 jig both hold six eighth notes per bar, but group them 2-2-2 and 3-3.',
       ],
       'perfect-intervals': [
         'Perfect 4ths, 5ths and octaves sound hollow because their frequencies line up in simple ratios.',
@@ -1929,6 +2117,7 @@ const MIDDLE_C   = 60;  // C4
       'perfect-intervals': 'The Power Chord',
       'thirds':            'The Mood Swinger',
       'major-minor-chords':'The Chord Goblin',
+      'more-meters':       'The Odd Meter',
       'seconds':           'The Half-Step Hustler',
       'sixths':            'The Sweet Sixth',
       'sevenths':          'The Devil’s Interval',
@@ -1982,10 +2171,13 @@ const MIDDLE_C   = 60;  // C4
     const PROGRESS_KEY = 'music-theory-progress-v1';
     // learn.unitIdx is a position in LEARN_UNITS. `layout` records which
     // order it was saved against, so inserting units can't shift a learner
-    // onto the wrong one. Layout 1 (no field) is the original 8 units.
-    const LEARN_LAYOUT = 2;
+    // onto the wrong one. Layout 1 (no field) is the original 8 units, layout 2
+    // added 2nds, 6ths and 7ths, layout 3 added "Beyond 4/4".
+    const LEARN_LAYOUT = 3;
     const LEARN_LAYOUT_1 = ['pulse','perfect-intervals','thirds','major-minor-chords',
                             'all-intervals','major-scale','dominant-7th','minor-and-modes'];
+    const LEARN_LAYOUT_2 = ['pulse','perfect-intervals','thirds','major-minor-chords','seconds','sixths',
+                            'sevenths','all-intervals','major-scale','dominant-7th','minor-and-modes'];
     const LEARN_STEP_NAMES = ['hear','play','why','boss','done'];
 
     // Sounds for the keyboard and every Play button. Piano is the Salamander
@@ -2116,7 +2308,8 @@ const MIDDLE_C   = 60;  // C4
             // Saved against the original order: find the same unit by id,
             // then step back to the first unfinished unit before it, so
             // units added earlier in the path get learned first.
-            const id = LEARN_LAYOUT_1[Math.max(0, Math.min(ui, LEARN_LAYOUT_1.length - 1))];
+            const old = d.learn.layout === 2 ? LEARN_LAYOUT_2 : LEARN_LAYOUT_1;
+            const id = old[Math.max(0, Math.min(ui, old.length - 1))];
             ui = Math.max(0, LEARN_UNITS.findIndex(u => u.id === id));
             const open = LEARN_UNITS.findIndex((u, i) => i <= ui && p.learn.units[u.id].step !== 'done');
             if (open >= 0) ui = open;
@@ -2862,7 +3055,8 @@ const MIDDLE_C   = 60;  // C4
     // Play any question's prompt, whichever quiz or Learn step it came from.
     function playQuestion(q) {
       if (!q) return;
-      if (q.events)                        playEvents(q.events);   // Learn variants carry their own prompt
+      if (q.video)                         showRoundVideo(q);
+      else if (q.events)                   playEvents(q.events);   // Learn variants carry their own prompt
       else if (q.kind === 'interval')      playIntervalPrompt(q, progress.settings.keyContext);
       else if (q.kind === 'interval-play' || q.kind === 'sing') playNote(q.rootMidi);
       else if (q.kind === 'chord')         q.arpeggiate ? playEvents(chordThenArpEvents(q.midis)) : playChord(q.midis);
@@ -2916,6 +3110,7 @@ const MIDDLE_C   = 60;  // C4
       const keyctx = qEl('keyctx-row');   // Learn keeps this in its settings sheet
       if (keyctx) keyctx.hidden = q.kind !== 'interval';
       if (state.mode === 'learn') {
+        clearRoundVideo();
         document.getElementById('learn-hint-btn').hidden = !intervalRef(q);
         learnRoundShown(q);
       }
@@ -3074,8 +3269,37 @@ const MIDDLE_C   = 60;  // C4
       '7/8':  { beats: 7,  unit: 8, accents: [2,0,1,0,1,0,0] },
       '9/8':  { beats: 9,  unit: 8, accents: [2,0,0,1,0,0,1,0,0] },
       '12/8': { beats: 12, unit: 8, accents: [2,0,0,1,0,0,1,0,0,1,0,0] },
+      // Learn's "Beyond 4/4" unit only (the Measures quiz leaves 2/2 out: its
+      // half-note beats would need their own wording).
+      '2/2':  { beats: 2,  unit: 2, accents: [2,0] },
+      '7/4':  { beats: 7,  unit: 4, accents: [2,0,0,0,1,0,0] },
     };
-    const meterTotal = (m) => METERS[m].beats * (METERS[m].unit === 4 ? 2 : 1);
+    const meterTotal = (m) => METERS[m].beats * 8 / METERS[m].unit;   // in eighths
+    const BEAT_NAMES = { 2: 'half', 4: 'quarter', 8: 'eighth' };
+
+    // What a meter sounds like, for explanations. The bottom number is how
+    // it's written down; the ear hears beats per bar and how each beat splits.
+    const METER_FEEL = {
+      '2/2':  '2/2 (cut time) counts two broad half-note beats, so it sounds like a brisk 2/4',
+      '6/8':  '6/8 has two beats, each split in three: ONE-and-a TWO-and-a',
+      '12/8': '12/8 has four beats, each split in three, like a slow 4/4 with a triplet swing',
+      '5/4':  '5/4 has five beats, usually felt as 3 + 2',
+      '7/4':  '7/4 has seven beats, usually felt as 4 + 3',
+    };
+
+    // Meters that sound alike by ear and differ only in how they're written,
+    // so a recording or tune accepts either. Clicks are stricter: they do
+    // show 2/4 against 4/4 (the lighter accent on beat 3) and 6/8 against
+    // 12/8, so only 2/2 and 2/4 stand in for each other there.
+    const SAME_FEEL = [['2/4', '2/2', '4/4'], ['6/8', '12/8']];
+    const SAME_CLICKS = [['2/4', '2/2']];
+    function soundsAlike(meter, choices, groups = SAME_FEEL) {
+      const g = groups.find(x => x.includes(meter));
+      return g ? choices.filter(c => c !== meter && g.includes(c)) : [];
+    }
+    function alikeNote(accept) {
+      return accept.length ? ` ${accept.join(' or ')} would sound the same, so ${accept.length > 1 ? 'they count' : 'it counts'} too.` : '';
+    }
 
     const MEASURE_LEVELS = {
       1: { meters: ['2/4','3/4','4/4'],
@@ -3086,7 +3310,7 @@ const MIDDLE_C   = 60;  // C4
            notes: Object.keys(NOTE_VALUES),
            kinds: ['complete','meter-ear','which-meter','count'],
            countMax: 5 },
-      3: { meters: Object.keys(METERS),
+      3: { meters: Object.keys(METERS).filter(m => m !== '2/2'),
            notes: Object.keys(NOTE_VALUES),
            kinds: ['complete','meter-ear','which-meter','count'],
            countMax: 6 },
@@ -3146,7 +3370,7 @@ const MIDDLE_C   = 60;  // C4
       if (kind === 'which-meter') {
         // Distractors must hold a different number of eighths, otherwise
         // (e.g. 3/4 vs 6/8) a single bar can't tell them apart.
-        const others = shuffle(Object.keys(METERS).filter(m => meterTotal(m) !== total));
+        const others = shuffle(Object.keys(METERS).filter(m => m !== '2/2' && meterTotal(m) !== total));
         const preferred = others.filter(m => lvl.meters.includes(m));
         const distractors = [...preferred, ...others.filter(m => !preferred.includes(m))]
           .filter((m, i, a) => a.findIndex(o => meterTotal(o) === meterTotal(m)) === i)
@@ -3179,13 +3403,16 @@ const MIDDLE_C   = 60;  // C4
     // Identify the time signature from accented clicks (also Learn unit 1).
     function makeMeterEarQuestion(meters, meter = pick(meters)) {
       const choices = shuffle([meter, ...shuffle(meters.filter(m => m !== meter)).slice(0, 3)]);
+      const accept = soundsAlike(meter, choices, SAME_CLICKS);
+      const m = METERS[meter];
       return {
         kind: 'meter-ear', meter,
         prompt: 'Listen — what is the time signature?',
-        choices: choices.map(m => ({ id: m, label: m })),
+        choices: choices.map(c => ({ id: c, label: c })),
         answer: meter,
-        explain: `${meter}: ${METERS[meter].beats} ${METERS[meter].unit === 4 ? 'quarter' : 'eighth'}-note ` +
-                 `pulses per measure, accent on the low downbeat.`,
+        accept,
+        explain: `${meter}: ${m.beats} ${BEAT_NAMES[m.unit]}-note pulses per measure, accent on the low downbeat.` +
+                 (METER_FEEL[meter] ? ` ${METER_FEEL[meter]}.` : '') + alikeNote(accept),
       };
     }
 
@@ -3194,7 +3421,7 @@ const MIDDLE_C   = 60;  // C4
     // Metronome clicks for `measures` bars of `meter`, starting at `startEighth`.
     function meterClicks(meter, measures, startEighth = 0) {
       const m = METERS[meter];
-      const step = m.unit === 4 ? 2 : 1;
+      const step = 8 / m.unit;
       const events = [];
       for (let bar = 0; bar < measures; bar++) {
         m.accents.forEach((acc, i) => {
@@ -3328,23 +3555,27 @@ const MIDDLE_C   = 60;  // C4
       opts.appendChild(grid);
     }
 
+    // `accept` lists other answers that also count (2/4 for a 4/4 tune).
+    const choiceRight = (q, id) => id === q.answer || (q.accept || []).includes(id);
+
     function answerChoice(id) {
       if (state.quizAnswered) return;
       const q = state.quizQuestion;
-      const correct = id === q.answer;
+      const correct = choiceRight(q, id);
       qEl('options').querySelectorAll('.quiz-opt-btn').forEach(b => {
         b.disabled = true;
-        if (b.dataset.id === q.answer) b.classList.add('correct');
+        if (b.dataset.id === q.answer || (correct && b.dataset.id === id)) b.classList.add('correct');
         else if (b.dataset.id === id)  b.classList.add('wrong');
       });
       const staff = qEl('staff');
-      if (staff.classList.contains('visible')) staff.innerHTML = renderMeasureSvg(q, true);
+      if (staff.classList.contains('visible') && q.rhythm) staff.innerHTML = renderMeasureSvg(q, true);
       if (q.kind === 'interval' || q.kind === 'interval-song') {
         revealIntervalKeys(q);
         renderIntervalRefs({ ...q, kind: 'interval' }, qEl('refs'));
         if (state.mode === 'learn') document.getElementById('learn-hint-btn').hidden = true;
       } else if (q.reveal) q.reveal(id);
       else if (q.kind === 'chord' || q.kind === 'scale') revealNoteKeys(q);
+      else if (q.meter && !q.rhythm) renderMeterRefs(q, qEl('refs'));
 
       const fb = qEl('feedback');
       fb.textContent = (correct ? '✓ Correct! ' : '✗ ') + q.explain;
@@ -3577,6 +3808,35 @@ const MIDDLE_C   = 60;  // C4
         const holder = document.createElement('div');
         watch.addEventListener('click', () => toggleVideo(box, holder, p));
         r.append(watch, refText(`${p.title} — ${p.artist}${p.year ? ` (${p.year})` : ''}`, `listen for ${p.cue}`), link);
+        box.append(r, holder);
+      });
+      box.hidden = false;
+    }
+
+    // After a pulse round: three random recordings in the same meter, leaving
+    // out the round's own song, so the card stays short and varies.
+    function renderMeterRefs(q, box) {
+      box.innerHTML = '';
+      const meter = q.meter;
+      const songs = shuffle(METER_POP.filter(p => p.meter === meter && (!q.video || p.id !== q.video.id))).slice(0, 3);
+      if (!songs.length) { box.hidden = true; return; }
+      const title = document.createElement('div');
+      title.className = 'iv-refs-title';
+      title.textContent = `${meter} in real songs`;
+      box.appendChild(title);
+      songs.forEach(p => {
+        const r = document.createElement('div');
+        r.className = 'iv-ref';
+        const watch = document.createElement('button');
+        watch.className = 'play-btn secondary';
+        watch.dataset.video = p.id;
+        watch.textContent = '▶ Watch';
+        const holder = document.createElement('div');
+        watch.addEventListener('click', () => toggleVideo(box, holder, p));
+        const counts = { '2/4': 'ONE-two', '2/2': 'ONE-two', '3/4': 'ONE-two-three', '4/4': 'ONE-two-three-four',
+                         '6/8': 'ONE-and-a TWO-and-a', '12/8': 'ONE-and-a two-and-a three-and-a four-and-a',
+                         '5/4': 'ONE-two-three FOUR-five', '7/4': 'ONE-two-three-four FIVE-six-seven' };
+        r.append(watch, refText(`${p.title} — ${p.artist} (${p.year})`, `count ${counts[meter]} along`));
         box.append(r, holder);
       });
       box.hidden = false;
@@ -3964,6 +4224,77 @@ const MIDDLE_C   = 60;  // C4
       };
     }
 
+    // "Name that meter": a tune plays with no clicks, only the slight weight
+    // a player puts on each bar's first note. 2/4 and 4/4 both group beats
+    // in twos, so either counts for a duple tune.
+    function makeSongMeterQuestion(spec) {
+      const song = pick(METER_SONGS.filter(s => spec.meters.includes(s.meter)));
+      const offs = song.notes.filter(([o]) => o != null).map(([o]) => o);
+      const start = tuneStart(offs, 52, 62);
+      const bar = METERS[song.meter].beats;
+      const beat = song.beat * (0.88 + Math.random() * 0.24);   // a new tempo each time
+      const events = [];
+      let pos = -song.pickup;
+      song.notes.forEach(([off, beats]) => {
+        if (off != null) {
+          const inBar = ((pos % bar) + bar) % bar;
+          const acc = Number.isInteger(inBar) ? METERS[song.meter].accents[inBar] : -1;
+          events.push({ t: (pos + song.pickup) * beat, notes: [midiToNoteName(start + off)],
+                        vel: acc === 2 ? 0.8 : acc === 1 ? 0.68 : acc === 0 ? 0.62 : 0.56,
+                        dur: beats * beat * 0.92 });
+        }
+        pos += beats;
+      });
+      const accept = [...new Set([...soundsAlike(song.meter, spec.meters), ...(song.also || [])])]
+        .filter(m => spec.meters.includes(m));
+      return {
+        kind: 'meter-song', meter: song.meter,
+        midis: [...new Set(offs.map(o => start + o))],
+        events,
+        tag: '♪ Name that meter',
+        prompt: 'No clicks this time — feel the strong beat in the tune. What is the time signature?',
+        choices: spec.meters.map(m => ({ id: m, label: m })),
+        answer: song.meter,
+        accept,
+        explain: `“${song.name}” is in ${song.meter}: ${song.count}.` +
+                 (METER_FEEL[song.meter] ? ` ${METER_FEEL[song.meter]}.` : song.meter === '3/4' ? ' ONE-two-three, like a waltz.' : '') +
+                 alikeNote(accept),
+      };
+    }
+
+    // "Real song": a recording plays in the round (on demand, from YouTube)
+    // and the learner names its meter. Online only, and never in a timed run.
+    function makeVideoMeterQuestion(spec) {
+      const p = pick(METER_POP.filter(x => spec.meters.includes(x.meter)));
+      const accept = soundsAlike(p.meter, spec.meters);
+      return {
+        kind: 'meter-video', meter: p.meter, video: p,
+        events: [],
+        tag: '▶ Real song',
+        prompt: `Count along to “${p.title}” — what is the time signature?`,
+        choices: spec.meters.map(m => ({ id: m, label: m })),
+        answer: p.meter,
+        accept,
+        explain: `“${p.title}” is written in ${p.meter}.` +
+                 (METER_FEEL[p.meter] ? ` ${METER_FEEL[p.meter]}.` : p.meter === '3/4' ? ' ONE-two-three: a waltz pulse.' : '') +
+                 alikeNote(accept),
+      };
+    }
+
+    // The round's recording, in place of the Play button's synth prompt.
+    function showRoundVideo(q) {
+      const box = document.getElementById('learn-video');
+      if (state.mode !== 'learn' || box.querySelector('iframe')) return;
+      box.hidden = false;
+      toggleVideo(box, box, q.video);
+    }
+
+    function clearRoundVideo() {
+      const box = document.getElementById('learn-video');
+      box.innerHTML = '';
+      box.hidden = true;
+    }
+
     // Count the bars: low accented downbeats, 2 to 4 of them.
     function makeCountQuestion(meters) {
       const meter = pick(meters);
@@ -4078,7 +4409,7 @@ const MIDDLE_C   = 60;  // C4
         interval: [['standard', 3], ['song', 1], ['odd', 1]],
         chord:    [['standard', 3], ['song', 1], ['odd', 1]],
         scale:    [['standard', 3], ['odd', 1], ['wrong-note', 1]],
-        meter:    [['standard', 3], ['count', 1]],
+        meter:    [['standard', 1], ['song', 3], ['video', 1], ['count', 1]],
       },
       play: {
         interval: [['standard', 2], ['blind', 1], ['phrase', 1]],
@@ -4092,12 +4423,14 @@ const MIDDLE_C   = 60;  // C4
       const idx = LEARN_UNITS.indexOf(u);
       if (v === 'standard' || v === 'count' || v === 'blind' || v === 'complete' || v === 'missing') return true;
       if (v === 'song') {
+        if (spec.type === 'meter') return METER_SONGS.some(s => spec.meters.includes(s.meter));
         return spec.type === 'interval' ? songIntervalCandidates(spec).length > 0
           : spec.type === 'chord' && songChordCandidates(spec.types, idx).length > 0;
       }
       if (v === 'odd') return (spec.semis || spec.types || []).length >= 2;
       if (v === 'wrong-note') return spec.type === 'scale' && spec.types.includes('Major');
       if (v === 'phrase') return phraseCandidates(spec.semis).length > 0;
+      if (v === 'video') return spec.type === 'meter' && navigator.onLine;
       return false;
     }
 
@@ -4108,9 +4441,9 @@ const MIDDLE_C   = 60;  // C4
       return pairs[pairs.length - 1][0];
     }
 
-    function chooseVariant(u, step) {
+    function chooseVariant(u, step, inRun = false) {
       const list = (LEARN_VARIANTS[step][u[step].type] || [['standard', 1]])
-        .filter(([v]) => variantAvailable(u, step, v));
+        .filter(([v]) => variantAvailable(u, step, v) && !(inRun && v === 'video'));
       if (state.forcedVariant && list.some(([v]) => v === state.forcedVariant)) return state.forcedVariant;
       return pickWeighted(list);
     }
@@ -4119,10 +4452,12 @@ const MIDDLE_C   = 60;  // C4
       const spec = u[step];
       switch (variant) {
         case 'song':       return spec.type === 'interval' ? makeSongIntervalQuestion(spec)
+                             : spec.type === 'meter'       ? makeSongMeterQuestion(spec)
                                                            : makeSongChordQuestion(spec, LEARN_UNITS.indexOf(u));
         case 'odd':        return makeOddOneOutQuestion(spec);
         case 'wrong-note': return makeWrongNoteQuestion();
         case 'count':      return makeCountQuestion(spec.meters);
+        case 'video':      return makeVideoMeterQuestion(spec);
         case 'blind':      return makeBlindIntervalPlayQuestion(spec.semis);
         case 'phrase':     return makePhraseQuestion(spec.semis);
         case 'complete':   return makeChordCompleteQuestion(spec);
@@ -4141,7 +4476,7 @@ const MIDDLE_C   = 60;  // C4
       } else {
         // The first few play rounds name what to build: always the standard one.
         const warmUp = step === 'play' && !inRun && unitProgress(u.id).play.total < LEARN_NAME_ROUNDS;
-        const variant = warmUp && !state.forcedVariant ? 'standard' : chooseVariant(u, step);
+        const variant = warmUp && !state.forcedVariant ? 'standard' : chooseVariant(u, step, inRun);
         q = buildVariant(u, step, variant, inRun);
         q.variant = variant;
       }
@@ -4168,6 +4503,9 @@ const MIDDLE_C   = 60;  // C4
       const tag = document.getElementById('learn-tag');
       tag.textContent = q.tag || '';
       tag.hidden = !q.tag;
+      // A recording round plays its own video, so the synth Play button goes.
+      document.querySelector('#learn-round .learn-play-wrap').style.display = q.video ? 'none' : '';
+      document.getElementById('learn-instrument').style.display = q.video ? 'none' : '';
       renderRunBar();
       renderCombo(false);
       const singBox = document.getElementById('learn-sing');
@@ -4951,6 +5289,7 @@ const MIDDLE_C   = 60;  // C4
     function viewLearnStep(step) {
       const u = LEARN_UNITS[state.learnUnitIdx];
       if (stepIndex(u, step) > stepIndex(u, unitProgress(u.id).step)) return;  // no skipping ahead
+      clearRoundVideo();
       abandonRun();
       state.learnDaily = false;
       state.learnStep = step;
@@ -5253,7 +5592,7 @@ const MIDDLE_C   = 60;  // C4
       if (q.kind === 'sing') {
         judgeSung(correct ? q.targetMidi : q.targetMidi + 1);
       } else if (q.choices) {
-        const wrong = q.choices.find(c => c.id !== q.answer);
+        const wrong = q.choices.find(c => !choiceRight(q, c.id));
         answerChoice(correct || !wrong ? q.answer : wrong.id);
       } else {
         const need = [...(q.needPcs || q.answerPcs)];
@@ -5294,6 +5633,7 @@ const MIDDLE_C   = 60;  // C4
     function switchMode(mode) {
       // Leaving Learn ends a boss or daily run (they are short) and the mic.
       if (mode !== 'learn') {
+        clearRoundVideo();
         abandonRun();
         state.learnDaily = false;
         releaseMic();
@@ -5504,7 +5844,7 @@ const MIDDLE_C   = 60;  // C4
 
           // ── Learn game layer ──
           // Force one question variant for Learn rounds ('standard', 'song',
-          // 'odd', 'wrong-note', 'count', 'blind', 'phrase', 'complete',
+          // 'odd', 'wrong-note', 'count', 'video', 'blind', 'phrase', 'complete',
           // 'missing'), or null for the normal random mix. Variants a unit
           // can't serve fall back to the mix.
           forceVariant:    (v) => { state.forcedVariant = v || null; return true; },
@@ -5566,7 +5906,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610271334';
+        const SW_VERSION = '2610310942';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
