@@ -1674,16 +1674,23 @@ title: Music Theory
 
     // Real recordings for the pulse unit: the "Real song" round and the
     // after-answer card. Only songs whose meter a source confirms: Musicnotes
-    // sheet music (Piano Man; When the Party's Over via Wikipedia), or
-    // Wikipedia's music section (When I Look at You, Rolling in the Deep,
-    // Firework). Much modern pop that feels "in three" is printed in 6/8 or
-    // 12/8 (Perfect, Lover, Breakaway), so it stays out of a 2-3-4 unit.
+    // sheet music (Piano Man, Come Away with Me, Happy; When the Party's Over
+    // via Wikipedia), Wikipedia's music section (When I Look at You, Rolling
+    // in the Deep, Firework, Shape of You, Uptown Funk) or MusicRadar (Kiss
+    // from a Rose). Much modern pop that feels "in three" is printed in 6/8 or
+    // 12/8 (Perfect, Lover, Breakaway, A Thousand Years, Earned It), so it
+    // stays out of a 2-3-4 unit.
     const METER_POP = [
       { meter: '3/4', title: 'when the party’s over', artist: 'Billie Eilish', year: 2018, id: 'pbMwTqkKSps' },
       { meter: '3/4', title: 'When I Look at You', artist: 'Miley Cyrus', year: 2010, id: '8wxOVn99FTE' },
+      { meter: '3/4', title: 'Come Away with Me', artist: 'Norah Jones', year: 2002, id: 'lbjZPFBD6JU' },
+      { meter: '3/4', title: 'Kiss from a Rose', artist: 'Seal', year: 1994, id: 'hDd2G_V1rzc' },
       { meter: '3/4', title: 'Piano Man', artist: 'Billy Joel', year: 1973, id: 'gxEPV4kolz0' },
       { meter: '4/4', title: 'Rolling in the Deep', artist: 'Adele', year: 2010, id: 'rYEDA3JcQqw' },
       { meter: '4/4', title: 'Firework', artist: 'Katy Perry', year: 2010, id: 'QGJuMBdaqIw' },
+      { meter: '4/4', title: 'Happy', artist: 'Pharrell Williams', year: 2013, id: 'ZbZSe6N_BXs' },
+      { meter: '4/4', title: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars', year: 2014, id: 'OPf0YbXqDm0' },
+      { meter: '4/4', title: 'Shape of You', artist: 'Ed Sheeran', year: 2017, id: 'JGwWNGJdvx8' },
     ];
 
     const INTERVAL_NAMES = [
@@ -3655,11 +3662,12 @@ const MIDDLE_C   = 60;  // C4
     }
 
     // After a pulse round: recordings in the same meter (a 2/4 answer gets
-    // the 4/4 ones, which also count in twos). The round's own song is left out.
+    // the 4/4 ones, which also count in twos). Three at random, leaving out
+    // the round's own song, so the card stays short and varies.
     function renderMeterRefs(q, box) {
       box.innerHTML = '';
       const meter = q.meter === '2/4' ? '4/4' : q.meter;
-      const songs = METER_POP.filter(p => p.meter === meter && (!q.video || p.id !== q.video.id));
+      const songs = shuffle(METER_POP.filter(p => p.meter === meter && (!q.video || p.id !== q.video.id))).slice(0, 3);
       if (!songs.length) { box.hidden = true; return; }
       const title = document.createElement('div');
       title.className = 'iv-refs-title';
@@ -5739,7 +5747,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610310907';
+        const SW_VERSION = '2610310920';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
