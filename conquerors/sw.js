@@ -1,5 +1,5 @@
 // Offline support: the app shell is cached on install; map images are cached as you browse.
-const CACHE_VERSION = 'dev';
+const CACHE_VERSION = '2610310343';
 const SHELL = `conquerors-shell-${CACHE_VERSION}`;
 const MAP_TILES = 'conquerors-map-tiles';
 const MAX_MAP_TILES = 1500;
