@@ -680,9 +680,14 @@ title: Music Theory
     }
     .learn-songs .song-chord-chip { font-size: 12px; padding: 4px 12px; }
 
-    .learn-reset {
-      display: block;
+    .learn-actions {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
       margin: 14px auto 0;
+    }
+    .learn-reset, .learn-unlock-all {
+      display: block;
       background: none;
       border: none;
       color: var(--text-dim);
@@ -691,7 +696,7 @@ title: Music Theory
       cursor: pointer;
       opacity: 0.7;
     }
-    .learn-reset:hover { opacity: 1; color: var(--text); }
+    .learn-reset:hover, .learn-unlock-all:hover { opacity: 1; color: var(--text); }
 
     /* Landscape phones: keep the path compact (declared after the base
        Learn rules so it wins the cascade). */
@@ -817,7 +822,10 @@ title: Music Theory
         </div>
       </div>
 
-      <button class="learn-reset" id="learn-reset">Reset progress</button>
+      <div class="learn-actions">
+        <button class="learn-reset" id="learn-reset">Reset progress</button>
+        <button class="learn-unlock-all" id="learn-unlock-all">Unlock all units</button>
+      </div>
     </div>
 
     <!-- SCALES -->
@@ -2950,6 +2958,13 @@ const MIDDLE_C   = 60;  // C4
       document.getElementById('learn-show-me').addEventListener('click', learnShowMe);
       document.getElementById('learn-reset').addEventListener('click', () => {
         if (confirm('Reset all progress? This clears the Learn path and your Quiz level.')) resetProgress();
+      });
+      document.getElementById('learn-unlock-all').addEventListener('click', () => {
+        if (confirm('Unlock all units now? You can still work through them at your own pace.')) {
+          progress.learn.unitIdx = LEARN_UNITS.length - 1;
+          saveProgress();
+          viewLearnUnit(progress.learn.unitIdx);
+        }
       });
 
       // Initial display — the app opens on the Learn path
