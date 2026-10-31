@@ -992,6 +992,23 @@ title: Music Theory
     }
     .learn-songs .song-chord-chip { font-size: 12px; padding: 4px 12px; }
 
+    .learn-actions {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 14px auto 0;
+    }
+    .learn-unlock-all {
+      display: block;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 11px;
+      text-decoration: underline;
+      cursor: pointer;
+      opacity: 0.7;
+    }
+    .learn-unlock-all:hover { opacity: 1; color: var(--text); }
     /* Interval references: a playable public-domain tune plus well-known
        recordings, embedded from YouTube only when the learner asks. */
     .iv-refs {
@@ -1346,6 +1363,10 @@ title: Music Theory
           <button class="play-btn secondary" id="learn-show-me">🎹 Show me on the keyboard</button>
           <button class="play-btn" id="learn-got-it">Got it ✓</button>
         </div>
+      </div>
+
+      <div class="learn-actions">
+        <button class="learn-unlock-all" id="learn-unlock-all">Unlock all units</button>
       </div>
     </div>
 
@@ -5644,6 +5665,13 @@ const MIDDLE_C   = 60;  // C4
         if (document.visibilityState === 'hidden') { stopSinging(); releaseMic(); return; }
         const q = state.quizQuestion;
         if (state.mode === 'learn' && q && q.kind === 'sing' && !state.quizAnswered) startSinging(q);
+      });
+      document.getElementById('learn-unlock-all').addEventListener('click', () => {
+        if (confirm('Unlock all units now? You can still work through them at your own pace.')) {
+          progress.learn.unitIdx = LEARN_UNITS.length - 1;
+          saveProgress();
+          viewLearnUnit(progress.learn.unitIdx);
+        }
       });
 
       // Initial display — the app opens on the Learn path
