@@ -3934,20 +3934,32 @@ const MIDDLE_C   = 60;  // C4
       const isChord = spec.type === 'chord';
 
       if (step === 'hear') {
-        if (spec.type === 'meter')    return makeMeterEarQuestion(spec.meters);
-        if (spec.type === 'interval') return makeIntervalQuestion({ ...spec, lowMin: 55, lowMax: 65 });
-        const type = pick(spec.types);
-        const q = isChord
-          ? makeChordQuestion(pick(LEARN_ROOTS), type, LEARN_RANGE)
-          : makeScaleQuestion(pick(LEARN_ROOTS), type, LEARN_RANGE, true);
-        const feel = (isChord ? CHORD_FEEL : SCALE_FEEL)[type];
-        return Object.assign(q, {
-          arpeggiate: true,   // block chord, then its notes one by one
-          prompt: isChord ? 'Listen — which chord is it?' : 'Listen — which scale is it?',
-          choices: spec.types.map(t => ({ id: t, label: t })),
-          answer: type,
-          explain: `${q.answerName} — ${(isChord ? CHORDS : SCALES)[type].formula}` + (feel ? ` · ${feel}` : ''),
-        });
+        let q;
+        if (spec.type === 'meter') {
+          q = makeMeterEarQuestion(spec.meters);
+        } else if (spec.type === 'interval') {
+          q = makeIntervalQuestion({ ...spec, lowMin: 55, lowMax: 65 });
+        } else {
+          const type = pick(spec.types);
+          q = isChord
+            ? makeChordQuestion(pick(LEARN_ROOTS), type, LEARN_RANGE)
+            : makeScaleQuestion(pick(LEARN_ROOTS), type, LEARN_RANGE, true);
+          const feel = (isChord ? CHORD_FEEL : SCALE_FEEL)[type];
+          Object.assign(q, {
+            arpeggiate: true,   // block chord, then its notes one by one
+            prompt: isChord ? 'Listen — which chord is it?' : 'Listen — which scale is it?',
+            choices: spec.types.map(t => ({ id: t, label: t })),
+            answer: type,
+            explain: `${q.answerName} — ${(isChord ? CHORDS : SCALES)[type].formula}` + (feel ? ` · ${feel}` : ''),
+          });
+        }
+        // Warmup: show the name in the prompt for the first few rounds so the
+        // user builds sound-to-label association before guessing blind.
+        if (!inRun && unitProgress(u.id).hear.total < LEARN_NAME_ROUNDS) {
+          const answerName = q.kind === 'interval' ? INTERVAL_NAMES[Number(q.answer)] : q.answer;
+          if (answerName) q.prompt = `Listen — this is: ${answerName}`;
+        }
+        return q;
       }
 
       if (spec.type === 'interval') return makeIntervalPlayQuestion(spec.semis);
