@@ -1,0 +1,35 @@
+{
+  "id": "/conquerors/",
+  "name": "Conquerors",
+  "short_name": "Conquerors",
+  "description": "Turn your Strava activities into a map of conquered city tiles.",
+  "start_url": "/conquerors/",
+  "scope": "/conquerors/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1116",
+  "theme_color": "#0e1116",
+  "icons": [
+    {
+      "src": "/conquerors/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/conquerors/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/conquerors/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": [
+    "sports",
+    "games"
+  ],
+  "lang": "en-US"
+}

@@ -1,0 +1,21 @@
+import { decodePolyline, encodePolyline, tileAt, tileX, tileY, tileKey } from '../../conquerors/js/geo.js';
+import { computeConquest, level, achievements, squareQuest, districtQuests, nearestFrontier, largestSquare } from '../../conquerors/js/engine.js';
+import { demoActivities, DEMO_CENTER } from '../../conquerors/js/demo.js';
+import assert from 'node:assert';
+const p = decodePolyline('_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+assert.deepStrictEqual(p, [[38.5,-120.2],[40.7,-120.95],[43.252,-126.453]]);
+assert.strictEqual(encodePolyline(p), '_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+const t = tileAt(52.5163, 13.3777); assert.strictEqual(tileX(t), 70406); assert.strictEqual(tileY(t), 42987);
+// 3x3 block plus a stray tile -> square 3
+const s = new Set(); for (let x=0;x<3;x++) for (let y=0;y<3;y++) s.add(tileKey(100+x,200+y)); s.add(tileKey(110,200));
+assert.deepStrictEqual(largestSquare(s), {x:100,y:200,size:3});
+const t0 = performance.now();
+const c = computeConquest(demoActivities());
+console.log('compute ms', (performance.now()-t0).toFixed(1));
+console.log({tiles: c.owned.size, frontier: c.frontier.size, territory: c.territory.size, square: c.square, districts: c.districts.size, dominated: c.dominated, xp: c.xp, level: level(c.xp), maxVisits: c.maxVisits});
+console.log('ach unlocked', achievements(c).filter(a=>a.unlocked).map(a=>a.title));
+const q = squareQuest(c); console.log('square quest', q.size, q.missing.length, q.bonus);
+console.log('district quests', districtQuests(c,3).map(d=>[d.conquered,d.targets.length]));
+console.log('nearest', nearestFrontier(c, DEMO_CENTER, 3));
+console.log('monthly', c.monthly.map(m=>m.count).join(','));
+console.log('ALL OK');
