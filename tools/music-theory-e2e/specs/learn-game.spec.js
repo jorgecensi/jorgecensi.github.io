@@ -49,7 +49,10 @@ run(async () => {
     for (const step of ['hear', 'play']) {
       const variants = await mt(([u, s]) => window.__musicTheory.variantsFor(u, s), [id, step]);
       if (!variants.length) continue;   // pulse has no play step
-      assert(variants.includes('standard'), `${id}/${step} always offers the standard round`);
+      // Rhythm units are recordings only (online); every other unit keeps its standard round.
+      const meterUnit = ['pulse', 'more-meters'].includes(id);
+      if (meterUnit) assert(JSON.stringify(variants) === '["video"]', `${id}/${step} serves only real recordings online, got ${variants}`);
+      else assert(variants.includes('standard'), `${id}/${step} always offers the standard round`);
       for (const v of variants) {
         await mt((x) => window.__musicTheory.forceVariant(x), v);
         for (let rep = 0; rep < 3; rep++) {
@@ -74,11 +77,6 @@ run(async () => {
             assert(Math.abs(q.midis[1] - q.midis[0]) === q.semis && String(q.semis) === q.answer, `${tag}: answer is the tune's interval`);
             const pairs = evMidis.slice(1).map((m, i) => [evMidis[i], m]);
             assert(pairs.some(([a, b]) => a === q.midis[0] && b === q.midis[1]), `${tag}: the tune contains the interval`);
-          }
-          if (v === 'song' && q.kind === 'meter-song') {
-            assert((q.meter === '3/4') === !q.accept.length, `${tag}: only a duple tune accepts its sibling meter`);
-            assert(q.accept.every(m => m !== '3/4' && q.choiceIds.includes(m)),
-              `${tag}: accepted meters are ${q.accept}`);
           }
           if (v === 'video') {
             assert(q.kind === 'meter-video' && q.video && q.video.meter === q.answer, `${tag}: answer is the recording's meter`);
@@ -113,7 +111,7 @@ run(async () => {
           }, rep !== 1);
           await tick();
           assert((await prog()).learn.units[id][step].total === before + 1, `${tag}: the answer is recorded`);
-          if (id === 'pulse') assert(songCards > 0, `${tag}: real songs in this meter follow the answer`);
+          if (meterUnit) assert(songCards > 0, `${tag}: real songs in this meter follow the answer`);
           served++;
         }
       }

@@ -1626,106 +1626,6 @@ title: Music Theory
       ],
     };
 
-    // Tunes for the pulse unit's "Name that meter" rounds: played with no
-    // clicks, so the strong beat has to be found in the melody. All public
-    // domain. `notes` are [semitones from C, beats] (null = rest), `pickup`
-    // is how many beats come before the first downbeat, `beat` is seconds
-    // per beat and `count` shows where the strong beats fall.
-    const METER_SONGS = [
-      { name: 'Happy Birthday', meter: '3/4', pickup: 1, beat: 0.42,
-        count: 'hap-py | BIRTH-day to | YOU',
-        notes: [[-5,.75],[-5,.25],[-3,1],[-5,1],[0,1],[-1,2],[-5,.75],[-5,.25],[-3,1],[-5,1],[2,1],[0,2]] },
-      { name: 'Amazing Grace', meter: '3/4', pickup: 1, beat: 0.45,
-        count: 'a- | MA-zing | GRACE how | SWEET the | SOUND',
-        notes: [[-5,1],[0,2],[4,.5],[0,.5],[4,2],[2,1],[0,2],[-3,1],[-5,2],[-5,1],[0,2],[4,.5],[0,.5],[4,2],[2,1],[7,3]] },
-      { name: 'Silent Night', meter: '3/4', also: ['6/8'], pickup: 0, beat: 0.4,   // Gruber wrote it in 6/8
-        count: 'SI-lent | NIGHT | HO-ly | NIGHT',
-        notes: [[7,1.5],[9,.5],[7,1],[4,3],[7,1.5],[9,.5],[7,1],[4,3],[14,2],[14,1],[11,3],[12,2],[12,1],[7,3]] },
-      { name: 'Take Me Out to the Ball Game', meter: '3/4', pickup: 0, beat: 0.3,
-        count: 'TAKE me | OUT to the | BALL | GAME',
-        notes: [[0,2],[12,1],[9,1],[7,1],[4,1],[7,3],[2,3],[0,2],[12,1],[9,1],[7,1],[4,1],[7,3]] },
-      { name: 'Daisy Bell', meter: '3/4', pickup: 0, beat: 0.3,
-        count: 'DAI- | SY | DAI- | SY | GIVE me your | AN-swer | DO',
-        notes: [[12,3],[9,3],[5,3],[0,3],[2,1],[4,1],[5,1],[2,2],[5,1],[0,6]] },
-      { name: 'My Bonnie Lies Over the Ocean', meter: '3/4', pickup: 1, beat: 0.38,
-        count: 'my | BON-nie lies | O-ver the | O-cean',
-        notes: [[7,1],[16,1.5],[14,.5],[12,1],[14,1],[12,1],[9,1],[7,1],[4,4],[7,1],[16,1.5],[14,.5],[12,1],[12,1],[11,1],[12,1],[14,6]] },
-      { name: 'The Star-Spangled Banner', meter: '3/4', pickup: 1, beat: 0.42,
-        count: 'oh | SAY can you | SEE',
-        notes: [[7,.75],[4,.25],[0,1],[4,1],[7,1],[12,2],[16,.75],[14,.25],[12,1],[4,1],[6,1],[7,2],[7,.5],[7,.5],
-                [16,1.5],[14,.5],[12,1],[11,2],[9,.75],[11,.25],[12,1],[12,1],[7,1],[4,1],[0,2]] },
-      { name: 'Minuet in G', meter: '3/4', pickup: 0, beat: 0.45,
-        count: 'ONE two-and three-and | ONE two three',
-        notes: [[14,1],[7,.5],[9,.5],[11,.5],[12,.5],[14,1],[7,1],[7,1],[16,1],[12,.5],[14,.5],[16,.5],[18,.5],[19,1],[7,1],[7,1],
-                [12,1],[14,.5],[12,.5],[11,.5],[9,.5],[11,1],[12,.5],[11,.5],[9,.5],[7,.5],[6,1],[7,.5],[9,.5],[11,.5],[7,.5],[9,3]] },
-      { name: 'We Wish You a Merry Christmas', meter: '3/4', pickup: 1, beat: 0.36,
-        count: 'we | WISH you a | MER-ry | CHRIST-mas',
-        notes: [[2,1],[7,1],[7,.5],[9,.5],[7,.5],[6,.5],[4,1],[4,1],[4,1],[9,1],[9,.5],[11,.5],[9,.5],[7,.5],[6,1],[2,1],[2,1],
-                [11,1],[11,.5],[12,.5],[11,.5],[9,.5],[7,1],[4,1],[2,.5],[2,.5],[4,1],[9,1],[6,1],[7,3]] },
-      { name: 'Brahms’ Lullaby', meter: '3/4', pickup: 1, beat: 0.42,
-        count: 'lul-la- | BY, and good | NIGHT',
-        notes: [[4,.5],[4,.5],[7,2],[4,.5],[4,.5],[7,2],[4,.5],[7,.5],[12,1],[11,1.5],[9,.5],[9,1],[7,1],[2,.5],[4,.5],
-                [5,1],[2,1],[2,.5],[4,.5],[5,2],[2,.5],[5,.5],[11,.5],[9,.5],[7,1],[11,1],[12,3]] },
-      { name: 'Ode to Joy', meter: '4/4', pickup: 0, beat: 0.42,
-        count: 'JOY-ful, joy-ful, | WE a-dore thee',
-        notes: [[4,1],[4,1],[5,1],[7,1],[7,1],[5,1],[4,1],[2,1],[0,1],[0,1],[2,1],[4,1],[4,1.5],[2,.5],[2,2]] },
-      { name: 'Twinkle, Twinkle, Little Star', meter: '4/4', pickup: 0, beat: 0.4,
-        count: 'TWIN-kle, twin-kle | LIT-tle star',
-        notes: [[0,1],[0,1],[7,1],[7,1],[9,1],[9,1],[7,2],[5,1],[5,1],[4,1],[4,1],[2,1],[2,1],[0,2]] },
-      { name: 'When the Saints Go Marching In', meter: '4/4', pickup: 3, beat: 0.32,
-        count: 'oh when the | SAINTS | go march-ing | IN',
-        notes: [[0,1],[4,1],[5,1],[7,4],[null,1],[0,1],[4,1],[5,1],[7,4],[null,1],[0,1],[4,1],[5,1],[7,2],[4,2],[0,2],[4,2],[2,4]] },
-      { name: 'Frère Jacques', meter: '4/4', pickup: 0, beat: 0.4,
-        count: 'FRÈ-re Jac-ques | FRÈ-re Jac-ques',
-        notes: [[0,1],[2,1],[4,1],[0,1],[0,1],[2,1],[4,1],[0,1],[4,1],[5,1],[7,2],[4,1],[5,1],[7,2]] },
-      { name: 'Jingle Bells', meter: '4/4', pickup: 0, beat: 0.36,
-        count: 'JIN-gle bells | JIN-gle bells | JIN-gle all the | WAY',
-        notes: [[4,1],[4,1],[4,2],[4,1],[4,1],[4,2],[4,1],[7,1],[0,1.5],[2,.5],[4,4]] },
-      { name: 'Mary Had a Little Lamb', meter: '4/4', pickup: 0, beat: 0.4,
-        count: 'MA-ry had a | LIT-tle lamb',
-        notes: [[4,1],[2,1],[0,1],[2,1],[4,1],[4,1],[4,2],[2,1],[2,1],[2,2],[4,1],[7,1],[7,2],
-                [4,1],[2,1],[0,1],[2,1],[4,1],[4,1],[4,1],[4,1],[2,1],[2,1],[4,1],[2,1],[0,4]] },
-      { name: 'Old MacDonald Had a Farm', meter: '4/4', pickup: 0, beat: 0.36,
-        count: 'OLD Mac-Don-ald | HAD a farm',
-        notes: [[0,1],[0,1],[0,1],[-5,1],[-3,1],[-3,1],[-5,2],[4,1],[4,1],[2,1],[2,1],[0,3],[-5,1],
-                [0,1],[0,1],[0,1],[-5,1],[-3,1],[-3,1],[-5,2],[4,1],[4,1],[2,1],[2,1],[0,4]] },
-      { name: 'Auld Lang Syne', meter: '4/4', pickup: 1, beat: 0.45,
-        count: 'should | AULD ac-quain-tance | BE for-got',
-        notes: [[-5,1],[0,1.5],[-1,.5],[0,1],[4,1],[2,1.5],[0,.5],[2,1],[4,.5],[2,.5],[0,1.5],[0,.5],[4,1],[7,1],[9,4]] },
-      { name: 'Hot Cross Buns', meter: '4/4', pickup: 0, beat: 0.45,
-        count: 'HOT cross buns | HOT cross buns',
-        notes: [[4,1],[2,1],[0,2],[4,1],[2,1],[0,2],[0,.5],[0,.5],[0,.5],[0,.5],[2,.5],[2,.5],[2,.5],[2,.5],[4,1],[2,1],[0,2]] },
-      { name: 'Deck the Halls', meter: '4/4', pickup: 0, beat: 0.4,
-        count: 'DECK the halls with | BOUGHS of hol-ly',
-        notes: [[7,1.5],[5,.5],[4,1],[2,1],[0,1],[2,1],[4,1],[0,1],[2,.5],[4,.5],[5,.5],[2,.5],[4,1.5],[2,.5],[0,1],[-1,1],[0,2]] },
-      { name: 'O Come, All Ye Faithful', meter: '4/4', pickup: 1, beat: 0.42,
-        count: 'o | COME all ye | FAITH-ful',
-        notes: [[0,1],[0,2],[-5,1],[0,1],[2,2],[-5,2],[4,1],[2,1],[4,1],[5,1],[4,2],[2,1],[0,1]] },
-      // 6/8 tunes count in eighths: `beat` is one eighth note.
-      { name: 'Row, Row, Row Your Boat', meter: '6/8', pickup: 0, beat: 0.2,
-        count: 'ROW, row, | ROW your boat',
-        notes: [[0,3],[0,3],[0,2],[2,1],[4,3],[4,2],[2,1],[4,2],[5,1],[7,6],[12,1],[12,1],[12,1],[7,1],[7,1],[7,1],
-                [4,1],[4,1],[4,1],[0,1],[0,1],[0,1],[7,2],[5,1],[4,2],[2,1],[0,6]] },
-      { name: 'Three Blind Mice', meter: '6/8', pickup: 0, beat: 0.2,
-        count: 'THREE blind | MICE',
-        notes: [[4,3],[2,3],[0,6],[4,3],[2,3],[0,6],[7,3],[5,2],[5,1],[4,6],[7,3],[5,2],[5,1],[4,6]] },
-      { name: 'Yankee Doodle', meter: '2/4', pickup: 0, beat: 0.5,
-        count: 'YAN-kee | DOO-dle | WENT to | TOWN',
-        notes: [[0,.5],[0,.5],[2,.5],[4,.5],[0,.5],[4,.5],[2,.5],[-5,.5],[0,.5],[0,.5],[2,.5],[4,.5],[0,1],[-1,1],
-                [0,.5],[0,.5],[2,.5],[4,.5],[5,.5],[4,.5],[2,.5],[0,.5],[-1,.5],[-5,.5],[-3,.5],[-1,.5],[0,1],[0,1]] },
-      { name: 'The Entertainer', meter: '2/4', pickup: .5, beat: 0.5,
-        count: 'da-da | DA-da DA-da | DAAA',
-        notes: [[2,.25],[3,.25],[4,.25],[12,.5],[4,.25],[12,.5],[4,.25],[12,1.25],[12,.25],[14,.25],[15,.25],[16,.25],
-                [12,.25],[14,.25],[16,.5],[11,.25],[14,.5],[12,2.25]] },
-      { name: 'This Old Man', meter: '2/4', pickup: 0, beat: 0.5,
-        count: 'THIS old | MAN, he | PLAYED one',
-        notes: [[7,.5],[4,.5],[7,1],[7,.5],[4,.5],[7,1],[9,.5],[7,.5],[5,.5],[4,.5],[2,.5],[4,.5],[5,1]] },
-      { name: 'London Bridge', meter: '2/4', pickup: 0, beat: 0.5,
-        count: 'LON-don bridge is | FALL-ing down',
-        notes: [[7,.75],[9,.25],[7,.5],[5,.5],[4,.5],[5,.5],[7,1],[2,.5],[4,.5],[5,1],[4,.5],[5,.5],[7,1],
-                [7,.75],[9,.25],[7,.5],[5,.5],[4,.5],[5,.5],[7,1],[2,1],[7,1],[4,.5],[0,1.5]] },
-    ];
-
     // Real recordings for the pulse unit: the "Real song" round and the
     // after-answer card. Only songs whose meter a source confirms: Musicnotes
     // sheet music (Piano Man, Come Away with Me, Happy, Moon River, Que Sera
@@ -1814,14 +1714,14 @@ const MIDDLE_C   = 60;  // C4
       {
         id: 'pulse',
         title: 'Feel the pulse',
-        goal: 'Hear where the strong beat falls — every 2, 3 or 4 beats — first in clicks, then in songs.',
+        goal: 'Hear where the strong beat falls in real songs — every 2, 3 or 4 beats.',
         hear: { type: 'meter', meters: ['2/4','3/4','4/4'] },
         play: null,
         why: [
-          'Almost all music rides on a steady pulse, and your ear groups those pulses into bars by listening for the strong beat — the low click you just heard.',
+          'Almost all music rides on a steady pulse, and your ear groups those pulses into bars by listening for the strong beat — the ONE you have been counting from.',
           'In 2/4 the accent comes every 2 beats (a march: LEFT-right), in 3/4 every 3 (a waltz: ONE-two-three), and in 4/4 every 4, with a lighter lift on beat 3.',
           'The top number of a time signature is how many beats fill one bar; the bottom number says which note gets one beat (4 means a quarter note).',
-          'In a song there is no low click: the strong beat is where the tune leans — a longer note, a stressed word, a new chord. Tap along and count “1” where it leans.',
+          'The strong beat is where the music leans — a kick drum, a longer note, a stressed word, a new chord. Tap along and count “1” where it leans.',
           'Counting “1” on every strong beat is the single most useful habit for playing along with anyone else.',
         ],
         show: null,
@@ -1872,7 +1772,7 @@ const MIDDLE_C   = 60;  // C4
       {
         id: 'more-meters',
         title: 'Beyond 4/4',
-        goal: 'Hear cut time, beats that split in three (6/8, 12/8) and odd meters (5/4, 7/4).',
+        goal: 'Hear cut time, beats that split in three (6/8, 12/8) and odd meters (5/4, 7/4) in real songs.',
         hear: { type: 'meter', meters: ['2/2','3/4','4/4','6/8','12/8','5/4','7/4'] },
         play: null,
         why: [
@@ -4224,46 +4124,8 @@ const MIDDLE_C   = 60;  // C4
       };
     }
 
-    // "Name that meter": a tune plays with no clicks, only the slight weight
-    // a player puts on each bar's first note. 2/4 and 4/4 both group beats
-    // in twos, so either counts for a duple tune.
-    function makeSongMeterQuestion(spec) {
-      const song = pick(METER_SONGS.filter(s => spec.meters.includes(s.meter)));
-      const offs = song.notes.filter(([o]) => o != null).map(([o]) => o);
-      const start = tuneStart(offs, 52, 62);
-      const bar = METERS[song.meter].beats;
-      const beat = song.beat * (0.88 + Math.random() * 0.24);   // a new tempo each time
-      const events = [];
-      let pos = -song.pickup;
-      song.notes.forEach(([off, beats]) => {
-        if (off != null) {
-          const inBar = ((pos % bar) + bar) % bar;
-          const acc = Number.isInteger(inBar) ? METERS[song.meter].accents[inBar] : -1;
-          events.push({ t: (pos + song.pickup) * beat, notes: [midiToNoteName(start + off)],
-                        vel: acc === 2 ? 0.8 : acc === 1 ? 0.68 : acc === 0 ? 0.62 : 0.56,
-                        dur: beats * beat * 0.92 });
-        }
-        pos += beats;
-      });
-      const accept = [...new Set([...soundsAlike(song.meter, spec.meters), ...(song.also || [])])]
-        .filter(m => spec.meters.includes(m));
-      return {
-        kind: 'meter-song', meter: song.meter,
-        midis: [...new Set(offs.map(o => start + o))],
-        events,
-        tag: '♪ Name that meter',
-        prompt: 'No clicks this time — feel the strong beat in the tune. What is the time signature?',
-        choices: spec.meters.map(m => ({ id: m, label: m })),
-        answer: song.meter,
-        accept,
-        explain: `“${song.name}” is in ${song.meter}: ${song.count}.` +
-                 (METER_FEEL[song.meter] ? ` ${METER_FEEL[song.meter]}.` : song.meter === '3/4' ? ' ONE-two-three, like a waltz.' : '') +
-                 alikeNote(accept),
-      };
-    }
-
     // "Real song": a recording plays in the round (on demand, from YouTube)
-    // and the learner names its meter. Online only, and never in a timed run.
+    // and the learner names its meter. Online only.
     function makeVideoMeterQuestion(spec) {
       const p = pick(METER_POP.filter(x => spec.meters.includes(x.meter)));
       const accept = soundsAlike(p.meter, spec.meters);
@@ -4293,20 +4155,6 @@ const MIDDLE_C   = 60;  // C4
       const box = document.getElementById('learn-video');
       box.innerHTML = '';
       box.hidden = true;
-    }
-
-    // Count the bars: low accented downbeats, 2 to 4 of them.
-    function makeCountQuestion(meters) {
-      const meter = pick(meters);
-      const count = 2 + Math.floor(Math.random() * 3);
-      return {
-        kind: 'count', meter, count,
-        tag: 'Count the bars',
-        prompt: `How many bars of ${meter} do you hear?`,
-        choices: ['2', '3', '4'].map(n => ({ id: n, label: n })),
-        answer: String(count),
-        explain: `${count} bars — count the low accented downbeats.`,
-      };
     }
 
     // Play-by-ear: the interval sounds, the first note is lit, play the second.
@@ -4409,7 +4257,8 @@ const MIDDLE_C   = 60;  // C4
         interval: [['standard', 3], ['song', 1], ['odd', 1]],
         chord:    [['standard', 3], ['song', 1], ['odd', 1]],
         scale:    [['standard', 3], ['odd', 1], ['wrong-note', 1]],
-        meter:    [['standard', 1], ['song', 3], ['video', 1], ['count', 1]],
+        // Rhythm units are real recordings only; clicks stand in offline.
+        meter:    [['video', 1], ['standard', 1]],
       },
       play: {
         interval: [['standard', 2], ['blind', 1], ['phrase', 1]],
@@ -4421,9 +4270,9 @@ const MIDDLE_C   = 60;  // C4
     function variantAvailable(u, step, v) {
       const spec = u[step];
       const idx = LEARN_UNITS.indexOf(u);
-      if (v === 'standard' || v === 'count' || v === 'blind' || v === 'complete' || v === 'missing') return true;
+      if (v === 'standard') return spec.type !== 'meter' || !navigator.onLine;
+      if (v === 'blind' || v === 'complete' || v === 'missing') return true;
       if (v === 'song') {
-        if (spec.type === 'meter') return METER_SONGS.some(s => spec.meters.includes(s.meter));
         return spec.type === 'interval' ? songIntervalCandidates(spec).length > 0
           : spec.type === 'chord' && songChordCandidates(spec.types, idx).length > 0;
       }
@@ -4441,9 +4290,9 @@ const MIDDLE_C   = 60;  // C4
       return pairs[pairs.length - 1][0];
     }
 
-    function chooseVariant(u, step, inRun = false) {
+    function chooseVariant(u, step) {
       const list = (LEARN_VARIANTS[step][u[step].type] || [['standard', 1]])
-        .filter(([v]) => variantAvailable(u, step, v) && !(inRun && v === 'video'));
+        .filter(([v]) => variantAvailable(u, step, v));
       if (state.forcedVariant && list.some(([v]) => v === state.forcedVariant)) return state.forcedVariant;
       return pickWeighted(list);
     }
@@ -4452,11 +4301,9 @@ const MIDDLE_C   = 60;  // C4
       const spec = u[step];
       switch (variant) {
         case 'song':       return spec.type === 'interval' ? makeSongIntervalQuestion(spec)
-                             : spec.type === 'meter'       ? makeSongMeterQuestion(spec)
                                                            : makeSongChordQuestion(spec, LEARN_UNITS.indexOf(u));
         case 'odd':        return makeOddOneOutQuestion(spec);
         case 'wrong-note': return makeWrongNoteQuestion();
-        case 'count':      return makeCountQuestion(spec.meters);
         case 'video':      return makeVideoMeterQuestion(spec);
         case 'blind':      return makeBlindIntervalPlayQuestion(spec.semis);
         case 'phrase':     return makePhraseQuestion(spec.semis);
@@ -4476,7 +4323,7 @@ const MIDDLE_C   = 60;  // C4
       } else {
         // The first few play rounds name what to build: always the standard one.
         const warmUp = step === 'play' && !inRun && unitProgress(u.id).play.total < LEARN_NAME_ROUNDS;
-        const variant = warmUp && !state.forcedVariant ? 'standard' : chooseVariant(u, step, inRun);
+        const variant = warmUp && !state.forcedVariant ? 'standard' : chooseVariant(u, step);
         q = buildVariant(u, step, variant, inRun);
         q.variant = variant;
       }
@@ -4503,8 +4350,9 @@ const MIDDLE_C   = 60;  // C4
       const tag = document.getElementById('learn-tag');
       tag.textContent = q.tag || '';
       tag.hidden = !q.tag;
-      // A recording round plays its own video, so the synth Play button goes.
-      document.querySelector('#learn-round .learn-play-wrap').style.display = q.video ? 'none' : '';
+      // A recording round plays its own video, so the synth Play button goes,
+      // except in a boss run, where it carries the timer ring.
+      document.querySelector('#learn-round .learn-play-wrap').style.display = q.video && !(run && run.timed) ? 'none' : '';
       document.getElementById('learn-instrument').style.display = q.video ? 'none' : '';
       renderRunBar();
       renderCombo(false);
@@ -4725,6 +4573,7 @@ const MIDDLE_C   = 60;  // C4
     const DAILY_BONUS_XP = 30;     // first mix of the day only
     // Answer time per question, on top of how long the prompt plays.
     const ANSWER_SECS = { choice: 10, keys: 18 };
+    const VIDEO_LISTEN_SECS = 20;   // a recording has to load and be counted along to
 
     // Where a run's questions come from: [{ u, step, w }] with weights.
     function runSources(run) {
@@ -4779,6 +4628,7 @@ const MIDDLE_C   = 60;  // C4
 
     // How long a question's prompt takes to play, in seconds.
     function promptSeconds(q) {
+      if (q.video) return VIDEO_LISTEN_SECS;
       if (q.events) return eventsEnd(q.events);
       if (q.kind === 'interval') return eventsEnd(intervalPromptEvents(q, progress.settings.keyContext));
       if (q.kind === 'chord') return q.arpeggiate ? eventsEnd(chordThenArpEvents(q.midis)) : 1.2;
@@ -5844,7 +5694,7 @@ const MIDDLE_C   = 60;  // C4
 
           // ── Learn game layer ──
           // Force one question variant for Learn rounds ('standard', 'song',
-          // 'odd', 'wrong-note', 'count', 'video', 'blind', 'phrase', 'complete',
+          // 'odd', 'wrong-note', 'video', 'blind', 'phrase', 'complete',
           // 'missing'), or null for the normal random mix. Variants a unit
           // can't serve fall back to the mix.
           forceVariant:    (v) => { state.forcedVariant = v || null; return true; },
@@ -5906,7 +5756,7 @@ const MIDDLE_C   = 60;  // C4
 
       // Service Worker
       if ('serviceWorker' in navigator) {
-        const SW_VERSION = '2610310948';
+        const SW_VERSION = '2610311003';
         navigator.serviceWorker.register(
           `/music-theory/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
           { scope: '/music-theory/' }
