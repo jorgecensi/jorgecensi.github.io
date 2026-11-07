@@ -381,6 +381,41 @@ permalink: /cyber-quest/
             flex: 1; background: transparent; border: 0; color: #e6edf7; font-family: var(--mono); font-size: 16px; /* 16px+ stops iOS zooming in on focus */ outline: none; padding: 2px 0;
         }
         .term-help { font-size: 0.75rem; color: var(--muted); }
+        /* The terminal opens full screen from a button, like a real SSH session. */
+        #ops .term-step, #ops .terminal, #ops .term-help, #ops .chips { display: none; }
+        .term-open-btn { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--mono); }
+        .ops-intro { font-size: 0.9rem; color: #bae6fd; background: rgba(56, 189, 248, 0.08); border-left: 3px solid var(--info); border-radius: 8px; padding: 10px 12px; }
+        .ops-intro code { font-family: var(--mono); }
+        #ops.term-open .term-wrap {
+            position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--vvh, 100dvh); z-index: 40; gap: 0;
+            background: #0c0c0c; padding: var(--safe-top) 0 0;
+        }
+        #ops.term-open .term-wrap > :not(.threat):not(.term-step):not(.lesson):not(.terminal):not(.chips):not(.term-done) { display: none; }
+        #ops.term-open .lesson { display: none; margin: 0; border-radius: 0; border-left: 0; border-right: 0; max-height: 38vh; overflow-y: auto; }
+        #ops.term-open.lesson-open .lesson:not(:empty) { display: block; }
+        #ops.term-open .threat { margin: 0; border-radius: 0; padding: 8px 12px; }
+        #ops.term-open .feed li:not(:first-child) { display: none; }
+        #ops.term-open .term-step {
+            display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #1f1f1f; border-bottom: 1px solid #2c2c2c;
+            font: 0.78rem/1.3 var(--mono); color: #bdbdbd;
+        }
+        .term-step .ts-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+        .term-step .ts-text b { color: #fff; font-weight: 600; }
+        .term-step.flash .ts-text { color: #8ae234; }
+        .term-x { background: #2c2c2c; border: 0; color: #ddd; border-radius: 6px; width: 34px; height: 30px; flex: none; font-size: 0.9rem; }
+        #ops.lesson-open .term-x[aria-expanded="true"] { background: #3a3a3a; }
+        #ops.term-open .terminal { display: flex; flex: 1; min-height: 0; overflow-y: auto; border: 0; border-radius: 0; background: #0c0c0c; }
+        #ops.term-open .term-bar { display: none; }
+        #ops.term-open .term-out { height: auto; min-height: 0; overflow: visible; padding: 10px 12px 0; color: #d3d7cf; font-size: 0.8rem; }
+        #ops.term-open .term-inrow { border: 0; background: transparent; padding: 0 12px 14px; }
+        #ops.term-open .chips { display: flex; flex-wrap: nowrap; overflow-x: auto; padding: 8px; gap: 6px; background: #161616; border-top: 1px solid #2c2c2c; padding-bottom: calc(8px + var(--safe-bottom)); }
+        #ops.term-open .chip { flex: none; background: #262626; border-color: #3a3a3a; color: #e5e5e5; }
+        #ops.term-open .term-done { margin: 12px; }
+        .term-out .pu, .term-inrow .pu { color: #8ae234; font-weight: 700; }
+        .term-out .pp, .term-inrow .pp { color: #729fcf; font-weight: 700; }
+        .term-out .motd { color: #d3d7cf; }
+        .term-inrow .pr { color: #d3d7cf; }
+        .term-inrow input { caret-color: #d3d7cf; }
         .term-help code { font-family: var(--mono); color: var(--info); }
         .chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .chip {
@@ -794,7 +829,7 @@ permalink: /cyber-quest/
                 <h3>💻 Terminal Ops</h3>
                 <ul>
                     <li>A simulated Linux server you defend with <b>real commands</b> — <code>ls</code>, <code>cat</code>, <code>grep</code>, <code>ps</code>, <code>kill</code>, <code>chmod</code>, <code>ss</code>, <code>ufw</code>, <code>systemctl</code> and more. You can even pipe, like <code>cat file | grep word</code>.</li>
-                    <li><b>📘 Basics</b> start from zero: moving around, where Linux keeps settings and logs, reading logs, processes and scheduled jobs, permissions and services. Each step has a short 📖 lesson above the terminal that explains the idea and the command to try.</li>
+                    <li><b>📘 Basics</b> start from zero: moving around, where Linux keeps settings and logs, reading logs, processes and scheduled jobs, permissions and services. Each step has a short 📖 lesson that explains the idea and the command to try. Tap <b>⌨️ Open terminal</b> to work full screen; the 📖 button there shows the lesson again.</li>
                     <li><b>🚨 Incidents</b> unlock after the Basics: you use what you learned to catch an intruder and harden the server, with lessons that point back to the Basics.</li>
                     <li>Stuck? Type <code>hint</code> for the exact command, <code>help</code> for every command, or <code>man ls</code> to explain one.</li>
                     <li>It's a sandbox in your browser on a fake filesystem — nothing touches a real machine. Labs unlock in order and earn XP like missions.</li>
@@ -843,12 +878,19 @@ permalink: /cyber-quest/
                     <div class="threat-bar"><i id="ops-threat-bar"></i></div>
                     <ul class="feed" id="ops-feed" aria-live="polite"></ul>
                 </div>
+                <div class="ops-intro" id="ops-intro" hidden></div>
+                <div class="term-step" id="ops-step">
+                    <button class="term-x" id="ops-close" aria-label="Back to the lesson and objectives">✕</button>
+                    <span class="ts-text" id="ops-step-text"></span>
+                    <button class="term-x" id="ops-lesson-toggle" aria-label="Show or hide the lesson" aria-expanded="false">📖</button>
+                </div>
                 <div class="lesson" id="ops-lesson" aria-live="polite"></div>
                 <div class="objectives">
                     <h3>Objectives</h3>
                     <ul id="ops-objectives"></ul>
                 </div>
-                <div class="terminal">
+                <button class="btn term-open-btn" id="ops-open"><span>⌨️</span> Open terminal</button>
+                <div class="terminal" id="ops-term">
                     <div class="term-bar">
                         <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
                         <span class="host" id="ops-host">alex@web-01</span>
@@ -856,10 +898,10 @@ permalink: /cyber-quest/
                     <div class="term-out" id="ops-out"></div>
                     <div class="term-inrow" id="ops-inrow">
                         <span class="pr" id="ops-prompt">$</span>
-                        <input id="ops-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command" placeholder="type a command, or 'help'">
+                        <input id="ops-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command" enterkeyhint="go">
                     </div>
                 </div>
-                <div class="term-help">New here? Type <code>help</code> for commands, or <code>hint</code> for your next step. Tap a shortcut:</div>
+                <div class="term-help">New here? Type <code>help</code> for commands, or <code>hint</code> for your next step.</div>
                 <div class="chips" id="ops-chips"></div>
                 <div class="term-done" id="ops-done">
                     <h3 id="ops-done-title"></h3>
@@ -911,7 +953,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070655';
+    const SW_VERSION = '2611070707';
 
     (() => {
         'use strict';
@@ -2227,7 +2269,7 @@ permalink: /cyber-quest/
             window.scrollTo(0, 0);
             if (screen === 'home') renderHome();
             if (screen === 'guide') renderGuide();
-            if (screen === 'ops') setTimeout(() => { const i = $('ops-input'); if (i) i.focus({ preventScroll: true }); }, 50);
+            if (screen !== 'ops') { document.getElementById('ops').classList.remove('term-open'); }
             if (screen !== 'ops') Ops.stopIncident();
             if (screen !== 'triage') Triage.stop();
             if (screen !== 'story') Story.stopTyping();
@@ -2902,7 +2944,7 @@ permalink: /cyber-quest/
                 title: 'The Linux Map',
                 blurb: 'Learn where Linux keeps settings, logs, users and temporary files.',
                 xp: 45,
-                scenario: 'Every Linux server uses the same basic layout. Once you know it,\nyou always know where to look: settings in /etc, logs in /var/log,\nusers in /home, and scratch space in /tmp.\n\nFollow the lesson above the terminal, one step at a time.',
+                scenario: 'Every Linux server uses the same basic layout. Once you know it,\nyou always know where to look: settings in /etc, logs in /var/log,\nusers in /home, and scratch space in /tmp.\n\nFollow the 📖 lesson, one step at a time.',
                 skills: ['ls /', 'cd', 'cat', 'ls -a'],
                 chips: ['ls /', 'cd /etc', 'ls', 'cat hostname', 'ls /var/log', 'cd ~', 'pwd', 'ls -a /tmp', 'hint'],
                 debrief: 'You have the map now. / is the root of everything, /etc holds settings, /var/log holds logs, /home holds each user\'s files, and /tmp and /var/tmp are shared scratch space where malware likes to hide. Paths that start with / are absolute, and anything else starts from where you are.',
@@ -3386,18 +3428,20 @@ permalink: /cyber-quest/
                 $('ops-chips').innerHTML = (l.chips || ['help', 'ls -a', 'ps aux', 'hint']).concat(['help', 'clear'])
                     .filter((c, i, arr) => arr.indexOf(c) === i)
                     .map((c) => `<button class="chip" data-chip="${esc(c)}">${esc(c)}</button>`).join('');
-                $('ops-prompt').textContent = this.prompt();
+                $('ops-prompt').innerHTML = this.promptHtml();
                 $('ops-host').textContent = 'alex@' + this.host;
                 $('ops').classList.toggle('alarm', !!l.incident);
                 $('ops-threat').hidden = !l.incident;
                 $('ops-feed').innerHTML = '';
                 $('ops-done').className = 'term-done';
-                this.print('Connected to ' + esc(this.host) + '.', 'dim');
-                // Intros are authored HTML (they may contain <code>).
-                if (l.intro) this.print(l.intro, 'mira');
-                else this.print('Read the 📖 lesson above, then type the command below and press Enter.', 'dim');
-                this.print('Stuck? <span class="hl">hint</span> shows the exact command. <span class="hl">help</span> lists every command.', 'dim');
-                this.print('');
+                // A login banner like a real SSH session. People talk outside the terminal:
+                // the intro sits above the lesson, and incident messages go to the alert feed.
+                this.print(esc('Welcome to Ubuntu 22.04.4 LTS\n\nLast login: Mon Mar  9 08:57 from 10.0.4.22'), 'motd');
+                // Intros are authored HTML (they may contain <code>). Incidents show theirs as the briefing.
+                $('ops-intro').innerHTML = l.intro && !l.incident ? l.intro : '';
+                $('ops-intro').hidden = !l.intro || !!l.incident;
+                this._step = -1;
+                this.closeTerm();
                 this.renderObjectives();
                 show('ops');
                 if (l.incident) this.startIncident(l.incident);
@@ -3462,7 +3506,6 @@ permalink: /cyber-quest/
                 const feed = $('ops-feed');
                 feed.prepend(li);
                 while (feed.children.length > 3) feed.lastChild.remove();
-                this.print(esc(text), 'alert-' + lvl);
                 if (lvl === 'bad') Sfx.hit(); else if (lvl === 'warn' || lvl === 'say') Sfx.ping();
             },
             updateHud() {
@@ -3486,7 +3529,7 @@ permalink: /cyber-quest/
                 $('ops-continue').textContent = '↻ Try again';
                 const src = this.lab, mode = this.mode, onDone = this.onDone;
                 this._next = () => this.run(src, { mode, onDone });
-                $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                this.closeTerm(); $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             },
             continue() {
                 const next = this._next;
@@ -3498,6 +3541,10 @@ permalink: /cyber-quest/
                 const short = this.T.cwd.replace('/home/alex', '~');
                 return 'alex@' + this.host + ':' + short + '$';
             },
+            promptHtml() { // coloured like Ubuntu's default bash prompt
+                const short = this.T.cwd.replace(/^\/home\/alex/, '~');
+                return '<span class="pu">alex@' + esc(this.host) + '</span>:<span class="pp">' + esc(short) + '</span>$';
+            },
 
             print(html, cls) {
                 const div = document.createElement('div');
@@ -3506,11 +3553,12 @@ permalink: /cyber-quest/
                 $('ops-out').appendChild(div);
                 const out = $('ops-out');
                 out.scrollTop = out.scrollHeight;
+                this.scrollTerm();
             },
 
             submit(raw) {
                 const cmd = raw.trim();
-                this.print('<span class="cmd-echo"><span class="pr">' + esc(this.prompt()) + '</span> ' + esc(raw) + '</span>');
+                this.print('<span class="cmd-echo">' + this.promptHtml() + ' ' + esc(raw) + '</span>');
                 if (cmd) { this.hist.push(cmd); this.histPos = this.hist.length; this.T.history.push(cmd); }
                 if (cmd === 'clear') { $('ops-out').innerHTML = ''; return; }
                 if (cmd) this.exec(cmd);
@@ -3602,7 +3650,7 @@ permalink: /cyber-quest/
                         T.cwd = this.resolve(pos[0] || '~');
                         T.visited.add(T.cwd);
                         if (/(^|\/)\.\.(\/|$)/.test(pos[0] || '')) T.upTo.add(T.cwd);
-                        $('ops-prompt').textContent = this.prompt();
+                        $('ops-prompt').innerHTML = this.promptHtml();
                         return {};
                     }
                     case 'ls': return this.ls(pos[0], flags);
@@ -3868,16 +3916,55 @@ permalink: /cyber-quest/
                 $('ops-count').textContent = done + '/' + tasks.length;
                 // The lesson for the first unfinished step (lesson HTML is authored content).
                 const t = tasks[cur];
-                $('ops-lesson').innerHTML = t && t.lesson && !this.lab.incident
-                    ? '<div class="step">📖 Step ' + (cur + 1) + ' of ' + tasks.length + '</div><h4>' + esc(t.desc) + '</h4><p>' + t.lesson + '</p>'
-                    : '';
+                $('ops-lesson').innerHTML = this.lab.incident
+                    ? (this.lab.intro ? '<div class="step">🚨 Briefing</div><p>' + this.lab.intro + '</p>' : '')
+                    : t && t.lesson ? '<div class="step">📖 Step ' + (cur + 1) + ' of ' + tasks.length + '</div><h4>' + esc(t.desc) + '</h4><p>' + t.lesson + '</p>' : '';
+                if (!this._flashing) $('ops-step-text').innerHTML = t ? 'Step ' + (cur + 1) + '/' + tasks.length + ': <b>' + esc(t.desc) + '</b>' : '<b>All objectives complete</b>';
+                // A new step opens its lesson in the terminal view (not for incidents: no time to read there).
+                if (cur !== this._step) { this._step = cur; if (!this.lab.incident && cur >= 0) this.toggleLesson(true); }
+            },
+            openTerm() {
+                $('ops').classList.add('term-open');
+                this.fitTerm();
+                const i = $('ops-input');
+                i.focus({ preventScroll: true });
+                this.scrollTerm();
+            },
+            closeTerm() {
+                $('ops').classList.remove('term-open');
+                $('ops-input').blur();
+            },
+            toggleLesson(on) {
+                const open = on == null ? !$('ops').classList.contains('lesson-open') : on;
+                $('ops').classList.toggle('lesson-open', open);
+                $('ops-lesson-toggle').setAttribute('aria-expanded', String(open));
+            },
+            flashStep(desc) {
+                const bar = $('ops-step');
+                this._flashing = true;
+                $('ops-step-text').textContent = '✓ ' + desc;
+                bar.classList.add('flash');
+                Sfx.ok();
+                clearTimeout(this._flashT);
+                this._flashT = setTimeout(() => { this._flashing = false; bar.classList.remove('flash'); if (this.lab) this.renderObjectives(); }, 1400);
+            },
+            // Size the full-screen terminal to the visible area, so the on-screen keyboard never covers the prompt.
+            fitTerm() {
+                const vv = window.visualViewport;
+                const r = document.documentElement.style;
+                if (vv) { r.setProperty('--vvh', vv.height + 'px'); r.setProperty('--vv-top', vv.offsetTop + 'px'); }
+                this.scrollTerm();
+            },
+            scrollTerm() {
+                const t = $('ops-term');
+                if ($('ops').classList.contains('term-open')) t.scrollTop = t.scrollHeight;
             },
 
             checkTasks() {
                 const before = this.lab.tasks.filter((t) => t._was).length;
                 this.lab.tasks.forEach((t) => {
                     const now = t.check(this.T);
-                    if (now && !t._was) { t._was = true; this.print('<span class="ok">✓ objective complete: ' + esc(t.desc) + '</span>'); }
+                    if (now && !t._was) { t._was = true; this.flashStep(t.desc); }
                 });
                 this.renderObjectives();
                 if (this.lab.tasks.every((t) => t.check(this.T))) this.finish();
@@ -3905,7 +3992,7 @@ permalink: /cyber-quest/
                     $('ops-continue').textContent = 'Continue the story →';
                     const done = this.onDone;
                     this._next = () => done && done({ stars });
-                    $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    this.closeTerm(); $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     return;
                 }
                 this._next = () => show('home');
@@ -3917,7 +4004,7 @@ permalink: /cyber-quest/
                 $('ops-done-title').textContent = '🎉 ' + l.title + ' complete!';
                 $('ops-done-text').innerHTML = esc(l.debrief) + (first ? ' <b>+' + l.xp + ' XP</b>' : ' <span class="dim">(already cleared)</span>');
                 $('ops-done').className = 'term-done show';
-                $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                this.closeTerm(); $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         };
 
@@ -5241,6 +5328,11 @@ permalink: /cyber-quest/
         $('b-start').addEventListener('click', startMission);
         $('ob-start').addEventListener('click', () => Ops.start());
         $('ops-continue').addEventListener('click', () => Ops.continue());
+        $('ops-open').addEventListener('click', () => Ops.openTerm());
+        $('ops-close').addEventListener('click', () => Ops.closeTerm());
+        $('ops-lesson-toggle').addEventListener('click', () => Ops.toggleLesson());
+        $('ops-term').addEventListener('click', (e) => { if (!window.getSelection().toString() && e.target.closest('#ops-term')) $('ops-input').focus({ preventScroll: true }); });
+        if (window.visualViewport) ['resize', 'scroll'].forEach((ev) => window.visualViewport.addEventListener(ev, () => { if (S.screen === 'ops') Ops.fitTerm(); }));
         $('tr-continue').addEventListener('click', () => { const next = Triage._next; Triage._next = null; if (next) next(); else show('home'); });
         $('tr-quit').addEventListener('click', () => {
             if (Triage.over || window.confirm('Leave? The story is saved, but this part restarts next time.')) show('home');

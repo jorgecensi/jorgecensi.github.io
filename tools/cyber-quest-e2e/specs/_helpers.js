@@ -28,7 +28,11 @@ async function launch() {
   // Training Grounds is collapsed by default; mission and lab cards live inside it.
   const openGrounds = () => ev(() => { document.getElementById('grounds').open = true; });
   const screen = () => ev(() => window.__cyberQuest.state.screen);
-  const type = async (cmd) => { await page.fill('#ops-input', cmd); await page.press('#ops-input', 'Enter'); };
+  // The terminal opens full screen from a button; open it first if it's closed.
+  const type = async (cmd) => {
+    if (await page.isVisible('#ops-open')) await page.click('#ops-open');
+    await page.fill('#ops-input', cmd); await page.press('#ops-input', 'Enter');
+  };
   const feed = () => ev(() => document.getElementById('ops-feed').innerText);
   const shot = async (name) => { if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true }); };
   const noHScroll = async () => assert(!(await ev(() => document.documentElement.scrollWidth > innerWidth)), 'page scrolls horizontally');

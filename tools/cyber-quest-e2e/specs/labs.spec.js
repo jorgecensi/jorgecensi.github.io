@@ -39,6 +39,9 @@ const LABS = {
   await type('man crontab'); await type('frobnicate');
   const out = await ev(() => window.__cyberQuest.ops.out);
   assert(/minute hour/.test(out) && /type help/.test(out), 'man pages and unknown-command help work');
+  assert(await page.isVisible('#ops-term') && !(await ev(() => window.__cyberQuest.ops.out)).includes('Mira'), 'the terminal is open full screen and has no character lines');
+  await page.click('#ops-close');
+  assert(!(await page.isVisible('#ops-term')) && await page.isVisible('#ops-open'), 'closing the terminal goes back to the lesson');
   await page.click('#ops-quit');
 
   // A save from before the Basics track existed keeps the labs it already cleared.
