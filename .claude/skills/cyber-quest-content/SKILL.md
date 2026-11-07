@@ -66,6 +66,11 @@ const INC_X = {
 };
 ```
 
+A **challenge** (no hints, checks a Basics lab) is an entry in `CHALLENGES`:
+`{ id, after: '<basics lab id>', icon, title, par, xp, blurb, scenario, debrief, build() { ... return { ..., vars } }, tasks }`.
+Randomise in `build()` (`pick`, `rnd`, `fsTree`), keep goals free of commands, and add a
+solver to `SOLVE` in `labs.spec.js`. Every new Basics lab should get one.
+
 A phishing rush is `{ type: 'triage', gap: 4.5, window: 13, mails: [{ name, addr, subject, preview, attach?, phish, why, hit? }] }`.
 
 ## Mistakes we already made
