@@ -28,6 +28,18 @@ mood or location the app has (for example calm/day, night, alarm).
 **App icon:**
 > 16-bit pixel art app icon, square, <subject>, <app background colour> filling the whole square, bold readable shape at small sizes, no text, crisp hard pixels, no anti-aliasing.
 
+**Overworld map (one per world):** same style, "top-down bird's-eye overworld
+map like a 16-bit console RPG, portrait 3:4", then name each landmark and where
+it sits (for example "bottom-left: a glass lobby"), and say "no roads or paths
+between places, no text, no characters, no UI". The game draws the roads and
+nodes itself; after the upload, move the node `x`/`y` in `WORLDS` onto the
+landmarks.
+
+**Walking sprite (map player):** "top-down chibi walking sprite, 4×2 grid of
+same-size cells: row 1 facing down (step A, step B), facing up (A, B); row 2
+facing left (A, B), facing right (A, B)", plus the magenta background line.
+Process with `sheet ... --grid 4x2` and keep the frame order.
+
 Tell the owner: PNG at the largest size the tool gives, and send it even if the
 generator ignored the magenta and drew a checkerboard (then use
 `tools/character-sheet-extraction/` for that sheet instead).

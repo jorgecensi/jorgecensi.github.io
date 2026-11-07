@@ -20,6 +20,7 @@ runs each spec with a 420 s timeout (`SPEC_TIMEOUT=`). Screenshots land in
 | `incident-fail.spec.js` | Lets the chapter 2 brute-force attack run out: the meter climbs, `auth.log` grows, the incident ends in “Breached”, and “Try again” restarts at 0%. | ~90 s |
 | `missions.spec.js` | Every Training Grounds quiz mission, tier unlocking, the password forge, a boss timeout, reaching the top rank. | ~1 min |
 | `labs.spec.js` | Every terminal lab by following its lessons, shell details (`tail -n`, `grep -c`, quoted args, `answer`, `man`), lab locking, old-save compatibility. | ~30 s |
+| `map.spec.js` | The home overworld map: every chapter has a node, locked nodes, walking (tap and arrow keys), the walk to the next chapter after one is cleared, side nodes. | ~5 s |
 
 ## Gotchas
 
