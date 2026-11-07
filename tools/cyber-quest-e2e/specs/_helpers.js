@@ -16,6 +16,8 @@ async function launch() {
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  // A missing sprite or background shows up as a 4xx, not a console error.
+  page.on('response', (r) => { if (r.status() >= 400) errors.push(r.status() + ' ' + r.url()); });
   page.on('dialog', (d) => d.accept());
 
   const ev = (f, a) => page.evaluate(f, a);
