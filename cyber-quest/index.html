@@ -437,7 +437,13 @@ permalink: /cyber-quest/
         #ops.term-open .term-out, #ops.term-open .term-inrow { flex: none; } /* never squeeze the output under the prompt: scroll instead */
         #ops.term-open .chips { display: flex; flex-wrap: nowrap; overflow-x: auto; padding: 8px; gap: 6px; background: #161616; border-top: 1px solid #2c2c2c; padding-bottom: calc(8px + var(--safe-bottom)); }
         #ops.term-open .chip { flex: none; background: #262626; border-color: #3a3a3a; color: #e5e5e5; }
-        #ops.term-open .term-done { margin: 12px; }
+        #ops.term-open .term-done.show {
+            flex: none; margin: 0; border-radius: 0; border-left: 0; border-right: 0; max-height: 45%; overflow-y: auto;
+            padding: 14px 16px calc(14px + var(--safe-bottom)); background-color: #0f1f1a;
+        }
+        #ops.term-open .term-done.show.bad { background-color: #2a1016; }
+        #ops.term-open.finished .chips, #ops.term-open.finished .term-inrow { display: none; }
+        #ops.term-open.finished .term-out { padding-bottom: 12px; }
         .term-out .pu, .term-inrow .pu { color: #8ae234; font-weight: 700; }
         .term-out .pp, .term-inrow .pp { color: #729fcf; font-weight: 700; }
         .term-out .motd { color: #d3d7cf; }
@@ -980,7 +986,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070848';
+    const SW_VERSION = '2611070913';
 
     (() => {
         'use strict';
@@ -2810,7 +2816,7 @@ permalink: /cyber-quest/
                         fs: d({
                             home: d({ alex: d({
                                 'welcome.txt': f('-rw-r--r--', 'Welcome to web-01.\n\nThis is a training server. Read incident-ticket.txt for your\nfirst task, then look around with ls, cd and cat.\n'),
-                                'incident-ticket.txt': f('-rw-r--r--', 'TICKET #4471 — Orientation\n\nGet familiar with the server:\n  1. Find out where you are                  (pwd)\n  2. Look around, and walk into some folders (ls, cd, cd ..)\n  3. List hidden files too                   (ls -a)\n  4. Read this ticket                        (cat)\n  5. Check which user you are logged in as   (whoami)\n\nWell done, you\'re reading it. Next, check who you are.\n'),
+                                'incident-ticket.txt': f('-rw-r--r--', 'TICKET #4471 — Orientation\n\nGet familiar with the server:\n  1. pwd          where am I?\n  2. ls, cd, cd ..  walk into folders\n  3. ls -a        show hidden files\n  4. cat          read this ticket\n  5. whoami       which user am I?\n\nWell done, you\'re reading it. Next, check who you are.\n'),
                                 '.note': f('-rw-r--r--', 'Pro tip: "cd .." goes up one directory, "cd ~" goes home,\nand "clear" wipes the screen. You found a hidden file — nice.\n'),
                                 projects: d({
                                     starfall: d({
@@ -3468,6 +3474,7 @@ permalink: /cyber-quest/
                 $('ops-intro').innerHTML = l.intro && !l.incident ? l.intro : '';
                 $('ops-intro').hidden = !l.intro || !!l.incident;
                 this._step = -1;
+                $('ops').classList.remove('finished');
                 this.closeTerm();
                 this.renderObjectives();
                 show('ops');
@@ -3556,7 +3563,7 @@ permalink: /cyber-quest/
                 $('ops-continue').textContent = '↻ Try again';
                 const src = this.lab, mode = this.mode, onDone = this.onDone;
                 this._next = () => this.run(src, { mode, onDone });
-                this.closeTerm(); $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                this.showDone();
             },
             continue() {
                 const next = this._next;
@@ -3964,6 +3971,16 @@ permalink: /cyber-quest/
                 i.focus({ preventScroll: true });
                 this.scrollTerm();
             },
+            // The result: in the full-screen terminal it docks at the bottom, so the last
+            // output stays readable (and scrollable) above it; otherwise scroll to the card.
+            showDone() {
+                $('ops').classList.add('finished');
+                if ($('ops').classList.contains('term-open')) {
+                    $('ops-input').blur();
+                    this.toggleLesson(false);
+                    this.scrollTerm();
+                } else $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            },
             closeTerm() {
                 $('ops').classList.remove('term-open', 'typing');
                 document.documentElement.classList.remove('term-lock');
@@ -4029,7 +4046,7 @@ permalink: /cyber-quest/
                     $('ops-continue').textContent = 'Continue the story →';
                     const done = this.onDone;
                     this._next = () => done && done({ stars });
-                    this.closeTerm(); $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    this.showDone();
                     return;
                 }
                 this._next = () => show('home');
@@ -4041,7 +4058,7 @@ permalink: /cyber-quest/
                 $('ops-done-title').textContent = '🎉 ' + l.title + ' complete!';
                 $('ops-done-text').innerHTML = esc(l.debrief) + (first ? ' <b>+' + l.xp + ' XP</b>' : ' <span class="dim">(already cleared)</span>');
                 $('ops-done').className = 'term-done show';
-                this.closeTerm(); $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                this.showDone();
             }
         };
 

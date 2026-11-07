@@ -30,6 +30,7 @@ const LABS = {
       assert(/Not quite/.test(out), 'a wrong answer is rejected');
     }
     assert(await ev(() => window.__cyberQuest.ops.done), id + ' should be finished');
+    assert(await page.isVisible('#ops-term') && await page.isVisible('#ops-done'), id + ': the result docks under the terminal, which stays readable');
     console.log('  ', id, '→ done');
     await page.click('#ops-continue');
     await openGrounds();
