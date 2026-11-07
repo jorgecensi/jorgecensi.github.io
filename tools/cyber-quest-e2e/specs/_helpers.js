@@ -26,7 +26,13 @@ async function launch() {
     await page.waitForFunction(() => window.__cyberQuest, null, { timeout: 5000 });
   };
   // Training Grounds is collapsed by default; mission and lab cards live inside it.
-  const openGrounds = () => ev(() => { document.getElementById('grounds').open = true; });
+  // Training Grounds only shows while the player stands on its map spot: walk there, then open it.
+  const openGrounds = () => ev(() => {
+    const m = window.__cyberQuest.map;
+    if (window.__cyberQuest.progress.settings.mapAt !== 'grounds') m.walk('grounds');
+    m.syncGrounds();
+    document.getElementById('grounds').open = true;
+  });
   const screen = () => ev(() => window.__cyberQuest.state.screen);
   // The terminal opens full screen from a button; open it first if it's closed.
   const type = async (cmd) => {

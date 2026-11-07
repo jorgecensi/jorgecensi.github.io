@@ -583,6 +583,7 @@ permalink: /cyber-quest/
         .signpost .btn-row { margin: 0; }
         .signpost .hint { font-size: 0.75rem; color: var(--muted); margin: 8px 0 0; }
         .grounds { margin-bottom: 8px; }
+        .grounds[hidden] { display: none; }
         .grounds summary {
             list-style: none; cursor: pointer; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
             padding: 14px 44px 14px 16px; position: relative; margin-bottom: 14px;
@@ -996,7 +997,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611071032';
+    const SW_VERSION = '2611071140';
 
     (() => {
         'use strict';
@@ -4981,6 +4982,7 @@ permalink: /cyber-quest/
                 if (this.PLAYER_SPRITE) $('map-player').firstChild.style.backgroundImage = 'url("' + this.PLAYER_SPRITE + '")';
                 this.face('down', 0);
                 this.renderSign();
+                this.syncGrounds();
                 if (walkTo && this.world === WORLDS.findIndex((x) => x.nodes.includes(want))) {
                     s.mapFor = want.id; saveProgress();
                     setTimeout(() => this.walk(walkTo), 450);
@@ -4996,6 +4998,9 @@ permalink: /cyber-quest/
                 const pts = this.route(s.mapAt, id);
                 if (pts.length) { s.mapAt = id; saveProgress(); }
                 this.select(id);
+                if (id !== 'grounds') this.syncGrounds(); // leaving: hide it now; arriving: show it on arrival
+                const arrive = then;
+                then = () => { this.syncGrounds(); if (arrive) arrive(); };
                 if (!pts.length) { if (then) then(); return; }
                 const el = $('map-player');
                 if (reducedMotion || !el) { if (el) Object.assign(el.style, this.pos(pts[pts.length - 1].x, pts[pts.length - 1].y)); if (then) then(); return; }
@@ -5015,6 +5020,12 @@ permalink: /cyber-quest/
                     setTimeout(step, ms);
                 };
                 step();
+            },
+            // The Training Grounds list only shows while the player stands on its map spot.
+            syncGrounds() {
+                const here = progress.settings.mapAt === 'grounds';
+                $('grounds').hidden = !here;
+                if (!here) $('grounds').open = false;
             },
             select(id) {
                 this.sel = id;
