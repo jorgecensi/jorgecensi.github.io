@@ -367,6 +367,29 @@ permalink: /cyber-quest/
             padding: 12px; height: 46vh; min-height: 260px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
         }
         .term-out .cmd-echo { color: #e6edf7; }
+        /* Lines wrap only between words, and wrapped lines hang under where they started. */
+        .term-out { word-break: normal; overflow-wrap: break-word; }
+        .term-out > div { padding-left: var(--hang, 2ch); text-indent: calc(-1 * var(--hang, 2ch)); }
+        .term-out .c-msg { display: block; padding-left: 2ch; text-indent: 0; }
+        .term-out [class^="c-"]:not(.c-msg):not(.c-proc), .term-out .ls-i { white-space: pre; }
+        .term-out .ls-i { display: inline-block; margin-right: 2ch; text-indent: 0; }
+        .term-out .c-time { color: #75808a; }
+        .term-out .c-meta { color: #75808a; }
+        .term-out .c-ip { color: #fcaf3e; font-weight: 600; }
+        .term-out .c-port { color: #e9b96e; }
+        .term-out .c-user { color: #ad7fa8; font-weight: 600; }
+        .term-out .c-path { color: #729fcf; }
+        .term-out .c-bad { color: #ef6b6b; font-weight: 600; }
+        .term-out .c-good { color: #8ae234; font-weight: 600; }
+        .term-out .c-dir { color: #729fcf; font-weight: 700; }
+        .term-out .c-exec { color: #8ae234; }
+        .term-out .c-hidden { color: #8a8f94; }
+        .term-out .c-head { color: #ffffff; font-weight: 700; }
+        .term-out .c-cmd { color: #fce94f; }
+        .term-out .c-url { color: #fcaf3e; text-decoration: underline; }
+        .term-out .c-proc { color: #8ae234; }
+        .term-out .hl .c-proc { color: inherit; }
+        .term-out .c-flag { color: #34e2e2; }
         .term-out .cmd-echo .pr { color: var(--accent); }
         .term-out .err { color: #ff9ca8; }
         .term-out .ok { color: #7ee7c0; }
@@ -381,6 +404,41 @@ permalink: /cyber-quest/
             flex: 1; background: transparent; border: 0; color: #e6edf7; font-family: var(--mono); font-size: 16px; /* 16px+ stops iOS zooming in on focus */ outline: none; padding: 2px 0;
         }
         .term-help { font-size: 0.75rem; color: var(--muted); }
+        /* The terminal opens full screen from a button, like a real SSH session. */
+        #ops .term-step, #ops .terminal, #ops .term-help, #ops .chips { display: none; }
+        .term-open-btn { display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--mono); }
+        .ops-intro { font-size: 0.9rem; color: #bae6fd; background: rgba(56, 189, 248, 0.08); border-left: 3px solid var(--info); border-radius: 8px; padding: 10px 12px; }
+        .ops-intro code { font-family: var(--mono); }
+        #ops.term-open .term-wrap {
+            position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); height: var(--vvh, 100dvh); z-index: 40; gap: 0;
+            background: #0c0c0c; padding: var(--safe-top) 0 0;
+        }
+        #ops.term-open .term-wrap > :not(.threat):not(.term-step):not(.lesson):not(.terminal):not(.chips):not(.term-done) { display: none; }
+        #ops.term-open .lesson { display: none; margin: 0; border-radius: 0; border-left: 0; border-right: 0; max-height: 38vh; overflow-y: auto; }
+        #ops.term-open.lesson-open .lesson:not(:empty) { display: block; }
+        #ops.term-open .threat { margin: 0; border-radius: 0; padding: 8px 12px; }
+        #ops.term-open .feed li:not(:first-child) { display: none; }
+        #ops.term-open .term-step {
+            display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #1f1f1f; border-bottom: 1px solid #2c2c2c;
+            font: 0.78rem/1.3 var(--mono); color: #bdbdbd;
+        }
+        .term-step .ts-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+        .term-step .ts-text b { color: #fff; font-weight: 600; }
+        .term-step.flash .ts-text { color: #8ae234; }
+        .term-x { background: #2c2c2c; border: 0; color: #ddd; border-radius: 6px; width: 34px; height: 30px; flex: none; font-size: 0.9rem; }
+        #ops.lesson-open .term-x[aria-expanded="true"] { background: #3a3a3a; }
+        #ops.term-open .terminal { display: flex; flex: 1; min-height: 0; overflow-y: auto; border: 0; border-radius: 0; background: #0c0c0c; }
+        #ops.term-open .term-bar { display: none; }
+        #ops.term-open .term-out { height: auto; min-height: 0; overflow: visible; padding: 10px 10px 0; color: #d3d7cf; font-size: 0.75rem; }
+        #ops.term-open .term-inrow { border: 0; background: transparent; padding: 0 12px 14px; }
+        #ops.term-open .chips { display: flex; flex-wrap: nowrap; overflow-x: auto; padding: 8px; gap: 6px; background: #161616; border-top: 1px solid #2c2c2c; padding-bottom: calc(8px + var(--safe-bottom)); }
+        #ops.term-open .chip { flex: none; background: #262626; border-color: #3a3a3a; color: #e5e5e5; }
+        #ops.term-open .term-done { margin: 12px; }
+        .term-out .pu, .term-inrow .pu { color: #8ae234; font-weight: 700; }
+        .term-out .pp, .term-inrow .pp { color: #729fcf; font-weight: 700; }
+        .term-out .motd { color: #d3d7cf; }
+        .term-inrow .pr { color: #d3d7cf; }
+        .term-inrow input { caret-color: #d3d7cf; }
         .term-help code { font-family: var(--mono); color: var(--info); }
         .chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .chip {
@@ -794,7 +852,7 @@ permalink: /cyber-quest/
                 <h3>💻 Terminal Ops</h3>
                 <ul>
                     <li>A simulated Linux server you defend with <b>real commands</b> — <code>ls</code>, <code>cat</code>, <code>grep</code>, <code>ps</code>, <code>kill</code>, <code>chmod</code>, <code>ss</code>, <code>ufw</code>, <code>systemctl</code> and more. You can even pipe, like <code>cat file | grep word</code>.</li>
-                    <li><b>📘 Basics</b> start from zero: moving around, where Linux keeps settings and logs, reading logs, processes and scheduled jobs, permissions and services. Each step has a short 📖 lesson above the terminal that explains the idea and the command to try.</li>
+                    <li><b>📘 Basics</b> start from zero: moving around, where Linux keeps settings and logs, reading logs, processes and scheduled jobs, permissions and services. Each step has a short 📖 lesson that explains the idea and the command to try. Tap <b>⌨️ Open terminal</b> to work full screen; the 📖 button there shows the lesson again.</li>
                     <li><b>🚨 Incidents</b> unlock after the Basics: you use what you learned to catch an intruder and harden the server, with lessons that point back to the Basics.</li>
                     <li>Stuck? Type <code>hint</code> for the exact command, <code>help</code> for every command, or <code>man ls</code> to explain one.</li>
                     <li>It's a sandbox in your browser on a fake filesystem — nothing touches a real machine. Labs unlock in order and earn XP like missions.</li>
@@ -843,12 +901,19 @@ permalink: /cyber-quest/
                     <div class="threat-bar"><i id="ops-threat-bar"></i></div>
                     <ul class="feed" id="ops-feed" aria-live="polite"></ul>
                 </div>
+                <div class="ops-intro" id="ops-intro" hidden></div>
+                <div class="term-step" id="ops-step">
+                    <button class="term-x" id="ops-close" aria-label="Back to the lesson and objectives">✕</button>
+                    <span class="ts-text" id="ops-step-text"></span>
+                    <button class="term-x" id="ops-lesson-toggle" aria-label="Show or hide the lesson" aria-expanded="false">📖</button>
+                </div>
                 <div class="lesson" id="ops-lesson" aria-live="polite"></div>
                 <div class="objectives">
                     <h3>Objectives</h3>
                     <ul id="ops-objectives"></ul>
                 </div>
-                <div class="terminal">
+                <button class="btn term-open-btn" id="ops-open"><span>⌨️</span> Open terminal</button>
+                <div class="terminal" id="ops-term">
                     <div class="term-bar">
                         <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
                         <span class="host" id="ops-host">alex@web-01</span>
@@ -856,10 +921,10 @@ permalink: /cyber-quest/
                     <div class="term-out" id="ops-out"></div>
                     <div class="term-inrow" id="ops-inrow">
                         <span class="pr" id="ops-prompt">$</span>
-                        <input id="ops-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command" placeholder="type a command, or 'help'">
+                        <input id="ops-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command" enterkeyhint="go">
                     </div>
                 </div>
-                <div class="term-help">New here? Type <code>help</code> for commands, or <code>hint</code> for your next step. Tap a shortcut:</div>
+                <div class="term-help">New here? Type <code>help</code> for commands, or <code>hint</code> for your next step.</div>
                 <div class="chips" id="ops-chips"></div>
                 <div class="term-done" id="ops-done">
                     <h3 id="ops-done-title"></h3>
@@ -911,7 +976,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070646';
+    const SW_VERSION = '2611070710';
 
     (() => {
         'use strict';
@@ -2175,6 +2240,7 @@ permalink: /cyber-quest/
 
         // ── Progress ──────────────────────────────────────────────────────
         const STORE_KEY = 'cyber-quest-progress-v1';
+        const STORY_REV = 2; // bump when beats are inserted into a released chapter, and migrate in loadProgress()
         let progress = loadProgress();
 
         function loadProgress() {
@@ -2184,12 +2250,16 @@ permalink: /cyber-quest/
                     p.labs = p.labs || {};
                     p.story = p.story || {};
                     p.settings = p.settings || {};
+                    // rev 2 inserted two beats into ch1 after beat 1: move saves that were past them.
+                    if ((p.rev || 1) < 2 && p.storyAt && p.storyAt.ch === 'ch1' && p.storyAt.beat >= 2) p.storyAt.beat += 2;
+                    p.rev = STORY_REV;
                     return p;
                 }
             } catch (e) { /* storage blocked */ }
-            return { v: 1, missions: {}, labs: {}, story: {}, settings: {} };
+            return { v: 1, rev: STORY_REV, missions: {}, labs: {}, story: {}, settings: {} };
         }
         function saveProgress() {
+            progress.rev = STORY_REV;
             try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (e) { /* ignore */ }
         }
         const totalXp = () => Object.values(progress.missions).reduce((s, m) => s + (m.xp || 0), 0)
@@ -2222,7 +2292,7 @@ permalink: /cyber-quest/
             window.scrollTo(0, 0);
             if (screen === 'home') renderHome();
             if (screen === 'guide') renderGuide();
-            if (screen === 'ops') setTimeout(() => { const i = $('ops-input'); if (i) i.focus({ preventScroll: true }); }, 50);
+            if (screen !== 'ops') { document.getElementById('ops').classList.remove('term-open'); }
             if (screen !== 'ops') Ops.stopIncident();
             if (screen !== 'triage') Triage.stop();
             if (screen !== 'story') Story.stopTyping();
@@ -2728,16 +2798,24 @@ permalink: /cyber-quest/
                 title: 'First Contact',
                 blurb: 'Learn to move around a Linux server from the command line.',
                 xp: 40,
-                scenario: 'You start your first day on the security team. You\'ve just SSHed into\n"web-01", a web server. Before anything else: learn to look around.\n\nType a command and press Enter. Start with "help" if you\'re stuck.',
-                skills: ['pwd', 'ls', 'cd', 'cat', 'whoami', 'ps'],
-                debrief: 'That\'s the core of navigating any Linux box: pwd (where am I), ls (what\'s here), cd (move around), cat (read a file), whoami/id (who am I), ps (what\'s running). Every investigation starts here.',
+                scenario: 'You start your first day on the security team. You\'ve just SSHed into\n"web-01", a web server. Before anything else: learn to move around.\n\nType a command and press Enter. Start with "help" if you\'re stuck.',
+                skills: ['pwd', 'ls', 'cd', 'cd ..', 'ls -a', 'cat', 'whoami'],
+                debrief: 'That\'s the core of moving around any Linux box: pwd (where am I), ls (what\'s here), cd (go into a folder), cd .. (go back up), ls -a (show hidden files) and cat (read a file). Every investigation starts here, and you\'ll use these every day.',
                 build() {
                     return {
                         fs: d({
                             home: d({ alex: d({
                                 'welcome.txt': f('-rw-r--r--', 'Welcome to web-01.\n\nThis is a training server. Read incident-ticket.txt for your\nfirst task, then look around with ls, cd and cat.\n'),
-                                'incident-ticket.txt': f('-rw-r--r--', 'TICKET #4471 — Orientation\n\nGet familiar with the server:\n  1. Find out which directory you\'re in       (pwd)\n  2. List the files, including hidden ones     (ls -a)\n  3. Read this ticket                          (cat)\n  4. Check which user you are logged in as     (whoami)\n  5. See what processes are running            (ps aux)\n\nHidden files start with a dot. There may be one here...\n'),
+                                'incident-ticket.txt': f('-rw-r--r--', 'TICKET #4471 — Orientation\n\nGet familiar with the server:\n  1. Find out where you are                  (pwd)\n  2. Look around, and walk into some folders (ls, cd, cd ..)\n  3. List hidden files too                   (ls -a)\n  4. Read this ticket                        (cat)\n  5. Check which user you are logged in as   (whoami)\n\nWell done, you\'re reading it. Next, check who you are.\n'),
                                 '.note': f('-rw-r--r--', 'Pro tip: "cd .." goes up one directory, "cd ~" goes home,\nand "clear" wipes the screen. You found a hidden file — nice.\n'),
+                                projects: d({
+                                    starfall: d({
+                                        'README.md': f('-rw-r--r--', '# Starfall\nThe game we launch in two weeks. Ask Mira before changing anything here.\n'),
+                                        'build.sh': f('-rwxr-xr-x', '#!/bin/sh\necho "building Starfall..."\n'),
+                                        assets: d({ 'logo.png': f('-rw-r--r--', '<image>\n') })
+                                    }),
+                                    'old-prototype': d({ 'TODO.txt': f('-rw-r--r--', 'make the spaceship less slow\n') })
+                                }),
                                 logs: d({ 'app.log': f('-rw-r--r--', '[info] server started on port 443\n[info] healthy\n') })
                             }) }),
                             etc: d({ 'motd': f('-rw-r--r--', 'web-01 — Ubuntu 22.04 LTS\n', 'root') }),
@@ -2756,38 +2834,140 @@ permalink: /cyber-quest/
                     };
                 },
                 stage: 'basics',
-                chips: ['pwd', 'ls', 'ls -a', 'cat incident-ticket.txt', 'whoami', 'ps aux', 'hint'],
+                chips: ['pwd', 'ls', 'cd projects', 'cd starfall', 'cd ..', 'ls -a', 'cat incident-ticket.txt', 'whoami', 'hint'],
                 tasks: [
                     {
-                        id: 'pwd', desc: 'Print your current directory', hint: 'Type: pwd', check: (T) => T.ran(/^\s*pwd\b/),
-                        lesson: 'A terminal is a text conversation with the computer: you type a command, press <b>Enter</b>, and it answers. You are always "standing" in some folder (Linux calls folders <b>directories</b>). <code>pwd</code> (print working directory) tells you which one.'
+                        id: 'pwd', desc: 'Print your current directory', hint: 'Type: pwd', check: (T) => T.pwdAt.has('/home/alex'),
+                        lesson: 'A terminal is a text conversation with the computer: you type a command, press <b>Enter</b>, and it answers. You are always "standing" in some folder (Linux calls folders <b>directories</b>). <code>pwd</code> (print working directory) tells you which one. Type <code>pwd</code>.'
                     },
                     {
-                        id: 'ls', desc: 'List files, including hidden ones (ls -a)', hint: 'Type: ls -a', check: (T) => T.ran(/^\s*ls\b.*\s-\w*a/) || T.ran(/^\s*ls\s+-a/),
-                        lesson: '<code>ls</code> lists what\'s in the current directory. Files whose names start with a dot (like <code>.note</code>) are <b>hidden</b>, and plain <code>ls</code> skips them. Add the <b>option</b> <code>-a</code> ("all") to see them: <code>ls -a</code>. Options change what a command does, and they almost always start with a dash.'
+                        id: 'ls', desc: 'List what\'s in your folder', hint: 'Type: ls', check: (T) => T.listed.has('/home/alex'),
+                        lesson: 'You\'re in <code>/home/alex</code>, your <b>home folder</b>. <code>ls</code> (list) shows what\'s inside it: files like <code>welcome.txt</code> and folders like <code>projects</code>. Type <code>ls</code>.'
+                    },
+                    {
+                        id: 'cd', desc: 'Go into the projects folder', hint: 'Type: cd projects', check: (T) => T.visited.has('/home/alex/projects'),
+                        lesson: '<code>cd</code> (change directory) walks into a folder. Type <code>cd projects</code>. Notice how the prompt on the left changes to show where you are: <code>~</code> means your home folder, so <code>~/projects</code> is the projects folder inside it.'
+                    },
+                    {
+                        id: 'deeper', desc: 'Go one level deeper, into starfall, and list it', hint: 'Type: cd starfall  then  ls', check: (T) => T.listed.has('/home/alex/projects/starfall'),
+                        lesson: 'Folders live inside folders, like boxes in boxes. Run <code>ls</code> to see what\'s in <code>projects</code>, then go into the game\'s folder with <code>cd starfall</code> and list it with <code>ls</code>.'
+                    },
+                    {
+                        id: 'where', desc: 'Check where you are now', hint: 'Type: pwd', check: (T) => T.pwdAt.has('/home/alex/projects/starfall'),
+                        lesson: 'When you\'re a few folders deep, it\'s easy to lose track. Type <code>pwd</code> again. The answer is a <b>path</b>: the list of folders from the very top (<code>/</code>) down to you, separated by slashes.'
+                    },
+                    {
+                        id: 'up', desc: 'Climb back up to your home folder with cd ..', hint: 'Type: cd ..  twice (or cd ../.. once)', check: (T) => T.upTo.has('/home/alex'),
+                        lesson: '<code>..</code> (two dots) means "the folder above this one". <code>cd ..</code> climbs up one level. You\'re two levels below home, so type <code>cd ..</code> twice and watch the prompt go back to <code>~</code>. (Lost? <code>cd ~</code> always takes you home.)'
+                    },
+                    {
+                        id: 'hidden', desc: 'List everything at home, hidden files too (ls -a)', hint: 'Type: ls -a', check: (T) => T.listedAll.has('/home/alex'),
+                        lesson: 'Some files are <b>hidden</b>: their names start with a dot (like <code>.note</code>), and plain <code>ls</code> skips them. Add the <b>option</b> <code>-a</code> ("all") to see them: <code>ls -a</code>. Options change what a command does, and they almost always start with a dash.'
                     },
                     {
                         id: 'cat', desc: 'Read the incident ticket', hint: 'Type: cat incident-ticket.txt', check: (T) => T.readAbs('/home/alex/incident-ticket.txt'),
-                        lesson: '<code>cat FILE</code> prints a file\'s contents. Type <code>cat incident-ticket.txt</code>. Tip: on a keyboard, type the first few letters and use ↑ to repeat earlier commands. Read the hidden <code>.note</code> too if you like.'
+                        lesson: 'Now that you can find files, read one. <code>cat FILE</code> prints a file\'s contents: type <code>cat incident-ticket.txt</code>. Tip: on a keyboard, ↑ repeats earlier commands. Read the hidden <code>.note</code> too if you like.'
                     },
                     {
                         id: 'who', desc: 'Check which user you are', hint: 'Type: whoami', check: (T) => T.ran(/^\s*(whoami|id)\b/),
                         lesson: 'Every command runs as a <b>user</b>, and what you can do depends on who you are. <code>whoami</code> prints your username. <code>id</code> also shows your groups. Being in the <b>sudo</b> group means you can run admin commands.'
+                    }
+                ]
+            },
+            {
+                id: 'lost-and-found',
+                stage: 'basics',
+                after: 'first-contact',
+                icon: '🔎',
+                title: 'Lost & Found',
+                blurb: 'Practise moving around: track down a file Sam lost on the shared drive.',
+                xp: 40,
+                scenario: 'Sam saved the signed release checklist on the shared drive and\nforgot where. Follow the trail of notes from folder to folder.\n\nYou\'ll need pwd, ls, cd, cd .. and ls -a. Type "hint" if you\'re stuck.',
+                skills: ['cd /absolute/path', 'cd ..', 'ls -a', 'pwd', 'find -name'],
+                chips: ['cat sam-note.txt', 'cd /srv/shared', 'ls', 'ls -a', 'cd ..', 'pwd', 'hint'],
+                debrief: 'You found it by following paths: absolute ones from the top (/srv/shared), relative ones from where you stood (marketing, ../engineering/releases), and hidden folders with ls -a. When you know a file\'s name but not where it is, find does the walking for you. Investigators do exactly this when they hunt for a planted file.',
+                build() {
+                    return {
+                        fs: d({
+                            home: d({ alex: d({
+                                'sam-note.txt': f('-rw-r--r--', 'Hiya! The signed release checklist is on the shared drive,\nsomewhere under /srv/shared. I put it with the marketing stuff, I think.\nOr maybe I moved it. Sorry!!  — Sam\n')
+                            }) }),
+                            srv: d({ shared: d({
+                                marketing: d({
+                                    'README.txt': f('-rw-r--r--', 'Moved all the release files to ../engineering/releases\n(up one folder, then into engineering, then into releases).  — Sam\n'),
+                                    'social-posts.txt': f('-rw-r--r--', 'Starfall launches on the 14th! 🚀\n'),
+                                    posters: d({ 'draft-1.png': f('-rw-r--r--', '<image>\n'), 'draft-2.png': f('-rw-r--r--', '<image>\n') })
+                                }),
+                                engineering: d({
+                                    builds: d({ 'starfall-0.9.zip': f('-rw-r--r--', '<archive>\n'), 'starfall-1.0.zip': f('-rw-r--r--', '<archive>\n') }),
+                                    releases: d({
+                                        'notes.txt': f('-rw-r--r--', 'Signed checklists are archived in a hidden folder here,\nso nobody deletes them by accident.\n'),
+                                        '.archive': d({ '2026-03': d({
+                                            'release-checklist.txt': f('-rw-r--r--', 'STARFALL RELEASE CHECKLIST — signed\n\n[x] Final build tested\n[x] Store page approved\n[x] Servers ready\n\nSigned: Dana, Mira, Sam\n')
+                                        }) })
+                                    })
+                                }),
+                                art: d({
+                                    characters: d({ 'pilot.png': f('-rw-r--r--', '<image>\n'), 'robot.png': f('-rw-r--r--', '<image>\n') }),
+                                    logos: d({ old: d({ 'brightside-logo-2019.png': f('-rw-r--r--', '<image>\n') }), wip: d({ v3: d({ 'starfall-logo.png': f('-rw-r--r--', '<image>\n') }) }) })
+                                }),
+                                finance: d({ '2026': d({ 'budget.xlsx': f('-rw-r--r--', '<spreadsheet>\n') }) })
+                            }) })
+                        }),
+                        cwd: '/home/alex',
+                        procs: [{ user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' }, { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'note', desc: 'Read Sam\'s note in your home folder', hint: 'Type: ls  then  cat sam-note.txt', check: (T) => T.readAbs('/home/alex/sam-note.txt'),
+                        lesson: 'Sam left a note in your home folder. Look with <code>ls</code>, then read it with <code>cat sam-note.txt</code>.'
                     },
                     {
-                        id: 'ps', desc: 'See what processes are running', hint: 'Type: ps aux', check: (T) => T.ran(/^\s*ps\b/),
-                        lesson: 'A <b>process</b> is a program that is running right now. <code>ps aux</code> lists all of them. You\'ll learn to read that table properly in a later lab. For now, just take a look.'
+                        id: 'shared', desc: 'Jump to /srv/shared and list it', hint: 'Type: cd /srv/shared  then  ls', check: (T) => T.listed.has('/srv/shared'),
+                        lesson: 'A path that starts with <code>/</code> is <b>absolute</b>: it starts at the very top, so it works from anywhere. Jump straight there with <code>cd /srv/shared</code>, then <code>ls</code> to see the folders on the shared drive.'
+                    },
+                    {
+                        id: 'marketing', desc: 'Check the marketing folder and read its README', hint: 'Type: cd marketing  then  ls  then  cat README.txt', check: (T) => T.readAbs('/srv/shared/marketing/README.txt'),
+                        lesson: 'A path without a leading <code>/</code> is <b>relative</b>: it starts from where you are. You\'re in /srv/shared, so <code>cd marketing</code> walks into the folder below. List it, and read the <code>README.txt</code> you find.'
+                    },
+                    {
+                        id: 'releases', desc: 'Follow the README to engineering/releases', hint: 'Type: cd ../engineering/releases', check: (T) => T.visited.has('/srv/shared/engineering/releases') && T.ran(/^\s*cd\s+\.\./),
+                        lesson: 'Sam moved the files to <code>../engineering/releases</code>. Read it left to right: <code>..</code> goes up one folder (back to /srv/shared), then into <code>engineering</code>, then into <code>releases</code>. You can type it as one path, <code>cd ../engineering/releases</code>, or one step at a time: <code>cd ..</code>, then <code>cd engineering</code>, then <code>cd releases</code>.'
+                    },
+                    {
+                        id: 'hidden', desc: 'Find the hidden folder in releases', hint: 'Type: ls -a', check: (T) => T.listedAll.has('/srv/shared/engineering/releases'),
+                        lesson: 'Plain <code>ls</code> only shows <code>notes.txt</code> here. Read it if you like: it says the checklists are kept in a <b>hidden</b> folder. Hidden names start with a dot, so list everything with <code>ls -a</code>.'
+                    },
+                    {
+                        id: 'found', desc: 'Open the archive and read the checklist', hint: 'Type: cd .archive  then  ls  then  cd 2026-03  then  cat release-checklist.txt', check: (T) => T.readAbs('/srv/shared/engineering/releases/.archive/2026-03/release-checklist.txt'),
+                        lesson: 'Go into the hidden folder with <code>cd .archive</code> (the dot is part of its name), list it, and keep going down until you find <code>release-checklist.txt</code>. Then read it with <code>cat</code>.'
+                    },
+                    {
+                        id: 'path', desc: 'Get the full path to send Sam', hint: 'Type: pwd', check: (T) => T.pwdAt.has('/srv/shared/engineering/releases/.archive/2026-03'),
+                        lesson: 'Found it! Sam will want to know exactly where it is. <code>pwd</code> prints the full path of the folder you\'re standing in, ready to copy into a message.'
+                    },
+                    {
+                        id: 'find', desc: 'Dana needs the Starfall logo: search for starfall-logo.png', hint: 'Type: find /srv/shared -name starfall-logo.png', check: (T) => T.ran(/^\s*find\b.*-name\s+["']?starfall-logo/),
+                        lesson: 'Dana needs <code>starfall-logo.png</code>, and nobody knows where it is. Walking every folder by hand would take ages. <code>find</code> walks them for you: <code>find /srv/shared -name starfall-logo.png</code> means "start at /srv/shared, look in every folder below it, and print any file with this name".'
+                    },
+                    {
+                        id: 'logo', desc: 'Go to the folder find showed you and list it', hint: 'Type: cd /srv/shared/art/logos/wip/v3  then  ls', check: (T) => T.listed.has('/srv/shared/art/logos/wip/v3'),
+                        lesson: '<code>find</code> printed the file\'s full path. The folder is everything before the last <code>/</code>. Go there with <code>cd</code> and that folder path, then <code>ls</code> to see the logo with your own eyes.'
                     }
                 ]
             },
             {
                 id: 'linux-map',
                 stage: 'basics',
+                after: 'first-contact',
                 icon: '🗺️',
                 title: 'The Linux Map',
                 blurb: 'Learn where Linux keeps settings, logs, users and temporary files.',
                 xp: 45,
-                scenario: 'Every Linux server uses the same basic layout. Once you know it,\nyou always know where to look: settings in /etc, logs in /var/log,\nusers in /home, and scratch space in /tmp.\n\nFollow the lesson above the terminal, one step at a time.',
+                scenario: 'Every Linux server uses the same basic layout. Once you know it,\nyou always know where to look: settings in /etc, logs in /var/log,\nusers in /home, and scratch space in /tmp.\n\nFollow the 📖 lesson, one step at a time.',
                 skills: ['ls /', 'cd', 'cat', 'ls -a'],
                 chips: ['ls /', 'cd /etc', 'ls', 'cat hostname', 'ls /var/log', 'cd ~', 'pwd', 'ls -a /tmp', 'hint'],
                 debrief: 'You have the map now. / is the root of everything, /etc holds settings, /var/log holds logs, /home holds each user\'s files, and /tmp and /var/tmp are shared scratch space where malware likes to hide. Paths that start with / are absolute, and anything else starts from where you are.',
@@ -3187,7 +3367,7 @@ permalink: /cyber-quest/
         ];
 
         const labDone = (id) => !!(progress.labs && progress.labs[id] && progress.labs[id].done);
-        const labUnlocked = (i) => i === 0 || labDone(LABS[i - 1].id) || labDone(LABS[i].id);
+        const labUnlocked = (i) => i === 0 || labDone(LABS[i].after || LABS[i - 1].id) || labDone(LABS[i].id);
         const LAB_STAGES = [
             { id: 'basics', name: 'Basics', icon: '📘', blurb: 'Learn the command line step by step. No experience needed.' },
             { id: 'ops', name: 'Incidents', icon: '🚨', blurb: 'Put the basics to work on a real(istic) attack.' }
@@ -3257,7 +3437,7 @@ permalink: /cyber-quest/
                     fs: b.fs, cwd: b.cwd, procs: b.procs, net: b.net, services: b.services,
                     history: [], read: new Set(), killedCmds: new Set(), killedPids: new Set(),
                     stoppedSvc: new Set(), disabledSvc: new Set(),
-                    visited: new Set([b.cwd]), listed: new Set(), listedAll: new Set(), listedLong: new Set(),
+                    visited: new Set([b.cwd]), listed: new Set(), listedAll: new Set(), listedLong: new Set(), pwdAt: new Set(), upTo: new Set(),
                     answers: new Set(), crontab: b.crontab || '', removed: new Set(), flags: new Set(), hints: 0,
                     ufw: { enabled: false, deny: new Set(), allow: new Set(), denyFrom: new Set() },
                     ran(re) { return this.history.some((c) => re.test(c)); },
@@ -3271,18 +3451,20 @@ permalink: /cyber-quest/
                 $('ops-chips').innerHTML = (l.chips || ['help', 'ls -a', 'ps aux', 'hint']).concat(['help', 'clear'])
                     .filter((c, i, arr) => arr.indexOf(c) === i)
                     .map((c) => `<button class="chip" data-chip="${esc(c)}">${esc(c)}</button>`).join('');
-                $('ops-prompt').textContent = this.prompt();
+                $('ops-prompt').innerHTML = this.promptHtml();
                 $('ops-host').textContent = 'alex@' + this.host;
                 $('ops').classList.toggle('alarm', !!l.incident);
                 $('ops-threat').hidden = !l.incident;
                 $('ops-feed').innerHTML = '';
                 $('ops-done').className = 'term-done';
-                this.print('Connected to ' + esc(this.host) + '.', 'dim');
-                // Intros are authored HTML (they may contain <code>).
-                if (l.intro) this.print(l.intro, 'mira');
-                else this.print('Read the 📖 lesson above, then type the command below and press Enter.', 'dim');
-                this.print('Stuck? <span class="hl">hint</span> shows the exact command. <span class="hl">help</span> lists every command.', 'dim');
-                this.print('');
+                // A login banner like a real SSH session. People talk outside the terminal:
+                // the intro sits above the lesson, and incident messages go to the alert feed.
+                ['Welcome to Ubuntu 22.04.4 LTS', '', 'Last login: Mon Mar  9 08:57 from 10.0.4.22'].forEach((l) => this.print(esc(l), 'motd'));
+                // Intros are authored HTML (they may contain <code>). Incidents show theirs as the briefing.
+                $('ops-intro').innerHTML = l.intro && !l.incident ? l.intro : '';
+                $('ops-intro').hidden = !l.intro || !!l.incident;
+                this._step = -1;
+                this.closeTerm();
                 this.renderObjectives();
                 show('ops');
                 if (l.incident) this.startIncident(l.incident);
@@ -3347,7 +3529,6 @@ permalink: /cyber-quest/
                 const feed = $('ops-feed');
                 feed.prepend(li);
                 while (feed.children.length > 3) feed.lastChild.remove();
-                this.print(esc(text), 'alert-' + lvl);
                 if (lvl === 'bad') Sfx.hit(); else if (lvl === 'warn' || lvl === 'say') Sfx.ping();
             },
             updateHud() {
@@ -3371,7 +3552,7 @@ permalink: /cyber-quest/
                 $('ops-continue').textContent = '↻ Try again';
                 const src = this.lab, mode = this.mode, onDone = this.onDone;
                 this._next = () => this.run(src, { mode, onDone });
-                $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                this.closeTerm(); $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             },
             continue() {
                 const next = this._next;
@@ -3383,19 +3564,25 @@ permalink: /cyber-quest/
                 const short = this.T.cwd.replace('/home/alex', '~');
                 return 'alex@' + this.host + ':' + short + '$';
             },
+            promptHtml() { // coloured like Ubuntu's default bash prompt
+                const short = this.T.cwd.replace(/^\/home\/alex/, '~');
+                return '<span class="pu">alex@' + esc(this.host) + '</span>:<span class="pp">' + esc(short) + '</span>$';
+            },
 
-            print(html, cls) {
+            print(html, cls, indent) {
                 const div = document.createElement('div');
                 if (cls) div.className = cls;
+                if (indent) div.style.setProperty('--hang', Math.min(indent, 26) + 'ch');
                 div.innerHTML = html;
                 $('ops-out').appendChild(div);
                 const out = $('ops-out');
                 out.scrollTop = out.scrollHeight;
+                this.scrollTerm();
             },
 
             submit(raw) {
                 const cmd = raw.trim();
-                this.print('<span class="cmd-echo"><span class="pr">' + esc(this.prompt()) + '</span> ' + esc(raw) + '</span>');
+                this.print('<span class="cmd-echo">' + this.promptHtml() + ' ' + colorCmd(raw) + '</span>');
                 if (cmd) { this.hist.push(cmd); this.histPos = this.hist.length; this.T.history.push(cmd); }
                 if (cmd === 'clear') { $('ops-out').innerHTML = ''; return; }
                 if (cmd) this.exec(cmd);
@@ -3432,7 +3619,10 @@ permalink: /cyber-quest/
                 const parts = line.split('|').map((s) => s.trim());
                 let res = this.runCmd(parts[0]);
                 for (let i = 1; i < parts.length; i++) res = this.pipe(res, parts[i]);
-                (res.out || []).forEach((l) => this.print(typeof l === 'string' ? esc(l) : l.html, l.cls));
+                (res.out || []).forEach((l) => {
+                    if (typeof l === 'string') return this.print(colorize(l));
+                    this.print(l.html != null ? l.html : colorize(l.text || ''), l.cls, l.indent);
+                });
                 (res.err || []).forEach((l) => this.print(esc(l), 'err'));
             },
 
@@ -3447,7 +3637,7 @@ permalink: /cyber-quest/
                     const re = new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), i ? 'i' : '');
                     const hits = lines.filter((l) => re.test(l) !== v);
                     if (fl.includes('c')) return { out: [String(hits.length)] };
-                    return { out: hits.map((l) => ({ text: l, html: hlMatch(l, pat, i) })) };
+                    return { out: hits.map((l) => ({ text: l, html: colorize(l) })) };
                 }
                 if (cmd === 'wc' && a.includes('-l')) return { out: [String(lines.length)] };
                 if (cmd === 'head') { const n = num(a, 10); return { out: lines.slice(0, n) }; }
@@ -3475,7 +3665,7 @@ permalink: /cyber-quest/
                     }
                     case 'whoami': return { out: ['alex'] };
                     case 'id': return { out: ['uid=1000(alex) gid=1000(alex) groups=1000(alex),27(sudo)'] };
-                    case 'pwd': return { out: [T.cwd] };
+                    case 'pwd': T.pwdAt.add(T.cwd); return { out: [T.cwd] };
                     case 'echo': return { out: [args.join(' ')] };
                     case 'history': return { out: T.history.map((c, i) => '  ' + (i + 1) + '  ' + c) };
                     case 'date': return { out: ['Mon Mar  9 09:14:22 UTC 2026'] };
@@ -3486,7 +3676,8 @@ permalink: /cyber-quest/
                         if (n.type !== 'dir') return { err: ['cd: ' + pos[0] + ': Not a directory'] };
                         T.cwd = this.resolve(pos[0] || '~');
                         T.visited.add(T.cwd);
-                        $('ops-prompt').textContent = this.prompt();
+                        if (/(^|\/)\.\.(\/|$)/.test(pos[0] || '')) T.upTo.add(T.cwd);
+                        $('ops-prompt').innerHTML = this.promptHtml();
                         return {};
                     }
                     case 'ls': return this.ls(pos[0], flags);
@@ -3548,7 +3739,7 @@ permalink: /cyber-quest/
                 let names = Object.keys(n.children).sort();
                 if (!all) names = names.filter((x) => x[0] !== '.');
                 if (all) names = ['.', '..'].concat(names);
-                if (!long) return { out: [names.join('  ')] };
+                if (!long) return { out: [{ text: names.join('  '), html: names.map((nm) => '<span class="ls-i ' + (nm === '.' || nm === '..' ? 'c-dir' : lsClass(n.children[nm], nm)) + '">' + esc(nm) + '</span>').join('') }] };
                 return { out: names.map((nm) => {
                     if (nm === '.' || nm === '..') return lsLine({ type: 'dir', mode: 'drwxr-xr-x', owner: 'alex' }, nm);
                     return lsLine(n.children[nm], nm);
@@ -3586,7 +3777,7 @@ permalink: /cyber-quest/
                     }
                     this.T.read.add(abs);
                     node.content.replace(/\n$/, '').split('\n').forEach((l) => {
-                        if (re.test(l)) out.push({ text: l, html: (prefix ? '<span class="dim">' + esc(abs) + ':</span>' : '') + hlMatch(l, pat, i) });
+                        if (re.test(l)) out.push({ text: l, html: (prefix ? '<span class="c-path">' + esc(abs) + ':</span>' : '') + colorize(l) });
                     });
                 };
                 if (!targets.length) return { err: ['usage: grep [-i] [-r] PATTERN FILE'] };
@@ -3626,11 +3817,13 @@ permalink: /cyber-quest/
             },
 
             ps() {
-                const out = ['USER       PID  %CPU %MEM COMMAND'];
+                const H = 'USER'.padEnd(8) + ' ' + 'PID'.padStart(5) + ' ' + '%CPU'.padStart(4) + ' ' + '%MEM'.padStart(4) + ' COMMAND';
+                const out = [{ text: H, html: '<span class="c-head">' + esc(H) + '</span>' }];
                 this.T.procs.forEach((p) => {
                     const cpu = parseFloat(p.cpu);
-                    const line = p.user.padEnd(9) + ' ' + String(p.pid).padStart(5) + ' ' + p.cpu.padStart(5) + ' ' + p.mem.padStart(4) + ' ' + p.cmd;
-                    out.push({ text: line, html: cpu > 50 ? '<span class="hl">' + esc(line) + '</span>' : esc(line) });
+                    const line = p.user.padEnd(8) + ' ' + String(p.pid).padStart(5) + ' ' + p.cpu.padStart(4) + ' ' + p.mem.padStart(4) + ' ' + p.cmd;
+                    const head = line.slice(0, line.length - p.cmd.length);
+                    out.push({ text: line, indent: head.length, html: '<span' + (cpu > 50 ? ' class="hl"' : '') + '>' + esc(head) + '<span class="c-proc">' + esc(p.cmd) + '</span></span>' });
                 });
                 return { out };
             },
@@ -3676,14 +3869,14 @@ permalink: /cyber-quest/
             },
 
             ss() {
-                const out = ['Netid State  Local Address:Port   Peer / Process'];
+                const out = [{ text: 'Netid State  Local Address:Port   Peer / Process', html: '<span class="c-head">Netid State  Local Address:Port   Peer / Process</span>' }];
                 this.T.net.forEach((s) => {
                     if (s.svc && this.T.stoppedSvc.has(s.svc)) return; // a stopped service no longer listens
                     if (s.gone && s.gone(this.T)) return;
                     const est = s.state === 'ESTAB';
                     const line = s.proto.padEnd(5) + ' ' + (est ? 'ESTAB ' : 'LISTEN') + ' ' + (s.addr + ':' + s.port).padEnd(20) + ' ' + (est ? s.peer + '  ' : '') + s.proc;
                     const warn = !est && [21, 23, 3306, 8080].includes(s.port);
-                    out.push({ text: line, html: warn ? '<span class="hl">' + esc(line) + '  ⚠ public</span>' : est ? '<span class="hl">' + esc(line) + '  ⚠ outbound</span>' : esc(line) });
+                    out.push({ text: line, indent: 34, html: warn ? '<span class="hl">' + esc(line) + '  ⚠ public</span>' : est ? '<span class="hl">' + esc(line) + '  ⚠ outbound</span>' : colorize(line) });
                 });
                 return { out };
             },
@@ -3752,16 +3945,55 @@ permalink: /cyber-quest/
                 $('ops-count').textContent = done + '/' + tasks.length;
                 // The lesson for the first unfinished step (lesson HTML is authored content).
                 const t = tasks[cur];
-                $('ops-lesson').innerHTML = t && t.lesson && !this.lab.incident
-                    ? '<div class="step">📖 Step ' + (cur + 1) + ' of ' + tasks.length + '</div><h4>' + esc(t.desc) + '</h4><p>' + t.lesson + '</p>'
-                    : '';
+                $('ops-lesson').innerHTML = this.lab.incident
+                    ? (this.lab.intro ? '<div class="step">🚨 Briefing</div><p>' + this.lab.intro + '</p>' : '')
+                    : t && t.lesson ? '<div class="step">📖 Step ' + (cur + 1) + ' of ' + tasks.length + '</div><h4>' + esc(t.desc) + '</h4><p>' + t.lesson + '</p>' : '';
+                if (!this._flashing) $('ops-step-text').innerHTML = t ? 'Step ' + (cur + 1) + '/' + tasks.length + ': <b>' + esc(t.desc) + '</b>' : '<b>All objectives complete</b>';
+                // A new step opens its lesson in the terminal view (not for incidents: no time to read there).
+                if (cur !== this._step) { this._step = cur; if (!this.lab.incident && cur >= 0) this.toggleLesson(true); }
+            },
+            openTerm() {
+                $('ops').classList.add('term-open');
+                this.fitTerm();
+                const i = $('ops-input');
+                i.focus({ preventScroll: true });
+                this.scrollTerm();
+            },
+            closeTerm() {
+                $('ops').classList.remove('term-open');
+                $('ops-input').blur();
+            },
+            toggleLesson(on) {
+                const open = on == null ? !$('ops').classList.contains('lesson-open') : on;
+                $('ops').classList.toggle('lesson-open', open);
+                $('ops-lesson-toggle').setAttribute('aria-expanded', String(open));
+            },
+            flashStep(desc) {
+                const bar = $('ops-step');
+                this._flashing = true;
+                $('ops-step-text').textContent = '✓ ' + desc;
+                bar.classList.add('flash');
+                Sfx.ok();
+                clearTimeout(this._flashT);
+                this._flashT = setTimeout(() => { this._flashing = false; bar.classList.remove('flash'); if (this.lab) this.renderObjectives(); }, 1400);
+            },
+            // Size the full-screen terminal to the visible area, so the on-screen keyboard never covers the prompt.
+            fitTerm() {
+                const vv = window.visualViewport;
+                const r = document.documentElement.style;
+                if (vv) { r.setProperty('--vvh', vv.height + 'px'); r.setProperty('--vv-top', vv.offsetTop + 'px'); }
+                this.scrollTerm();
+            },
+            scrollTerm() {
+                const t = $('ops-term');
+                if ($('ops').classList.contains('term-open')) t.scrollTop = t.scrollHeight;
             },
 
             checkTasks() {
                 const before = this.lab.tasks.filter((t) => t._was).length;
                 this.lab.tasks.forEach((t) => {
                     const now = t.check(this.T);
-                    if (now && !t._was) { t._was = true; this.print('<span class="ok">✓ objective complete: ' + esc(t.desc) + '</span>'); }
+                    if (now && !t._was) { t._was = true; this.flashStep(t.desc); }
                 });
                 this.renderObjectives();
                 if (this.lab.tasks.every((t) => t.check(this.T))) this.finish();
@@ -3789,7 +4021,7 @@ permalink: /cyber-quest/
                     $('ops-continue').textContent = 'Continue the story →';
                     const done = this.onDone;
                     this._next = () => done && done({ stars });
-                    $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    this.closeTerm(); $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     return;
                 }
                 this._next = () => show('home');
@@ -3801,7 +4033,7 @@ permalink: /cyber-quest/
                 $('ops-done-title').textContent = '🎉 ' + l.title + ' complete!';
                 $('ops-done-text').innerHTML = esc(l.debrief) + (first ? ' <b>+' + l.xp + ' XP</b>' : ' <span class="dim">(already cleared)</span>');
                 $('ops-done').className = 'term-done show';
-                $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                this.closeTerm(); $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         };
 
@@ -3822,9 +4054,47 @@ permalink: /cyber-quest/
                 return esc(line).replace(new RegExp('(' + esc(pat).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', ci ? 'gi' : 'g'), '<span class="hl">$1</span>');
             } catch (e) { return esc(line); }
         }
+        // Console colours: one pass over a plain output line, so highlights never nest.
+        // IPs, timestamps, ports, users, paths and good/bad words get their own colour;
+        // each highlight stays on one line when the console wraps.
+        const HL_RX = /(\bhttps?:\/\/[^\s'\x22|]+)|(\b\d{1,3}(?:\.\d{1,3}){3}(?::\d{1,5}|\/\d{1,2})?\b)|(\bport \d+\b)|(\b(?:Failed|FAILED|failed|error|ERROR|Error|denied|DENIED|Invalid|invalid|refused|CRITICAL|critical|warning|WARNING|malware|ransom\w*)\b)|(\b(?:Accepted|accepted|active \(running\)|enabled|healthy|OK|ALLOW)\b)|(\b(?:(?:password|publickey) for (?:invalid user )?|user=|USER=)(\w[\w.-]*))|((?:^|(?<=[\s=:'"(]))(?:~|\.{1,2})?\/[\w.@~+\/-]*)/g;
+        function colorize(line) {
+            const m = /^([A-Z][a-z]{2} +\d{1,2} \d\d:\d\d:\d\d) (\S+) ([^:]{1,40}): (.*)$/.exec(line);
+            if (m) { // a syslog line: a dim header, then the message on its own indented line
+                return '<span class="c-time">' + esc(m[1]) + '</span> <span class="c-meta">' + esc(m[2] + ' ' + m[3]) + ':</span>' +
+                    '<span class="c-msg">' + colorize(m[4]) + '</span>';
+            }
+            let out = '', at = 0;
+            line.replace(HL_RX, (all, url, ip, port, bad, good, forU, user, path, i) => {
+                out += esc(line.slice(at, i));
+                at = i + all.length;
+                if (url) out += '<span class="c-url">' + esc(url) + '</span>';
+                else if (ip) out += '<span class="c-ip">' + esc(ip) + '</span>';
+                else if (port) out += '<span class="c-port">' + esc(port) + '</span>';
+                else if (bad) out += '<span class="c-bad">' + esc(bad) + '</span>';
+                else if (good) out += '<span class="c-good">' + esc(good) + '</span>';
+                else if (forU) out += esc(forU.slice(0, forU.length - user.length)) + '<span class="c-user">' + esc(user) + '</span>';
+                else if (path) out += path.length > 1 ? '<span class="c-path">' + esc(path) + '</span>' : esc(path);
+                return all;
+            });
+            return out + esc(line.slice(at));
+        }
+        // The echoed command: the program in yellow, options in cyan.
+        function colorCmd(raw) {
+            return raw.split(/(\s+)/).map((w, i) => {
+                if (!w.trim()) return w;
+                if (i === 0 || /^(sudo)$/.test(raw.split(/\s+/)[0]) && i === 2) return '<span class="c-cmd">' + esc(w) + '</span>';
+                if (w === '|') return '<span class="c-cmd">|</span>';
+                if (/^-/.test(w)) return '<span class="c-flag">' + esc(w) + '</span>';
+                return esc(w);
+            }).join('').replace(/(<span class="c-cmd">\|<\/span>\s*)([^\s<]+)/g, '$1<span class="c-cmd">$2</span>');
+        }
+        const lsClass = (n, name) => n.type === 'dir' ? 'c-dir' : /x/.test(n.mode || '') ? 'c-exec' : name[0] === '.' ? 'c-hidden' : '';
         function lsLine(n, name) {
             const size = n.type === 'dir' ? '4096' : String((n.content || '').length);
-            return { text: n.mode + ' ' + (n.owner || 'alex').padEnd(8) + ' ' + size.padStart(5) + ' ' + name, html: (n.type === 'dir' ? '<span class="ok">' : '') + esc(n.mode + ' ' + (n.owner || 'alex').padEnd(8) + ' ' + size.padStart(5) + ' ' + name) + (n.type === 'dir' ? '</span>' : '') };
+            const head = n.mode + ' ' + (n.owner || 'alex').padEnd(8) + ' ' + size.padStart(5) + ' ';
+            const w = /[w]/.test((n.mode || '').slice(7));
+            return { text: head + name, indent: head.length, html: (w ? '<span class="c-bad">' + esc(n.mode) + '</span>' + esc(head.slice(n.mode.length)) : esc(head)) + '<span class="' + lsClass(n, name) + '">' + esc(name) + '</span>' };
         }
         // World bits: positions 7,8,9 in a mode string like -rw-rw-rw-.
         function permMatch(mode, spec) {
@@ -3856,7 +4126,7 @@ permalink: /cyber-quest/
             '  <span class="hl">pwd</span>                where am I         <span class="hl">cat</span> &lt;file&gt;      read a file',
             '  <span class="hl">tail</span> [-n 5] FILE   last lines         <span class="hl">head</span> [-n 5] FILE  first lines',
             '  <span class="hl">wc -l</span> FILE         count lines        <span class="hl">crontab -l</span>       your scheduled jobs',
-            '  <span class="hl">grep</span> [-i -r] PAT FILE  search in files   <span class="hl">find</span> PATH -perm -0002   find files',
+            '  <span class="hl">grep</span> [-i -r] PAT FILE  search in files   <span class="hl">find</span> PATH -name NAME  find files',
             '  <span class="hl">ps</span> aux             running processes  <span class="hl">kill</span> &lt;pid&gt;      stop a process',
             '  <span class="hl">chmod</span> 640 &lt;file&gt;    change permissions <span class="hl">ss</span> -tlnp         listening ports',
             '  <span class="hl">ufw</span> deny &lt;port&gt;     firewall rule      <span class="hl">systemctl</span> stop &lt;svc&gt;  stop a service',
@@ -4267,7 +4537,7 @@ permalink: /cyber-quest/
         const CHAPTERS = [
             {
                 id: 'ch1', num: 1, title: 'Day One', day: 'Monday', icon: '📧', xp: 80,
-                synopsis: 'Two weeks before launch, it\'s your first day as Brightside\'s security analyst. Learn the terminal, then stop a phishing wave.',
+                synopsis: 'Two weeks before launch, it\'s your first day as Brightside\'s security analyst. Learn to find your way around the terminal, then stop a phishing wave.',
                 beats: [
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 09:02', art: '🏢', lines: [
@@ -4280,8 +4550,19 @@ permalink: /cyber-quest/
                         ]
                     },
                     { type: 'train', lab: 'first-contact', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Take your time. Read each note, type the command, press Enter.”' },
+                    // Beats 2-3 were added later: loadProgress() shifts old ch1 saves past them (STORY_REV 2).
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 09:50', art: '🗂️', lines: [
+                            ['sam', 'Mira? Tiny emergency. I saved the signed release checklist on the shared drive, and now I can\'t find it.', 'worried'],
+                            ['mira', 'Perfect timing. Finding things is half of this job. Alex, the shared drive lives at /srv/shared on web-01.'],
+                            ['sam', 'I left you a note in your home folder. I think. Probably.', 'happy'],
+                            ['mira', 'Use what you just learned: cd, ls, cd .. and ls -a. Slowly. It\'s practice, not a race.']
+                        ]
+                    },
+                    { type: 'train', lab: 'lost-and-found', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Follow the notes from folder to folder. Check pwd whenever you feel lost.”' },
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 10:30', art: '☕', lines: [
+                            ['sam', 'You found it! And the logo! I owe you a coffee.', 'happy'],
                             ['mira', 'Good. You\'ll live in that terminal. But most attacks don\'t start on servers. They start in someone\'s inbox.'],
                             ['dana', 'Hi! I\'m Dana. I started this place. Mira says you\'re the reason I\'ll sleep at night from now on. No pressure!', 'happy'],
                             ['mira', 'A few questions before lunch. No timer, no penalty. I just want to see how you think.']
@@ -5114,6 +5395,11 @@ permalink: /cyber-quest/
         $('b-start').addEventListener('click', startMission);
         $('ob-start').addEventListener('click', () => Ops.start());
         $('ops-continue').addEventListener('click', () => Ops.continue());
+        $('ops-open').addEventListener('click', () => Ops.openTerm());
+        $('ops-close').addEventListener('click', () => Ops.closeTerm());
+        $('ops-lesson-toggle').addEventListener('click', () => Ops.toggleLesson());
+        $('ops-term').addEventListener('click', (e) => { if (!window.getSelection().toString() && e.target.closest('#ops-term')) $('ops-input').focus({ preventScroll: true }); });
+        if (window.visualViewport) ['resize', 'scroll'].forEach((ev) => window.visualViewport.addEventListener(ev, () => { if (S.screen === 'ops') Ops.fitTerm(); }));
         $('tr-continue').addEventListener('click', () => { const next = Triage._next; Triage._next = null; if (next) next(); else show('home'); });
         $('tr-quit').addEventListener('click', () => {
             if (Triage.over || window.confirm('Leave? The story is saved, but this part restarts next time.')) show('home');

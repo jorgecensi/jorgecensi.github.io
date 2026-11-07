@@ -4,7 +4,8 @@
 const { launch, assert, sleep } = require('./_helpers');
 
 const TRAIN = {
-  'first-contact': ['pwd', 'ls -a', 'cat incident-ticket.txt', 'whoami', 'ps aux'],
+  'first-contact': ['pwd', 'ls', 'cd projects', 'ls', 'cd starfall', 'ls', 'pwd', 'cd ..', 'cd ..', 'ls -a', 'cat incident-ticket.txt', 'whoami'],
+  'lost-and-found': ['ls', 'cat sam-note.txt', 'cd /srv/shared', 'ls', 'cd marketing', 'ls', 'cat README.txt', 'cd ../engineering/releases', 'ls', 'ls -a', 'cd .archive', 'ls', 'cd 2026-03', 'cat release-checklist.txt', 'pwd', 'find /srv/shared -name starfall-logo.png', 'cd /srv/shared/art/logos/wip/v3', 'ls'],
   'linux-map': ['ls /', 'cd /etc', 'ls', 'cat hostname', 'ls /var/log', 'cd ~', 'pwd', 'ls -a /tmp'],
   'reading-logs': ['tail syslog', 'grep -i error syslog', 'cat auth.log', 'grep -c Failed auth.log', 'answer 198.51.100.23'],
   jobs: ['ps aux', 'kill 3310', 'cat /etc/crontab', 'ls /etc/cron.d', 'crontab -l'],
@@ -106,7 +107,7 @@ const TRAIN = {
   await page.click('#st-choices [data-go="home"]');
   const prog = await ev(() => window.__cyberQuest.progress);
   assert(['ch1', 'ch2', 'ch3', 'ch4', 'ch5'].every((id) => prog.story[id] && prog.story[id].done), 'every chapter is saved as done');
-  assert(['first-contact', 'linux-map', 'reading-logs', 'jobs', 'perms'].every((id) => prog.labs[id] && prog.labs[id].done), 'training beats clear their labs');
+  assert(['first-contact', 'lost-and-found', 'linux-map', 'reading-logs', 'jobs', 'perms'].every((id) => prog.labs[id] && prog.labs[id].done), 'training beats clear their labs');
   await noHScroll();
   assert(errors.length === 0, 'console errors: ' + errors.join(' | '));
   console.log('PASS story');
