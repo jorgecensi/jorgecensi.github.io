@@ -1,6 +1,6 @@
 // Clears every terminal lab by typing what its lessons teach, and checks shell details
 // (tail -n, grep -c, answer, man), lab locking, and that an old save keeps cleared labs.
-const { launch, assert } = require('./_helpers');
+const { launch, assert, SOLVE } = require('./_helpers');
 
 const LABS = {
   'first-contact': ['pwd', 'ls', 'cd projects', 'ls', 'cd starfall', 'ls', 'pwd', 'cd ..', 'cd ..', 'ls -a', 'cat incident-ticket.txt', 'whoami'],
@@ -38,13 +38,6 @@ const LABS = {
     await openGrounds();
   }
   // Challenges: no lesson, no hints, randomised answers (read from the shell's vars), stars for efficiency.
-  const SOLVE = {
-    'ch-find': (v) => ['find /srv/shared -name launch-key.txt', 'cat ' + v.path, 'answer ' + v.code, 'answer ' + v.dir],
-    'ch-map': (v) => ['cat /etc/passwd', 'answer ' + v.user, 'ls /var/log', 'answer ' + v.logs, 'ls -a /tmp', 'ls -a /var/tmp', 'answer ' + v.code],
-    'ch-logs': (v) => ['grep Failed /var/log/auth.log', 'answer ' + v.ip, 'answer ' + v.n, 'grep Accepted /var/log/auth.log', 'answer ' + v.user],
-    'ch-jobs': (v) => ['ps aux', 'kill ' + v.pid, 'ls /etc/cron.d', 'answer ' + v.job],
-    'ch-perms': (v) => ['ls -l ~/.ssh', 'chmod 600 ' + v.key, 'ss -tlnp', 'systemctl stop ' + v.svc, 'ufw deny ' + v.port, 'ufw enable']
-  };
   for (const [id, solve] of Object.entries(SOLVE)) {
     await page.click('[data-lab="' + id + '"]');
     await page.click('#ob-start');

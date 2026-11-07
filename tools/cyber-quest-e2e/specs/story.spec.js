@@ -1,7 +1,7 @@
 // Plays the whole story campaign the way a player would: taps through scenes, answers
 // questions (one wrong first), types real commands in every training and incident beat,
 // and checks each live mechanic fires (miner respawn, SSH lockout warning, C2 relaunch).
-const { launch, assert, sleep } = require('./_helpers');
+const { launch, assert, sleep, SOLVE } = require('./_helpers');
 
 const TRAIN = {
   'first-contact': ['pwd', 'ls', 'cd projects', 'ls', 'cd starfall', 'ls', 'pwd', 'cd ..', 'cd ..', 'ls -a', 'cat incident-ticket.txt', 'whoami'],
@@ -26,6 +26,13 @@ const TRAIN = {
     const key = info.lab || info.title;
     if (TRAIN[key]) {
       for (const c of TRAIN[key]) await type(c);
+    } else if (SOLVE[key]) {
+      // A chapter's final exam: no lesson, no hints, random answers.
+      await type('hint');
+      assert(/No hints/.test(await ev(() => window.__cyberQuest.ops.out)), key + ': the exam gives no hints');
+      const vars = await ev(() => window.__cyberQuest.shell.T.vars);
+      for (const c of SOLVE[key](vars)) await type(c);
+      seen.exams = (seen.exams || 0) + 1;
     } else if (key === 'SSH under attack') {
       await sleep(3000);
       await type('grep Failed /var/log/auth.log');
@@ -60,7 +67,7 @@ const TRAIN = {
     await page.waitForSelector('#ops-done.show', { timeout: 5000 });
     assert(/Connection to \S+ closed/.test(await ev(() => window.__cyberQuest.ops.out)), key + ': exit prints the logout lines');
     const title = await page.innerText('#ops-done-title');
-    assert(info.inc ? /contained/.test(title) : /done/.test(title), key + ' did not complete: ' + title);
+    assert(info.inc ? /contained/.test(title) : /done|passed/.test(title), key + ' did not complete: ' + title);
     console.log('  ', key, '→', title);
     await page.click('#ops-continue');
   };
@@ -107,6 +114,7 @@ const TRAIN = {
   }
   assert(done, 'reached the end of chapter 5');
   await shot('story-end');
+  assert(seen.exams === 5, 'every chapter ends with a no-hint exam (got ' + seen.exams + ')');
   assert(seen.wrongAnswer, 'a wrong answer is rejected with feedback');
   assert(seen.miner, 'the miner respawns while its cron job exists');
   assert(seen.lockout, 'blocking port 22 triggers the lockout warning');

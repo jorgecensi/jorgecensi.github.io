@@ -873,6 +873,7 @@ permalink: /cyber-quest/
                 <ul>
                     <li>A simulated Linux server you defend with <b>real commands</b> — <code>ls</code>, <code>cat</code>, <code>grep</code>, <code>ps</code>, <code>kill</code>, <code>chmod</code>, <code>ss</code>, <code>ufw</code>, <code>systemctl</code> and more. You can even pipe, like <code>cat file | grep word</code>.</li>
                     <li><b>📘 Basics</b> start from zero: moving around, where Linux keeps settings and logs, reading logs, processes and scheduled jobs, permissions and services. Each step has a short 📖 lesson that explains the idea and the command to try. Tap <b>⌨️ Open terminal</b> to work full screen; the 📖 button there shows the lesson again.</li>
+                    <li>Every chapter ends with a <b>🎓 final exam</b>: a challenge on that chapter's skills, with no lessons and no hints. Its stars count towards the chapter's stars.</li>
                     <li><b>🏆 Challenges</b> (Training Grounds) test a Basics lab with no lessons, no hints and no shortcut buttons. Goals say what to achieve, not which command to type, and every run is different, so you have to really know the commands. <code>help</code> and <code>man</code> still work. Fewer commands earn more stars.</li>
                     <li>When every objective is done, <b>log out</b> with <code>exit</code> (or <code>logout</code>) to see your result, just as you'd close a real server session. In an incident the clock stops as soon as the threat is contained, so take your time reading.</li>
                     <li><b>🚨 Incidents</b> unlock after the Basics: you use what you learned to catch an intruder and harden the server, with lessons that point back to the Basics.</li>
@@ -998,7 +999,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611071325';
+    const SW_VERSION = '2611071533';
 
     (() => {
         'use strict';
@@ -3552,6 +3553,37 @@ permalink: /cyber-quest/
                     { id: 'stop', desc: 'Stop the service that sends passwords unencrypted', check: (T) => T.stoppedSvc.has(T.vars.svc) },
                     { id: 'block', desc: 'Block its port and switch the firewall on', check: (T) => T.ufw.enabled && T.ufw.deny.has(T.vars.port) }
                 ]
+            },
+            {
+                id: 'ch-final', after: 'perms', icon: '🎓', title: 'Final Exam: Certification', par: 12, xp: 100,
+                blurb: 'Everything at once: find, read logs, stop a process, lock a key. No help.',
+                scenario: 'Your certification: one server with a little of everything wrong\nwith it. Show what you learned this week.' + CHALLENGE_SCENARIO,
+                debrief: 'Certified. You found a hidden file, read an attacker out of a log, stopped a runaway process and locked down a private key, all from memory. That is the everyday toolkit of a security analyst.',
+                build() {
+                    const dir = pick(['/srv/shared/engineering/builds/.cache', '/srv/shared/art/characters/wip', '/srv/shared/finance/2026/q1', '/srv/shared/marketing/posters/old']);
+                    const code = pick(['NEBULA', 'COMET', 'ORBIT', 'QUASAR', 'PULSAR']);
+                    const ip = pick(['203.0.113.', '198.51.100.']) + (10 + rnd(240)), n = 5 + rnd(6);
+                    const name = pick(['kworkerz', 'sysupdate', 'cpuhelper']), pid = 4000 + rnd(5000);
+                    const key = pick(['id_rsa', 'deploy_key', 'backup_key']);
+                    const auth = ['Mar 12 01:02:11 web-01 sshd[1902]: Accepted publickey for alex from 10.0.4.22 port 50122 ssh2'];
+                    for (let i = 0; i < n; i++) auth.push('Mar 12 01:' + String(10 + i * 3).padStart(2, '0') + ':0' + rnd(10) + ' web-01 sshd[22' + (10 + i) + ']: Failed password for ' + pick(['root', 'admin', 'test', 'git']) + ' from ' + ip + ' port ' + (40000 + rnd(20000)) + ' ssh2');
+                    const files = {
+                        ['/srv/shared/readme.txt']: f('-rw-r--r--', 'Shared drive.\n'),
+                        [dir + '/cert-key.txt']: f('-rw-r--r--', 'CERTIFICATION KEY\nCode word: ' + code + '\n'),
+                        '/var/log/auth.log': f('-rw-r-----', auth.join('\n') + '\n', 'root'),
+                        ['/home/alex/.ssh/' + key]: f('-rw-r--r--', '-----BEGIN OPENSSH PRIVATE KEY-----\n(training key — not real)\n-----END OPENSSH PRIVATE KEY-----\n'),
+                        '/home/alex/.ssh/authorized_keys': f('-rw-------', 'ssh-ed25519 AAAAC3Nza...training alex@laptop\n')
+                    };
+                    const procs = BASE_PROCS();
+                    procs.splice(2, 0, { user: 'www-data', pid, cpu: (90 + rnd(9)) + '.' + rnd(10), mem: '3.' + rnd(10), cmd: '/var/tmp/.cache/' + name });
+                    return { fs: fsTree(files), cwd: '/home/alex', procs, net: [], services: {}, vars: { path: dir + '/cert-key.txt', code, ip, pid, key: '/home/alex/.ssh/' + key } };
+                },
+                tasks: [
+                    { id: 'code', desc: 'Find cert-key.txt under /srv/shared and answer the code word in it', answer: (T) => T.vars.code, check: (T) => T.answers.has(T.vars.code), wrong: 'That isn\'t the code word in cert-key.txt.' },
+                    { id: 'ip', desc: 'Answer the IP address that keeps failing to log in', answer: (T) => T.vars.ip, check: (T) => T.answers.has(T.vars.ip), wrong: 'That isn\'t the address behind the failures.' },
+                    { id: 'kill', desc: 'Stop the process that is using almost all the CPU', check: (T) => T.killedPids.has(T.vars.pid) },
+                    { id: 'key', desc: 'Make the exposed private key readable only by you', check: (T) => { const k = T.node(T.vars.key); return !!k && /^-r[w-]-------$/.test(k.mode); } }
+                ]
             }
         ];
         CHALLENGES.forEach((c) => LABS.push(Object.assign({ stage: 'challenge', challenge: true, chips: [], skills: [] }, c)));
@@ -4241,10 +4273,22 @@ permalink: /cyber-quest/
                         if (this.T.hints >= 2) stars = Math.max(1, stars - 1);
                         Sfx.win();
                     } else Sfx.ok();
+                    let examLine = '';
+                    if (l.challenge) { // a chapter's final exam: stars for efficiency, and they count towards the chapter
+                        const used = this.T.history.filter((c) => !/^(help|man|clear|exit|logout)\b/.test(c)).length;
+                        stars = used <= l.par ? 3 : used <= l.par * 2 ? 2 : 1;
+                        examLine = '<span class="stars">' + starHtml(stars) + '</span><br><span class="dim">' + used + ' commands · par ' + l.par + '</span><br>';
+                        Sfx.win();
+                    }
                     // Training beats that reuse a lab also clear it in the Training Grounds.
-                    if (l.labId) { progress.labs[l.labId] = { done: true, xp: l.xp }; saveProgress(); }
-                    $('ops-done-title').textContent = l.incident ? '🛡️ Threat contained' : '✅ ' + l.title + ': done';
-                    $('ops-done-text').innerHTML = (l.incident ? '<span class="stars">' + starHtml(stars) + '</span><br>' : '') + esc(l.debrief || '');
+                    if (l.labId) {
+                        const was = progress.labs[l.labId] || {};
+                        progress.labs[l.labId] = { done: true, xp: l.xp };
+                        if (l.challenge) progress.labs[l.labId].stars = Math.max(stars, was.stars || 0);
+                        saveProgress();
+                    }
+                    $('ops-done-title').textContent = l.incident ? '🛡️ Threat contained' : l.challenge ? '🎓 Exam passed' : '✅ ' + l.title + ': done';
+                    $('ops-done-text').innerHTML = (l.incident ? '<span class="stars">' + starHtml(stars) + '</span><br>' : examLine) + esc(l.debrief || '');
                     $('ops-done').className = 'term-done show';
                     $('ops-continue').textContent = 'Continue the story →';
                     const done = this.onDone;
@@ -4848,7 +4892,13 @@ permalink: /cyber-quest/
                             ['mira', 'No idea yet. But someone is very interested in Starfall.', 'worried'],
                             [null, 'Somewhere out there, someone has just written your company\'s name on a list.']
                         ]
-                    }
+                    },
+                    // Final exam: no lessons, no hints (appended, so saved beat indexes stay valid).
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 17:30', art: '🎓', lines: [
+                        ['mira', 'Before you head home: one last thing. Sam hid another file. No notes and no hints this time. Show me what stuck.']
+                    ] },
+                    { type: 'train', lab: 'ch-find', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Final exam. No lessons, no hints. Show me.”' }
                 ]
             },
             {
@@ -4898,7 +4948,13 @@ permalink: /cyber-quest/
                             [null, 'One username in the log stands out: blacklantern.'],
                             ['mira', 'BL. Black Lantern. A crew that holds game launches to ransom. Get some sleep, rookie. They\'ll be back.', 'worried']
                         ]
-                    }
+                    },
+                    // Final exam: no lessons, no hints (appended, so saved beat indexes stay valid).
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Wed 08:15', art: '🎓', lines: [
+                        ['mira', 'Morning. Before coffee: a log from a server nobody\'s checked. Find out who tried to get in, with no hints. Just you and grep.']
+                    ] },
+                    { type: 'train', lab: 'ch-logs', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Final exam. No lessons, no hints. Show me.”' }
                 ]
             },
             {
@@ -4934,7 +4990,13 @@ permalink: /cyber-quest/
                             ['mira', 'Same crew. They got onto build-01 with an old password nobody ever changed.'],
                             ['mira', 'Tomorrow we close every door we don\'t need.']
                         ]
-                    }
+                    },
+                    // Final exam: no lessons, no hints (appended, so saved beat indexes stay valid).
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Wed 18:40', art: '🎓', lines: [
+                        ['mira', 'One more box is crawling. Same trick as the miner, different names. No hints this time: find it, stop it, find what restarts it.']
+                    ] },
+                    { type: 'train', lab: 'ch-jobs', host: 'build-01', intro: '🧑🏾‍💻 Mira: “Final exam. No lessons, no hints. Show me.”' }
                 ]
             },
             {
@@ -4973,7 +5035,13 @@ permalink: /cyber-quest/
                             ['dana', 'Launch is tomorrow. Tell me we\'re ready.', 'worried'],
                             ['mira', 'As ready as anyone gets. If they come again, it\'ll be loud.']
                         ]
-                    }
+                    },
+                    // Final exam: no lessons, no hints (appended, so saved beat indexes stay valid).
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 19:05', art: '🎓', lines: [
+                        ['mira', 'Last check before launch day. Another server, another leaky key and an old service. You know the drill. No hints.']
+                    ] },
+                    { type: 'train', lab: 'ch-perms', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Final exam. No lessons, no hints. Show me.”' }
                 ]
             },
             {
@@ -5022,7 +5090,13 @@ permalink: /cyber-quest/
                             ['mira', 'Welcome to the team, analyst. Officially.', 'happy'],
                             [null, 'Black Lantern has gone quiet. For now.']
                         ]
-                    }
+                    },
+                    // Final exam: no lessons, no hints (appended, so saved beat indexes stay valid).
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Sat 11:00', art: '🎓', lines: [
+                        ['mira', 'Monday you\'re officially on the team. Today\'s the certification: one server, a bit of everything. No notes, no hints. You\'ve got this.']
+                    ] },
+                    { type: 'train', lab: 'ch-final', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Final exam. No lessons, no hints. Show me.”' }
                 ]
             }
         ];

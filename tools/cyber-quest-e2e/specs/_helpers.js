@@ -46,4 +46,15 @@ async function launch() {
   return { browser, page, errors, ev, open, openGrounds, screen, type, feed, shot, noHScroll };
 }
 
-module.exports = { launch, assert, sleep };
+
+// Solutions for the no-hint challenges and chapter exams, built from the run's random T.vars.
+const SOLVE = {
+  'ch-find': (v) => ['find /srv/shared -name launch-key.txt', 'cat ' + v.path, 'answer ' + v.code, 'answer ' + v.dir],
+  'ch-map': (v) => ['cat /etc/passwd', 'answer ' + v.user, 'ls /var/log', 'answer ' + v.logs, 'ls -a /tmp', 'ls -a /var/tmp', 'answer ' + v.code],
+  'ch-logs': (v) => ['grep Failed /var/log/auth.log', 'answer ' + v.ip, 'answer ' + v.n, 'grep Accepted /var/log/auth.log', 'answer ' + v.user],
+  'ch-jobs': (v) => ['ps aux', 'kill ' + v.pid, 'ls /etc/cron.d', 'answer ' + v.job],
+  'ch-perms': (v) => ['ls -l ~/.ssh', 'chmod 600 ' + v.key, 'ss -tlnp', 'systemctl stop ' + v.svc, 'ufw deny ' + v.port, 'ufw enable'],
+  'ch-final': (v) => ['find /srv/shared -name cert-key.txt', 'cat ' + v.path, 'answer ' + v.code, 'grep Failed /var/log/auth.log', 'answer ' + v.ip, 'ps aux', 'kill ' + v.pid, 'ls -l ~/.ssh', 'chmod 600 ' + v.key]
+};
+
+module.exports = { launch, assert, sleep, SOLVE };
