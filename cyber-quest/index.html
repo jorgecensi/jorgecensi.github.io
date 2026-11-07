@@ -687,7 +687,8 @@ permalink: /cyber-quest/
         .tr-msg.bad { border-left-color: var(--danger); }
         .tr-inbox { display: grid; gap: 10px; }
         .tr-card { background: #f8fafc; color: #0f172a; border-radius: 14px; padding: 12px 14px; animation: slideIn 0.3s ease; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } }
+        .tr-card.gone { pointer-events: none; opacity: 0; transition: opacity 0.2s ease; }
         .tr-from { font-size: 0.86rem; }
         .tr-addr { font-family: var(--mono); font-size: 0.78rem; color: #475569; word-break: break-all; }
         .tr-subj { font-weight: 700; margin: 4px 0 2px; }
@@ -5333,7 +5334,7 @@ permalink: /cyber-quest/
                     (m.attach ? '<span class="attach">📎 ' + esc(m.attach) + '</span>' : '') +
                     '<div class="tr-timer"><i></i></div>' +
                     '<div class="tr-actions"><button class="tr-report" data-tr="report" data-id="' + m.id + '">🎣 Report</button><button class="tr-allow" data-tr="allow" data-id="' + m.id + '">✅ Allow</button></div>';
-                $('tr-inbox').prepend(card);
+                $('tr-inbox').append(card); // new mail goes below, so nothing jumps under the player's finger
                 Sfx.ping();
             },
             decide(id, verdict, timeout) {
@@ -5341,7 +5342,7 @@ permalink: /cyber-quest/
                 if (!m || this.over) return;
                 this.active = this.active.filter((x) => x !== m);
                 const card = $('tr-m' + id);
-                if (card) card.remove();
+                if (card) { card.classList.add('gone'); setTimeout(() => card.remove(), reducedMotion ? 0 : 220); }
                 const reported = verdict === 'report';
                 if (m.phish && !reported) {
                     this.danger += 30;

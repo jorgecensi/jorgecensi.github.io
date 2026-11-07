@@ -70,6 +70,9 @@ const TRAIN = {
     for (;;) {
       const st = await ev(() => { const t = window.__cyberQuest.triage; return { over: t.over, active: t.active.map((m) => ({ id: m.id, phish: m.phish })) }; });
       if (st.over) break;
+      // New mail is added below the older ones, so nothing moves under the player's finger.
+      const order = await ev(() => [...document.querySelectorAll('#tr-inbox .tr-card:not(.gone)')].map((c) => Number(c.id.slice(4))));
+      assert(order.every((id, i) => i === 0 || id > order[i - 1]), 'inbox keeps the oldest mail on top: ' + order.join(','));
       // First attempt allows everything and must fail; the retry answers correctly.
       for (const m of st.active) await page.click(`[data-tr="${triageAttempt === 1 ? 'allow' : m.phish ? 'report' : 'allow'}"][data-id="${m.id}"]`).catch(() => {});
       await sleep(400);
