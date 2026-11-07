@@ -437,7 +437,7 @@ permalink: /cyber-quest/
             touch-action: manipulation; user-select: none; -webkit-user-select: none;
         }
         .map.has-art { background: #081c22 center / 100% 100% no-repeat; image-rendering: pixelated; }
-        .map.has-art .road.edge { stroke: rgba(4, 18, 26, 0.55); }
+        .map.has-art .road-bed { opacity: 0.5; }
         .map.has-art .node { width: 9.5%; font-size: clamp(12px, 3.6vw, 19px); border-width: 2px; }
         .map.has-art .node.boss { width: 12%; }
         .map.has-art .node.side, .map.has-art .node.gate { width: 8.5%; }
@@ -445,10 +445,11 @@ permalink: /cyber-quest/
         .map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
         .map .trace { fill: none; stroke: rgba(56, 189, 248, 0.10); stroke-width: 1.4; }
         .map .road { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-        .map .road.edge { stroke: #04121a; stroke-width: 9; }
-        .map .road.open { stroke: #e9c46a; stroke-width: 5; stroke-dasharray: 0.1 9; }
-        .map .road.locked { stroke: rgba(148, 163, 184, 0.35); stroke-width: 4; stroke-dasharray: 0.1 9; }
-        .map .road.side { stroke: #7dd3fc; stroke-width: 4; stroke-dasharray: 0.1 8; }
+        .map .road.edge { stroke: #04121a; stroke-width: 6; }
+        .map .dot { stroke: #04121a; stroke-width: 0.35; }
+        .map .dot.open { fill: #e9c46a; }
+        .map .dot.locked { fill: #64748b; }
+        .map .dot.side { fill: #7dd3fc; }
         .map-prop { position: absolute; transform: translate(-50%, -50%); font-size: clamp(16px, 5.5vw, 26px); opacity: 0.55; pointer-events: none; filter: saturate(0.7); }
         .map-label {
             position: absolute; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
@@ -910,7 +911,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070636';
+    const SW_VERSION = '2611070642';
 
     (() => {
         'use strict';
@@ -4519,14 +4520,15 @@ permalink: /cyber-quest/
             {
                 id: 'brightside', num: 1, name: 'Brightside Campus', art: 'map-brightside',
                 nodes: [
-                    { id: 'ch1', ch: 'ch1', x: 21, y: 119, place: 'Lobby' },
-                    { id: 'ch2', ch: 'ch2', x: 70, y: 99, place: 'Server closet', via: [[46, 110]] },
-                    { id: 'ch3', ch: 'ch3', x: 81, y: 73, place: 'Build lab', via: [[92, 86]] },
-                    { id: 'ch4', ch: 'ch4', x: 34, y: 76, place: 'Network gateway', via: [[56, 80]] },
-                    { id: 'ch5', ch: 'ch5', x: 50, y: 41, place: 'Launch pad', boss: true, via: [[52, 58]] },
-                    { id: 'grounds', kind: 'grounds', x: 84, y: 119, link: 'ch1', via: [[52, 125]], icon: '🎯', label: 'Training', place: 'Training Grounds' },
-                    { id: 'guide', kind: 'guide', x: 13, y: 46, link: 'ch4', via: [[14, 64]], icon: '📘', label: 'Guide', place: 'Field Guide library' },
-                    { id: 'gate', kind: 'gate', x: 88, y: 32, link: 'ch5', via: [[70, 40]], icon: '🌀', label: 'World 2', to: null }
+                    // Positions and bends follow the roads painted in map-brightside.webp.
+                    { id: 'ch1', ch: 'ch1', x: 20, y: 121, place: 'Lobby' },
+                    { id: 'ch2', ch: 'ch2', x: 70, y: 100, place: 'Server closet', via: [[52, 121], [52, 100]] },
+                    { id: 'ch3', ch: 'ch3', x: 81, y: 74, place: 'Build lab', via: [[57, 100], [57, 79], [81, 79]] },
+                    { id: 'ch4', ch: 'ch4', x: 34, y: 79, place: 'Network gateway', via: [[81, 79]] },
+                    { id: 'ch5', ch: 'ch5', x: 52, y: 42, place: 'Launch pad', boss: true, via: [[52, 79]] },
+                    { id: 'grounds', kind: 'grounds', x: 66, y: 113, link: 'ch1', via: [[52, 121], [66, 121]], icon: '🎯', label: 'Training', place: 'Training Grounds' },
+                    { id: 'guide', kind: 'guide', x: 14, y: 46, link: 'ch4', via: [[14, 79]], icon: '📘', label: 'Guide', place: 'Field Guide library' },
+                    { id: 'gate', kind: 'gate', x: 86, y: 30, link: 'ch5', via: [[62, 42], [62, 35], [86, 35]], icon: '🌀', label: 'World 2', to: null }
                 ],
                 // Props and traces only show while a world has no art.
                 props: [[6, 124, '🌳'], [94, 100, '🌳'], [6, 30, '🌳'], [38, 84, '☕'], [94, 46, '🖥️'], [62, 50, '🏢'], [26, 14, '📡'], [62, 112, '🪴'], [36, 40, '🛰️']],
@@ -4589,12 +4591,25 @@ permalink: /cyber-quest/
                 const done = w.nodes.filter((n) => n.ch && storyDone(n.ch)).length;
                 const chN = w.nodes.filter((n) => n.ch).length;
                 const stars = w.nodes.reduce((t, n) => t + ((n.ch && progress.story[n.ch] && progress.story[n.ch].stars) || 0), 0);
-                const roads = w.nodes.map((n) => {
-                    const f = this.from(n); if (!f) return '';
-                    const pts = [[f.x, f.y]].concat(n.via || [], [[n.x, n.y]]).map((p) => p.join(',')).join(' ');
-                    const cls = n.kind && n.kind !== 'gate' ? 'side' : this.open(n) ? 'open' : 'locked';
-                    return '<polyline class="road edge" points="' + pts + '"/><polyline class="road ' + cls + '" points="' + pts + '"/>';
-                }).join('');
+                // Roads: one dark band per road, then dots sampled along them. Roads can share a
+                // stretch of the painted road, so a dot close to an existing one is skipped
+                // (open roads are drawn first and win).
+                const lines = w.nodes.map((n) => {
+                    const f = this.from(n); if (!f) return null;
+                    return { pts: [[f.x, f.y]].concat(n.via || [], [[n.x, n.y]]), cls: n.kind && n.kind !== 'gate' ? 'side' : this.open(n) ? 'open' : 'locked' };
+                }).filter(Boolean);
+                const order = { open: 0, side: 1, locked: 2 }, dots = [];
+                lines.slice().sort((a, b) => order[a.cls] - order[b.cls]).forEach((l) => {
+                    for (let k = 1; k < l.pts.length; k++) {
+                        const [ax, ay] = l.pts[k - 1], [bx, by] = l.pts[k], len = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.round(len / 4.5));
+                        for (let t = 0; t <= n; t++) {
+                            const x = ax + (bx - ax) * t / n, y = ay + (by - ay) * t / n;
+                            if (!dots.some((d) => Math.hypot(d.x - x, d.y - y) < 3.2)) dots.push({ x, y, cls: l.cls });
+                        }
+                    }
+                });
+                const roads = '<g class="road-bed">' + lines.map((l) => '<polyline class="road edge" points="' + l.pts.map((p) => p.join(',')).join(' ') + '"/>').join('') + '</g>' +
+                    dots.map((d) => '<circle class="dot ' + d.cls + '" cx="' + d.x.toFixed(1) + '" cy="' + d.y.toFixed(1) + '" r="1.6"/>').join('');
                 const nodes = w.nodes.map((n) => {
                     const c = n.ch && Story.chapter(n.ch);
                     const open = this.open(n);

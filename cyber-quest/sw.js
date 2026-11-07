@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2611070636';
+const CACHE_VERSION = '2611070642';
 const CACHE_NAME = `cyber-quest-${CACHE_VERSION}`;
 const OFFLINE_URL = '/cyber-quest/';
 const PRECACHE_URLS = [
