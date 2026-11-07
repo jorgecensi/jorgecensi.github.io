@@ -53,7 +53,12 @@ const TRAIN = {
       const pid = await procPid('lockd');
       if (pid) await type('kill ' + pid);
     } else throw new Error('ASSERT FAILED: unknown terminal beat ' + key);
-    await page.waitForSelector('#ops-done.show', { timeout: 15000 });
+    // Every objective done: the clock stops and the session waits for the player to log out.
+    await page.waitForFunction(() => window.__cyberQuest.shell._ready, null, { timeout: 15000 });
+    assert(!(await ev(() => window.__cyberQuest.shell._finished)), key + ': the result waits for exit');
+    await type('exit');
+    await page.waitForSelector('#ops-done.show', { timeout: 5000 });
+    assert(/Connection to \S+ closed/.test(await ev(() => window.__cyberQuest.ops.out)), key + ': exit prints the logout lines');
     const title = await page.innerText('#ops-done-title');
     assert(info.inc ? /contained/.test(title) : /done/.test(title), key + ' did not complete: ' + title);
     console.log('  ', key, '→', title);

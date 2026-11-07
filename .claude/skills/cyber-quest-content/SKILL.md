@@ -95,7 +95,8 @@ A phishing rush is `{ type: 'triage', gap: 4.5, window: 13, mails: [{ name, addr
    - `story.spec.js`: add the commands for a new `train` lab to `TRAIN`, and a
      branch in `playTerminal()` for a new incident (by `title`) that exercises
      its live mechanic and asserts it fired.
-   - `labs.spec.js`: add a new lab's commands to `LABS`.
+   - `labs.spec.js`: add a new lab's commands to `LABS`. Every lab and incident ends with the player typing
+     `exit`; the specs type it for you after the listed commands.
    - `missions.spec.js` picks up new missions automatically.
 4. `jekyll build`, then `tools/cyber-quest-e2e/run.sh` (about 6 min), then
    screenshots of the new scenes with the `mobile-ui-check` skill.
