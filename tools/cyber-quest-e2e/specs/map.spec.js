@@ -14,6 +14,7 @@ const { launch, assert } = require('./_helpers');
   assert(missing.length === 0, 'chapters without a map node: ' + missing.join(', '));
 
   assert(await at() === 'ch1', 'a fresh player stands on chapter 1');
+  assert(!(await page.isVisible('#grounds')), 'the Training Grounds list is hidden away from its map spot');
   assert(/locked/.test(await cls('ch2')), 'chapter 2 starts locked');
   await page.click('[data-node="ch2"]');
   assert(await at() === 'ch1', 'tapping a locked node does not move the player');
@@ -22,6 +23,10 @@ const { launch, assert } = require('./_helpers');
   await page.click('[data-node="grounds"]');
   assert(await at() === 'grounds', 'the player walks to the Training Grounds');
   assert(await ev(() => document.getElementById('grounds').open), 'one tap walks there and opens the Training Grounds');
+  assert(await page.isVisible('#grounds'), 'standing on the Training spot shows the list');
+  await page.click('[data-node="ch1"]');
+  await open();
+  assert(!(await page.isVisible('#grounds')), 'walking away hides the list again');
 
   // Clearing chapter 1 walks the player on to chapter 2.
   await ev(() => {
