@@ -81,8 +81,13 @@ permalink: /cyber-quest/
 
         .rank-card {
             background: linear-gradient(135deg, #0f2a2a, var(--panel));
-            border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 18px;
+            border: 2px solid #1e3a44; border-radius: 14px; padding: 10px 14px; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 0 #04121a;
         }
+        .rank-badge { font-size: 1.7rem; line-height: 1; }
+        .rank-main { flex: 1; min-width: 0; }
+        .rank-card .bar { margin-top: 6px; }
+        .rank-card .rank-next { margin-top: 4px; font-size: 0.72rem; }
         .rank-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
         .rank-name { font-size: 1.15rem; font-weight: 700; }
         .rank-xp { font-family: var(--mono); color: var(--accent); }
@@ -411,6 +416,96 @@ permalink: /cyber-quest/
         .chapter .t { flex: 1; min-width: 0; }
         .chapter .t small { display: block; color: var(--muted); font-size: 0.75rem; }
         .chapter.current { border-color: var(--accent); }
+
+        /* ── Overworld map ───────────────────────────────────── */
+        .world { margin-bottom: 22px; }
+        .world-head { display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; }
+        .world-head .w-title { flex: 1; min-width: 0; }
+        .world-head .kicker { font-size: 0.7rem; letter-spacing: 0.16em; color: #fda4af; font-weight: 700; }
+        .world-head h2 { margin: 2px 0 0; font-size: 1.25rem; }
+        .world-head .w-stars { font-family: var(--mono); font-size: 0.85rem; color: var(--gold); white-space: nowrap; }
+        .world-head .icon-btn[disabled] { opacity: 0.3; }
+        .map {
+            position: relative; width: 100%; aspect-ratio: 100 / 130; border-radius: 16px; overflow: hidden;
+            border: 3px solid #1e3a44; box-shadow: inset 0 0 0 2px #050a14, 0 8px 24px rgba(0, 0, 0, 0.35);
+            background-color: #0b2a2a;
+            background-image:
+                linear-gradient(rgba(16, 185, 129, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(16, 185, 129, 0.07) 1px, transparent 1px),
+                radial-gradient(ellipse at 50% 20%, #12333f 0%, #0b2a2a 55%, #081c22 100%);
+            background-size: 6.25% 4.8%, 6.25% 4.8%, 100% 100%;
+            touch-action: manipulation; user-select: none; -webkit-user-select: none;
+        }
+        .map.has-art { background: #081c22 center / 100% 100% no-repeat; image-rendering: pixelated; }
+        .map.has-art .road-bed { opacity: 0.5; }
+        .map.has-art .node { width: 9.5%; font-size: clamp(12px, 3.6vw, 19px); border-width: 2px; }
+        .map.has-art .node.boss { width: 12%; }
+        .map.has-art .node.side, .map.has-art .node.gate { width: 8.5%; }
+        .map.has-art .map-prop { display: none; }
+        .map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .map .trace { fill: none; stroke: rgba(56, 189, 248, 0.10); stroke-width: 1.4; }
+        .map .road { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .map .road.edge { stroke: #04121a; stroke-width: 6; }
+        .map .dot { stroke: #04121a; stroke-width: 0.35; }
+        .map .dot.open { fill: #e9c46a; }
+        .map .dot.locked { fill: #64748b; }
+        .map .dot.side { fill: #7dd3fc; }
+        .map-prop { position: absolute; transform: translate(-50%, -50%); font-size: clamp(16px, 5.5vw, 26px); opacity: 0.55; pointer-events: none; filter: saturate(0.7); }
+        .map-label {
+            position: absolute; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
+            font: 700 0.6rem/1 var(--mono); letter-spacing: 0.12em; color: rgba(167, 243, 208, 0.55); text-transform: uppercase;
+        }
+        .node {
+            position: absolute; transform: translate(-50%, -50%); width: 13%; aspect-ratio: 1; padding: 0;
+            border-radius: 50%; border: 3px solid #04121a; display: grid; place-items: center;
+            font-size: clamp(15px, 4.6vw, 24px); line-height: 1; cursor: pointer;
+            background: radial-gradient(circle at 35% 30%, #fde68a, #e9a23b 70%); box-shadow: 0 4px 0 #04121a, inset 0 -4px 0 rgba(0, 0, 0, 0.18);
+            color: #111;
+        }
+        .node.done { background: radial-gradient(circle at 35% 30%, #a7f3d0, #10b981 70%); }
+        .node.locked { background: radial-gradient(circle at 35% 30%, #64748b, #334155 70%); cursor: not-allowed; }
+        .node.locked > span { filter: grayscale(1); opacity: 0.8; }
+        .node.boss { width: 17%; border-radius: 22%; background: radial-gradient(circle at 35% 30%, #fda4af, #e11d48 72%); }
+        .node.boss.done { background: radial-gradient(circle at 35% 30%, #a7f3d0, #10b981 70%); }
+        .node.boss.locked { background: radial-gradient(circle at 35% 30%, #7f1d1d, #3b0a14 72%); }
+        .node.side { width: 11%; border-radius: 26%; background: radial-gradient(circle at 35% 30%, #bae6fd, #0ea5e9 72%); }
+        .node.gate { width: 12%; border-radius: 30% 30% 8% 8%; background: radial-gradient(circle at 50% 30%, #c4b5fd, #6d28d9 75%); }
+        .node.gate.locked { background: radial-gradient(circle at 50% 30%, #4c1d95, #1e1b4b 75%); }
+        .node .n-num {
+            position: absolute; left: 50%; top: 100%; transform: translate(-50%, 4px); white-space: nowrap;
+            font: 800 0.62rem/1 var(--mono); color: #e6edf7; background: #04121acc; border-radius: 5px; padding: 3px 5px;
+        }
+        .node .n-stars { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -2px); font-size: 0.55rem; white-space: nowrap; letter-spacing: -1px; }
+        .node.sel { outline: 3px solid #fff; outline-offset: 3px; }
+        .node.next-up::after {
+            content: ''; position: absolute; inset: -9px; border-radius: inherit; border: 2px solid #fde68a;
+            animation: node-pulse 1.6s ease-out infinite;
+        }
+        @keyframes node-pulse { from { opacity: 0.9; transform: scale(0.85); } to { opacity: 0; transform: scale(1.25); } }
+        .node.nope { animation: node-nope 0.3s; }
+        @keyframes node-nope { 25% { margin-left: -3px; } 75% { margin-left: 3px; } }
+        .map-player {
+            position: absolute; width: 11%; aspect-ratio: 1; transform: translate(-50%, -112%); pointer-events: none; z-index: 3;
+            display: grid; place-items: end center; transition: left 0.22s linear, top 0.22s linear;
+        }
+        .map-player .p-body { font-size: clamp(20px, 7vw, 34px); line-height: 1; animation: p-bob 0.9s ease-in-out infinite alternate; filter: drop-shadow(0 2px 0 #04121a); }
+        .map-player.sprite { width: 8.5%; aspect-ratio: 34 / 56; transform: translate(-50%, -88%); }
+        .map-player.sprite .p-body {
+            width: 100%; height: 100%; animation: none; filter: none; font-size: 0;
+            background-repeat: no-repeat; background-size: 800% 100%; image-rendering: pixelated;
+        }
+        .map-player::after { content: ''; position: absolute; bottom: -6%; width: 60%; height: 14%; border-radius: 50%; background: rgba(0, 0, 0, 0.45); z-index: -1; }
+        @keyframes p-bob { from { transform: translateY(0); } to { transform: translateY(-12%); } }
+        .signpost {
+            margin-top: 12px; padding: 14px; border-radius: 14px; background: var(--panel); border: 2px solid #1e3a44;
+            box-shadow: 0 4px 0 #04121a;
+        }
+        .signpost .sp-kicker { font: 700 0.7rem/1.2 var(--mono); color: var(--muted); letter-spacing: 0.08em; }
+        .signpost h3 { margin: 4px 0 4px; font-size: 1.1rem; display: flex; gap: 8px; align-items: center; }
+        .signpost h3 .stars { margin-left: auto; font-size: 0.85rem; }
+        .signpost p { margin: 0 0 12px; color: #cbd5e1; font-size: 0.9rem; }
+        .signpost .btn-row { margin: 0; }
+        .signpost .hint { font-size: 0.75rem; color: var(--muted); margin: 8px 0 0; }
         .grounds { margin-bottom: 8px; }
         .grounds summary {
             list-style: none; cursor: pointer; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
@@ -566,13 +661,13 @@ permalink: /cyber-quest/
                 <button class="icon-btn" data-go="about" aria-label="How to play">?</button>
             </div>
 
-            <div class="rank-card">
-                <div class="rank-row">
-                    <div><div class="section-label" style="margin:0">Your rank</div><div class="rank-name" id="rank-name">Trainee</div></div>
-                    <div class="rank-xp" id="rank-xp">0 XP</div>
+            <div class="rank-card" aria-label="Your rank">
+                <span class="rank-badge" aria-hidden="true">🛡️</span>
+                <div class="rank-main">
+                    <div class="rank-row"><span class="rank-name" id="rank-name">Trainee</span><span class="rank-xp" id="rank-xp">0 XP</span></div>
+                    <div class="bar"><i id="rank-bar"></i></div>
+                    <div class="rank-next" id="rank-next"></div>
                 </div>
-                <div class="bar"><i id="rank-bar"></i></div>
-                <div class="rank-next" id="rank-next"></div>
             </div>
 
             <div class="story-hero" id="story-hero"></div>
@@ -659,6 +754,7 @@ permalink: /cyber-quest/
                     <li>You're the new security analyst at a small game studio, two weeks before its big launch. A hacker crew wants it. Five chapters, one per day of launch week.</li>
                     <li>Each chapter starts <b>calm</b>: your mentor Mira teaches you, you practise in a quiet terminal, and you answer a few questions with no clock.</li>
                     <li>Then the <b>alarm</b> goes off and the attack happens live: logs stream in, a threat meter climbs, and you fight back with what you just learned. If the meter hits 100%, you see what went wrong and try again.</li>
+                    <li>The home screen is a <b>map</b> of the campus. Tap a spot to walk there, and tap it again (or the button below the map) to play. Locked spots open as you clear chapters, and the side areas hold the Training Grounds and the Field Guide. On a keyboard, the arrow keys walk and Enter plays.</li>
                     <li>Your story is saved after every step, so you can stop at any time.</li>
                 </ul>
             </div>
@@ -815,7 +911,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070401';
+    const SW_VERSION = '2611070642';
 
     (() => {
         'use strict';
@@ -3117,6 +3213,7 @@ permalink: /cyber-quest/
             },
             alarm() { [880, 660, 880, 660].forEach((f, i) => this.tone(f, 0.16, 'square', 0.035, i * 0.2)); },
             ping() { this.tone(1250, 0.07, 'sine', 0.05); },
+            step() { this.tone(300, 0.04, 'square', 0.018); },
             hit() { this.tone(150, 0.28, 'sawtooth', 0.05); },
             ok() { this.tone(660, 0.07, 'sine', 0.05); this.tone(990, 0.1, 'sine', 0.05, 0.08); },
             win() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.16, 'triangle', 0.05, i * 0.11)); },
@@ -4411,6 +4508,248 @@ permalink: /cyber-quest/
         ];
 
         const storyDone = (id) => !!(progress.story[id] && progress.story[id].done);
+
+        // ── Overworld map ─────────────────────────────────────────────────
+        // The home screen is a top-down map, one per world. Coordinates are in a
+        // 100 × 130 box (x across, y down). A chapter node joins the one before
+        // it; `link` joins side nodes; `via` adds bends to the road leading in.
+        // To add a world: give it a chapter list (new CHAPTERS entries), set the
+        // previous world's gate `to`, and optionally `art` (/img/cq/<art>.webp,
+        // a 3:4 top-down background with no roads or text).
+        const WORLDS = [
+            {
+                id: 'brightside', num: 1, name: 'Brightside Campus', art: 'map-brightside',
+                nodes: [
+                    // Positions and bends follow the roads painted in map-brightside.webp.
+                    { id: 'ch1', ch: 'ch1', x: 20, y: 121, place: 'Lobby' },
+                    { id: 'ch2', ch: 'ch2', x: 70, y: 100, place: 'Server closet', via: [[52, 121], [52, 100]] },
+                    { id: 'ch3', ch: 'ch3', x: 81, y: 74, place: 'Build lab', via: [[57, 100], [57, 79], [81, 79]] },
+                    { id: 'ch4', ch: 'ch4', x: 34, y: 79, place: 'Network gateway', via: [[81, 79]] },
+                    { id: 'ch5', ch: 'ch5', x: 52, y: 42, place: 'Launch pad', boss: true, via: [[52, 79]] },
+                    { id: 'grounds', kind: 'grounds', x: 66, y: 113, link: 'ch1', via: [[52, 121], [66, 121]], icon: '🎯', label: 'Training', place: 'Training Grounds' },
+                    { id: 'guide', kind: 'guide', x: 14, y: 46, link: 'ch4', via: [[14, 79]], icon: '📘', label: 'Guide', place: 'Field Guide library' },
+                    { id: 'gate', kind: 'gate', x: 86, y: 30, link: 'ch5', via: [[62, 42], [62, 35], [86, 35]], icon: '🌀', label: 'World 2', to: null }
+                ],
+                // Props and traces only show while a world has no art.
+                props: [[6, 124, '🌳'], [94, 100, '🌳'], [6, 30, '🌳'], [38, 84, '☕'], [94, 46, '🖥️'], [62, 50, '🏢'], [26, 14, '📡'], [62, 112, '🪴'], [36, 40, '🛰️']],
+                traces: ['M0,92 H14 V70', 'M100,56 H90 V40 H70', 'M40,0 V12 H56', 'M100,110 H92', 'M0,20 H10 V8']
+            }
+        ];
+
+        const WorldMap = {
+            PLAYER_SPRITE: '/img/cq/player-map.png', // 8 frames: down ×2, up ×2, left ×2, right ×2
+            world: 0, busy: false,
+            W() { return WORLDS[this.world]; },
+            node(id) { return this.W().nodes.find((n) => n.id === id); },
+            from(n) { // the node a node's road comes from
+                if (n.link) return this.node(n.link);
+                const chs = this.W().nodes.filter((m) => m.ch);
+                const i = chs.indexOf(n);
+                return i > 0 ? chs[i - 1] : null;
+            },
+            open(n) {
+                if (n.ch) {
+                    const i = CHAPTERS.findIndex((c) => c.id === n.ch);
+                    return i === 0 || storyDone(n.ch) || storyDone(CHAPTERS[i - 1].id);
+                }
+                if (n.kind === 'gate') return !!n.to && this.W().nodes.every((m) => !m.ch || storyDone(m.ch));
+                return true;
+            },
+            curNode() { // where the story wants the player
+                const cur = Story.current();
+                const w = this.W();
+                const n = cur && w.nodes.find((m) => m.ch === cur.ch.id);
+                if (n) return n;
+                return w.nodes.filter((m) => m.ch).pop();
+            },
+            pos(x, y) { return { left: x + '%', top: (y / 1.3) + '%' }; },
+            route(a, b) { // breadth-first search over the roads; returns points to walk
+                const w = this.W(), adj = {};
+                w.nodes.forEach((n) => { const f = this.from(n); if (f) { (adj[n.id] = adj[n.id] || []).push(f.id); (adj[f.id] = adj[f.id] || []).push(n.id); } });
+                const prev = { [a]: null }, q = [a];
+                while (q.length) { const c = q.shift(); if (c === b) break; (adj[c] || []).forEach((m) => { if (!(m in prev)) { prev[m] = c; q.push(m); } }); }
+                if (!(b in prev)) return [];
+                const ids = []; for (let c = b; c; c = prev[c]) ids.unshift(c);
+                const pts = [];
+                for (let i = 1; i < ids.length; i++) {
+                    const p = this.node(ids[i - 1]), n = this.node(ids[i]);
+                    let via = [];
+                    if (this.from(n) === p) via = n.via || [];
+                    else if (this.from(p) === n) via = (p.via || []).slice().reverse();
+                    via.forEach(([x, y]) => pts.push({ x, y }));
+                    pts.push({ x: n.x, y: n.y, id: n.id });
+                }
+                return pts;
+            },
+            render() {
+                const w = this.W();
+                const s = progress.settings;
+                const want = this.curNode();
+                if (!s.mapAt || !this.node(s.mapAt)) { s.mapAt = want.id; s.mapFor = want.id; }
+                const walkTo = s.mapFor !== want.id ? want.id : null; // the story moved on: walk there
+                if (!this.sel || !this.node(this.sel)) this.sel = s.mapAt;
+                const done = w.nodes.filter((n) => n.ch && storyDone(n.ch)).length;
+                const chN = w.nodes.filter((n) => n.ch).length;
+                const stars = w.nodes.reduce((t, n) => t + ((n.ch && progress.story[n.ch] && progress.story[n.ch].stars) || 0), 0);
+                // Roads: one dark band per road, then dots sampled along them. Roads can share a
+                // stretch of the painted road, so a dot close to an existing one is skipped
+                // (open roads are drawn first and win).
+                const lines = w.nodes.map((n) => {
+                    const f = this.from(n); if (!f) return null;
+                    return { pts: [[f.x, f.y]].concat(n.via || [], [[n.x, n.y]]), cls: n.kind && n.kind !== 'gate' ? 'side' : this.open(n) ? 'open' : 'locked' };
+                }).filter(Boolean);
+                const order = { open: 0, side: 1, locked: 2 }, dots = [];
+                lines.slice().sort((a, b) => order[a.cls] - order[b.cls]).forEach((l) => {
+                    for (let k = 1; k < l.pts.length; k++) {
+                        const [ax, ay] = l.pts[k - 1], [bx, by] = l.pts[k], len = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.round(len / 4.5));
+                        for (let t = 0; t <= n; t++) {
+                            const x = ax + (bx - ax) * t / n, y = ay + (by - ay) * t / n;
+                            if (!dots.some((d) => Math.hypot(d.x - x, d.y - y) < 3.2)) dots.push({ x, y, cls: l.cls });
+                        }
+                    }
+                });
+                const roads = '<g class="road-bed">' + lines.map((l) => '<polyline class="road edge" points="' + l.pts.map((p) => p.join(',')).join(' ') + '"/>').join('') + '</g>' +
+                    dots.map((d) => '<circle class="dot ' + d.cls + '" cx="' + d.x.toFixed(1) + '" cy="' + d.y.toFixed(1) + '" r="1.6"/>').join('');
+                const nodes = w.nodes.map((n) => {
+                    const c = n.ch && Story.chapter(n.ch);
+                    const open = this.open(n);
+                    const st = c && progress.story[c.id];
+                    const cls = ['node', n.kind || '', n.kind === 'grounds' || n.kind === 'guide' ? 'side' : '', n.boss ? 'boss' : '', !open ? 'locked' : '', st && st.done ? 'done' : '',
+                        n.ch && n.id === want.id && !(st && st.done) ? 'next-up' : '', n.id === this.sel ? 'sel' : ''].join(' ');
+                    const icon = c ? c.icon : n.icon;
+                    const label = c ? 'CH ' + c.num : n.label;
+                    const name = c ? 'Chapter ' + c.num + ': ' + c.title : n.place;
+                    const p = this.pos(n.x, n.y);
+                    return '<button class="' + cls + '" data-node="' + n.id + '" style="left:' + p.left + ';top:' + p.top + '" aria-label="' + esc(name + (open ? '' : ' (locked)')) + '">' +
+                        (st && st.done ? '<span class="n-stars">' + '⭐'.repeat(st.stars || 0) + '</span>' : '') +
+                        '<span>' + (open ? icon : '🔒') + '</span><span class="n-num">' + esc(label) + '</span></button>';
+                }).join('');
+                const props = (w.props || []).map(([x, y, e]) => { const p = this.pos(x, y); return '<span class="map-prop" style="left:' + p.left + ';top:' + p.top + '">' + e + '</span>'; }).join('');
+                const traces = (w.art ? [] : w.traces || []).map((d) => '<path class="trace" d="' + d + '"/>').join('');
+                const at = this.node(s.mapAt), pp = this.pos(at.x, at.y);
+                $('story-hero').className = 'world';
+                $('story-hero').innerHTML =
+                    '<div class="world-head">' +
+                    (WORLDS.length > 1 ? '<button class="icon-btn" data-world="-1" aria-label="Previous world"' + (this.world ? '' : ' disabled') + '>◀</button>' : '') +
+                    '<div class="w-title"><div class="kicker">WORLD ' + w.num + ' · ' + done + '/' + chN + ' CHAPTERS</div><h2>' + esc(w.name) + '</h2></div>' +
+                    '<span class="w-stars">⭐ ' + stars + '/' + chN * 3 + '</span>' +
+                    (WORLDS.length > 1 ? '<button class="icon-btn" data-world="1" aria-label="Next world"' + (this.world < WORLDS.length - 1 ? '' : ' disabled') + '>▶</button>' : '') +
+                    '</div>' +
+                    '<div class="map' + (w.art ? ' has-art' : '') + '" id="map"' + (w.art ? ' style="background-image:url(\'/img/cq/' + w.art + '.webp\')"' : '') + '>' +
+                    '<svg viewBox="0 0 100 130" preserveAspectRatio="none" aria-hidden="true">' + traces + roads + '</svg>' + props + nodes +
+                    '<div class="map-player' + (this.PLAYER_SPRITE ? ' sprite' : '') + '" id="map-player" style="left:' + pp.left + ';top:' + pp.top + '"><div class="p-body">🧑‍💻</div></div>' +
+                    '</div>' +
+                    '<div class="signpost" id="signpost" aria-live="polite"></div>';
+                if (this.PLAYER_SPRITE) $('map-player').firstChild.style.backgroundImage = 'url("' + this.PLAYER_SPRITE + '")';
+                this.face('down', 0);
+                this.renderSign();
+                if (walkTo && this.world === WORLDS.findIndex((x) => x.nodes.includes(want))) {
+                    s.mapFor = want.id; saveProgress();
+                    setTimeout(() => this.walk(walkTo), 450);
+                }
+            },
+            face(dir, f) {
+                if (!this.PLAYER_SPRITE) return;
+                const i = ['down', 'up', 'left', 'right'].indexOf(dir) * 2 + f;
+                $('map-player').firstChild.style.backgroundPosition = (i / 7 * 100) + '% 0';
+            },
+            walk(id, then) {
+                const s = progress.settings;
+                const pts = this.route(s.mapAt, id);
+                if (pts.length) { s.mapAt = id; saveProgress(); }
+                this.select(id);
+                if (!pts.length) { if (then) then(); return; }
+                const el = $('map-player');
+                if (reducedMotion || !el) { if (el) Object.assign(el.style, this.pos(pts[pts.length - 1].x, pts[pts.length - 1].y)); if (then) then(); return; }
+                this.busy = true;
+                let i = 0, cx = parseFloat(el.style.left), cy = parseFloat(el.style.top) * 1.3, frame = 0;
+                const step = () => {
+                    if (!el.isConnected) { this.busy = false; return; }
+                    if (i >= pts.length) { this.busy = false; this.face('down', 0); if (then) then(); return; }
+                    const p = pts[i++];
+                    const dx = p.x - cx, dy = p.y - cy, dist = Math.hypot(dx, dy);
+                    this.face(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'), frame = 1 - frame);
+                    const ms = Math.max(90, dist * 7);
+                    el.style.transitionDuration = ms + 'ms';
+                    Object.assign(el.style, this.pos(p.x, p.y));
+                    cx = p.x; cy = p.y;
+                    Sfx.step();
+                    setTimeout(step, ms);
+                };
+                step();
+            },
+            select(id) {
+                this.sel = id;
+                document.querySelectorAll('#map .node').forEach((b) => b.classList.toggle('sel', b.dataset.node === id));
+                this.renderSign();
+            },
+            tap(id) {
+                if (this.busy) return;
+                const n = this.node(id);
+                if (!this.open(n)) {
+                    const b = document.querySelector('#map [data-node="' + id + '"]');
+                    if (b) { b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope'); }
+                    this.select(id);
+                    return;
+                }
+                if (id === progress.settings.mapAt) return this.enter(n);
+                this.walk(id);
+            },
+            enter(n) {
+                if (n.ch) {
+                    const cur = Story.current();
+                    return Story.open(n.ch, cur && cur.ch.id === n.ch ? cur.beat : 0);
+                }
+                if (n.kind === 'grounds') {
+                    const g = $('grounds'); g.open = true;
+                    return g.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+                }
+                if (n.kind === 'guide') return show('guide');
+                if (n.kind === 'gate' && n.to) { this.world = WORLDS.findIndex((w) => w.id === n.to); this.sel = null; progress.settings.mapAt = null; return renderHome(); }
+            },
+            step(d) { // keyboard: walk to the previous/next open node along the chapters
+                if (this.busy) return;
+                const list = this.W().nodes.filter((n) => n.ch || n.kind === 'gate');
+                let i = list.findIndex((n) => n.id === progress.settings.mapAt);
+                if (i < 0) i = 0; else i += d;
+                const n = list[i];
+                if (n && this.open(n)) this.walk(n.id);
+            },
+            renderSign() {
+                const n = this.node(this.sel), el = $('signpost');
+                if (!n || !el) return;
+                const c = n.ch && Story.chapter(n.ch);
+                const open = this.open(n);
+                const here = n.id === progress.settings.mapAt;
+                let html = '';
+                if (c) {
+                    const st = progress.story[c.id];
+                    const cur = Story.current();
+                    const isCur = cur && cur.ch === c;
+                    html = '<div class="sp-kicker">CHAPTER ' + c.num + ' · ' + esc(c.day.toUpperCase()) + ' · ' + esc(n.place.toUpperCase()) + '</div>' +
+                        '<h3><span>' + c.icon + '</span>' + esc(c.title) + '<span class="stars">' + (st && st.done ? starHtml(st.stars) : open ? '+' + c.xp + ' XP' : '') + '</span></h3>' +
+                        '<p>' + esc(c.synopsis) + '</p>';
+                    if (!open) html += '<p class="hint">🔒 Finish Chapter ' + (c.num - 1) + ' to open this.</p>';
+                    else if (isCur) {
+                        const doneN = CHAPTERS.filter((x) => storyDone(x.id)).length;
+                        const label = (cur.beat > 0 ? '▶ Continue' : doneN ? '▶ Play' : '▶ Start the story') + ' · Ch. ' + c.num + ': ' + c.title;
+                        html += '<div class="btn-row"><button class="btn" data-story-play>' + esc(label) + '</button></div>';
+                    } else html += '<div class="btn-row"><button class="btn' + (st && st.done ? ' secondary' : '') + '" data-chapter="' + c.id + '">' + (st && st.done ? '↺ Replay' : '▶ Play') + ' · Ch. ' + c.num + '</button></div>';
+                } else if (n.kind === 'grounds') {
+                    html = '<div class="sp-kicker">SIDE AREA</div><h3><span>🎯</span>Training Grounds</h3><p>Practise any skill on its own, any time: quizzes in three tiers and terminal labs. Everything here earns XP too.</p>' +
+                        '<div class="btn-row"><button class="btn secondary" data-node-enter="grounds">Open the Training Grounds</button></div>';
+                } else if (n.kind === 'guide') {
+                    html = '<div class="sp-kicker">SIDE AREA</div><h3><span>📘</span>Field Guide</h3><p>Every tip you\'ve earned so far, in one place.</p>' +
+                        '<div class="btn-row"><button class="btn secondary" data-go="guide">Read the Field Guide</button></div>';
+                } else if (n.kind === 'gate') {
+                    html = '<div class="sp-kicker">WORLD GATE</div><h3><span>🌀</span>' + (n.to ? 'To World ' + (this.world + 2) : 'World 2 · Coming soon') + '</h3>' +
+                        '<p>' + (n.to ? (open ? 'The way to the next world is open.' : 'Clear every chapter in this world to open the gate.') : 'Black Lantern isn\'t the only crew out there. New threats are on their way.') + '</p>' +
+                        (n.to && open ? '<div class="btn-row"><button class="btn" data-node-enter="gate">Go through the gate</button></div>' : '');
+                }
+                if (open && !here && !c) html += '<p class="hint">Tap it on the map to walk there.</p>';
+                el.innerHTML = html;
+            }
+        };
         const fmtLine = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
 
         const Story = {
@@ -4723,26 +5062,7 @@ permalink: /cyber-quest/
             }
         };
 
-        function renderStoryHero() {
-            const cur = Story.current();
-            const doneN = CHAPTERS.filter((c) => storyDone(c.id)).length;
-            const label = !cur ? '↺ Replay from Chapter 1'
-                : (cur.beat > 0 ? '▶ Continue' : doneN ? '▶ Play' : '▶ Start the story') + ' · Ch. ' + cur.ch.num + ': ' + cur.ch.title;
-            const rows = CHAPTERS.map((c, i) => {
-                const open = i === 0 || storyDone(CHAPTERS[i - 1].id) || storyDone(c.id);
-                const isCur = cur && cur.ch === c;
-                const st = progress.story[c.id];
-                return '<button class="chapter' + (isCur ? ' current' : '') + '" data-chapter="' + c.id + '"' + (open ? '' : ' disabled') + '>' +
-                    '<span class="num">CH ' + c.num + '</span><span>' + (open ? c.icon : '🔒') + '</span>' +
-                    '<span class="t">' + esc(c.title) + '<small>' + esc(c.day) + (st && st.done ? '' : ' · +' + c.xp + ' XP') + '</small></span>' +
-                    '<span class="stars">' + (st && st.done ? starHtml(st.stars) : '') + '</span></button>';
-            }).join('');
-            $('story-hero').innerHTML = '<div class="kicker">📖 STORY CAMPAIGN · ' + doneN + '/' + CHAPTERS.length + ' CHAPTERS</div>' +
-                '<h2>Defend Brightside</h2>' +
-                '<p>Two weeks to launch. A hacker crew wants the studio\'s game. You\'re the new security analyst, and you\'ll learn on the job.</p>' +
-                '<button class="btn" data-story-play>' + esc(label) + '</button>' +
-                '<div class="chapters">' + rows + '</div>';
-        }
+        function renderStoryHero() { WorldMap.render(); }
 
         // ── Events ────────────────────────────────────────────────────────
         document.addEventListener('click', (e) => {
@@ -4762,6 +5082,12 @@ permalink: /cyber-quest/
                 const id = chapter.dataset.chapter;
                 return Story.open(id, cur && cur.ch.id === id ? cur.beat : 0);
             }
+            const node = e.target.closest('[data-node]');
+            if (node) return WorldMap.tap(node.dataset.node);
+            const nodeEnter = e.target.closest('[data-node-enter]');
+            if (nodeEnter) return WorldMap.enter(WorldMap.node(nodeEnter.dataset.nodeEnter));
+            const world = e.target.closest('[data-world]');
+            if (world && !world.disabled) { WorldMap.world += Number(world.dataset.world); WorldMap.sel = null; progress.settings.mapAt = null; return renderHome(); }
             const nextCh = e.target.closest('[data-story-next]');
             if (nextCh) return Story.open(nextCh.dataset.storyNext, 0);
             const ask = e.target.closest('[data-ask]');
@@ -4791,6 +5117,11 @@ permalink: /cyber-quest/
         $('tr-continue').addEventListener('click', () => { const next = Triage._next; Triage._next = null; if (next) next(); else show('home'); });
         $('tr-quit').addEventListener('click', () => {
             if (Triage.over || window.confirm('Leave? The story is saved, but this part restarts next time.')) show('home');
+        });
+        document.addEventListener('keydown', (e) => {
+            if (S.screen !== 'home' || /INPUT|TEXTAREA|SUMMARY/.test(e.target.tagName)) return;
+            const d = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+            if (d) { e.preventDefault(); WorldMap.step(d); }
         });
         document.addEventListener('keydown', (e) => {
             if (S.screen !== 'story' || (e.key !== 'Enter' && e.key !== ' ')) return;
@@ -4846,6 +5177,7 @@ permalink: /cyber-quest/
             window.__cyberQuest = {
                 get state() { return { screen: S.screen, mission: S.mission && S.mission.id, idx: S.idx, total: S.queue.length, shields: S.shields, answered: S.answered, kind: S.queue[S.idx] && S.queue[S.idx].kind }; },
                 get progress() { return JSON.parse(JSON.stringify(progress)); },
+                map: WorldMap,
                 missions: MISSIONS.map((m) => m.id),
                 analysePassword,
                 answerCorrect() {

@@ -84,6 +84,9 @@ A phishing rush is `{ type: 'triage', gap: 4.5, window: 13, mails: [{ name, addr
 ## Steps
 
 1. Write the content (skeletons above). New art: use the `pixel-art-assets` skill.
+   A new chapter also needs a node on the map: add `{ id, ch, x, y, place, via? }`
+   to its world in `WORLDS`, or start a new world (see AGENTS.md) and point the
+   previous world's gate `to` it. Screenshot the map afterwards.
 2. Bump `SW_VERSION`/`CACHE_VERSION` together; add any new asset to `PRECACHE_URLS`.
 3. Update the e2e specs in `tools/cyber-quest-e2e/specs/`:
    - `story.spec.js`: add the commands for a new `train` lab to `TRAIN`, and a
