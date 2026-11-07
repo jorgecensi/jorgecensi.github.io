@@ -373,7 +373,7 @@ permalink: /cyber-quest/
         }
         .term-inrow .pr { color: var(--accent); white-space: nowrap; }
         .term-inrow input {
-            flex: 1; background: transparent; border: 0; color: #e6edf7; font-family: var(--mono); font-size: 0.8rem; outline: none; padding: 2px 0;
+            flex: 1; background: transparent; border: 0; color: #e6edf7; font-family: var(--mono); font-size: 16px; /* 16px+ stops iOS zooming in on focus */ outline: none; padding: 2px 0;
         }
         .term-help { font-size: 0.75rem; color: var(--muted); }
         .term-help code { font-family: var(--mono); color: var(--info); }
@@ -815,7 +815,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070340';
+    const SW_VERSION = '2611070359';
 
     (() => {
         'use strict';
@@ -4775,7 +4775,7 @@ permalink: /cyber-quest/
             const lab = e.target.closest('[data-lab]');
             if (lab && !lab.disabled) return Ops.open(lab.dataset.lab);
             const chip = e.target.closest('[data-chip]');
-            if (chip) { const inp = $('ops-input'); inp.value = chip.dataset.chip; inp.focus(); Ops.submit(chip.dataset.chip); return; }
+            if (chip) { const inp = $('ops-input'); inp.value = chip.dataset.chip; Ops.submit(chip.dataset.chip); return; }
             const mission = e.target.closest('[data-mission]');
             if (mission && !mission.disabled) return openBriefing(mission.dataset.mission);
             const opt = e.target.closest('[data-opt]');
