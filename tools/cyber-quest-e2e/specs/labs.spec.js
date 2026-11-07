@@ -3,7 +3,8 @@
 const { launch, assert } = require('./_helpers');
 
 const LABS = {
-  'first-contact': ['pwd', 'ls -a', 'cat incident-ticket.txt', 'whoami', 'ps aux'],
+  'first-contact': ['pwd', 'ls', 'cd projects', 'ls', 'cd starfall', 'ls', 'pwd', 'cd ..', 'cd ..', 'ls -a', 'cat incident-ticket.txt', 'whoami'],
+  'lost-and-found': ['ls', 'cat sam-note.txt', 'cd /srv/shared', 'ls', 'cd marketing', 'ls', 'cat README.txt', 'cd ../engineering/releases', 'ls', 'ls -a', 'cd .archive', 'ls', 'cd 2026-03', 'cat release-checklist.txt', 'pwd', 'find /srv/shared -name starfall-logo.png', 'cd /srv/shared/art/logos/wip/v3', 'ls'],
   'linux-map': ['ls /', 'cd /etc', 'ls', 'cat hostname', 'ls /var/log', 'cd ~', 'pwd', 'ls -a /tmp'],
   'reading-logs': ['tail -n 3 syslog', 'grep -i error syslog', 'cat auth.log', 'grep -c Failed auth.log', 'grep "Failed password" auth.log | wc -l', 'answer 10.0.4.22', 'answer 198.51.100.23'],
   jobs: ['ps aux', 'kill 3310', 'cat /etc/crontab', 'ls /etc/cron.d', 'crontab -l'],
@@ -45,6 +46,13 @@ const LABS = {
   await open(); await openGrounds();
   const old = await ev(() => Object.fromEntries([...document.querySelectorAll('#lab-list [data-lab]')].map((b) => [b.dataset.lab, !b.disabled])));
   assert(old['linux-map'] && old.intruder && old.lockdown && !old['reading-logs'], 'old saves keep cleared labs open: ' + JSON.stringify(old));
+  // Saves from before Day One's Lost & Found beats (rev 1) skip past them; newer saves don't move.
+  await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch1', beat: 4 } })));
+  await open();
+  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 6, 'an old ch1 save past the first training moves 2 beats on');
+  await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch1', beat: 4 } })));
+  await open();
+  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 4, 'a current save keeps its beat');
   await noHScroll();
   assert(errors.length === 0, 'console errors: ' + errors.join(' | '));
   console.log('PASS labs');

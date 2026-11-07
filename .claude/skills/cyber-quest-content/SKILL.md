@@ -12,7 +12,10 @@ This skill is the how-to: skeletons, steps and the mistakes we already made.
 - **Never rename** a chapter id (`ch1`…), mission id or lab id: they are
   `localStorage` progress keys. **Never reorder or insert beats in a released
   chapter**: `progress.storyAt` stores a beat index. Add a new chapter at the
-  end instead.
+  end instead, or, when the owner wants a released chapter expanded, insert the
+  beats, bump `STORY_REV` and shift older saves in `loadProgress()` (see rev 2),
+  with a check in `labs.spec.js`. A lab inserted mid-list sets `after` on the
+  next lab so old saves don't get it locked.
 - **Teach before you test.** Every skill an incident needs must appear first in
   a calm beat of the same or an earlier chapter: a `train` lesson, a scene or
   an `ask`. Incident lessons and tips point back to where the skill was taught.
