@@ -371,7 +371,8 @@ permalink: /cyber-quest/
         .term-out { word-break: normal; overflow-wrap: break-word; }
         .term-out > div { padding-left: var(--hang, 2ch); text-indent: calc(-1 * var(--hang, 2ch)); }
         .term-out .c-msg { display: block; padding-left: 2ch; text-indent: 0; }
-        .term-out [class^="c-"]:not(.c-msg):not(.c-proc), .term-out .ls-i { white-space: pre; }
+        .term-out [class^="c-"]:not(.c-msg):not(.c-proc):not(.c-path):not(.c-url), .term-out .ls-i { white-space: pre; }
+        .term-out .c-path, .term-out .c-url { overflow-wrap: anywhere; }
         .term-out .ls-i { display: inline-block; margin-right: 2ch; text-indent: 0; }
         .term-out .c-time { color: #75808a; }
         .term-out .c-meta { color: #75808a; }
@@ -400,7 +401,13 @@ permalink: /cyber-quest/
             font-family: var(--mono); font-size: 0.8rem; background: #070d18;
         }
         .term-inrow .pr { color: var(--accent); white-space: nowrap; }
-        .term-inrow input {
+        /* A long prompt or command wraps onto the next line instead of pushing the terminal sideways. */
+        .term-inrow { flex-wrap: wrap; row-gap: 2px; align-items: flex-start; }
+        .term-inrow .pr { padding-top: 2px; }
+        .term-inrow .pu { white-space: nowrap; }
+        .term-inrow .pr { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+        #ops.term-open .terminal, #ops.term-open .term-out { overflow-x: hidden; }
+        .term-inrow textarea {
             flex: 1; background: transparent; border: 0; color: #e6edf7; font-family: var(--mono); font-size: 16px; /* 16px+ stops iOS zooming in on focus */ outline: none; padding: 2px 0;
         }
         .term-help { font-size: 0.75rem; color: var(--muted); }
@@ -449,7 +456,7 @@ permalink: /cyber-quest/
         .term-out .pp, .term-inrow .pp { color: #729fcf; font-weight: 700; }
         .term-out .motd { color: #d3d7cf; }
         .term-inrow .pr { color: #d3d7cf; }
-        .term-inrow input { caret-color: #d3d7cf; }
+        .term-inrow textarea { caret-color: #d3d7cf; flex: 1 1 10ch; min-width: 10ch; resize: none; overflow: hidden; line-height: 1.4; height: 1.4em; overflow-wrap: anywhere; word-break: break-all; }
         .term-help code { font-family: var(--mono); color: var(--info); }
         .chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .chip {
@@ -934,7 +941,7 @@ permalink: /cyber-quest/
                     <div class="term-out" id="ops-out"></div>
                     <div class="term-inrow" id="ops-inrow">
                         <span class="pr" id="ops-prompt">$</span>
-                        <input id="ops-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command" enterkeyhint="go">
+                        <textarea id="ops-input" rows="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal command" enterkeyhint="go"></textarea>
                     </div>
                 </div>
                 <div class="term-help">New here? Type <code>help</code> for commands, or <code>hint</code> for your next step.</div>
@@ -989,7 +996,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611071024';
+    const SW_VERSION = '2611071025';
 
     (() => {
         'use strict';
@@ -3601,9 +3608,9 @@ permalink: /cyber-quest/
                 if (cmd) { this.hist.push(cmd); this.histPos = this.hist.length; this.T.history.push(cmd); }
                 if (cmd === 'clear') { $('ops-out').innerHTML = ''; return; }
                 if (cmd) this.exec(cmd);
-                if (this._exitNow) { this._exitNow = false; $('ops-input').value = ''; return this.finish(); }
+                if (this._exitNow) { this._exitNow = false; $('ops-input').value = ''; growInput(); return this.finish(); }
                 this.checkTasks();
-                $('ops-input').value = '';
+                $('ops-input').value = ''; growInput();
             },
 
             // Resolve a path against the current working directory.
@@ -4120,7 +4127,11 @@ permalink: /cyber-quest/
                 else if (bad) out += '<span class="c-bad">' + esc(bad) + '</span>';
                 else if (good) out += '<span class="c-good">' + esc(good) + '</span>';
                 else if (forU) out += esc(forU.slice(0, forU.length - user.length)) + '<span class="c-user">' + esc(user) + '</span>';
-                else if (path) out += path.length > 1 ? '<span class="c-path">' + esc(path) + '</span>' : esc(path);
+                else if (path) {
+                    const tail = /[.,;:]+$/.exec(path); // sentence punctuation after a path isn't part of it
+                    const p = tail && tail[0].length < path.length ? path.slice(0, -tail[0].length) : path;
+                    out += p.length > 1 ? '<span class="c-path">' + esc(p) + '</span>' + esc(path.slice(p.length)) : esc(path);
+                }
                 return all;
             });
             return out + esc(line.slice(at));
@@ -5482,6 +5493,18 @@ permalink: /cyber-quest/
                 show('home');
             }
         });
+        // The command box grows onto more lines for a long command, like a terminal wrapping it.
+        function growInput() {
+            const i = $('ops-input');
+            i.style.height = 'auto';
+            i.style.height = i.scrollHeight + 'px';
+        }
+        $('ops-input').addEventListener('input', (e) => {
+            if (/[\r\n]/.test(e.target.value)) e.target.value = e.target.value.replace(/[\r\n]+/g, ' '); // pasted line breaks
+            growInput();
+            Ops.scrollTerm();
+        });
+        $('ops-input').addEventListener('keyup', (e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') growInput(); });
         $('ops-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); if (!Ops._finished) Ops.submit(e.target.value); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); if (Ops.histPos > 0) { Ops.histPos--; e.target.value = Ops.hist[Ops.histPos] || ''; } }
