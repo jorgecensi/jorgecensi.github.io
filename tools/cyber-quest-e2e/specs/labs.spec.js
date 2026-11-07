@@ -29,7 +29,10 @@ const LABS = {
       assert(/Session 42/.test(out) && !/Mar 09 06:00:44/.test(out.split('tail -n 3 syslog')[1].split('grep -i')[0]), 'tail -n 3 shows only the last lines');
       assert(/Not quite/.test(out), 'a wrong answer is rejected');
     }
+    assert(await ev(() => window.__cyberQuest.shell._ready) && !(await ev(() => window.__cyberQuest.ops.done)), id + ': objectives done, waiting for exit');
+    await type('exit');
     assert(await ev(() => window.__cyberQuest.ops.done), id + ' should be finished');
+    assert(await page.isVisible('#ops-term') && await page.isVisible('#ops-done'), id + ': the result docks under the terminal, which stays readable');
     console.log('  ', id, '→ done');
     await page.click('#ops-continue');
     await openGrounds();
@@ -37,6 +40,8 @@ const LABS = {
   await page.click('[data-lab="first-contact"]');
   await page.click('#ob-start');
   await type('man crontab'); await type('frobnicate');
+  await type('exit');
+  assert(/still have work/.test(await ev(() => window.__cyberQuest.ops.out)) && !(await ev(() => window.__cyberQuest.ops.done)), 'exit before the objectives are done keeps you in');
   const out = await ev(() => window.__cyberQuest.ops.out);
   assert(/minute hour/.test(out) && /type help/.test(out), 'man pages and unknown-command help work');
   assert(await page.isVisible('#ops-term') && !(await ev(() => window.__cyberQuest.ops.out)).includes('Mira'), 'the terminal is open full screen and has no character lines');
