@@ -20,7 +20,7 @@ This skill is the how-to: skeletons, steps and the mistakes we already made.
   a calm beat of the same or an earlier chapter: a `train` lesson, a scene or
   an `ask`. Incident lessons and tips point back to where the skill was taught.
 - **Rhythm per chapter:** calm scene → train → ask(s) → alarm scene → incident
-  or triage → calm debrief that moves the story on.
+  or triage → calm debrief that moves the story on → no-hint final exam.
 - **Defensive and fictional only.** The player defends; never script attacking
   someone, exploit payloads or real malware code. IPs come from the RFC 5737
   ranges (192.0.2.x, 198.51.100.x, 203.0.113.x), credentials are fake, and
@@ -65,6 +65,13 @@ const INC_X = {
   }
 };
 ```
+
+A **challenge** (no hints, checks a Basics lab) is an entry in `CHALLENGES`:
+`{ id, after: '<basics lab id>', icon, title, par, xp, blurb, scenario, debrief, build() { ... return { ..., vars } }, tasks }`.
+Randomise in `build()` (`pick`, `rnd`, `fsTree`), keep goals free of commands, and add a
+solver to `SOLVE` in `specs/_helpers.js`. Every new Basics lab should get one, and every
+new chapter should end with a final exam (a Mira scene, then `{ type: 'train', lab: '<challenge id>' }`)
+on that chapter's skills.
 
 A phishing rush is `{ type: 'triage', gap: 4.5, window: 13, mails: [{ name, addr, subject, preview, attach?, phish, why, hit? }] }`.
 

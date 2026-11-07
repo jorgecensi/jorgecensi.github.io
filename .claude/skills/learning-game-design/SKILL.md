@@ -37,11 +37,14 @@ where it ended instead of where it started.
 6. **Failing is free and explains itself.** A loss says what happened and why,
    then offers an instant retry. No lives to buy, no lost progress.
 7. **Save at every step.** People play in short sessions on phones.
-8. **Keep practice mode separate.** The old quizzes and labs became the Training
+8. **Check that it stuck.** Lessons and hints prove nothing: the owner asked for
+   challenges with no tips, where the goal says what to achieve (not the command)
+   and the scenario is randomised, so the player has to apply the skill.
+9. **Keep practice mode separate.** The old quizzes and labs became the Training
    Grounds, collapsed under the campaign, so the main screen reads as a game.
-9. **Mobile first.** Tappable shortcut chips for typed commands, big targets,
+10. **Mobile first.** Tappable shortcut chips for typed commands, big targets,
    and safe-area padding.
-10. **Accessibility.** Respect reduced motion, cap flashing (no more than 3 per
+11. **Accessibility.** Respect reduced motion, cap flashing (no more than 3 per
     second; slow pulses only), and offer a mute toggle.
 
 ## Before building, decide

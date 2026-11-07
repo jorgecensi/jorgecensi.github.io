@@ -1,6 +1,6 @@
 // Clears every terminal lab by typing what its lessons teach, and checks shell details
 // (tail -n, grep -c, answer, man), lab locking, and that an old save keeps cleared labs.
-const { launch, assert } = require('./_helpers');
+const { launch, assert, SOLVE } = require('./_helpers');
 
 const LABS = {
   'first-contact': ['pwd', 'ls', 'cd projects', 'ls', 'cd starfall', 'ls', 'pwd', 'cd ..', 'cd ..', 'ls -a', 'cat incident-ticket.txt', 'whoami'],
@@ -37,6 +37,33 @@ const LABS = {
     await page.click('#ops-continue');
     await openGrounds();
   }
+  // Challenges: no lesson, no hints, randomised answers (read from the shell's vars), stars for efficiency.
+  for (const [id, solve] of Object.entries(SOLVE)) {
+    await page.click('[data-lab="' + id + '"]');
+    await page.click('#ob-start');
+    const lesson = await page.innerText('#ops-lesson');
+    assert(/challenge/i.test(lesson) && !/STEP 1/i.test(lesson), id + ' shows no lesson');
+    assert((await page.$$('#ops-chips .chip')).length <= 2, id + ' has no command shortcuts');
+    await type('hint');
+    assert(/No hints/.test(await ev(() => window.__cyberQuest.ops.out)), id + ': hint is switched off');
+    await type('answer definitely-wrong');
+    const vars = await ev(() => window.__cyberQuest.shell.T.vars);
+    for (const c of solve(vars)) await type(c);
+    await type('exit');
+    assert(await ev(() => window.__cyberQuest.ops.done), id + ' should be finished');
+    const stars = await ev((i) => window.__cyberQuest.progress.labs[i].stars, id);
+    assert(stars >= 2, id + ' earns stars for an efficient run (got ' + stars + ')');
+    console.log('  ', id, '->', stars, 'stars');
+    await page.click('#ops-continue');
+    await openGrounds();
+  }
+  // A fresh run is randomised.
+  const runs = new Set();
+  for (let i = 0; i < 6; i++) runs.add(await ev(() => { window.__cyberQuest.ops.open('ch-logs'); window.__cyberQuest.ops.start(); return window.__cyberQuest.shell.T.vars.ip; }));
+  assert(runs.size > 1, 'challenge answers change between runs');
+  await page.click('#ops-quit');
+  await open(); await openGrounds();
+
   await page.click('[data-lab="first-contact"]');
   await page.click('#ob-start');
   await type('man crontab'); await type('frobnicate');
