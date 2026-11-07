@@ -394,7 +394,7 @@ permalink: /cyber-quest/
         /* ── Story campaign ── */
         .story-hero {
             position: relative; overflow: hidden; border-radius: 18px; padding: 18px; margin-bottom: 26px;
-            background: radial-gradient(circle at 85% 10%, rgba(244, 63, 94, 0.28), transparent 45%), linear-gradient(150deg, #123b3b, #0d1526 70%);
+            background: linear-gradient(180deg, rgba(13, 21, 38, 0.55), rgba(13, 21, 38, 0.92) 42%, #0d1526 70%), #0d1526 url("/img/cq/bg-night.webp") top center / 100% auto no-repeat;
             border: 1px solid #2b4a52;
         }
         .story-hero .kicker { font-size: 0.72rem; letter-spacing: 0.16em; color: #fda4af; font-weight: 700; }
@@ -424,24 +424,35 @@ permalink: /cyber-quest/
         .story-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         .story-loc { flex: 1; min-width: 0; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
         .story-loc b { display: block; font-family: system-ui, sans-serif; font-size: 0.95rem; color: var(--text); }
+        /* Scene backgrounds and character sprites: /img/cq/ (built with tools/pixel-sprite-sheet). */
         .stage {
-            position: relative; height: 30vh; min-height: 190px; border-radius: 18px; overflow: hidden;
+            position: relative; aspect-ratio: 16 / 9; max-height: 46vh; width: 100%; border-radius: 18px; overflow: hidden;
             display: grid; place-items: center; border: 1px solid #2b4a52;
-            background: radial-gradient(circle at 30% 20%, rgba(56, 189, 248, 0.25), transparent 55%), linear-gradient(160deg, #134e4a, #0b1220 75%);
-            transition: background 0.6s ease, border-color 0.6s ease;
+            background: #0b1220 url("/img/cq/bg-day.webp") center / cover no-repeat;
+            transition: border-color 0.6s ease;
         }
-        #story[data-mood="night"] .stage { background: radial-gradient(circle at 75% 20%, rgba(250, 250, 210, 0.18), transparent 30%), linear-gradient(160deg, #2a1f5c, #0b1220 75%); border-color: #3b3270; }
+        #story[data-mood="night"] .stage { background-image: url("/img/cq/bg-night.webp"); border-color: #3b3270; }
         #story[data-mood="alarm"] .stage {
-            background: radial-gradient(circle at 50% 45%, #6b1024, #1a0710 72%); border-color: var(--danger);
+            background-image: url("/img/cq/bg-alarm.webp"); border-color: var(--danger);
             animation: alarmPulse 1.6s ease-in-out infinite;
         }
+        /* Ground the speaker: darken the bottom of the scene a little. */
+        .stage::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 55%, rgba(5, 9, 15, 0.55)); pointer-events: none; }
         #story[data-mood="alarm"] .stage::before {
-            content: "⚠ INCIDENT IN PROGRESS"; position: absolute; top: 10px; left: 12px; font-family: var(--mono);
-            font-size: 0.7rem; letter-spacing: 0.18em; color: #fecdd3;
+            content: "⚠ INCIDENT IN PROGRESS"; position: absolute; top: 10px; left: 12px; z-index: 3; font-family: var(--mono);
+            font-size: 0.68rem; letter-spacing: 0.18em; color: #fecdd3; background: rgba(26, 7, 16, 0.75); padding: 3px 8px; border-radius: 6px;
         }
         @keyframes alarmPulse { 50% { box-shadow: inset 0 0 70px rgba(244, 63, 94, 0.5); } }
-        .stage-art { font-size: 5.2rem; line-height: 1; filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5)); }
-        .stage-card { position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 20px; background: rgba(5, 9, 15, 0.55); }
+        .stage-art { display: none; }
+        .actor {
+            position: absolute; bottom: 0; left: 7%; height: 86%; z-index: 1;
+            background-repeat: no-repeat; image-rendering: pixelated; image-rendering: crisp-edges;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+        }
+        .actor[hidden] { display: none; }
+        #story[data-mood="alarm"] .actor { filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.7)); }
+        .stage-card { z-index: 2; }
+        .stage-card { position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 20px; background: rgba(5, 9, 15, 0.72); }
         .stage-card.show { display: grid; }
         .stage.carded .stage-art { visibility: hidden; }
         .stage-card .ch { font-family: var(--mono); letter-spacing: 0.25em; font-size: 0.78rem; color: #99f6e4; }
@@ -458,6 +469,7 @@ permalink: /cyber-quest/
             width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem;
             background: var(--panel-2); border: 2px solid var(--line); flex: 0 0 auto;
         }
+        .avatar[hidden] { display: none; }
         .speaker b { display: block; }
         .speaker small { color: var(--muted); font-size: 0.75rem; }
         .dialog.narr .speaker { display: none; }
@@ -768,7 +780,7 @@ permalink: /cyber-quest/
                 <div class="story-loc"><b id="st-chapter"></b><span id="st-loc"></span></div>
                 <button class="icon-btn" data-sound aria-label="Sound on or off">🔊</button>
             </div>
-            <div class="stage" id="st-stage"><div class="stage-art" id="st-art">🏢</div><div class="stage-card" id="st-card"></div></div>
+            <div class="stage" id="st-stage"><div class="stage-art" id="st-art"></div><div class="actor" id="st-actor" hidden aria-hidden="true"></div><div class="stage-card" id="st-card"></div></div>
             <div class="dialog" id="st-dialog" tabindex="0" aria-live="polite">
                 <div class="speaker"><span class="avatar" id="st-avatar"></span><div><b id="st-name"></b><small id="st-role"></small></div></div>
                 <p class="line" id="st-text"></p>
@@ -803,7 +815,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070222';
+    const SW_VERSION = '2611070321';
 
     (() => {
         'use strict';
@@ -3780,13 +3792,19 @@ permalink: /cyber-quest/
         // Chapters are lists of beats. Calm beats teach (scenes, questions with no clock,
         // training terminals); alarm beats are live incidents (terminal or mail rush).
         // Every name, company, domain and IP below is fictional (IPs are RFC 5737).
+        // Sprites are horizontal strips of same-size frames (see tools/pixel-sprite-sheet).
+        // `frames` maps an expression to its index; `rest` is the face a character settles on in an alarm,
+        // `calm` the one outside an alarm (the SIEM only ever speaks to raise one).
+        const PORTRAIT = { neutral: 0, talk: 1, worried: 2, happy: 3 };
         const CHARS = {
-            mira: { name: 'Mira', role: 'Security lead · your mentor', avatar: '🧑🏾‍💻', color: '#10b981' },
-            sam: { name: 'Sam', role: 'IT admin', avatar: '🧑‍🔧', color: '#38bdf8' },
-            dana: { name: 'Dana', role: 'Founder, Brightside Games', avatar: '🧑🏻‍💼', color: '#f59e0b' },
-            siem: { name: 'SIEM', role: 'Security alert system', avatar: '🛰️', color: '#f43f5e' },
-            lantern: { name: 'Black Lantern', role: 'Unknown sender', avatar: '🏮', color: '#ef4444' }
+            mira: { name: 'Mira', role: 'Security lead · your mentor', avatar: '🧑🏾‍💻', color: '#10b981', sprite: { src: '/img/cq/mira.png', n: 4, w: 75, h: 79, frames: PORTRAIT } },
+            sam: { name: 'Sam', role: 'IT admin', avatar: '🧑‍🔧', color: '#38bdf8', sprite: { src: '/img/cq/sam.png', n: 4, w: 73, h: 79, frames: PORTRAIT } },
+            dana: { name: 'Dana', role: 'Founder, Brightside Games', avatar: '🧑🏻‍💼', color: '#f59e0b', sprite: { src: '/img/cq/dana.png', n: 4, w: 74, h: 77, frames: PORTRAIT } },
+            siem: { name: 'SIEM', role: 'Security alert system', avatar: '🛰️', color: '#f43f5e', rest: 'alarm', calm: 'alarm', sprite: { src: '/img/cq/siem.png', n: 5, w: 53, h: 60, frames: { neutral: 0, talk: 1, worried: 2, alarm: 3, happy: 4 } } },
+            lantern: { name: 'Black Lantern', role: 'Unknown sender', avatar: '🏮', color: '#ef4444', rest: 'threat', talkFace: 'threat', sprite: { src: '/img/cq/lantern.png', n: 2, w: 45, h: 78, frames: { neutral: 0, idle: 0, threat: 1 } } }
         };
+        const STORY_ART = ['/img/cq/bg-day.webp', '/img/cq/bg-night.webp', '/img/cq/bg-alarm.webp', '/img/cq/bg-flat.webp', '/img/cq/bg-party.webp']
+            .concat(Object.values(CHARS).map((c) => c.sprite.src));
 
         // "23:41:05"-style timestamps for live logs.
         const clockAt = (h, m, s) => {
@@ -4158,8 +4176,8 @@ permalink: /cyber-quest/
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 09:02', art: '🏢', lines: [
                             [null, 'Brightside Games: twelve people, one office above a bakery, and a game called Starfall launching in two weeks.'],
                             ['mira', 'You must be our new analyst. I\'m Mira. I run security here, which mostly means worrying on behalf of twelve people.'],
-                            ['sam', 'And I\'m Sam! IT, printers, the coffee machine. I already set up your account. Username: alex.'],
-                            ['sam', '…I didn\'t know your name yet. You can be alex for now.'],
+                            ['sam', 'And I\'m Sam! IT, printers, the coffee machine. I already set up your account. Username: alex.', 'happy'],
+                            ['sam', '…I didn\'t know your name yet. You can be alex for now.', 'worried'],
                             ['mira', 'Classic Sam. Launches attract attention, and some of it is the wrong kind. Let\'s get you comfortable on our servers before anything happens.'],
                             ['mira', 'This laptop is connected to web-01, the server behind our website. No rush. Follow my notes and look around.']
                         ]
@@ -4168,7 +4186,7 @@ permalink: /cyber-quest/
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 10:30', art: '☕', lines: [
                             ['mira', 'Good. You\'ll live in that terminal. But most attacks don\'t start on servers. They start in someone\'s inbox.'],
-                            ['dana', 'Hi! I\'m Dana. I started this place. Mira says you\'re the reason I\'ll sleep at night from now on. No pressure!'],
+                            ['dana', 'Hi! I\'m Dana. I started this place. Mira says you\'re the reason I\'ll sleep at night from now on. No pressure!', 'happy'],
                             ['mira', 'A few questions before lunch. No timer, no penalty. I just want to see how you think.']
                         ]
                     },
@@ -4208,9 +4226,9 @@ permalink: /cyber-quest/
                     },
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 12:10', art: '🍕', lines: [
-                            ['mira', 'Not bad for day one. Look at the senders: lookalike domains, all registered last week. Someone planned this.'],
-                            ['sam', 'One of them was signed “BL”. Who\'s BL?'],
-                            ['mira', 'No idea yet. But someone is very interested in Starfall.'],
+                            ['mira', 'Not bad for day one. Look at the senders: lookalike domains, all registered last week. Someone planned this.', 'happy'],
+                            ['sam', 'One of them was signed “BL”. Who\'s BL?', 'worried'],
+                            ['mira', 'No idea yet. But someone is very interested in Starfall.', 'worried'],
                             [null, 'Somewhere out there, someone has just written your company\'s name on a list.']
                         ]
                     }
@@ -4230,8 +4248,8 @@ permalink: /cyber-quest/
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 16:05', art: '📜', lines: [
                             ['mira', 'Logs live in /var/log. Now let\'s read them like a pro: never top to bottom.'],
-                            ['sam', 'I usually just scroll until my thumb hurts.'],
-                            ['mira', 'We know, Sam.']
+                            ['sam', 'I usually just scroll until my thumb hurts.', 'happy'],
+                            ['mira', 'We know, Sam.', 'happy']
                         ]
                     },
                     { type: 'train', lab: 'reading-logs', host: 'web-01', intro: '🧑🏾‍💻 Mira: “The newest lines are at the bottom, and grep is your best friend.”' },
@@ -4246,7 +4264,7 @@ permalink: /cyber-quest/
                         explain: 'Block it at the firewall. And never delete logs: they\'re your evidence.'
                     },
                     {
-                        type: 'scene', mood: 'night', loc: 'Your flat · Tue 23:41', art: '🌙', lines: [
+                        type: 'scene', mood: 'night', bg: 'flat', loc: 'Your flat · Tue 23:41', art: '🌙', lines: [
                             [null, 'You\'re halfway into your pyjamas when your phone buzzes.'],
                             ['siem', '🔴 SSH login failures on web-01: 40 per minute and rising.'],
                             ['mira', 'Someone\'s guessing passwords on web-01 right now. I\'m driving in, but you\'re closer to a laptop.'],
@@ -4256,12 +4274,12 @@ permalink: /cyber-quest/
                     INC_BRUTE,
                     {
                         type: 'scene', mood: 'night', loc: 'Brightside Games HQ · Wed 00:20', art: '☕', lines: [
-                            ['mira', 'Blocked. Breathe. Nice work.'],
+                            ['mira', 'Blocked. Breathe. Nice work.', 'happy'],
                             ['mira', 'Look at the usernames they tried: root, admin, sam, starfall…'],
-                            ['sam', '…my password was starfall2026.'],
+                            ['sam', '…my password was starfall2026.', 'worried'],
                             ['mira', 'Was. Change it tonight. And Sam? Turn on two-factor.'],
                             [null, 'One username in the log stands out: blacklantern.'],
-                            ['mira', 'BL. Black Lantern. A crew that holds game launches to ransom. Get some sleep, rookie. They\'ll be back.']
+                            ['mira', 'BL. Black Lantern. A crew that holds game launches to ransom. Get some sleep, rookie. They\'ll be back.', 'worried']
                         ]
                     }
                 ]
@@ -4272,7 +4290,7 @@ permalink: /cyber-quest/
                 beats: [
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Wed 10:05', art: '🏭', lines: [
-                            ['dana', 'Our build server is crawling. Builds take four hours instead of one. Is that… a security thing?'],
+                            ['dana', 'Our build server is crawling. Builds take four hours instead of one. Is that… a security thing?', 'worried'],
                             ['mira', 'Slow machines are sometimes just slow. Sometimes they\'re working for someone else.'],
                             ['mira', 'Rookie: processes and schedules. What\'s running right now, and what starts things on a timer.']
                         ]
@@ -4294,7 +4312,7 @@ permalink: /cyber-quest/
                     INC_MINER,
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Wed 11:30', art: '🧯', lines: [
-                            ['mira', 'Clean. And look where that cron job downloaded from: 198.51.100.40.'],
+                            ['mira', 'Clean. And look where that cron job downloaded from: 198.51.100.40.', 'neutral'],
                             ['sam', 'Same crew?'],
                             ['mira', 'Same crew. They got onto build-01 with an old password nobody ever changed.'],
                             ['mira', 'Tomorrow we close every door we don\'t need.']
@@ -4333,9 +4351,9 @@ permalink: /cyber-quest/
                     INC_SCAN,
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 15:00', art: '🌇', lines: [
-                            ['sam', 'The scanner just… gave up?'],
-                            ['mira', 'Nothing worth knocking on. That\'s the goal.'],
-                            ['dana', 'Launch is tomorrow. Tell me we\'re ready.'],
+                            ['sam', 'The scanner just… gave up?', 'happy'],
+                            ['mira', 'Nothing worth knocking on. That\'s the goal.', 'happy'],
+                            ['dana', 'Launch is tomorrow. Tell me we\'re ready.', 'worried'],
                             ['mira', 'As ready as anyone gets. If they come again, it\'ll be loud.']
                         ]
                     }
@@ -4347,9 +4365,9 @@ permalink: /cyber-quest/
                 beats: [
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Fri 08:55', art: '🚀', lines: [
-                            ['dana', 'Starfall goes live at noon. Forty thousand people on the wishlist. Anything I should worry about?'],
+                            ['dana', 'Starfall goes live at noon. Forty thousand people on the wishlist. Anything I should worry about?', 'happy'],
                             ['mira', 'The guessing is blocked, the miner\'s gone, the doors are shut. If Black Lantern tries again, they\'ll go for the big one.'],
-                            ['dana', 'The big one?'],
+                            ['dana', 'The big one?', 'worried'],
                             ['mira', 'Ransomware. Let\'s make sure our rookie knows the drill.']
                         ]
                     },
@@ -4379,12 +4397,12 @@ permalink: /cyber-quest/
                     INC_RANSOM,
                     RESTORE,
                     {
-                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Fri 12:00', art: '🎆', lines: [
+                        type: 'scene', mood: 'calm', bg: 'party', loc: 'Brightside Games HQ · Fri 12:00', art: '🎆', lines: [
                             [null, '12:00. Starfall goes live. Forty thousand players in the first hour.'],
-                            ['dana', 'We launched. On time. And nobody outside this room will ever know how close that was.'],
-                            ['mira', 'That\'s the job. When we win, nothing happens.'],
-                            ['sam', 'I turned on two-factor. For everything. Even the coffee machine.'],
-                            ['mira', 'Welcome to the team, analyst. Officially.'],
+                            ['dana', 'We launched. On time. And nobody outside this room will ever know how close that was.', 'happy'],
+                            ['mira', 'That\'s the job. When we win, nothing happens.', 'happy'],
+                            ['sam', 'I turned on two-factor. For everything. Even the coffee machine.', 'happy'],
+                            ['mira', 'Welcome to the team, analyst. Officially.', 'happy'],
                             [null, 'Black Lantern has gone quiet. For now.']
                         ]
                     }
@@ -4411,11 +4429,15 @@ permalink: /cyber-quest/
                 this.results = [];
                 this.i = beat || 0;
                 show('story');
+                // Warm the cache so backgrounds and faces don't pop in mid-scene.
+                if (!this.preloaded) { this.preloaded = true; STORY_ART.forEach((src) => { new Image().src = src; }); }
                 $('st-chapter').textContent = 'Chapter ' + this.ch.num + ' · ' + this.ch.title;
                 if (this.i === 0) this.titleCard(); else this.play();
             },
-            mood(m, loc, art) {
+            // A scene can name its own background (bg: 'flat' → /img/cq/bg-flat.webp); otherwise the mood picks one.
+            mood(m, loc, art, bg) {
                 $('story').dataset.mood = m || 'calm';
+                $('st-stage').style.backgroundImage = bg ? 'url("/img/cq/bg-' + bg + '.webp")' : '';
                 if (loc != null) $('st-loc').textContent = loc;
                 if (art) $('st-art').textContent = art;
             },
@@ -4425,6 +4447,7 @@ permalink: /cyber-quest/
                 $('st-card').innerHTML = '<div><div class="ch">CHAPTER ' + ch.num + ' · ' + esc(ch.day.toUpperCase()) + '</div><h2>' + esc(ch.title) + '</h2><p>' + esc(ch.synopsis) + '</p></div>';
                 $('st-card').className = 'stage-card show'; $('st-stage').classList.add('carded');
                 this.speak(null, 'Tap to begin.');
+                this.actor(null);
                 this.onTap = () => { $('st-card').className = 'stage-card'; $('st-stage').classList.remove('carded'); this.play(); };
             },
             play() {
@@ -4433,7 +4456,10 @@ permalink: /cyber-quest/
                 progress.storyAt = { ch: this.ch.id, beat: this.i };
                 saveProgress();
                 const b = this.ch.beats[this.i];
-                if (b.type === 'scene') { this.mood(b.mood, b.loc, b.art); this.line = 0; return this.showLine(); }
+                if (b.type === 'scene') { this.mood(b.mood, b.loc, b.art, b.bg); this.line = 0; return this.showLine(); }
+                // Other beats keep the setting of the scene before them (also when resuming mid-chapter).
+                const prev = this.ch.beats.slice(0, this.i).reverse().find((x) => x.type === 'scene');
+                if (prev) this.mood(prev.mood, prev.loc, prev.art, prev.bg);
                 if (b.type === 'ask') return this.ask(b);
                 if (b.type === 'triage') return Triage.run(b, (r) => this.after(r));
                 // Training and incident beats run in the terminal. A training beat can reuse a lab.
@@ -4448,17 +4474,40 @@ permalink: /cyber-quest/
             },
             showLine() {
                 const b = this.ch.beats[this.i];
-                const [who, text] = b.lines[this.line];
-                this.speak(who, text);
+                const [who, text, face] = b.lines[this.line];
+                this.speak(who, text, face);
                 this.onTap = () => {
                     this.line++;
                     if (this.line < b.lines.length) this.showLine();
                     else { this.i++; this.play(); }
                 };
             },
-            speak(who, text) {
+            // Show a character on the stage with one expression (null hides the stage actor).
+            actor(who, face) {
+                const el = $('st-actor');
+                const sp = who && CHARS[who] && CHARS[who].sprite;
+                if (!sp) { el.hidden = true; return; }
+                const i = sp.frames[face] != null ? sp.frames[face] : 0;
+                el.hidden = false;
+                el.style.backgroundImage = 'url("' + sp.src + '")';
+                el.style.backgroundSize = (sp.n * 100) + '% 100%';
+                el.style.backgroundPosition = (sp.n > 1 ? (i / (sp.n - 1)) * 100 : 0) + '% 0';
+                el.style.aspectRatio = sp.w + ' / ' + sp.h;
+            },
+            // The face a speaker settles on: the line's own, else worried in an alarm, else neutral.
+            restFace(who, face) {
+                if (face) return face;
+                const c = CHARS[who] || {};
+                return $('story').dataset.mood === 'alarm' ? (c.rest || 'worried') : (c.calm || 'neutral');
+            },
+            speak(who, text, face) {
                 const c = who && CHARS[who];
+                const rest = c ? this.restFace(who, face) : null;
+                this.speaker = who;
+                this.rest = rest;
+                this.actor(who, rest);
                 $('st-dialog').classList.toggle('narr', !c);
+                $('st-avatar').hidden = !!(c && c.sprite);
                 $('st-avatar').textContent = c ? c.avatar : '';
                 $('st-avatar').style.borderColor = c ? c.color : '';
                 $('st-name').textContent = c ? c.name : '';
@@ -4476,9 +4525,11 @@ permalink: /cyber-quest/
                 let n = 0;
                 this.typing = true;
                 el.textContent = '';
+                const talk = c ? (c.talkFace || 'talk') : null;
                 this.typer = setInterval(() => {
                     n += 2;
                     el.textContent = plain.slice(0, n);
+                    if (talk && n % 12 === 0) this.actor(who, (n / 12) % 2 ? talk : rest);
                     if (n >= plain.length) this.finishTyping();
                 }, 18);
                 this.fullText = fmtLine(text);
@@ -4487,6 +4538,7 @@ permalink: /cyber-quest/
                 this.stopTyping();
                 if (this.fullText != null) $('st-text').innerHTML = this.fullText;
                 this.fullText = null;
+                if (this.speaker) this.actor(this.speaker, this.rest);
             },
             stopTyping() {
                 clearInterval(this.typer);
@@ -4516,6 +4568,7 @@ permalink: /cyber-quest/
                     btn.classList.add('correct');
                     $('st-feedback').className = 'st-feedback good';
                     $('st-feedback').innerHTML = '✔ ' + fmtLine(b.explain) + '<div class="btn-row"><button class="btn" data-story-tap>Continue ▸</button></div>';
+                    this.actor(b.who || 'mira', 'happy');
                     Sfx.ok();
                     this.askBeat = null;
                     this.onTap = () => { this.i++; this.play(); };
@@ -4526,6 +4579,7 @@ permalink: /cyber-quest/
                     btn.classList.add('wrong');
                     $('st-feedback').className = 'st-feedback bad';
                     $('st-feedback').textContent = 'Not quite. Think about what the attacker wants, and try another answer.';
+                    this.actor(b.who || 'mira', 'worried');
                     Sfx.hit();
                 }
             },
@@ -4540,6 +4594,7 @@ permalink: /cyber-quest/
                 saveProgress();
                 Sfx.win();
                 this.mood('calm', 'Chapter complete', '🏆');
+                this.actor(null);
                 const last = !nextCh;
                 $('st-card').innerHTML = '<div><div class="ch">CHAPTER ' + ch.num + ' COMPLETE</div><h2>' + esc(ch.title) + '</h2><div class="stars">' + starHtml(stars) + '</div>' +
                     '<p>' + (first ? '+' + ch.xp + ' XP' : 'Replayed') + (last ? ' · The end… for now.' : '') + '</p></div>';
@@ -4548,6 +4603,7 @@ permalink: /cyber-quest/
                     ? 'Starfall launched, and Black Lantern went home empty-handed. Keep training in the Training Grounds: more chapters are coming.'
                     : 'Next up: Chapter ' + nextCh.num + ', “' + nextCh.title + '”.');
                 this.finishTyping();
+                this.actor(null);
                 $('st-tap').hidden = true;
                 this.onTap = null;
                 $('st-choices').innerHTML = (last ? '' : '<button class="btn" data-story-next="' + nextCh.id + '">Next chapter →</button>') +

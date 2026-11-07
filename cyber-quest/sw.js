@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2611070222';
+const CACHE_VERSION = '2611070321';
 const CACHE_NAME = `cyber-quest-${CACHE_VERSION}`;
 const OFFLINE_URL = '/cyber-quest/';
 const PRECACHE_URLS = [
@@ -6,7 +6,17 @@ const PRECACHE_URLS = [
     '/cyber-quest/manifest.json',
     '/img/cyber-quest-icon-192.png',
     '/img/cyber-quest-icon-512.png',
-    '/img/favicon.ico'
+    '/img/favicon.ico',
+    '/img/cq/bg-day.webp',
+    '/img/cq/bg-night.webp',
+    '/img/cq/bg-alarm.webp',
+    '/img/cq/bg-flat.webp',
+    '/img/cq/bg-party.webp',
+    '/img/cq/mira.png',
+    '/img/cq/sam.png',
+    '/img/cq/dana.png',
+    '/img/cq/siem.png',
+    '/img/cq/lantern.png'
 ];
 
 self.addEventListener('install', (event) => {
