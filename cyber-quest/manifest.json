@@ -2,7 +2,7 @@
   "id": "/cyber-quest/",
   "name": "Cyber Quest — Learn Cybersecurity",
   "short_name": "Cyber Quest",
-  "description": "A game that takes you from beginner to advanced cybersecurity: spot phishing, read email headers and logs, find vulnerable code and run an incident response.",
+  "description": "Defend a game studio from a hacker crew in a story-driven cybersecurity game: learn from your mentor, then fight live attacks in a real terminal.",
   "start_url": "/cyber-quest/",
   "scope": "/cyber-quest/",
   "display": "standalone",
