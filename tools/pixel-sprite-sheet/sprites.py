@@ -5,6 +5,7 @@ true-pixel RGBA sprite strips, and scene paintings into small web backgrounds.
   sprites.py sheet  IN OUT --scale 8 --grid 2x2 [--inset 0] [--pick 0,1,2,3]
   sprites.py sheet  IN OUT --scale 8 --figures [--pick 4,5]
   sprites.py bg     IN OUT --width 688
+  sprites.py icon   IN OUT_PREFIX         # -> OUT_PREFIX-192.png and OUT_PREFIX-512.png
   sprites.py period IN...            # estimate the art-pixel size of a sheet
 
 OUT for `sheet` is a horizontal strip: every frame is cropped to the same
@@ -107,6 +108,29 @@ def preview(img, path, zoom=4):
     bg.resize((img.width * zoom, img.height * zoom), Image.NEAREST).save(path)
 
 
+def icon(src, prefix, corner=0.07):
+    """App icons from a square generated image. Generators bake white rounded corners into
+    the pixels; a maskable PWA icon must fill the whole square, so paint bright, colourless
+    pixels near the corners with the icon's own background colour (sampled mid-edge).
+    Saturated pixels (a red lantern in a corner, say) are left alone."""
+    im = Image.open(src).convert('RGB')
+    side = min(im.size)
+    im = im.crop(((im.width - side) // 2, (im.height - side) // 2, (im.width + side) // 2, (im.height + side) // 2))
+    a = np.asarray(im).copy()
+    ai = a.astype(int)
+    H, W = a.shape[:2]
+    bg = np.median(np.concatenate([ai[H // 2, :8], ai[H // 2, -8:], ai[:8, W // 2], ai[-8:, W // 2]]), axis=0).astype(np.uint8)
+    r = int(side * corner)
+    yy, xx = np.mgrid[:H, :W]
+    near = (np.minimum(yy, H - 1 - yy) < r) & (np.minimum(xx, W - 1 - xx) < r)
+    whitish = (ai.sum(axis=2) > ai[H // 2, :8].sum(axis=1).mean() + 120) & ((ai.max(axis=2) - ai.min(axis=2)) < 60)
+    a[near & whitish] = bg
+    out = Image.fromarray(a)
+    for size in (512, 192):
+        out.resize((size, size), Image.LANCZOS).save(f'{prefix}-{size}.png', optimize=True)
+    return int((near & whitish).sum()), tuple(int(x) for x in bg)
+
+
 def period(path):
     """Estimate the art-pixel size from how often colour edges repeat. A guide, not gospel:
     it can report a multiple (try half) or hit the bottom of its range on noisy JPEGs."""
@@ -139,9 +163,13 @@ def main():
     b.add_argument('src'); b.add_argument('out'); b.add_argument('--width', type=int, default=688)
     b.add_argument('--quality', type=int, default=80)
     pr = sub.add_parser('period'); pr.add_argument('src', nargs='+')
+    ic = sub.add_parser('icon'); ic.add_argument('src'); ic.add_argument('prefix')
     a = p.parse_args()
 
-    if a.cmd == 'period':
+    if a.cmd == 'icon':
+        n, bg = icon(a.src, a.prefix)
+        print(f'{a.prefix}-512.png, {a.prefix}-192.png: repainted {n} corner pixels with {bg}')
+    elif a.cmd == 'period':
         for f in a.src:
             print(f, period(f))
     elif a.cmd == 'bg':

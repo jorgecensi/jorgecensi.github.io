@@ -1,384 +1,91 @@
 ---
-description: Scaffold a new PWA in this Jekyll site — creates the HTML page, service worker, manifest, icons, and wires everything up
-argument-hint: [app-name]
+description: Scaffold a new PWA in this Jekyll site. Creates <slug>/index.html, sw.js, manifest.json and icons, and wires up the home cards (EN + pt-BR), README, the cache-bump workflow and AGENTS.md.
+argument-hint: [what the app should do]
 ---
 
-You are scaffolding a new Progressive Web App for this Jekyll portfolio site (jorgecensi.github.io). The site already has three PWAs (Binary Puzzle, CrossFit Timer, Flappy Bird) that follow a consistent pattern. You will gather requirements, generate icons, and create/update all the necessary files.
+You are adding a new standalone, offline-capable app (PWA) to this site. Every
+recent app follows the same layout; copy it rather than inventing a new one.
+Reference apps: `chroma/` (single file, canvas/audio) and `cyber-quest/`
+(single file, multi-screen UI, e2e suite).
 
-## Step 1 — Gather Requirements
+## 1. Decide the basics (don't interrogate the owner)
 
-Ask these questions **one at a time**, waiting for the user's answer before asking the next. Skip any that were already provided via `$ARGUMENTS`.
+From `$ARGUMENTS` and the conversation, pick sensible defaults and state them in
+one short list. Ask only if what the app should *do* is unclear.
 
-1. **App name** — the full display name (e.g. "Snake Game")
-2. **Short name** — shown on the home screen icon (e.g. "Snake", max ~12 chars)
-3. **Slug** — the URL path segment (e.g. `snake` → `/snake/`). All generated files use this prefix: `snake.html`, `snake-sw.js`, `snake-manifest.json`
-4. **Description** — one sentence describing what the app does (used in the manifest and the apps page card)
-5. **Theme color** — hex color for the browser chrome and icon background (default: `#6366f1` — the site's indigo)
-6. **Category** — one of: `games`, `productivity`, `utilities`, `entertainment`, `sports`, or another appropriate value
-7. **Emoji** — a single emoji for the apps page card (e.g. 🐍)
-8. **App content** — describe what the app does so you can scaffold meaningful HTML/JS (e.g. "a snake game using canvas", "a Pomodoro timer", "a markdown previewer"). You will generate a working or well-stubbed implementation.
+| Field | Default |
+|---|---|
+| Name | From the request, e.g. "Cyber Quest" |
+| Short name | ≤ 12 characters |
+| Slug | kebab-case of the short name → `/<slug>/` |
+| Theme colour | The app's dark background (most apps are dark navy), else `#6366f1` |
+| Emoji | One emoji for the home card |
+| Card tag | `PWA` or `Game` |
 
-After collecting all answers, confirm the summary with the user before writing any files.
+## 2. Create the files
 
----
-
-## Step 2 — Generate Icons
-
-Use the Bash tool to run a temporary Python script that generates two PNG icon files using **Pillow**. The icons are a rounded square in the theme color with the first two characters of the short name (uppercased) centered in white.
-
-Write this script to `/tmp/gen_icons.py` and run it:
-
-```python
-import sys
-import math
-
-try:
-    from PIL import Image, ImageDraw, ImageFont
-except ImportError:
-    print("PILLOW_MISSING")
-    sys.exit(0)
-
-import os
-
-slug = sys.argv[1]
-color_hex = sys.argv[2].lstrip('#')
-label = sys.argv[3][:2].upper()
-out_dir = sys.argv[4]
-
-r = int(color_hex[0:2], 16)
-g = int(color_hex[2:4], 16)
-b = int(color_hex[4:6], 16)
-bg = (r, g, b, 255)
-
-def make_icon(size, path, label, bg):
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    radius = size // 5
-    draw.rounded_rectangle([(0, 0), (size - 1, size - 1)], radius=radius, fill=bg)
-    font_size = size // 3
-    try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-    except Exception:
-        try:
-            font = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", font_size)
-        except Exception:
-            font = ImageFont.load_default()
-    bbox = draw.textbbox((0, 0), label, font=font)
-    tw = bbox[2] - bbox[0]
-    th = bbox[3] - bbox[1]
-    x = (size - tw) / 2 - bbox[0]
-    y = (size - th) / 2 - bbox[1]
-    draw.text((x, y), label, fill=(255, 255, 255, 255), font=font)
-    img.convert("RGB").save(path, "PNG")
-    print(f"Created {path}")
-
-make_icon(192, os.path.join(out_dir, f"{slug}-icon-192.png"), label, bg)
-make_icon(512, os.path.join(out_dir, f"{slug}-icon-512.png"), label, bg)
+```
+<slug>/index.html      front matter `layout: null` + `permalink: /<slug>/`; the whole app in one file
+<slug>/sw.js           copy of chroma/sw.js with the name swapped (below)
+<slug>/manifest.json   copy of chroma/manifest.json, fields changed
+img/<slug>-icon-192.png, img/<slug>-icon-512.png
 ```
 
-Run it with:
-```
-python /tmp/gen_icons.py <slug> <theme_color> <short_name> <repo_root>/img
-```
-
-**If Pillow is missing** (script prints `PILLOW_MISSING`): attempt `pip install Pillow --quiet` and retry. If it still fails, create an SVG icon instead:
-
-```xml
-<!-- img/<slug>-icon.svg -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="38" fill="<theme_color>"/>
-  <text x="96" y="120" font-family="Arial,sans-serif" font-size="80" font-weight="bold"
-        text-anchor="middle" fill="white"><first-two-chars-of-short-name></text>
-</svg>
+```bash
+mkdir -p <slug>
+sed -e 's/chroma/<slug>/g' -e "s/CACHE_VERSION = '[^']*'/CACHE_VERSION = 'dev'/" chroma/sw.js > <slug>/sw.js
 ```
 
-And update the manifest icons to reference the SVG with `"type": "image/svg+xml"`.
+In `manifest.json`, set `id`, `start_url` and `scope` to `/<slug>/`, plus `name`,
+`short_name`, `description`, `theme_color`, `background_color`, `categories`,
+`orientation`, and the icon paths (`"purpose": "any maskable"`).
 
----
+`index.html` essentials (copy the `<head>` and the service-worker block at the
+bottom of `cyber-quest/index.html`, then rename):
 
-## Step 3 — Create Files
+- `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">`,
+  theme-color, `apple-mobile-web-app-*`, `<link rel="manifest" href="/<slug>/manifest.json">`,
+  icon and apple-touch-icon links.
+- `const SW_VERSION = 'dev';` (the workflow rewrites it), and registration of
+  `/<slug>/sw.js?v=` + SW_VERSION with scope `/<slug>/`. Reload on
+  `controllerchange` only if the page already had a controller; show an "update
+  ready" prompt for the waiting worker.
+- **Safe area (required):** `--safe-bottom: env(safe-area-inset-bottom, 0px)` on
+  `:root`. Give the outermost container `padding-bottom: calc(<16-28>px + var(--safe-bottom))`,
+  and do the same for every fixed or sticky bottom bar and floating button. If
+  you centre the shell with flexbox on `body`, add `align-items: flex-start`, or
+  the padding is lost once content scrolls (this bit personal-trainer).
+- Colours as CSS variables, `prefers-reduced-motion` respected, and no layout
+  wider than the viewport at 390 px.
+- If the app has state worth testing, add a `?debug=1` hook (`window.__<app>`)
+  from the start.
 
-Replace `<slug>`, `<name>`, `<short_name>`, `<description>`, `<theme_color>`, `<category>`, `<emoji>` with the collected values throughout.
+**Icons:** for a real icon, have the owner generate one (prompt in the
+`pixel-art-assets` skill) and run
+`python3 -I tools/pixel-sprite-sheet/sprites.py icon <upload> img/<slug>-icon`.
+For a placeholder now, draw a simple shape on the theme colour with Pillow at
+512 and 192 px, keeping it inside the central 80% (the maskable safe zone).
 
-### `<slug>-manifest.json`
+## 3. Wire it up (all four, or the app is half-installed)
 
-```json
-{
-  "id": "/<slug>/",
-  "name": "<name>",
-  "short_name": "<short_name>",
-  "description": "<description>",
-  "start_url": "/<slug>/",
-  "scope": "/<slug>/",
-  "display": "standalone",
-  "background_color": "<theme_color>",
-  "theme_color": "<theme_color>",
-  "orientation": "portrait-primary",
-  "icons": [
-    {
-      "src": "/img/<slug>-icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/img/<slug>-icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "categories": ["<category>"],
-  "lang": "en-US",
-  "screenshots": [],
-  "related_applications": [],
-  "prefer_related_applications": false
-}
-```
+1. **Home cards:** add an `<a class="app-card" href="/<slug>/">` after the last
+   card in both `index.html` and `pt-BR/index.html` (Portuguese text, add
+   "(em inglês)" if the app is English only). Copy a neighbour's markup.
+2. **README.md:** one line in the Apps list.
+3. **`.github/workflows/bump-pwa-cache-version.yml`:** four edits, mirroring `cyber_quest`:
+   the `check` line under "Detect changed PWA files", the `changed` dict entry,
+   an `if bump_all or changed[...]` block setting `CACHE_VERSION` in sw.js and
+   `SW_VERSION` in index.html, and both files in the final `git add`.
+4. **AGENTS.md:** add the app to the PWA list under Key caveats, and give it its
+   own section (structure, debug hook, tests, "bump SW_VERSION/CACHE_VERSION
+   together").
 
-### `<slug>-sw.js`
+## 4. Verify
 
-```javascript
-const CACHE_VERSION = 'dev';
-const CACHE_NAME = `<slug>-${CACHE_VERSION}`;
-const OFFLINE_URL = '/<slug>/';
-const PRECACHE_URLS = [
-  '/<slug>/',
-  '/<slug>-manifest.json',
-  '/img/<slug>-icon-192.png',
-  '/img/<slug>-icon-512.png',
-  '/img/favicon.ico'
-];
+- `/opt/rbenv/versions/3.3.6/bin/jekyll build` exits 0.
+- Use the `mobile-ui-check` skill: screenshot the app's screens at phone size,
+  with no problems reported. Look at the images.
+- If the app has real logic, copy `tools/cyber-quest-e2e/` (run.sh, package.json
+  pinned to the image's Playwright, `_helpers.js`) and write a smoke spec.
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
-  );
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) =>
-      Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName.startsWith('<slug>-')) {
-            return caches.delete(cacheName);
-          }
-          return Promise.resolve();
-        })
-      )
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') {
-    return;
-  }
-
-  const requestUrl = new URL(event.request.url);
-  const isNavigationRequest = event.request.mode === 'navigate';
-  const isSameOrigin = requestUrl.origin === self.location.origin;
-
-  if (isNavigationRequest) {
-    event.respondWith(
-      fetch(event.request)
-        .then((networkResponse) => {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-          return networkResponse;
-        })
-        .catch(() => caches.match(event.request).then((cached) => cached || caches.match(OFFLINE_URL)))
-    );
-    return;
-  }
-
-  if (isSameOrigin) {
-    event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        const networkFetch = fetch(event.request)
-          .then((networkResponse) => {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-            return networkResponse;
-          })
-          .catch(() => cachedResponse);
-
-        return cachedResponse || networkFetch;
-      })
-    );
-  }
-});
-```
-
-### Safe-area bottom padding (required — do not skip)
-
-Every button or control near the bottom of the screen — a CTA at the end of a scrolling page, a fixed/sticky control bar, a floating action button, an install banner — **must** reserve space for the device's home-indicator/gesture-bar safe area, or it ends up uncomfortably close to (or under) the bottom edge on notched iOS/Android phones. Several apps in this repo shipped without this and had to be patched later — bake it in from the start instead:
-
-- Define `--safe-bottom: env(safe-area-inset-bottom, 0px);` on `:root` (or `body`) in the new app's `<style>` block.
-- Give the outermost scrolling container (the `<body>` or a `#app`/`.container` wrapper) `padding-bottom: calc(<base>px + var(--safe-bottom));` — never a bare px value — so the last button on the page always clears the safe area. `<base>` is normally 16–28px depending on the app's spacing scale.
-- Any `position: fixed`/`sticky` bottom bar or floating button gets the same treatment: `padding-bottom: calc(<base>px + var(--safe-bottom));` or `bottom: calc(<base>px + var(--safe-bottom));` instead of a fixed value.
-- Reference implementations already in this repo: `tuner/index.html`, `personal-trainer/index.html`, `crossfit-timer/index.html`, `f1-championship/index.html` — all use this pattern (`env(safe-area-inset-bottom, ...)`) on both their outer container and any fixed bottom controls.
-
-Check every place the new app touches the bottom of the viewport, not just one global rule — a fixed bottom nav needs it as much as a single "Start" button at the end of a form.
-
-**Gotcha — verify the padding can actually apply.** Reserving the safe area only works if the element carrying that padding is free to grow with its content. If you center a max-width app shell with `body { display: flex; justify-content: center; }` (no `flex-direction`/`align-items` override), the shell becomes a *stretched* flex item clamped to `body`'s height — on any screen taller than one viewport, its content (and the bottom padding) overflows the box instead of growing it, so the page scrolls right past the reserved padding and buttons end up flush against the edge again. This bit `personal-trainer/index.html` after it already had the `env(safe-area-inset-bottom)` padding in place. If you use this centering pattern, add `align-items: flex-start;` to `body` (or use `margin: 0 auto` on the shell instead of flex centering) — then check a screen with enough content to require scrolling, not just the first short screen, since the bug is invisible until content overflows.
-
-### `<slug>.html`
-
-This is a **standalone** HTML file (not using Jekyll layouts) that is self-contained, similar to `flappy.html`. Include the service worker registration script and implement the app content described by the user. Structure:
-
-```html
----
-permalink: /<slug>/
----
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="<theme_color>">
-    <meta name="description" content="<description>">
-
-    <title><name></title>
-
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/<slug>-manifest.json">
-
-    <!-- iOS specific -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="<short_name>">
-    <link rel="apple-touch-icon" href="/img/<slug>-icon-192.png">
-
-    <!-- Favicon -->
-    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
-
-    <style>
-        :root {
-            --safe-bottom: env(safe-area-inset-bottom, 0px);
-        }
-
-        /* Give the outermost container bottom padding like:
-           padding-bottom: calc(20px + var(--safe-bottom));
-           Apply the same calc() to any fixed/sticky bottom bar or button — see
-           "Safe-area bottom padding" above. Never use a bare px value at the bottom. */
-
-        /* App styles here */
-    </style>
-</head>
-
-<body>
-    <!-- App HTML here -->
-
-    <script>
-        const SW_VERSION = 'dev';
-
-        if ('serviceWorker' in navigator) {
-            let hasRefreshedForUpdate = false;
-
-            const askToUpdate = (registration) => {
-                const shouldUpdate = window.confirm('A new <name> update is ready. Update now?');
-                if (shouldUpdate && registration.waiting) {
-                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-                }
-            };
-
-            navigator.serviceWorker.register('/<slug>-sw.js?v=' + SW_VERSION)
-                .then((registration) => {
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                if (!hasRefreshedForUpdate) {
-                                    hasRefreshedForUpdate = true;
-                                    askToUpdate(registration);
-                                }
-                            }
-                        });
-                    });
-                });
-
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
-            });
-        }
-
-        // App JavaScript here
-    </script>
-</body>
-
-</html>
-```
-
-Implement the actual app logic (game, tool, etc.) based on the user's description from Step 1. Make it functional — don't leave placeholder comments without code.
-
----
-
-## Step 4 — Update Existing Files
-
-### `_layouts/default.html`
-
-Find the block:
-```
-{% if page.ref == "binary" %}
-```
-
-Add an `{% elsif %}` branch **before** the `{% endif %}` for the new PWA:
-
-```liquid
-{% elsif page.ref == "<slug>" %}
-    <meta name="theme-color" content="<theme_color>">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="<short_name>">
-    <link rel="apple-touch-icon" href="/img/<slug>-icon-192.png">
-    <link rel="manifest" href="/<slug>-manifest.json">
-```
-
-**Note:** Only add this block if `<slug>.html` uses the default Jekyll layout (i.e., has a `layout: default` or `layout: wrapper` in the front matter). If the HTML page is fully standalone (like `flappy.html`), skip this step since the manifest is already linked directly in the page's `<head>`.
-
-### `apps.html`
-
-Append a new card inside the `.apps-grid` div, following the same pattern as the existing cards:
-
-```html
-    <a class="app-card" href="/<slug>/">
-        <span class="app-icon"><emoji></span>
-        <h3><name></h3>
-        <p><description></p>
-        <span class="app-tag"><category></span>
-    </a>
-```
-
-### `.github/workflows/bump-pwa-cache-version.yml`
-
-In the `files_and_patterns` dict inside the Python block, add:
-
-```python
-"<slug>-sw.js": r"const CACHE_VERSION = '[^']*';",
-"<slug>.html": r"const SW_VERSION = '[^']*';",
-```
-
-In the `git add` command at the end, add `<slug>-sw.js` and `<slug>.html` to the list.
-
----
-
-## Step 5 — Verify
-
-After all files are created:
-
-1. Run `bundle exec jekyll build` and confirm there are no errors.
-2. Report all files created/modified to the user with a checklist.
-3. Remind the user to:
-   - Start the dev server: `bundle exec jekyll serve --port 4001`
-   - Visit `http://localhost:4001/<slug>/` to test the app
-   - Check DevTools → Application → Manifest and Service Workers
-   - Visit `http://localhost:4001/apps/` to see the new card
+Then branch, commit, push and open a draft PR as usual.

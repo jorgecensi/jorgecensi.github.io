@@ -32,6 +32,9 @@ python3 sprites.py sheet mixed.png ../../img/cq/lantern.png --scale 8 --figures 
 
 # A 16:9 scene painting -> a 688px-wide WebP background
 python3 sprites.py bg scene.jpg ../../img/cq/bg-day.webp
+
+# A square app icon -> ../../img/<app>-icon-192.png and -512.png (white rounded corners painted over)
+python3 sprites.py icon generated-icon.jpg ../../img/cyber-quest-icon
 ```
 
 How `sheet` works: it keys out magenta, splits the cells, then rebuilds the true

@@ -22,6 +22,13 @@ bundle exec jekyll serve --host 0.0.0.0 --port 4000 --livereload
 - **PWAs**: nearly all of the standalone apps under `README.md`'s app index (CrossFit Timer, Personal Trainer, Flappy Bird, Auto Runner, Elasto Mania, F1 Championship, World Cup 2026, Curator, Drum Machine, Synth, Tuner, Music Theory, Binary, Tennis Planner, Squeak the Geek, Ding, Chroma, Cyber Quest) are fully client-side PWAs requiring no additional services.
 - **Restarting `jekyll serve`**: `jekyll serve` (without `--watch`) reads files fresh from `_site/` on every request, so after editing a file just re-run `bundle exec jekyll build` — no server restart needed. If you do `pkill -f "jekyll serve"` to stop a `run_in_background` server, the harness reports that background task as "failed" (exit 144, i.e. SIGTERM) even though the kill succeeded; this is expected, not a real error — verify by curling the port or just start a new background server instead of killing the old one.
 - **Save reusable tooling instead of rebuilding it each time**: when a task requires developing a non-trivial script, technique, or multi-step process (image processing, data transformation, a debugging workflow, etc.) that's likely to come up again, save the finished version under `tools/<topic>/` with a short README (and a GOTCHAS.md if you hit real failure modes worth remembering) instead of leaving it in an ephemeral scratchpad. Add a pointer to it from the relevant section of this file so it's rediscovered automatically next time — that saves re-deriving the same approach (and burning the tokens that took) from scratch. See `tools/character-sheet-extraction/` for an example.
+- **Reusable skills and commands** (`.claude/skills/`, `.claude/commands/`): use them instead of re-deriving the work.
+  - `/create-pwa`: scaffold a new app in the current folder layout and wire it up everywhere.
+  - `mobile-ui-check`: phone-size screenshots plus a smoke check through `tools/ui-check/shoot.js`. Don't hand-write Playwright screenshot scripts.
+  - `pixel-art-assets`: write image-generator prompts for the owner, then turn the uploads into sprites, backgrounds and icons with `tools/pixel-sprite-sheet/`.
+  - `learning-game-design`: what the owner wants from a learning app (hands-on, progressive, story-driven, calm/alarm rhythm).
+  - `cyber-quest-content`: skeletons and checklists for new Cyber Quest chapters, incidents, labs and missions.
+  - `capture-gotcha`: record a hard-won lesson in the right skill.
 
 ### Auto Runner app (`/auto-runner`)
 
