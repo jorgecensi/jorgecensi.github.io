@@ -21,8 +21,7 @@ const { launch, assert } = require('./_helpers');
 
   await page.click('[data-node="grounds"]');
   assert(await at() === 'grounds', 'the player walks to the Training Grounds');
-  await page.click('[data-node="grounds"]');
-  assert(await ev(() => document.getElementById('grounds').open), 'tapping it again opens the Training Grounds');
+  assert(await ev(() => document.getElementById('grounds').open), 'one tap walks there and opens the Training Grounds');
 
   // Clearing chapter 1 walks the player on to chapter 2.
   await ev(() => {
@@ -42,9 +41,15 @@ const { launch, assert } = require('./_helpers');
   await page.keyboard.press('ArrowRight');
   assert(await at() === 'ch2', 'ArrowRight stops at the last open chapter');
 
-  // Tapping the node you stand on plays it.
-  await page.click('[data-node="ch2"]');
-  assert(await ev(() => window.__cyberQuest.state.screen) === 'story', 'tapping the current node starts the chapter');
+  // Arrow keys only walk; Enter opens the node you stand on.
+  assert(await ev(() => window.__cyberQuest.state.screen) === 'home', 'walking with the keyboard does not open a chapter');
+  await page.keyboard.press('Enter');
+  assert(await ev(() => window.__cyberQuest.state.screen) === 'story', 'Enter starts the chapter you stand on');
+
+  // One tap on another open node walks there and starts it.
+  await open();
+  await page.click('[data-node="ch1"]');
+  assert(await at() === 'ch1' && await ev(() => window.__cyberQuest.state.screen) === 'story', 'one tap walks to chapter 1 and starts it');
 
   await shot('map');
   await noHScroll();
