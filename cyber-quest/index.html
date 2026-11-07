@@ -812,7 +812,7 @@ permalink: /cyber-quest/
                     <li>You're the new security analyst at a small game studio, two weeks before its big launch. A hacker crew wants it. Five chapters, one per day of launch week.</li>
                     <li>Each chapter starts <b>calm</b>: your mentor Mira teaches you, you practise in a quiet terminal, and you answer a few questions with no clock.</li>
                     <li>Then the <b>alarm</b> goes off and the attack happens live: logs stream in, a threat meter climbs, and you fight back with what you just learned. If the meter hits 100%, you see what went wrong and try again.</li>
-                    <li>The home screen is a <b>map</b> of the campus. Tap a spot to walk there, and tap it again (or the button below the map) to play. Locked spots open as you clear chapters, and the side areas hold the Training Grounds and the Field Guide. On a keyboard, the arrow keys walk and Enter plays.</li>
+                    <li>The home screen is a <b>map</b> of the campus. Tap a spot to walk there and open it. Locked spots open as you clear chapters, and the side areas hold the Training Grounds and the Field Guide. On a keyboard, the arrow keys walk without opening, and Enter opens the spot you're on.</li>
                     <li>Your story is saved after every step, so you can stop at any time.</li>
                 </ul>
             </div>
@@ -976,7 +976,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070716';
+    const SW_VERSION = '2611070723';
 
     (() => {
         'use strict';
@@ -4974,7 +4974,7 @@ permalink: /cyber-quest/
                     return;
                 }
                 if (id === progress.settings.mapAt) return this.enter(n);
-                this.walk(id);
+                this.walk(id, () => { if (S.screen === 'home') this.enter(n); }); // walk there, then open it
             },
             enter(n) {
                 if (n.ch) {
@@ -5027,7 +5027,7 @@ permalink: /cyber-quest/
                         '<p>' + (n.to ? (open ? 'The way to the next world is open.' : 'Clear every chapter in this world to open the gate.') : 'Black Lantern isn\'t the only crew out there. New threats are on their way.') + '</p>' +
                         (n.to && open ? '<div class="btn-row"><button class="btn" data-node-enter="gate">Go through the gate</button></div>' : '');
                 }
-                if (open && !here && !c) html += '<p class="hint">Tap it on the map to walk there.</p>';
+
                 el.innerHTML = html;
             }
         };
@@ -5408,6 +5408,7 @@ permalink: /cyber-quest/
             if (S.screen !== 'home' || /INPUT|TEXTAREA|SUMMARY/.test(e.target.tagName)) return;
             const d = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
             if (d) { e.preventDefault(); WorldMap.step(d); }
+            else if (e.key === 'Enter' && !e.target.closest('button, a') && !WorldMap.busy) { e.preventDefault(); WorldMap.enter(WorldMap.node(progress.settings.mapAt)); }
         });
         document.addEventListener('keydown', (e) => {
             if (S.screen !== 'story' || (e.key !== 'Enter' && e.key !== ' ')) return;
