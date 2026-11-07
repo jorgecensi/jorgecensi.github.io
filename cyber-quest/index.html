@@ -815,7 +815,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070312';
+    const SW_VERSION = '2611070321';
 
     (() => {
         'use strict';
@@ -3793,16 +3793,17 @@ permalink: /cyber-quest/
         // training terminals); alarm beats are live incidents (terminal or mail rush).
         // Every name, company, domain and IP below is fictional (IPs are RFC 5737).
         // Sprites are horizontal strips of same-size frames (see tools/pixel-sprite-sheet).
-        // `frames` maps an expression to its index; `rest` is the face a character settles on in an alarm.
+        // `frames` maps an expression to its index; `rest` is the face a character settles on in an alarm,
+        // `calm` the one outside an alarm (the SIEM only ever speaks to raise one).
         const PORTRAIT = { neutral: 0, talk: 1, worried: 2, happy: 3 };
         const CHARS = {
             mira: { name: 'Mira', role: 'Security lead · your mentor', avatar: '🧑🏾‍💻', color: '#10b981', sprite: { src: '/img/cq/mira.png', n: 4, w: 75, h: 79, frames: PORTRAIT } },
             sam: { name: 'Sam', role: 'IT admin', avatar: '🧑‍🔧', color: '#38bdf8', sprite: { src: '/img/cq/sam.png', n: 4, w: 73, h: 79, frames: PORTRAIT } },
             dana: { name: 'Dana', role: 'Founder, Brightside Games', avatar: '🧑🏻‍💼', color: '#f59e0b', sprite: { src: '/img/cq/dana.png', n: 4, w: 74, h: 77, frames: PORTRAIT } },
-            siem: { name: 'SIEM', role: 'Security alert system', avatar: '🛰️', color: '#f43f5e', rest: 'alarm', sprite: { src: '/img/cq/siem.png', n: 5, w: 53, h: 60, frames: { neutral: 0, talk: 1, worried: 2, alarm: 3, happy: 4 } } },
+            siem: { name: 'SIEM', role: 'Security alert system', avatar: '🛰️', color: '#f43f5e', rest: 'alarm', calm: 'alarm', sprite: { src: '/img/cq/siem.png', n: 5, w: 53, h: 60, frames: { neutral: 0, talk: 1, worried: 2, alarm: 3, happy: 4 } } },
             lantern: { name: 'Black Lantern', role: 'Unknown sender', avatar: '🏮', color: '#ef4444', rest: 'threat', talkFace: 'threat', sprite: { src: '/img/cq/lantern.png', n: 2, w: 45, h: 78, frames: { neutral: 0, idle: 0, threat: 1 } } }
         };
-        const STORY_ART = ['/img/cq/bg-day.webp', '/img/cq/bg-night.webp', '/img/cq/bg-alarm.webp']
+        const STORY_ART = ['/img/cq/bg-day.webp', '/img/cq/bg-night.webp', '/img/cq/bg-alarm.webp', '/img/cq/bg-flat.webp', '/img/cq/bg-party.webp']
             .concat(Object.values(CHARS).map((c) => c.sprite.src));
 
         // "23:41:05"-style timestamps for live logs.
@@ -4263,7 +4264,7 @@ permalink: /cyber-quest/
                         explain: 'Block it at the firewall. And never delete logs: they\'re your evidence.'
                     },
                     {
-                        type: 'scene', mood: 'night', loc: 'Your flat · Tue 23:41', art: '🌙', lines: [
+                        type: 'scene', mood: 'night', bg: 'flat', loc: 'Your flat · Tue 23:41', art: '🌙', lines: [
                             [null, 'You\'re halfway into your pyjamas when your phone buzzes.'],
                             ['siem', '🔴 SSH login failures on web-01: 40 per minute and rising.'],
                             ['mira', 'Someone\'s guessing passwords on web-01 right now. I\'m driving in, but you\'re closer to a laptop.'],
@@ -4396,7 +4397,7 @@ permalink: /cyber-quest/
                     INC_RANSOM,
                     RESTORE,
                     {
-                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Fri 12:00', art: '🎆', lines: [
+                        type: 'scene', mood: 'calm', bg: 'party', loc: 'Brightside Games HQ · Fri 12:00', art: '🎆', lines: [
                             [null, '12:00. Starfall goes live. Forty thousand players in the first hour.'],
                             ['dana', 'We launched. On time. And nobody outside this room will ever know how close that was.', 'happy'],
                             ['mira', 'That\'s the job. When we win, nothing happens.', 'happy'],
@@ -4433,8 +4434,10 @@ permalink: /cyber-quest/
                 $('st-chapter').textContent = 'Chapter ' + this.ch.num + ' · ' + this.ch.title;
                 if (this.i === 0) this.titleCard(); else this.play();
             },
-            mood(m, loc, art) {
+            // A scene can name its own background (bg: 'flat' → /img/cq/bg-flat.webp); otherwise the mood picks one.
+            mood(m, loc, art, bg) {
                 $('story').dataset.mood = m || 'calm';
+                $('st-stage').style.backgroundImage = bg ? 'url("/img/cq/bg-' + bg + '.webp")' : '';
                 if (loc != null) $('st-loc').textContent = loc;
                 if (art) $('st-art').textContent = art;
             },
@@ -4453,10 +4456,10 @@ permalink: /cyber-quest/
                 progress.storyAt = { ch: this.ch.id, beat: this.i };
                 saveProgress();
                 const b = this.ch.beats[this.i];
-                if (b.type === 'scene') { this.mood(b.mood, b.loc, b.art); this.line = 0; return this.showLine(); }
+                if (b.type === 'scene') { this.mood(b.mood, b.loc, b.art, b.bg); this.line = 0; return this.showLine(); }
                 // Other beats keep the setting of the scene before them (also when resuming mid-chapter).
                 const prev = this.ch.beats.slice(0, this.i).reverse().find((x) => x.type === 'scene');
-                if (prev) this.mood(prev.mood, prev.loc, prev.art);
+                if (prev) this.mood(prev.mood, prev.loc, prev.art, prev.bg);
                 if (b.type === 'ask') return this.ask(b);
                 if (b.type === 'triage') return Triage.run(b, (r) => this.after(r));
                 // Training and incident beats run in the terminal. A training beat can reuse a lab.
@@ -4495,7 +4498,7 @@ permalink: /cyber-quest/
             restFace(who, face) {
                 if (face) return face;
                 const c = CHARS[who] || {};
-                return $('story').dataset.mood === 'alarm' ? (c.rest || 'worried') : 'neutral';
+                return $('story').dataset.mood === 'alarm' ? (c.rest || 'worried') : (c.calm || 'neutral');
             },
             speak(who, text, face) {
                 const c = who && CHARS[who];
