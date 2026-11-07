@@ -414,7 +414,10 @@ permalink: /cyber-quest/
             background: #0c0c0c; padding: var(--safe-top) 0 0;
         }
         #ops.term-open .term-wrap > :not(.threat):not(.term-step):not(.lesson):not(.terminal):not(.chips):not(.term-done) { display: none; }
-        #ops.term-open .lesson { display: none; margin: 0; border-radius: 0; border-left: 0; border-right: 0; max-height: 38vh; overflow-y: auto; }
+        #ops.term-open .lesson { display: none; margin: 0; border-radius: 0; border-left: 0; border-right: 0; max-height: 40%; overflow-y: auto; flex: none; }
+        html.term-lock, html.term-lock body { background: #0c0c0c; overflow: hidden; }
+        #ops.term-open.typing .chips { padding-bottom: 8px; }
+        #ops.term-open .threat, #ops.term-open .term-step, #ops.term-open .chips { flex: none; }
         #ops.term-open.lesson-open .lesson:not(:empty) { display: block; }
         #ops.term-open .threat { margin: 0; border-radius: 0; padding: 8px 12px; }
         #ops.term-open .feed li:not(:first-child) { display: none; }
@@ -431,6 +434,7 @@ permalink: /cyber-quest/
         #ops.term-open .term-bar { display: none; }
         #ops.term-open .term-out { height: auto; min-height: 0; overflow: visible; padding: 10px 10px 0; color: #d3d7cf; font-size: 0.75rem; }
         #ops.term-open .term-inrow { border: 0; background: transparent; padding: 0 12px 14px; }
+        #ops.term-open .term-out, #ops.term-open .term-inrow { flex: none; } /* never squeeze the output under the prompt: scroll instead */
         #ops.term-open .chips { display: flex; flex-wrap: nowrap; overflow-x: auto; padding: 8px; gap: 6px; background: #161616; border-top: 1px solid #2c2c2c; padding-bottom: calc(8px + var(--safe-bottom)); }
         #ops.term-open .chip { flex: none; background: #262626; border-color: #3a3a3a; color: #e5e5e5; }
         #ops.term-open .term-done { margin: 12px; }
@@ -976,7 +980,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611070749';
+    const SW_VERSION = '2611070841';
 
     (() => {
         'use strict';
@@ -2292,7 +2296,7 @@ permalink: /cyber-quest/
             window.scrollTo(0, 0);
             if (screen === 'home') renderHome();
             if (screen === 'guide') renderGuide();
-            if (screen !== 'ops') { document.getElementById('ops').classList.remove('term-open'); }
+            if (screen !== 'ops') { document.getElementById('ops').classList.remove('term-open', 'typing'); document.documentElement.classList.remove('term-lock'); }
             if (screen !== 'ops') Ops.stopIncident();
             if (screen !== 'triage') Triage.stop();
             if (screen !== 'story') Story.stopTyping();
@@ -3950,17 +3954,19 @@ permalink: /cyber-quest/
                     : t && t.lesson ? '<div class="step">📖 Step ' + (cur + 1) + ' of ' + tasks.length + '</div><h4>' + esc(t.desc) + '</h4><p>' + t.lesson + '</p>' : '';
                 if (!this._flashing) $('ops-step-text').innerHTML = t ? 'Step ' + (cur + 1) + '/' + tasks.length + ': <b>' + esc(t.desc) + '</b>' : '<b>All objectives complete</b>';
                 // A new step opens its lesson in the terminal view (not for incidents: no time to read there).
-                if (cur !== this._step) { this._step = cur; if (!this.lab.incident && cur >= 0) this.toggleLesson(true); }
+                if (cur !== this._step) { this._step = cur; if (!this.lab.incident && cur >= 0 && !$('ops').classList.contains('typing')) this.toggleLesson(true); }
             },
             openTerm() {
                 $('ops').classList.add('term-open');
+                document.documentElement.classList.add('term-lock');
                 this.fitTerm();
                 const i = $('ops-input');
                 i.focus({ preventScroll: true });
                 this.scrollTerm();
             },
             closeTerm() {
-                $('ops').classList.remove('term-open');
+                $('ops').classList.remove('term-open', 'typing');
+                document.documentElement.classList.remove('term-lock');
                 $('ops-input').blur();
             },
             toggleLesson(on) {
@@ -3986,7 +3992,9 @@ permalink: /cyber-quest/
             },
             scrollTerm() {
                 const t = $('ops-term');
-                if ($('ops').classList.contains('term-open')) t.scrollTop = t.scrollHeight;
+                if (!$('ops').classList.contains('term-open')) return;
+                t.scrollTop = t.scrollHeight;
+                requestAnimationFrame(() => { t.scrollTop = t.scrollHeight; });
             },
 
             checkTasks() {
@@ -5396,6 +5404,13 @@ permalink: /cyber-quest/
         $('ob-start').addEventListener('click', () => Ops.start());
         $('ops-continue').addEventListener('click', () => Ops.continue());
         $('ops-open').addEventListener('click', () => Ops.openTerm());
+        // While the keyboard is up, fold the lesson away (📖 brings it back) and keep the prompt in view.
+        $('ops-input').addEventListener('focus', () => {
+            $('ops').classList.add('typing');
+            Ops.toggleLesson(false);
+            [0, 120, 350, 700].forEach((ms) => setTimeout(() => Ops.fitTerm(), ms)); // the keyboard animates in
+        });
+        $('ops-input').addEventListener('blur', () => { $('ops').classList.remove('typing'); setTimeout(() => Ops.fitTerm(), 350); });
         $('ops-close').addEventListener('click', () => Ops.closeTerm());
         $('ops-lesson-toggle').addEventListener('click', () => Ops.toggleLesson());
         $('ops-term').addEventListener('click', (e) => { if (!window.getSelection().toString() && e.target.closest('#ops-term')) $('ops-input').focus({ preventScroll: true }); });
