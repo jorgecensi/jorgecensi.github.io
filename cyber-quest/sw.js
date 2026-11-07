@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2611070625';
+const CACHE_VERSION = '2611070636';
 const CACHE_NAME = `cyber-quest-${CACHE_VERSION}`;
 const OFFLINE_URL = '/cyber-quest/';
 const PRECACHE_URLS = [
@@ -12,6 +12,8 @@ const PRECACHE_URLS = [
     '/img/cq/bg-alarm.webp',
     '/img/cq/bg-flat.webp',
     '/img/cq/bg-party.webp',
+    '/img/cq/map-brightside.webp',
+    '/img/cq/player-map.png',
     '/img/cq/mira.png',
     '/img/cq/sam.png',
     '/img/cq/dana.png',
