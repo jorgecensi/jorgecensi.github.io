@@ -387,6 +387,10 @@ permalink: /cyber-quest/
         .term-out .c-hidden { color: #8a8f94; }
         .term-out .c-head { color: #ffffff; font-weight: 700; }
         .term-out .c-cmd { color: #fce94f; }
+        .term-out .help-h { display: block; margin-top: 6px; color: #8ae234; font-weight: 700; }
+        .term-out .help-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 1.5ch; text-indent: 0; padding-left: 1ch; }
+        .term-out .help-cmd { color: #fce94f; overflow-wrap: anywhere; }
+        .term-out .help-desc { color: #c4c9cc; }
         .term-out .c-url { color: #fcaf3e; text-decoration: underline; }
         .term-out .c-proc { color: #8ae234; }
         .term-out .hl .c-proc { color: inherit; }
@@ -999,7 +1003,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611071540';
+    const SW_VERSION = '2611080041';
 
     (() => {
         'use strict';
@@ -3882,7 +3886,7 @@ permalink: /cyber-quest/
                 if (this.lab.cmds && this.lab.cmds[cmd]) return this.lab.cmds[cmd](args, this);
                 switch (cmd) {
                     case undefined: return {};
-                    case 'help': return { out: [{ html: HELP }] };
+                    case 'help': return { out: helpOut() };
                     case 'hint': {
                         T.hints++;
                         const t = this.lab.tasks.find((t) => !t.check(T));
@@ -4403,20 +4407,24 @@ permalink: /cyber-quest/
             for (const w of who) for (const p of m[3]) { const idx = off[w] + col[p]; arr[idx] = add ? p : '-'; }
             return arr.join('');
         }
-        const HELP = [
-            '<span class="hl">Available commands</span> (this is a safe simulation):',
-            '  <span class="hl">ls</span> [-a -l] [dir]   list files        <span class="hl">cd</span> &lt;dir&gt;        change directory',
-            '  <span class="hl">pwd</span>                where am I         <span class="hl">cat</span> &lt;file&gt;      read a file',
-            '  <span class="hl">tail</span> [-n 5] FILE   last lines         <span class="hl">head</span> [-n 5] FILE  first lines',
-            '  <span class="hl">wc -l</span> FILE         count lines        <span class="hl">crontab -l</span>       your scheduled jobs',
-            '  <span class="hl">grep</span> [-i -r] PAT FILE  search in files   <span class="hl">find</span> PATH -name NAME  find files',
-            '  <span class="hl">ps</span> aux             running processes  <span class="hl">kill</span> &lt;pid&gt;      stop a process',
-            '  <span class="hl">chmod</span> 640 &lt;file&gt;    change permissions <span class="hl">ss</span> -tlnp         listening ports',
-            '  <span class="hl">ufw</span> deny &lt;port&gt;     firewall rule      <span class="hl">systemctl</span> stop &lt;svc&gt;  stop a service',
-            '  <span class="hl">whoami</span> / <span class="hl">id</span>        who am I          <span class="hl">sha256sum</span> &lt;file&gt;  checksum a file',
-            '  <span class="hl">answer</span> &lt;text&gt;      answer a question  <span class="hl">man</span> &lt;cmd&gt;        explain a command',
-            '  <span class="hl">hint</span>  next step        <span class="hl">clear</span>  wipe screen   you can also pipe:  cat file | grep word'
-        ].join('\n');
+        // `help`: one command per line, grouped, with descriptions in a column that wraps
+        // cleanly on a phone (each row hangs under the description column).
+        const HELP_GROUPS = [
+            ['Moving around', [['pwd', 'where am I'], ['ls [-a -l] [dir]', 'list files'], ['cd <dir>', 'change directory'], ['find <dir> -name <name>', 'find files']]],
+            ['Reading files', [['cat <file>', 'read a file'], ['head / tail [-n 5] <file>', 'first / last lines'], ['grep [-i -c -r] <word> <file>', 'search in files'], ['wc -l <file>', 'count lines'], ['sha256sum <file>', 'checksum a file']]],
+            ['Processes and jobs', [['ps aux', 'running processes'], ['kill <pid>', 'stop a process'], ['crontab -l', 'your scheduled jobs']]],
+            ['Security', [['whoami / id', 'who am I'], ['chmod 600 <file>', 'change permissions'], ['ss -tlnp', 'listening ports'], ['systemctl stop <svc>', 'stop a service'], ['ufw deny <port>', 'firewall rule']]],
+            ['This game', [['answer <text>', 'answer a question'], ['man <cmd>', 'explain a command'], ['hint', 'your next step'], ['clear', 'wipe the screen'], ['exit', 'log out']]]
+        ];
+        function helpOut() {
+            const out = [{ html: '<span class="hl">Available commands</span> <span class="dim">(a safe simulation)</span>' }];
+            HELP_GROUPS.forEach(([title, rows]) => {
+                out.push({ html: '<span class="help-h">' + esc(title) + '</span>' });
+                rows.forEach(([cmd, desc]) => out.push({ text: cmd + '  ' + desc, html: '<span class="help-row"><span class="help-cmd">' + esc(cmd) + '</span><span class="help-desc">' + esc(desc) + '</span></span>' }));
+            });
+            out.push({ html: '<span class="dim">Pipe one into another: cat auth.log | grep Failed</span>' });
+            return out;
+        }
         const MAN = {
             ls: 'ls — list directory contents. -a shows hidden (dotfiles), -l shows details.',
             grep: 'grep — print lines matching a pattern. -i ignores case, -r searches a directory.',
