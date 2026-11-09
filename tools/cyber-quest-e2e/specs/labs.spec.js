@@ -10,6 +10,8 @@ const LABS = {
   'log-filters': ['head -n 3 syslog', 'grep -v CRON syslog', 'grep -i error syslog | grep app', 'grep "Failed password" auth.log', 'grep "Failed password" auth.log | tail -n 1', 'answer 09:15:20', 'answer 09:13:48'],
   'log-timeline': ['ls nginx', 'head nginx/access.log', 'cut -d " " -f 1 nginx/access.log', 'cut -d " " -f 1 nginx/access.log | sort | uniq -c | sort -rn | head -n 1', 'answer 203.0.113.45', 'grep -r 203.0.113.45 /var/log', 'answer deploy'],
   jobs: ['ps aux', 'kill 3310', 'cat /etc/crontab', 'ls /etc/cron.d', 'crontab -l'],
+  'file-perms': ['ls -l', 'answer rw-', 'answer r--', 'stat notes.txt', 'answer 755', 'chmod o-w salaries.csv', 'chmod 600 secrets.env', 'ls -l'],
+  services: ['systemctl list-units', 'ss -tlnp', 'answer 6379', 'systemctl status telnet', 'systemctl stop telnet', 'systemctl disable telnet', 'ufw deny 3306', 'ufw allow 22', 'ufw allow 443', 'ufw enable', 'ufw status'],
   perms: ['ls -l ~/.ssh', 'chmod 600 ~/.ssh/id_ed25519', 'ss -tlnp', 'systemctl stop ftp', 'ufw deny 21', 'ufw enable'],
   intruder: ['ps aux', 'kill 6621', 'ls /etc/cron.d', 'cat /etc/cron.d/apache-update', 'grep Accepted /var/log/auth.log', 'ufw deny from 203.0.113.66'],
   lockdown: ['ls -l', 'chmod 640 config.php', 'ss -tlnp', 'systemctl stop telnet', 'ufw deny 3306']
@@ -37,6 +39,15 @@ const LABS = {
       assert(!/CRON\[/.test(inv) && /disk usage/.test(inv), 'grep -v drops the matching lines and keeps the rest');
       const chain = out.split('| grep app')[1].split('grep "Failed')[0];
       assert(/database connection refused/.test(chain) && !/nginx/.test(chain), 'grep | grep narrows twice');
+    }
+    if (id === 'file-perms') {
+      const out = await ev(() => window.__cyberQuest.ops.out);
+      assert(/\(0644\/-rw-r--r--\)/.test(out), 'stat shows permissions as a number and as letters');
+      assert(/-rw-rw-r--\s+dana\s+staff/.test(out) && /-rw-------\s+alex\s+staff/.test(out), 'ls -l shows owner and group, and the chmods took effect');
+    }
+    if (id === 'services') {
+      const out = await ev(() => window.__cyberQuest.ops.out);
+      assert(/telnet\.service\s+active/.test(out) && /enabled at boot/.test(out) && /Status: active/.test(out), 'systemctl list-units/status and ufw status report the state');
     }
     if (id === 'log-timeline') {
       const out = await ev(() => window.__cyberQuest.ops.out);
@@ -109,6 +120,9 @@ const LABS = {
   await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch2', beat: 3 } })));
   await open();
   assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 3, 'an old ch2 save before the new parts stays put');
+  await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch4', beat: 1 } })));
+  await open();
+  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 7, 'an old ch4 save at its training moves 6 beats on');
   await noHScroll();
   assert(errors.length === 0, 'console errors: ' + errors.join(' | '));
   console.log('PASS labs');
