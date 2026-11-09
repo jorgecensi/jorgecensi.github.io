@@ -1003,7 +1003,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611082208';
+    const SW_VERSION = '2611091200';
 
     (() => {
         'use strict';
@@ -2267,7 +2267,7 @@ permalink: /cyber-quest/
 
         // ── Progress ──────────────────────────────────────────────────────
         const STORE_KEY = 'cyber-quest-progress-v1';
-        const STORY_REV = 2; // bump when beats are inserted into a released chapter, and migrate in loadProgress()
+        const STORY_REV = 3; // bump when beats are inserted into a released chapter, and migrate in loadProgress()
         let progress = loadProgress();
 
         function loadProgress() {
@@ -2279,6 +2279,8 @@ permalink: /cyber-quest/
                     p.settings = p.settings || {};
                     // rev 2 inserted two beats into ch1 after beat 1: move saves that were past them.
                     if ((p.rev || 1) < 2 && p.storyAt && p.storyAt.ch === 'ch1' && p.storyAt.beat >= 2) p.storyAt.beat += 2;
+                    // rev 3 inserted six beats into ch2 after beat 3 (Filter the Noise, Follow the Trail).
+                    if ((p.rev || 1) < 3 && p.storyAt && p.storyAt.ch === 'ch2' && p.storyAt.beat >= 4) p.storyAt.beat += 6;
                     p.rev = STORY_REV;
                     return p;
                 }
@@ -3133,8 +3135,176 @@ permalink: /cyber-quest/
                 ]
             },
             {
+                id: 'log-filters',
+                stage: 'basics',
+                after: 'reading-logs',
+                icon: '🧹',
+                title: 'Filter the Noise',
+                blurb: 'Cut a busy log down to the lines that matter: head, tail, grep -v and chained greps.',
+                xp: 50,
+                scenario: 'Real logs are noisy. Most of syslog is CRON saying "I ran a job"\nevery fifteen minutes. Your job: throw away the noise and keep the\nfew lines that matter.\n\nYou start in /var/log. Follow the 📖 lesson, one step at a time.',
+                skills: ['head -n', 'grep -v', 'grep | grep', 'grep "phrase"', 'grep | tail -n 1'],
+                chips: ['head -n 3 syslog', 'grep -v CRON syslog', 'grep -i error syslog | grep app', 'grep "Failed password" auth.log', 'hint'],
+                debrief: 'Filtering is most of log work. head and tail -n pick lines by position, grep picks them by content, grep -v throws lines away, quotes keep a phrase together, and pipes chain filters until only the answer is left. "grep … | tail -n 1" (the newest match) is one you\'ll type for the rest of your career.',
+                build() {
+                    const cron = (t, pid, job) => 'Mar 09 ' + t + ' web-01 CRON[' + pid + ']: (root) CMD (' + job + ')';
+                    const clean = '/usr/lib/php/sessionclean', hourly = 'run-parts /etc/cron.hourly';
+                    const syslog = [
+                        cron('06:00:01', 2101, hourly),
+                        'Mar 09 06:00:02 web-01 systemd[1]: Starting Daily apt upgrade...',
+                        'Mar 09 06:00:44 web-01 systemd[1]: Finished Daily apt upgrade.',
+                        cron('06:15:01', 2140, clean), cron('06:30:01', 2177, clean), cron('06:45:01', 2203, clean), cron('07:00:01', 2231, hourly),
+                        'Mar 09 07:12:09 web-01 nginx[980]: ERROR upstream timed out (110) while reading response',
+                        cron('07:15:01', 2260, clean), cron('07:30:01', 2288, clean),
+                        'Mar 09 07:40:31 web-01 kernel: [ 9231.11] eth0: link up, 1000 Mbps',
+                        cron('07:45:01', 2315, clean), cron('08:00:01', 2342, hourly),
+                        'Mar 09 08:02:55 web-01 app[1201]: error: database connection refused',
+                        'Mar 09 08:03:00 web-01 app[1201]: reconnected to database',
+                        cron('08:15:01', 2371, clean), cron('08:30:01', 2399, clean), cron('08:45:01', 2426, clean), cron('09:00:01', 2454, hourly),
+                        'Mar 09 09:10:47 web-01 app[1201]: Error: disk usage at 91% on /var',
+                        'Mar 09 09:12:30 web-01 app[1201]: Error: disk usage at 94% on /var',
+                        cron('09:15:01', 2483, clean),
+                        'Mar 09 09:16:05 web-01 systemd[1]: Started Session 42 of user alex.'
+                    ];
+                    const auth = [
+                        'Mar 09 08:30:15 web-01 sshd[1902]: Accepted publickey for alex from 10.0.4.22 port 44110 ssh2',
+                        'Mar 09 08:31:02 web-01 sudo: alex : COMMAND=/usr/bin/apt update',
+                        'Mar 09 09:02:11 web-01 sshd[2410]: Failed password for root from 198.51.100.77 port 51201 ssh2',
+                        'Mar 09 09:05:37 web-01 sshd[2412]: Failed password for admin from 198.51.100.77 port 51244 ssh2',
+                        'Mar 09 09:09:02 web-01 sshd[2415]: Failed password for root from 198.51.100.77 port 51290 ssh2',
+                        'Mar 09 09:13:48 web-01 sshd[2419]: Failed password for git from 198.51.100.77 port 51333 ssh2',
+                        'Mar 09 09:15:20 web-01 sshd[2422]: Failed publickey for alex from 10.0.4.22 port 44180 ssh2',
+                        'Mar 09 09:16:04 web-01 sshd[2423]: Accepted publickey for alex from 10.0.4.22 port 44190 ssh2'
+                    ];
+                    return {
+                        fs: d({
+                            home: d({ alex: d({}) }),
+                            var: d({ log: d({ syslog: f('-rw-r-----', syslog.join('\n'), 'root'), 'auth.log': f('-rw-r-----', auth.join('\n'), 'root') }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root')
+                        }, 'drwxr-xr-x', 'root'),
+                        cwd: '/var/log',
+                        procs: [{ user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' }, { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'head', desc: 'Show only the first 3 lines of syslog (head -n 3)', hint: 'Type: head -n 3 syslog', check: (T) => T.ran(/^\s*(head|tail)\b(?=.*(-n\s*\d|\s-\d))(?=.*syslog)/),
+                        lesson: 'Last time <code>tail</code> showed the end of a log. <code>head</code> shows the start, and both take <code>-n</code> and a number to say how many lines: <code>head -n 3 syslog</code> prints the first 3, <code>tail -n 3 syslog</code> the last 3. Start small like this whenever you open a log you don\'t know: you see what its lines look like before it floods your screen.'
+                    },
+                    {
+                        id: 'noise', desc: 'Hide the CRON noise (grep -v)', hint: 'Type: grep -v CRON syslog', check: (T) => T.ran(/^\s*grep\b(?=.*\s-\w*v)(?=.*cron)/i),
+                        lesson: 'Try <code>cat syslog</code>: most lines are <b>CRON</b>, the scheduler, saying it ran a routine job. That\'s noise. <code>grep -v WORD</code> does the opposite of grep: it shows every line that does <b>not</b> contain WORD. Type <code>grep -v CRON syslog</code> and watch the log shrink to the lines worth reading.'
+                    },
+                    {
+                        id: 'chain', desc: 'Show only the app\'s errors: two greps joined by a pipe', hint: 'Type: grep -i error syslog | grep app', check: (T) => T.ran(/grep\b.*\|\s*grep\b/i),
+                        lesson: 'One filter is good, two are better. A pipe <code>|</code> hands the first command\'s output to the next, so each grep narrows the result further: <code>grep -i error syslog | grep app</code> first keeps the errors, then keeps only the ones from <b>app</b>. You can chain as many as you like, reading left to right.'
+                    },
+                    {
+                        id: 'phrase', desc: 'Search auth.log for the phrase "Failed password" (in quotes)', hint: 'Type: grep "Failed password" auth.log', check: (T) => T.ran(/grep\b.*["']failed password["']/i),
+                        lesson: 'Spaces separate the parts of a command, so <code>grep Failed password auth.log</code> would search for "Failed" in two files called <i>password</i> and <i>auth.log</i>. Put a phrase in <b>quotes</b> to keep it together: <code>grep "Failed password" auth.log</code>. It matters here: one line says "Failed <b>publickey</b>", which is Alex\'s own laptop fumbling a key, not a guess.'
+                    },
+                    {
+                        id: 'last', desc: 'Show only the newest failed password (… | tail -n 1)', hint: 'Type: grep "Failed password" auth.log | tail -n 1', check: (T) => T.ran(/grep\b.*failed password.*\|\s*tail\b/i),
+                        lesson: 'Logs grow at the bottom, so the newest match is the last one grep prints. Pipe it into <code>tail -n 1</code> to keep just that line: <code>grep "Failed password" auth.log | tail -n 1</code>. "When did it last happen?" is one of the first questions in any incident.'
+                    },
+                    {
+                        id: 'when', desc: 'At what time was the newest password guess? (answer HH:MM:SS)', hint: 'Read the time after "Mar 09" in the line you just found, e.g. answer 09:00:00',
+                        answer: '09:13:48', wrong: 'Use grep "Failed password" auth.log | tail -n 1 and read the time after the date.', check: (T) => T.answers.has('09:13:48'),
+                        lesson: 'Every log line starts with a <b>timestamp</b>: the date (<code>Mar 09</code>) then the time (<code>09:13:48</code>). Read the time from the line you just found and type it, e.g. <code>answer 09:00:00</code>.'
+                    }
+                ]
+            },
+            {
+                id: 'log-timeline',
+                stage: 'basics',
+                icon: '👣',
+                title: 'Follow the Trail',
+                blurb: 'Read a web server log, count visitors with cut, sort and uniq -c, and follow one address through every log.',
+                xp: 55,
+                scenario: 'The website was slow this afternoon. Every request to it is written\nto /var/log/nginx/access.log, one line per page. Find out who was\nhammering it, then follow that address through the other logs.\n\nYou start in /var/log. Follow the 📖 lesson, one step at a time.',
+                skills: ['ls', 'head', 'cut -d " " -f 1', 'sort | uniq -c', 'grep -r'],
+                chips: ['ls nginx', 'head nginx/access.log', 'cut -d " " -f 1 nginx/access.log', 'cut -d " " -f 1 nginx/access.log | sort | uniq -c', 'hint'],
+                debrief: 'That\'s a real investigation pattern. cut picks a column, sort puts the same values next to each other, uniq -c counts them, and adding "| sort -rn | head" ranks them. Then grep -r follows the suspect through every log at once. The same address scouted the website for secrets and then tried to log in over SSH: one attacker, two doors. Linking events across logs like this is what turns scattered noise into a story.',
+                build() {
+                    const req = (ip, t, path, code, size) => ip + ' - - [09/Mar/2026:' + t + ' +0000] "GET ' + path + ' HTTP/1.1" ' + code + ' ' + size;
+                    const bad = '203.0.113.45';
+                    const access = [
+                        req('10.0.4.22', '14:00:03', '/', 200, 5120), req('192.0.2.15', '14:00:41', '/starfall', 200, 8840),
+                        req(bad, '14:01:02', '/wp-login.php', 404, 162), req('10.0.4.31', '14:01:30', '/press-kit.zip', 200, 90211),
+                        req(bad, '14:01:03', '/.env', 404, 162), req(bad, '14:01:03', '/admin', 404, 162),
+                        req('192.0.2.15', '14:02:10', '/starfall/trailer', 200, 4410), req(bad, '14:01:04', '/phpmyadmin/', 404, 162),
+                        req(bad, '14:01:05', '/backup.zip', 404, 162), req('10.0.4.22', '14:03:12', '/careers', 200, 3302),
+                        req(bad, '14:01:06', '/.git/config', 404, 162), req('198.51.100.8', '14:04:55', '/', 200, 5120),
+                        req(bad, '14:01:07', '/config.php.bak', 404, 162), req('192.0.2.15', '14:05:20', '/starfall/faq', 200, 2980),
+                        req(bad, '14:01:08', '/server-status', 403, 199), req('10.0.4.31', '14:06:02', '/', 200, 5120)
+                    ];
+                    const auth = [
+                        'Mar 09 13:58:12 web-01 sshd[3102]: Accepted publickey for alex from 10.0.4.22 port 45010 ssh2',
+                        'Mar 09 14:02:40 web-01 sshd[3140]: Failed password for deploy from ' + bad + ' port 50112 ssh2',
+                        'Mar 09 14:02:44 web-01 sshd[3141]: Failed password for deploy from ' + bad + ' port 50118 ssh2',
+                        'Mar 09 14:02:49 web-01 sshd[3143]: Failed password for deploy from ' + bad + ' port 50125 ssh2',
+                        'Mar 09 14:10:05 web-01 sshd[3190]: Accepted publickey for sam from 10.0.4.31 port 45088 ssh2'
+                    ];
+                    const syslog = [
+                        'Mar 09 14:00:01 web-01 CRON[3001]: (root) CMD (run-parts /etc/cron.hourly)',
+                        'Mar 09 14:01:09 web-01 nginx[980]: warning: 8 requests in 6 s from ' + bad,
+                        'Mar 09 14:15:01 web-01 CRON[3220]: (root) CMD (/usr/lib/php/sessionclean)'
+                    ];
+                    return {
+                        fs: d({
+                            home: d({ alex: d({}) }),
+                            var: d({
+                                log: d({
+                                    nginx: d({ 'access.log': f('-rw-r-----', access.join('\n'), 'www-data'), 'error.log': f('-rw-r-----', '2026/03/09 14:01:04 [error] 980#0: open() "/var/www/html/.env" failed (2: No such file or directory)', 'www-data') }, 'drwxr-xr-x', 'root'),
+                                    'auth.log': f('-rw-r-----', auth.join('\n'), 'root'),
+                                    syslog: f('-rw-r-----', syslog.join('\n'), 'root')
+                                }, 'drwxr-xr-x', 'root')
+                            }, 'drwxr-xr-x', 'root')
+                        }, 'drwxr-xr-x', 'root'),
+                        cwd: '/var/log',
+                        procs: [{ user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' }, { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }, { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'nginx', desc: 'List the web server\'s logs (ls nginx)', hint: 'Type: ls nginx', check: (T) => T.listed.has('/var/log/nginx'),
+                        lesson: 'Big programs keep their own folder of logs inside <code>/var/log</code>. <b>nginx</b> is the web server behind the website, so its logs are in <code>/var/log/nginx</code>. You\'re already in /var/log, so type <code>ls nginx</code>.'
+                    },
+                    {
+                        id: 'peek', desc: 'Read the first lines of the web log (head)', hint: 'Type: head nginx/access.log', check: (T) => T.ran(/^\s*(head|cat|tail)\b.*access\.log/),
+                        lesson: '<code>access.log</code> has one line per request. Each line starts with the visitor\'s <b>IP address</b>, then the time in [brackets], the page asked for (<code>"GET /careers"</code>), and the <b>status</b>: 200 = OK, 404 = not found, 403 = forbidden. Type <code>head nginx/access.log</code>. Spot anything odd about the pages some visitors ask for?'
+                    },
+                    {
+                        id: 'cut', desc: 'Show only the first column: the visitors\' addresses (cut)', hint: 'Type: cut -d " " -f 1 nginx/access.log', check: (T) => T.ran(/\bcut\b(?=.*-f\s*1\b)/) && T.ran(/access\.log/),
+                        lesson: 'You only care about <i>who</i> right now. <code>cut</code> keeps chosen columns: <code>-d " "</code> says columns are separated by spaces (the <b>d</b>elimiter, in quotes because it\'s a space), and <code>-f 1</code> keeps <b>f</b>ield 1. Type <code>cut -d " " -f 1 nginx/access.log</code>: one address per request.'
+                    },
+                    {
+                        id: 'count', desc: 'Count the requests from each address (… | sort | uniq -c)', hint: 'Type: cut -d " " -f 1 nginx/access.log | sort | uniq -c', check: (T) => T.ran(/\|\s*sort\b[^|]*\|\s*uniq\s+-\w*c/),
+                        lesson: '<code>uniq -c</code> squashes repeated lines into one and writes how many there were in front. It only joins repeats that sit <b>next to each other</b>, so <code>sort</code> them first. Add both to the end of your last command: <code>cut -d " " -f 1 nginx/access.log | sort | uniq -c</code>. (Pro move: add <code>| sort -rn</code> to put the biggest count on top.)'
+                    },
+                    {
+                        id: 'top', desc: 'Which address made the most requests? (answer <ip>)', hint: 'Look for the biggest number in the uniq -c output, then: answer <that IP>',
+                        answer: '203.0.113.45', wrong: 'Run cut -d " " -f 1 nginx/access.log | sort | uniq -c and pick the address with the biggest count.', check: (T) => T.answers.has('203.0.113.45'),
+                        lesson: 'The number in front of each address is how many requests it made. One stands out. Look back at <code>head</code>: it asked for <code>/.env</code>, <code>/.git/config</code> and <code>/backup.zip</code>, files that hold secrets on a careless server. That\'s someone scanning, not a fan. Type <code>answer</code> and the address.'
+                    },
+                    {
+                        id: 'trail', desc: 'Search every log for that address at once (grep -r)', hint: 'Type: grep -r 203.0.113.45 /var/log', check: (T) => T.ran(/^\s*grep\b(?=.*\s-\w*r)(?=.*203\.0\.113\.45)/),
+                        lesson: 'Did it try anything else? <code>grep -r</code> ("recursive") searches every file in a folder and its subfolders, and prints which file each match came from. Type <code>grep -r 203.0.113.45 /var/log</code>, then read where it turns up.'
+                    },
+                    {
+                        id: 'user', desc: 'Which username did it try over SSH? (answer <name>)', hint: 'Find its lines in auth.log, read the word after "Failed password for", then: answer <name>',
+                        answer: 'deploy', wrong: 'Look at the auth.log lines from 203.0.113.45: the name comes right after "Failed password for".', check: (T) => T.answers.has('deploy'),
+                        lesson: 'The address turned up in <code>auth.log</code> too: after scanning the website, it tried to log in over SSH. In a "Failed password for <b>NAME</b> from …" line, NAME is the account it tried. Type <code>answer</code> and that name.'
+                    }
+                ]
+            },
+            {
                 id: 'jobs',
                 stage: 'basics',
+                after: 'reading-logs',
                 icon: '⚙️',
                 title: 'Processes & Scheduled Jobs',
                 blurb: 'See what\'s running, stop a runaway process, and read cron jobs.',
@@ -3503,6 +3673,80 @@ permalink: /cyber-quest/
                 ]
             },
             {
+                id: 'ch-filter', after: 'log-filters', icon: '🧹', title: 'Challenge: Signal & Noise', par: 5, xp: 55,
+                blurb: 'A noisy log and two questions. Filter your way to the answers.',
+                scenario: 'This server\'s logs are mostly CRON chatter. Somewhere in there are\nthe lines that matter.' + CHALLENGE_SCENARIO,
+                debrief: 'You filtered instead of scrolling: grep -v to drop the noise, wc -l to count what was left, quotes to search a phrase, and tail -n 1 to find the newest match.',
+                build() {
+                    const two = (n) => String(n).padStart(2, '0');
+                    const events = [];
+                    for (let m = 0; m < 180; m += 15) events.push({ t: m * 60 + 1, l: 'CRON[' + (2000 + m) + ']: (root) CMD (' + pick(['/usr/lib/php/sessionclean', 'run-parts /etc/cron.hourly']) + ')' });
+                    const real = ['nginx[980]: ERROR upstream timed out (110)', 'app[1201]: error: database connection refused', 'kernel: [ 9231.11] eth0: link up', 'systemd[1]: Started Session 12 of user alex.', 'app[1201]: Error: disk usage at 9' + rnd(10) + '% on /var', 'systemd[1]: Restarting nginx.service...', 'app[1201]: cache warmed in 2.1 s'];
+                    const keep = real.slice(0, 3 + rnd(5));
+                    keep.forEach((l) => events.push({ t: 120 + rnd(10500), l }));
+                    events.sort((x, y) => x.t - y.t);
+                    const at = (t) => '0' + (6 + Math.floor(t / 3600)) + ':' + two(Math.floor(t / 60) % 60) + ':' + two(t % 60);
+                    const syslog = events.map((e) => 'Mar 11 ' + at(e.t) + ' web-01 ' + e.l);
+                    const ip = '198.51.100.' + (20 + rnd(200));
+                    let t = 3600 + rnd(600);
+                    const auth = [];
+                    const guesses = 3 + rnd(4);
+                    let time = '';
+                    for (let i = 0; i < guesses; i++) {
+                        t += 30 + rnd(400);
+                        time = at(t);
+                        auth.push('Mar 11 ' + time + ' web-01 sshd[' + (3100 + i) + ']: Failed password for ' + pick(['root', 'admin', 'git', 'test']) + ' from ' + ip + ' port ' + (40000 + rnd(20000)) + ' ssh2');
+                    }
+                    auth.unshift('Mar 11 06:40:02 web-01 sshd[2900]: Accepted publickey for alex from 10.0.4.22 port 44110 ssh2');
+                    auth.push('Mar 11 ' + at(t + 60 + rnd(300)) + ' web-01 sshd[3190]: Failed publickey for alex from 10.0.4.22 port 44180 ssh2');
+                    const files = {
+                        '/var/log/syslog': f('-rw-r-----', syslog.join('\n') + '\n', 'root'),
+                        '/var/log/auth.log': f('-rw-r-----', auth.join('\n') + '\n', 'root'),
+                        '/home/alex': null
+                    };
+                    return { fs: fsTree(files), cwd: '/home/alex', procs: BASE_PROCS(), net: [], services: {}, vars: { n: String(keep.length), time } };
+                },
+                tasks: [
+                    { id: 'n', desc: 'Answer how many lines in /var/log/syslog are NOT from CRON', answer: (T) => T.vars.n, check: (T) => T.answers.has(T.vars.n), wrong: 'That isn\'t how many non-CRON lines there are.' },
+                    { id: 'time', desc: 'Answer the time (HH:MM:SS) of the newest failed password guess in /var/log/auth.log', answer: (T) => T.vars.time, check: (T) => T.answers.has(T.vars.time), wrong: 'That isn\'t the time of the newest failed password guess.' }
+                ]
+            },
+            {
+                id: 'ch-trail', after: 'log-timeline', icon: '👣', title: 'Challenge: Busiest Visitor', par: 6, xp: 60,
+                blurb: 'Rank a web log\'s visitors, then follow the top one into the login log.',
+                scenario: 'Something hammered this website. Find who, then find what else\nthey tried.' + CHALLENGE_SCENARIO,
+                debrief: 'You ranked visitors with cut | sort | uniq -c and followed the top address across logs with grep -r. Same address on the website and on SSH: one attacker trying two doors.',
+                build() {
+                    const ip = pick(['203.0.113.', '198.51.100.']) + (10 + rnd(240));
+                    const user = pick(['deploy', 'backup', 'ci', 'jenkins', 'ftpuser']);
+                    const visitors = ['10.0.4.22', '10.0.4.31', '192.0.2.' + (10 + rnd(40)), '192.0.2.' + (60 + rnd(40)), '198.51.100.' + (2 + rnd(6))];
+                    const pages = ['/', '/starfall', '/careers', '/press-kit.zip', '/starfall/faq'];
+                    const probes = ['/.env', '/wp-login.php', '/admin', '/.git/config', '/backup.zip', '/phpmyadmin/', '/config.php.bak', '/server-status', '/db.sql', '/.aws/credentials'];
+                    const hits = 6 + rnd(4);
+                    const rows = [];
+                    visitors.forEach((v) => { for (let i = 0, n = 1 + rnd(3); i < n; i++) rows.push([v, pick(pages), 200]); });
+                    probes.slice(0, hits).forEach((pg) => rows.push([ip, pg, 404]));
+                    rows.sort(() => Math.random() - 0.5);
+                    const access = rows.map(([who, pg, code], i) => who + ' - - [11/Mar/2026:15:' + String(i * 2 % 60).padStart(2, '0') + ':0' + rnd(10) + ' +0000] "GET ' + pg + ' HTTP/1.1" ' + code + ' ' + (150 + rnd(9000)));
+                    const auth = [
+                        'Mar 11 14:58:12 web-01 sshd[3102]: Accepted publickey for alex from 10.0.4.22 port 45010 ssh2',
+                        'Mar 11 15:20:31 web-01 sshd[3150]: Failed password for root from ' + visitors[4] + ' port 50001 ssh2'
+                    ];
+                    for (let i = 0; i < 2 + rnd(3); i++) auth.push('Mar 11 15:3' + i + ':1' + rnd(10) + ' web-01 sshd[31' + (60 + i) + ']: Failed password for ' + user + ' from ' + ip + ' port ' + (50100 + rnd(900)) + ' ssh2');
+                    const files = {
+                        '/var/log/nginx/access.log': f('-rw-r-----', access.join('\n') + '\n', 'www-data'),
+                        '/var/log/auth.log': f('-rw-r-----', auth.join('\n') + '\n', 'root'),
+                        '/var/log/syslog': f('-rw-r-----', 'Mar 11 15:00:01 web-01 CRON[3001]: (root) CMD (run-parts /etc/cron.hourly)\n', 'root'),
+                        '/home/alex': null
+                    };
+                    return { fs: fsTree(files), cwd: '/home/alex', procs: BASE_PROCS(), net: [], services: {}, vars: { ip, user } };
+                },
+                tasks: [
+                    { id: 'ip', desc: 'Answer the address that sent the most requests to the website', answer: (T) => T.vars.ip, check: (T) => T.answers.has(T.vars.ip), wrong: 'That isn\'t the busiest address in the web log.' },
+                    { id: 'user', desc: 'That address also tried to log in over SSH: answer the username it tried', answer: (T) => T.vars.user, check: (T) => T.answers.has(T.vars.user), wrong: 'That isn\'t the account it tried.' }
+                ]
+            },
+            {
                 id: 'ch-jobs', after: 'jobs', icon: '⚙️', title: 'Challenge: Runaway Process', par: 6, xp: 60,
                 blurb: 'Something is eating the CPU and keeps coming back. Stop it and find out why.',
                 scenario: 'This server is crawling. Something is using almost all the CPU,\nand it seems to start itself again on a schedule.' + CHALLENGE_SCENARIO,
@@ -3868,6 +4112,7 @@ permalink: /cyber-quest/
                     if (fl.includes('c')) return { out: [String(hits.length)] };
                     return { out: hits.map((l) => ({ text: l, html: colorize(l) })) };
                 }
+                if (cmd === 'sort' || cmd === 'uniq' || cmd === 'cut') return textOp(cmd, a, lines);
                 if (cmd === 'wc' && a.includes('-l')) return { out: [String(lines.length)] };
                 if (cmd === 'head') { const n = num(a, 10); return { out: lines.slice(0, n) }; }
                 if (cmd === 'tail') { const n = num(a, 10); return { out: lines.slice(-n) }; }
@@ -3934,6 +4179,13 @@ permalink: /cyber-quest/
                         }
                         return { err: ['✘ Not quite. ' + (t.wrong || 'Look again and try another answer.')] };
                     }
+                    case 'sort': case 'uniq': case 'cut': {
+                        // The file is the last word, unless it is a flag or the value of -d / -f.
+                        const last = a.length > 1 ? a[a.length - 1] : null, before = a[a.length - 2];
+                        if (!last || last.startsWith('-') || before === '-d' || before === '-f') return { err: [cmd + ': give it a file (' + cmd + ' access.log) or pipe into it (… | ' + cmd + ')'] };
+                        const n = this.cat([last]);
+                        return n.out && n.out.some((l) => typeof l === 'string') ? textOp(cmd, a, n.out.filter((l) => typeof l === 'string')) : n;
+                    }
                     case 'head': { const n = this.cat(pos); if (n.out) n.out = n.out.slice(0, num(args, 10)); return n; }
                     case 'tail': { const n = this.cat(pos); if (n.out) n.out = n.out.slice(-num(args, 10)); return n; }
                     case 'grep': return this.grep(args);
@@ -3999,6 +4251,7 @@ permalink: /cyber-quest/
                 const i = fl.includes('i');
                 const r = fl.includes('r') || fl.includes('R');
                 const c = fl.includes('c');
+                const v = fl.includes('v');
                 const rest = args.filter((x) => !x.startsWith('-'));
                 const pat = rest[0] || '';
                 const targets = rest.slice(1);
@@ -4012,7 +4265,7 @@ permalink: /cyber-quest/
                     }
                     this.T.read.add(abs);
                     node.content.replace(/\n$/, '').split('\n').forEach((l) => {
-                        if (re.test(l)) out.push({ text: l, html: (prefix ? '<span class="c-path">' + esc(abs) + ':</span>' : '') + colorize(l) });
+                        if (re.test(l) !== v) out.push({ text: l, html: (prefix ? '<span class="c-path">' + esc(abs) + ':</span>' : '') + colorize(l) });
                     });
                 };
                 if (!targets.length) return { err: ['usage: grep [-i] [-r] PATTERN FILE'] };
@@ -4330,6 +4583,33 @@ permalink: /cyber-quest/
             const short = a.find((x) => /^-\d+$/.test(x)); // tail -5
             return short ? parseInt(short.slice(1), 10) : def;
         }
+        // sort, uniq and cut work the same on a file and after a pipe.
+        function textOp(cmd, a, lines) {
+            const flag = (ch) => a.some((x) => new RegExp('^-[a-z]*' + ch).test(x));
+            if (cmd === 'sort') {
+                const key = (l) => parseFloat(l.trim()) || 0;
+                const out = lines.slice().sort((x, y) => (flag('n') ? key(x) - key(y) : x < y ? -1 : x > y ? 1 : 0));
+                return { out: flag('r') ? out.reverse() : out };
+            }
+            if (cmd === 'uniq') {
+                const runs = [];
+                lines.forEach((l) => { const last = runs[runs.length - 1]; if (last && last.l === l) last.n++; else runs.push({ l, n: 1 }); });
+                return { out: runs.map((r) => (flag('c') ? String(r.n).padStart(7) + ' ' + r.l : r.l)) };
+            }
+            // cut -d ' ' -f 1: split each line at the delimiter and keep the numbered fields.
+            let delim = ' ', fields = '';
+            for (let k = 1; k < a.length; k++) {
+                const x = a[k];
+                if (x === '-d') delim = a[++k];
+                else if (/^-d./.test(x)) delim = x.slice(2);
+                else if (x === '-f') fields = a[++k] || '';
+                else if (/^-f./.test(x)) fields = x.slice(2);
+            }
+            if (!delim || delim === '"' || delim === "'") delim = ' ';
+            const nums = String(fields).split(',').map((n) => parseInt(n, 10)).filter((n) => n > 0);
+            if (!nums.length) return { err: ['cut: say which column with -f, e.g. cut -d " " -f 1 access.log'] };
+            return { out: lines.map((l) => { const parts = l.split(delim); return nums.map((n) => parts[n - 1] || '').join(delim); }) };
+        }
         function hlMatch(line, pat, ci) {
             if (!pat) return esc(line);
             try {
@@ -4411,7 +4691,7 @@ permalink: /cyber-quest/
         // cleanly on a phone (each row hangs under the description column).
         const HELP_GROUPS = [
             ['Moving around', [['pwd', 'where am I'], ['ls [-a -l] [dir]', 'list files'], ['cd <dir>', 'change directory'], ['find <dir> -name <name>', 'find files']]],
-            ['Reading files', [['cat <file>', 'read a file'], ['head / tail [-n 5] <file>', 'first / last lines'], ['grep [-i -c -r] <word> <file>', 'search in files'], ['wc -l <file>', 'count lines'], ['sha256sum <file>', 'checksum a file']]],
+            ['Reading files', [['cat <file>', 'read a file'], ['head / tail [-n 5] <file>', 'first / last lines'], ['grep [-i -c -r] <word> <file>', 'search in files'], ['grep -v <word> <file>', 'lines without it'], ['cut -d " " -f 1 <file>', 'keep one column'], ['sort | uniq -c', 'count repeats'], ['wc -l <file>', 'count lines'], ['sha256sum <file>', 'checksum a file']]],
             ['Processes and jobs', [['ps aux', 'running processes'], ['kill <pid>', 'stop a process'], ['crontab -l', 'your scheduled jobs']]],
             ['Security', [['whoami / id', 'who am I'], ['chmod 600 <file>', 'change permissions'], ['ss -tlnp', 'listening ports'], ['systemctl stop <svc>', 'stop a service'], ['ufw deny <port>', 'firewall rule']]],
             ['This game', [['answer <text>', 'answer a question'], ['man <cmd>', 'explain a command'], ['hint', 'your next step'], ['clear', 'wipe the screen'], ['exit', 'log out']]]
@@ -4427,7 +4707,10 @@ permalink: /cyber-quest/
         }
         const MAN = {
             ls: 'ls — list directory contents. -a shows hidden (dotfiles), -l shows details.',
-            grep: 'grep — print lines matching a pattern. -i ignores case, -r searches a directory.',
+            grep: 'grep — print lines matching a pattern. -i ignores case, -v shows the lines that do NOT match, -c counts, -r searches a whole directory. Quote a phrase: grep "Failed password" auth.log',
+            sort: 'sort — put lines in order. -n sorts by number, -r reverses (biggest first). Often: … | sort | uniq -c | sort -rn',
+            uniq: 'uniq — squash repeated neighbouring lines into one. -c puts a count in front. Sort first, so repeats sit together.',
+            cut: 'cut — keep only some columns. cut -d " " -f 1 access.log splits each line at spaces and keeps the 1st column.',
             chmod: 'chmod — change file permissions. e.g. chmod 640 file = owner read/write, group read, others nothing.',
             kill: 'kill — send a signal to a process by PID. kill -9 forces it.',
             ufw: 'ufw — uncomplicated firewall. ufw deny <port> blocks a port; ufw deny from <ip> blocks an address.',
@@ -4911,7 +5194,7 @@ permalink: /cyber-quest/
             },
             {
                 id: 'ch2', num: 2, title: 'Knock Knock', day: 'Tuesday', icon: '📜', xp: 100,
-                synopsis: 'Learn where Linux keeps its logs and how to read them. Late that night, someone starts guessing passwords.',
+                synopsis: 'Learn where Linux keeps its logs, then read, filter and cross-check them like a detective. Late that night, someone starts guessing passwords.',
                 beats: [
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 15:20', art: '🗺️', lines: [
@@ -4928,6 +5211,33 @@ permalink: /cyber-quest/
                         ]
                     },
                     { type: 'train', lab: 'reading-logs', host: 'web-01', intro: '🧑🏾‍💻 Mira: “The newest lines are at the bottom, and grep is your best friend.”' },
+                    // Beats 4-9 were added later: loadProgress() shifts old ch2 saves past them (STORY_REV 3).
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 16:40', art: '🧹', lines: [
+                            ['sam', 'Okay, I tried your grep thing on syslog. It\'s still four screens of CRON saying it ran a job.', 'worried'],
+                            ['mira', 'That\'s noise. Real logs are mostly noise. The skill isn\'t reading, it\'s throwing lines away until only the interesting ones are left.'],
+                            ['mira', 'Alex, part two: filters. Take it slow, and try each command a couple of different ways.']
+                        ]
+                    },
+                    { type: 'train', lab: 'log-filters', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Small commands, chained together. Read each pipe left to right.”' },
+                    {
+                        type: 'ask', who: 'mira', q: 'What does grep -v CRON syslog print?',
+                        options: ['Every line of syslog that does NOT contain CRON', 'Only the CRON lines', 'How many CRON lines there are', 'The newest CRON line'], answer: 0,
+                        explain: '-v flips grep around: it keeps every line that does not match. It\'s the quickest way to throw away noise you already understand. Counting would be -c, and the newest match is … | tail -n 1.'
+                    },
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 17:20', art: '👣', lines: [
+                            ['dana', 'Quick one: the website crawled for a few minutes after lunch. Press were trying to download the trailer. Was it just busy?', 'worried'],
+                            ['mira', 'Maybe. Or maybe someone was poking at it. The web server writes down every single visitor. Let\'s find out who.'],
+                            ['mira', 'Part three, Alex: count who\'s knocking, then follow them from log to log. Detectives call it following the trail.']
+                        ]
+                    },
+                    { type: 'train', lab: 'log-timeline', host: 'web-01', intro: '🧑🏾‍💻 Mira: “One address, many logs. Count first, then follow it.”' },
+                    {
+                        type: 'ask', who: 'mira', q: 'The same address asked the website for /.env and /backup.zip, then failed SSH logins for “deploy”. What do you make of it?',
+                        options: ['One attacker looking for a way in: first secrets on the website, then passwords', 'Two different people who share an internet connection', 'A search engine indexing the site', 'Nothing. 404 means it didn\'t work, so ignore it'], answer: 0,
+                        explain: 'Same address, same afternoon, two doors tried: that\'s one attacker doing reconnaissance. A 404 means this attempt failed, not that the attacker gave up, so you block the address and keep watching. Linking events across logs is how you see the whole story.'
+                    },
                     {
                         type: 'ask', who: 'mira', q: 'In auth.log: 30 “Failed password” lines from one address, then one “Accepted” from the same address. What happened?',
                         options: ['Someone guessed a password, and got in', 'A user forgot their password, then remembered', 'The server rebooted', 'Nothing. That\'s normal noise'], answer: 0,
