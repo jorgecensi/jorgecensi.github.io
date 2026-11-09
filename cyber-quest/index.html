@@ -1003,7 +1003,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611082208';
+    const SW_VERSION = '2611091300';
 
     (() => {
         'use strict';
@@ -2267,7 +2267,7 @@ permalink: /cyber-quest/
 
         // ── Progress ──────────────────────────────────────────────────────
         const STORE_KEY = 'cyber-quest-progress-v1';
-        const STORY_REV = 2; // bump when beats are inserted into a released chapter, and migrate in loadProgress()
+        const STORY_REV = 3; // bump when beats are inserted into a released chapter, and migrate in loadProgress()
         let progress = loadProgress();
 
         function loadProgress() {
@@ -2279,6 +2279,10 @@ permalink: /cyber-quest/
                     p.settings = p.settings || {};
                     // rev 2 inserted two beats into ch1 after beat 1: move saves that were past them.
                     if ((p.rev || 1) < 2 && p.storyAt && p.storyAt.ch === 'ch1' && p.storyAt.beat >= 2) p.storyAt.beat += 2;
+                    // rev 3 inserted six beats into ch2 after beat 3 (Filter the Noise, Follow the Trail).
+                    if ((p.rev || 1) < 3 && p.storyAt && p.storyAt.ch === 'ch2' && p.storyAt.beat >= 4) p.storyAt.beat += 6;
+                    // rev 3 also inserted six beats into ch4 after beat 0 (Who Can Read This?, Doors and Locks).
+                    if ((p.rev || 1) < 3 && p.storyAt && p.storyAt.ch === 'ch4' && p.storyAt.beat >= 1) p.storyAt.beat += 6;
                     p.rev = STORY_REV;
                     return p;
                 }
@@ -2815,8 +2819,8 @@ permalink: /cyber-quest/
         // A simulated Linux shell on a fake in-memory filesystem. You play the
         // defender of a fictional server and clear objectives with real commands.
         // Nothing here touches a real system.
-        const f = (mode, content, owner) => ({ type: 'file', mode: mode || '-rw-r--r--', owner: owner || 'alex', content: content || '' });
-        const d = (children, mode, owner) => ({ type: 'dir', mode: mode || 'drwxr-xr-x', owner: owner || 'alex', children: children || {} });
+        const f = (mode, content, owner, group) => ({ type: 'file', mode: mode || '-rw-r--r--', owner: owner || 'alex', group: group || owner || 'alex', content: content || '' });
+        const d = (children, mode, owner, group) => ({ type: 'dir', mode: mode || 'drwxr-xr-x', owner: owner || 'alex', group: group || owner || 'alex', children: children || {} });
 
         const LABS = [
             {
@@ -3133,8 +3137,176 @@ permalink: /cyber-quest/
                 ]
             },
             {
+                id: 'log-filters',
+                stage: 'basics',
+                after: 'reading-logs',
+                icon: '🧹',
+                title: 'Filter the Noise',
+                blurb: 'Cut a busy log down to the lines that matter: head, tail, grep -v and chained greps.',
+                xp: 50,
+                scenario: 'Real logs are noisy. Most of syslog is CRON saying "I ran a job"\nevery fifteen minutes. Your job: throw away the noise and keep the\nfew lines that matter.\n\nYou start in /var/log. Follow the 📖 lesson, one step at a time.',
+                skills: ['head -n', 'grep -v', 'grep | grep', 'grep "phrase"', 'grep | tail -n 1'],
+                chips: ['head -n 3 syslog', 'grep -v CRON syslog', 'grep -i error syslog | grep app', 'grep "Failed password" auth.log', 'hint'],
+                debrief: 'Filtering is most of log work. head and tail -n pick lines by position, grep picks them by content, grep -v throws lines away, quotes keep a phrase together, and pipes chain filters until only the answer is left. "grep … | tail -n 1" (the newest match) is one you\'ll type for the rest of your career.',
+                build() {
+                    const cron = (t, pid, job) => 'Mar 09 ' + t + ' web-01 CRON[' + pid + ']: (root) CMD (' + job + ')';
+                    const clean = '/usr/lib/php/sessionclean', hourly = 'run-parts /etc/cron.hourly';
+                    const syslog = [
+                        cron('06:00:01', 2101, hourly),
+                        'Mar 09 06:00:02 web-01 systemd[1]: Starting Daily apt upgrade...',
+                        'Mar 09 06:00:44 web-01 systemd[1]: Finished Daily apt upgrade.',
+                        cron('06:15:01', 2140, clean), cron('06:30:01', 2177, clean), cron('06:45:01', 2203, clean), cron('07:00:01', 2231, hourly),
+                        'Mar 09 07:12:09 web-01 nginx[980]: ERROR upstream timed out (110) while reading response',
+                        cron('07:15:01', 2260, clean), cron('07:30:01', 2288, clean),
+                        'Mar 09 07:40:31 web-01 kernel: [ 9231.11] eth0: link up, 1000 Mbps',
+                        cron('07:45:01', 2315, clean), cron('08:00:01', 2342, hourly),
+                        'Mar 09 08:02:55 web-01 app[1201]: error: database connection refused',
+                        'Mar 09 08:03:00 web-01 app[1201]: reconnected to database',
+                        cron('08:15:01', 2371, clean), cron('08:30:01', 2399, clean), cron('08:45:01', 2426, clean), cron('09:00:01', 2454, hourly),
+                        'Mar 09 09:10:47 web-01 app[1201]: Error: disk usage at 91% on /var',
+                        'Mar 09 09:12:30 web-01 app[1201]: Error: disk usage at 94% on /var',
+                        cron('09:15:01', 2483, clean),
+                        'Mar 09 09:16:05 web-01 systemd[1]: Started Session 42 of user alex.'
+                    ];
+                    const auth = [
+                        'Mar 09 08:30:15 web-01 sshd[1902]: Accepted publickey for alex from 10.0.4.22 port 44110 ssh2',
+                        'Mar 09 08:31:02 web-01 sudo: alex : COMMAND=/usr/bin/apt update',
+                        'Mar 09 09:02:11 web-01 sshd[2410]: Failed password for root from 198.51.100.77 port 51201 ssh2',
+                        'Mar 09 09:05:37 web-01 sshd[2412]: Failed password for admin from 198.51.100.77 port 51244 ssh2',
+                        'Mar 09 09:09:02 web-01 sshd[2415]: Failed password for root from 198.51.100.77 port 51290 ssh2',
+                        'Mar 09 09:13:48 web-01 sshd[2419]: Failed password for git from 198.51.100.77 port 51333 ssh2',
+                        'Mar 09 09:15:20 web-01 sshd[2422]: Failed publickey for alex from 10.0.4.22 port 44180 ssh2',
+                        'Mar 09 09:16:04 web-01 sshd[2423]: Accepted publickey for alex from 10.0.4.22 port 44190 ssh2'
+                    ];
+                    return {
+                        fs: d({
+                            home: d({ alex: d({}) }),
+                            var: d({ log: d({ syslog: f('-rw-r-----', syslog.join('\n'), 'root'), 'auth.log': f('-rw-r-----', auth.join('\n'), 'root') }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root')
+                        }, 'drwxr-xr-x', 'root'),
+                        cwd: '/var/log',
+                        procs: [{ user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' }, { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'head', desc: 'Show only the first 3 lines of syslog (head -n 3)', hint: 'Type: head -n 3 syslog', check: (T) => T.ran(/^\s*(head|tail)\b(?=.*(-n\s*\d|\s-\d))(?=.*syslog)/),
+                        lesson: 'Last time <code>tail</code> showed the end of a log. <code>head</code> shows the start, and both take <code>-n</code> and a number to say how many lines: <code>head -n 3 syslog</code> prints the first 3, <code>tail -n 3 syslog</code> the last 3. Start small like this whenever you open a log you don\'t know: you see what its lines look like before it floods your screen.'
+                    },
+                    {
+                        id: 'noise', desc: 'Hide the CRON noise (grep -v)', hint: 'Type: grep -v CRON syslog', check: (T) => T.ran(/^\s*grep\b(?=.*\s-\w*v)(?=.*cron)/i),
+                        lesson: 'Try <code>cat syslog</code>: most lines are <b>CRON</b>, the scheduler, saying it ran a routine job. That\'s noise. <code>grep -v WORD</code> does the opposite of grep: it shows every line that does <b>not</b> contain WORD. Type <code>grep -v CRON syslog</code> and watch the log shrink to the lines worth reading.'
+                    },
+                    {
+                        id: 'chain', desc: 'Show only the app\'s errors: two greps joined by a pipe', hint: 'Type: grep -i error syslog | grep app', check: (T) => T.ran(/grep\b.*\|\s*grep\b/i),
+                        lesson: 'One filter is good, two are better. A pipe <code>|</code> hands the first command\'s output to the next, so each grep narrows the result further: <code>grep -i error syslog | grep app</code> first keeps the errors, then keeps only the ones from <b>app</b>. You can chain as many as you like, reading left to right.'
+                    },
+                    {
+                        id: 'phrase', desc: 'Search auth.log for the phrase "Failed password" (in quotes)', hint: 'Type: grep "Failed password" auth.log', check: (T) => T.ran(/grep\b.*["']failed password["']/i),
+                        lesson: 'Spaces separate the parts of a command, so <code>grep Failed password auth.log</code> would search for "Failed" in two files called <i>password</i> and <i>auth.log</i>. Put a phrase in <b>quotes</b> to keep it together: <code>grep "Failed password" auth.log</code>. It matters here: one line says "Failed <b>publickey</b>", which is Alex\'s own laptop fumbling a key, not a guess.'
+                    },
+                    {
+                        id: 'last', desc: 'Show only the newest failed password (… | tail -n 1)', hint: 'Type: grep "Failed password" auth.log | tail -n 1', check: (T) => T.ran(/grep\b.*failed password.*\|\s*tail\b/i),
+                        lesson: 'Logs grow at the bottom, so the newest match is the last one grep prints. Pipe it into <code>tail -n 1</code> to keep just that line: <code>grep "Failed password" auth.log | tail -n 1</code>. "When did it last happen?" is one of the first questions in any incident.'
+                    },
+                    {
+                        id: 'when', desc: 'At what time was the newest password guess? (answer HH:MM:SS)', hint: 'Read the time after "Mar 09" in the line you just found, e.g. answer 09:00:00',
+                        answer: '09:13:48', wrong: 'Use grep "Failed password" auth.log | tail -n 1 and read the time after the date.', check: (T) => T.answers.has('09:13:48'),
+                        lesson: 'Every log line starts with a <b>timestamp</b>: the date (<code>Mar 09</code>) then the time (<code>09:13:48</code>). Read the time from the line you just found and type it, e.g. <code>answer 09:00:00</code>.'
+                    }
+                ]
+            },
+            {
+                id: 'log-timeline',
+                stage: 'basics',
+                icon: '👣',
+                title: 'Follow the Trail',
+                blurb: 'Read a web server log, count visitors with cut, sort and uniq -c, and follow one address through every log.',
+                xp: 55,
+                scenario: 'The website was slow this afternoon. Every request to it is written\nto /var/log/nginx/access.log, one line per page. Find out who was\nhammering it, then follow that address through the other logs.\n\nYou start in /var/log. Follow the 📖 lesson, one step at a time.',
+                skills: ['ls', 'head', 'cut -d " " -f 1', 'sort | uniq -c', 'grep -r'],
+                chips: ['ls nginx', 'head nginx/access.log', 'cut -d " " -f 1 nginx/access.log', 'cut -d " " -f 1 nginx/access.log | sort | uniq -c', 'hint'],
+                debrief: 'That\'s a real investigation pattern. cut picks a column, sort puts the same values next to each other, uniq -c counts them, and adding "| sort -rn | head" ranks them. Then grep -r follows the suspect through every log at once. The same address scouted the website for secrets and then tried to log in over SSH: one attacker, two doors. Linking events across logs like this is what turns scattered noise into a story.',
+                build() {
+                    const req = (ip, t, path, code, size) => ip + ' - - [09/Mar/2026:' + t + ' +0000] "GET ' + path + ' HTTP/1.1" ' + code + ' ' + size;
+                    const bad = '203.0.113.45';
+                    const access = [
+                        req('10.0.4.22', '14:00:03', '/', 200, 5120), req('192.0.2.15', '14:00:41', '/starfall', 200, 8840),
+                        req(bad, '14:01:02', '/wp-login.php', 404, 162), req('10.0.4.31', '14:01:30', '/press-kit.zip', 200, 90211),
+                        req(bad, '14:01:03', '/.env', 404, 162), req(bad, '14:01:03', '/admin', 404, 162),
+                        req('192.0.2.15', '14:02:10', '/starfall/trailer', 200, 4410), req(bad, '14:01:04', '/phpmyadmin/', 404, 162),
+                        req(bad, '14:01:05', '/backup.zip', 404, 162), req('10.0.4.22', '14:03:12', '/careers', 200, 3302),
+                        req(bad, '14:01:06', '/.git/config', 404, 162), req('198.51.100.8', '14:04:55', '/', 200, 5120),
+                        req(bad, '14:01:07', '/config.php.bak', 404, 162), req('192.0.2.15', '14:05:20', '/starfall/faq', 200, 2980),
+                        req(bad, '14:01:08', '/server-status', 403, 199), req('10.0.4.31', '14:06:02', '/', 200, 5120)
+                    ];
+                    const auth = [
+                        'Mar 09 13:58:12 web-01 sshd[3102]: Accepted publickey for alex from 10.0.4.22 port 45010 ssh2',
+                        'Mar 09 14:02:40 web-01 sshd[3140]: Failed password for deploy from ' + bad + ' port 50112 ssh2',
+                        'Mar 09 14:02:44 web-01 sshd[3141]: Failed password for deploy from ' + bad + ' port 50118 ssh2',
+                        'Mar 09 14:02:49 web-01 sshd[3143]: Failed password for deploy from ' + bad + ' port 50125 ssh2',
+                        'Mar 09 14:10:05 web-01 sshd[3190]: Accepted publickey for sam from 10.0.4.31 port 45088 ssh2'
+                    ];
+                    const syslog = [
+                        'Mar 09 14:00:01 web-01 CRON[3001]: (root) CMD (run-parts /etc/cron.hourly)',
+                        'Mar 09 14:01:09 web-01 nginx[980]: warning: 8 requests in 6 s from ' + bad,
+                        'Mar 09 14:15:01 web-01 CRON[3220]: (root) CMD (/usr/lib/php/sessionclean)'
+                    ];
+                    return {
+                        fs: d({
+                            home: d({ alex: d({}) }),
+                            var: d({
+                                log: d({
+                                    nginx: d({ 'access.log': f('-rw-r-----', access.join('\n'), 'www-data'), 'error.log': f('-rw-r-----', '2026/03/09 14:01:04 [error] 980#0: open() "/var/www/html/.env" failed (2: No such file or directory)', 'www-data') }, 'drwxr-xr-x', 'root'),
+                                    'auth.log': f('-rw-r-----', auth.join('\n'), 'root'),
+                                    syslog: f('-rw-r-----', syslog.join('\n'), 'root')
+                                }, 'drwxr-xr-x', 'root')
+                            }, 'drwxr-xr-x', 'root')
+                        }, 'drwxr-xr-x', 'root'),
+                        cwd: '/var/log',
+                        procs: [{ user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' }, { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }, { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'nginx', desc: 'List the web server\'s logs (ls nginx)', hint: 'Type: ls nginx', check: (T) => T.listed.has('/var/log/nginx'),
+                        lesson: 'Big programs keep their own folder of logs inside <code>/var/log</code>. <b>nginx</b> is the web server behind the website, so its logs are in <code>/var/log/nginx</code>. You\'re already in /var/log, so type <code>ls nginx</code>.'
+                    },
+                    {
+                        id: 'peek', desc: 'Read the first lines of the web log (head)', hint: 'Type: head nginx/access.log', check: (T) => T.ran(/^\s*(head|cat|tail)\b.*access\.log/),
+                        lesson: '<code>access.log</code> has one line per request. Each line starts with the visitor\'s <b>IP address</b>, then the time in [brackets], the page asked for (<code>"GET /careers"</code>), and the <b>status</b>: 200 = OK, 404 = not found, 403 = forbidden. Type <code>head nginx/access.log</code>. Spot anything odd about the pages some visitors ask for?'
+                    },
+                    {
+                        id: 'cut', desc: 'Show only the first column: the visitors\' addresses (cut)', hint: 'Type: cut -d " " -f 1 nginx/access.log', check: (T) => T.ran(/\bcut\b(?=.*-f\s*1\b)/) && T.ran(/access\.log/),
+                        lesson: 'You only care about <i>who</i> right now. <code>cut</code> keeps chosen columns: <code>-d " "</code> says columns are separated by spaces (the <b>d</b>elimiter, in quotes because it\'s a space), and <code>-f 1</code> keeps <b>f</b>ield 1. Type <code>cut -d " " -f 1 nginx/access.log</code>: one address per request.'
+                    },
+                    {
+                        id: 'count', desc: 'Count the requests from each address (… | sort | uniq -c)', hint: 'Type: cut -d " " -f 1 nginx/access.log | sort | uniq -c', check: (T) => T.ran(/\|\s*sort\b[^|]*\|\s*uniq\s+-\w*c/),
+                        lesson: '<code>uniq -c</code> squashes repeated lines into one and writes how many there were in front. It only joins repeats that sit <b>next to each other</b>, so <code>sort</code> them first. Add both to the end of your last command: <code>cut -d " " -f 1 nginx/access.log | sort | uniq -c</code>. (Pro move: add <code>| sort -rn</code> to put the biggest count on top.)'
+                    },
+                    {
+                        id: 'top', desc: 'Which address made the most requests? (answer <ip>)', hint: 'Look for the biggest number in the uniq -c output, then: answer <that IP>',
+                        answer: '203.0.113.45', wrong: 'Run cut -d " " -f 1 nginx/access.log | sort | uniq -c and pick the address with the biggest count.', check: (T) => T.answers.has('203.0.113.45'),
+                        lesson: 'The number in front of each address is how many requests it made. One stands out. Look back at <code>head</code>: it asked for <code>/.env</code>, <code>/.git/config</code> and <code>/backup.zip</code>, files that hold secrets on a careless server. That\'s someone scanning, not a fan. Type <code>answer</code> and the address.'
+                    },
+                    {
+                        id: 'trail', desc: 'Search every log for that address at once (grep -r)', hint: 'Type: grep -r 203.0.113.45 /var/log', check: (T) => T.ran(/^\s*grep\b(?=.*\s-\w*r)(?=.*203\.0\.113\.45)/),
+                        lesson: 'Did it try anything else? <code>grep -r</code> ("recursive") searches every file in a folder and its subfolders, and prints which file each match came from. Type <code>grep -r 203.0.113.45 /var/log</code>, then read where it turns up.'
+                    },
+                    {
+                        id: 'user', desc: 'Which username did it try over SSH? (answer <name>)', hint: 'Find its lines in auth.log, read the word after "Failed password for", then: answer <name>',
+                        answer: 'deploy', wrong: 'Look at the auth.log lines from 203.0.113.45: the name comes right after "Failed password for".', check: (T) => T.answers.has('deploy'),
+                        lesson: 'The address turned up in <code>auth.log</code> too: after scanning the website, it tried to log in over SSH. In a "Failed password for <b>NAME</b> from …" line, NAME is the account it tried. Type <code>answer</code> and that name.'
+                    }
+                ]
+            },
+            {
                 id: 'jobs',
                 stage: 'basics',
+                after: 'reading-logs',
                 icon: '⚙️',
                 title: 'Processes & Scheduled Jobs',
                 blurb: 'See what\'s running, stop a runaway process, and read cron jobs.',
@@ -3205,13 +3377,147 @@ permalink: /cyber-quest/
                 ]
             },
             {
+                id: 'file-perms',
+                stage: 'basics',
+                icon: '🔑',
+                title: 'Who Can Read This?',
+                blurb: 'Read rwx permissions slowly, turn them into numbers like 600 and 755, and change them with chmod.',
+                xp: 55,
+                scenario: 'Every file on Linux says who may read it, change it, or run it.\nToday you learn to read that, turn it into the numbers admins use\n(600, 644, 755…), and fix files that say too much.\n\nYou start in /srv/team. Follow the 📖 lesson, one step at a time.',
+                skills: ['ls -l', 'rwx', 'stat', 'r=4 w=2 x=1', 'chmod o-w', 'chmod 600'],
+                chips: ['ls -l', 'stat notes.txt', 'stat deploy.sh', 'chmod o-w salaries.csv', 'chmod 600 secrets.env', 'hint'],
+                debrief: 'You can read permissions now. Ten characters: the type, then rwx for the owner, the group and everyone else. As a number, each group adds up r=4, w=2, x=1, so rw- is 6, r-x is 5 and r-- is 4. That\'s why 644 is "owner edits, everyone reads", 755 is "owner edits, everyone runs" and 600 is "only me". chmod changes them with numbers (chmod 600) or letters (chmod o-w).',
+                build() {
+                    return {
+                        fs: d({
+                            home: d({ alex: d({}) }),
+                            srv: d({
+                                team: d({
+                                    'notes.txt': f('-rw-r--r--', 'Team notes: launch checklist is in the shared drive.\n', 'alex', 'staff'),
+                                    'deploy.sh': f('-rwxr-xr-x', '#!/bin/bash\necho "deploying Starfall..."\n', 'alex', 'staff'),
+                                    'salaries.csv': f('-rw-rw-rw-', 'name,salary\n(training data)\n', 'dana', 'staff'),
+                                    'secrets.env': f('-rw-r--r--', 'DB_PASSWORD=training-only-not-real\n', 'alex', 'staff'),
+                                    'drafts': d({ 'trailer-script.txt': f('-rw-rw-r--', 'INT. SPACESHIP - NIGHT\n', 'sam', 'staff') }, 'drwxrwxr-x', 'sam', 'staff')
+                                }, 'drwxrwxr-x', 'root', 'staff')
+                            }, 'drwxr-xr-x', 'root')
+                        }, 'drwxr-xr-x', 'root'),
+                        cwd: '/srv/team',
+                        procs: [{ user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' }, { user: 'alex', pid: 1455, cpu: '0.0', mem: '0.2', cmd: '-bash' }],
+                        net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' }],
+                        services: {}
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'lsl', desc: 'List the team folder with details (ls -l)', hint: 'Type: ls -l', check: (T) => T.listedLong.has('/srv/team'),
+                        lesson: '<code>ls -l</code> ("long") shows one file per line. Read a line from left to right:<br><code>-rw-r--r-- alex staff 53 notes.txt</code><br>the <b>permissions</b>, the <b>owner</b> (the user the file belongs to), the <b>group</b> (a team of users that shares it), the size, and the name. Type <code>ls -l</code>.'
+                    },
+                    {
+                        id: 'others', desc: 'What may everyone else do with notes.txt? (answer the last 3 letters)', hint: 'Split -rw-r--r-- into - | rw- | r-- | r--, then: answer r--',
+                        answer: 'r--', wrong: 'Split the permissions into 1 + 3 + 3 + 3 characters. The last three are for everyone else.', check: (T) => T.answers.has('r--'),
+                        lesson: 'The permissions are 10 characters. Split them <b>1 + 3 + 3 + 3</b>:<br><code>-</code> <code>rw-</code> <code>r--</code> <code>r--</code><br>type (<code>-</code> file, <code>d</code> folder) · <b>owner</b> · <b>group</b> · <b>others</b> (everyone else).<br>In each group of three: <b>r</b> = read, <b>w</b> = write (change), <b>x</b> = execute (run), <b>-</b> = not allowed. So notes.txt: the owner reads and writes, the group reads, others read. Type <code>answer</code> and the three letters for <b>others</b>, e.g. <code>answer rwx</code>.'
+                    },
+                    {
+                        id: 'stat', desc: 'See notes.txt\'s permissions as a number (stat)', hint: 'Type: stat notes.txt', check: (T) => T.ran(/^\s*stat\b/),
+                        lesson: 'Admins usually write permissions as a <b>3-digit number</b>, one digit per group. Each letter is worth points, and you add them up:<br><code>r = 4, w = 2, x = 1, - = 0</code><br>So for notes.txt (<code>rw- r-- r--</code>):<br><code>owner  rw- = 4+2+0 = 6</code><br><code>group  r-- = 4+0+0 = 4</code><br><code>others r-- = 4+0+0 = 4</code><br>That\'s <b>644</b>. Type <code>stat notes.txt</code> to see Linux show both: <code>(0644/-rw-r--r--)</code>. (Ignore the leading 0.)'
+                    },
+                    {
+                        id: 'num', desc: 'What number is deploy.sh\'s rwxr-xr-x? (answer 3 digits)', hint: 'rwx = 4+2+1, r-x = 4+0+1. Check with: stat deploy.sh',
+                        answer: '755', wrong: 'Add up each group: rwx = 4+2+1, r-x = 4+0+1. You can check with stat deploy.sh.', check: (T) => T.answers.has('755'),
+                        lesson: 'Your turn. deploy.sh is <code>rwx r-x r-x</code>: it\'s a script, so it needs <b>x</b> to run.<br><code>owner  rwx = 4+2+1 = ?</code><br><code>group  r-x = 4+0+1 = ?</code><br><code>others r-x = 4+0+1 = ?</code><br>Work it out, check it with <code>stat deploy.sh</code> if you like, then <code>answer</code> the three digits. Three numbers you\'ll see all the time: <b>644</b> (normal file), <b>755</b> (program or folder), <b>600</b> (private).'
+                    },
+                    {
+                        id: 'ow', desc: 'Stop everyone else changing salaries.csv (chmod o-w)', hint: 'Type: chmod o-w salaries.csv', check: (T) => { const n = T.node('/srv/team/salaries.csv'); return !!n && n.mode[8] === '-'; },
+                        lesson: 'salaries.csv is <code>rw- rw- rw-</code>: <b>anyone</b> on the server could change it. <code>chmod</code> also takes <b>letters</b>: who (<b>u</b>ser/owner, <b>g</b>roup, <b>o</b>thers, <b>a</b>ll), then <code>+</code> to add or <code>-</code> to remove, then the permission. So <code>chmod o-w salaries.csv</code> takes <b>w</b>rite away from <b>o</b>thers. Type it, then <code>ls -l</code> to see the change.'
+                    },
+                    {
+                        id: 'private', desc: 'Make secrets.env private: only you read and write it (chmod 600)', hint: 'Type: chmod 600 secrets.env', check: (T) => { const n = T.node('/srv/team/secrets.env'); return !!n && n.mode === '-rw-------'; },
+                        lesson: 'secrets.env holds a database password, but it\'s <code>644</code>: everyone can read it. You want "only me, read and write": build the number one group at a time.<br><code>owner  rw- = 4+2+0 = 6</code><br><code>group  --- = 0</code><br><code>others --- = 0</code><br>That\'s <b>600</b>. Type <code>chmod 600 secrets.env</code>. (Letters work too: <code>chmod go-r secrets.env</code>.)'
+                    },
+                    {
+                        id: 'check', desc: 'Check your work (ls -l or stat)', hint: 'Type: ls -l', check: (T) => { const i = T.history.map((c) => /chmod/.test(c)).lastIndexOf(true); return i >= 0 && T.history.slice(i + 1).some((c) => /^\s*(ls\s+-\w*l|stat)\b/.test(c)); },
+                        lesson: 'Always look after you change something. Type <code>ls -l</code>: salaries.csv should read <code>-rw-rw-r--</code> and secrets.env <code>-rw-------</code>. The dashes are doors you just closed.'
+                    }
+                ]
+            },
+            {
+                id: 'services',
+                stage: 'basics',
+                icon: '🚪',
+                title: 'Doors and Locks',
+                blurb: 'Find the services running on a server, read which ports face the internet, and close the ones nobody needs.',
+                xp: 60,
+                scenario: 'A server runs background programs called services. Some listen on a\nnetwork port, and every port that faces the internet is a door an\nattacker can knock on. Count the doors, close the useless ones and\nput a lock (a firewall) on the rest.\n\nFollow the 📖 lesson, one step at a time.',
+                skills: ['systemctl list-units', 'ss -tlnp', '0.0.0.0 vs 127.0.0.1', 'systemctl stop/disable', 'ufw allow/deny/enable'],
+                chips: ['systemctl list-units', 'ss -tlnp', 'systemctl status telnet', 'ufw allow 22', 'ufw status', 'hint'],
+                debrief: 'That\'s hardening. You listed the services, read which ports face everyone (0.0.0.0) and which only the server itself (127.0.0.1), switched off a service nobody needed (stop now, disable at boot), and put a firewall in front of the rest: allow what customers need, deny the database, and allow SSH before switching it on so you don\'t lock yourself out.',
+                build() {
+                    return {
+                        fs: d({ home: d({ alex: d({ 'todo.txt': f('-rw-r--r--', 'Sam: is telnet still on? we use ssh now.\n') }) }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root'),
+                        cwd: '/home/alex',
+                        procs: [
+                            { user: 'root', pid: 1, cpu: '0.0', mem: '0.1', cmd: '/sbin/init' },
+                            { user: 'root', pid: 712, cpu: '0.0', mem: '0.4', cmd: '/usr/sbin/sshd -D' },
+                            { user: 'root', pid: 740, cpu: '0.0', mem: '0.2', cmd: '/usr/sbin/in.telnetd' },
+                            { user: 'mysql', pid: 811, cpu: '1.2', mem: '8.4', cmd: '/usr/sbin/mysqld' },
+                            { user: 'redis', pid: 830, cpu: '0.3', mem: '1.1', cmd: '/usr/bin/redis-server 127.0.0.1:6379' },
+                            { user: 'www-data', pid: 980, cpu: '0.3', mem: '1.2', cmd: 'nginx: worker process' }
+                        ],
+                        net: [
+                            { proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' },
+                            { proto: 'tcp', port: 23, addr: '0.0.0.0', proc: 'telnetd', svc: 'telnet' },
+                            { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx' },
+                            { proto: 'tcp', port: 3306, addr: '0.0.0.0', proc: 'mysqld' },
+                            { proto: 'tcp', port: 6379, addr: '127.0.0.1', proc: 'redis' }
+                        ],
+                        services: { ssh: 'active', nginx: 'active', mysql: 'active', redis: 'active', telnet: 'active' }
+                    };
+                },
+                tasks: [
+                    {
+                        id: 'list', desc: 'List the services on this server (systemctl list-units)', hint: 'Type: systemctl list-units', check: (T) => T.ran(/^\s*systemctl\s+list/),
+                        lesson: 'A <b>service</b> is a program that runs in the background all the time: the web server, the database, the SSH server you logged in through. <code>systemctl</code> is the tool that controls them, and <code>systemctl list-units</code> lists them. Type it and read what each one is for.'
+                    },
+                    {
+                        id: 'ss', desc: 'See which ports are listening (ss -tlnp)', hint: 'Type: ss -tlnp', check: (T) => T.ran(/^\s*(ss|netstat)\b/),
+                        lesson: 'Some services <b>listen</b> on a numbered <b>port</b>, waiting for connections: 22 SSH, 23 Telnet, 443 HTTPS (the website), 3306 MySQL. <code>ss -tlnp</code> lists them: <b>t</b>cp, <b>l</b>istening, <b>n</b>umbers, <b>p</b>rogram. Read the address before the colon:<br><code>0.0.0.0:443</code> = anyone, anywhere can connect<br><code>127.0.0.1:6379</code> = only this server itself can connect<br>Type <code>ss -tlnp</code>.'
+                    },
+                    {
+                        id: 'local', desc: 'Which port can only this server itself reach? (answer <port>)', hint: 'Look for 127.0.0.1 in ss -tlnp, then: answer <the port after the colon>',
+                        answer: '6379', wrong: 'Find the line whose address starts with 127.0.0.1 and answer the number after the colon.', check: (T) => T.answers.has('6379'),
+                        lesson: '<code>127.0.0.1</code> is called <b>localhost</b>: it means "this machine". A service listening there can\'t be reached from the network at all, which is exactly right for helpers like a cache that only the website talks to. Find that line in the <code>ss -tlnp</code> output and <code>answer</code> its port.'
+                    },
+                    {
+                        id: 'status', desc: 'Check the telnet service (systemctl status telnet)', hint: 'Type: systemctl status telnet', check: (T) => T.ran(/^\s*systemctl\s+status\s+telnet/),
+                        lesson: '<b>Telnet</b> (port 23) is a 1970s remote login that sends everything, passwords included, as plain text anyone on the way can read. SSH replaced it. Look at it first: <code>systemctl status telnet</code> says whether it\'s running (<b>Active</b>) and whether it starts at boot (<b>enabled</b>).'
+                    },
+                    {
+                        id: 'off', desc: 'Switch telnet off now AND at boot (stop, then disable)', hint: 'Type: systemctl stop telnet  then  systemctl disable telnet', check: (T) => T.stoppedSvc.has('telnet') && T.disabledSvc.has('telnet'),
+                        lesson: 'Two different things: <code>systemctl stop telnet</code> stops it <b>now</b>, and <code>systemctl disable telnet</code> stops it starting again after the next <b>reboot</b>. Do only one and it\'s either still running or back on Monday. Type both, then <code>ss -tlnp</code>: port 23 is gone.'
+                    },
+                    {
+                        id: 'db', desc: 'Keep MySQL running but hide port 3306 from the internet (ufw deny)', hint: 'Type: ufw deny 3306', check: (T) => T.ufw.deny.has('3306'),
+                        lesson: 'MySQL can\'t be switched off: the website stores its data there. But it\'s listening on <code>0.0.0.0:3306</code>, so the whole internet can try passwords on it. A <b>firewall</b> sits in front of every port and decides who gets through. <code>ufw</code> ("uncomplicated firewall") adds rules: <code>ufw deny 3306</code> blocks that port from outside, while the website on the same server keeps using it.'
+                    },
+                    {
+                        id: 'on', desc: 'Allow SSH (22) and HTTPS (443), then switch the firewall on', hint: 'Type: ufw allow 22  then  ufw allow 443  then  ufw enable', check: (T) => T.ufw.enabled && T.ufw.allow.has('22') && T.ufw.allow.has('443'),
+                        lesson: 'Rules do nothing until the firewall is <b>on</b>. Before you switch it on, <b>allow</b> what must stay reachable: <code>ufw allow 22</code> (SSH: your own connection! forget it and you lock yourself out) and <code>ufw allow 443</code> (the website). Then <code>ufw enable</code>.'
+                    },
+                    {
+                        id: 'verify', desc: 'Check the firewall rules (ufw status)', hint: 'Type: ufw status', check: (T) => T.ufw.enabled && T.history.slice(T.history.map((c) => /ufw\s+enable/.test(c)).lastIndexOf(true) + 1).some((c) => /^\s*ufw\s+status/.test(c)),
+                        lesson: 'Check your work: <code>ufw status</code> should say <b>active</b>, with 22 and 443 ALLOWed and 3306 DENYed. Two open doors, both on purpose.'
+                    }
+                ]
+            },
+            {
                 id: 'perms',
                 stage: 'basics',
+                after: 'jobs',
                 icon: '🔐',
                 title: 'Permissions & Services',
                 blurb: 'Read rwx permissions, protect a key, and control services and ports.',
                 xp: 60,
-                scenario: 'Two more basics before your first real incident: who is allowed to\nread a file (permissions), and which programs are listening on the\nnetwork (services and ports).',
+                scenario: 'Put it together on web-01: fix a private key anyone can read, then\nfind and close an old service. Everything here was taught in\nWho Can Read This? and Doors and Locks.',
                 skills: ['ls -l', 'chmod', 'ss -tlnp', 'systemctl', 'ufw'],
                 chips: ['ls -l ~/.ssh', 'chmod 600 ~/.ssh/id_ed25519', 'ss -tlnp', 'systemctl status ftp', 'ufw status', 'hint'],
                 debrief: 'Permissions: ls -l shows rwx for owner, group and everyone else, and chmod changes them (600 = only the owner can read and write). Network: ss -tlnp shows which services are listening on which ports. systemctl stops services, and ufw blocks ports at the firewall. That\'s all the basics. You\'re ready for a real incident.',
@@ -3249,7 +3555,7 @@ permalink: /cyber-quest/
                     },
                     {
                         id: 'chmod', desc: 'Make your private key readable only by you (chmod 600)', hint: 'Type: chmod 600 ~/.ssh/id_ed25519', check: (T) => { const n = T.node('/home/alex/.ssh/id_ed25519'); return n && n.mode === '-rw-------'; },
-                        lesson: '<code>id_ed25519</code> is your <b>private key</b>, which works like a password. But <code>-rw-r--r--</code> means everyone can read it! <code>chmod</code> changes permissions using one digit per group: r=4, w=2, x=1, added up. So <b>6</b> = rw and <b>0</b> = nothing, which makes <b>600</b> "owner can read and write, nobody else can do anything". Type <code>chmod 600 ~/.ssh/id_ed25519</code>, then check with <code>ls -l ~/.ssh</code>.'
+                        lesson: '<code>id_ed25519</code> is your <b>private key</b>, which works like a password. But <code>-rw-r--r--</code> means everyone can read it! <code>chmod</code> takes one digit per group, in the order <b>owner, group, others</b>. Each digit adds up <b>r=4, w=2, x=1</b>:<br><code>owner rw- = 4+2+0 = 6</code><br><code>group --- = 0</code><br><code>other --- = 0</code><br>So <b>600</b> means "I can read and write, nobody else can do anything". Type <code>chmod 600 ~/.ssh/id_ed25519</code>, then check with <code>ls -l ~/.ssh</code>.'
                     },
                     {
                         id: 'ss', desc: 'List the ports that are listening (ss -tlnp)', hint: 'Type: ss -tlnp', check: (T) => T.ran(/^\s*(ss|netstat)\b/),
@@ -3503,6 +3809,80 @@ permalink: /cyber-quest/
                 ]
             },
             {
+                id: 'ch-filter', after: 'log-filters', icon: '🧹', title: 'Challenge: Signal & Noise', par: 5, xp: 55,
+                blurb: 'A noisy log and two questions. Filter your way to the answers.',
+                scenario: 'This server\'s logs are mostly CRON chatter. Somewhere in there are\nthe lines that matter.' + CHALLENGE_SCENARIO,
+                debrief: 'You filtered instead of scrolling: grep -v to drop the noise, wc -l to count what was left, quotes to search a phrase, and tail -n 1 to find the newest match.',
+                build() {
+                    const two = (n) => String(n).padStart(2, '0');
+                    const events = [];
+                    for (let m = 0; m < 180; m += 15) events.push({ t: m * 60 + 1, l: 'CRON[' + (2000 + m) + ']: (root) CMD (' + pick(['/usr/lib/php/sessionclean', 'run-parts /etc/cron.hourly']) + ')' });
+                    const real = ['nginx[980]: ERROR upstream timed out (110)', 'app[1201]: error: database connection refused', 'kernel: [ 9231.11] eth0: link up', 'systemd[1]: Started Session 12 of user alex.', 'app[1201]: Error: disk usage at 9' + rnd(10) + '% on /var', 'systemd[1]: Restarting nginx.service...', 'app[1201]: cache warmed in 2.1 s'];
+                    const keep = real.slice(0, 3 + rnd(5));
+                    keep.forEach((l) => events.push({ t: 120 + rnd(10500), l }));
+                    events.sort((x, y) => x.t - y.t);
+                    const at = (t) => '0' + (6 + Math.floor(t / 3600)) + ':' + two(Math.floor(t / 60) % 60) + ':' + two(t % 60);
+                    const syslog = events.map((e) => 'Mar 11 ' + at(e.t) + ' web-01 ' + e.l);
+                    const ip = '198.51.100.' + (20 + rnd(200));
+                    let t = 3600 + rnd(600);
+                    const auth = [];
+                    const guesses = 3 + rnd(4);
+                    let time = '';
+                    for (let i = 0; i < guesses; i++) {
+                        t += 30 + rnd(400);
+                        time = at(t);
+                        auth.push('Mar 11 ' + time + ' web-01 sshd[' + (3100 + i) + ']: Failed password for ' + pick(['root', 'admin', 'git', 'test']) + ' from ' + ip + ' port ' + (40000 + rnd(20000)) + ' ssh2');
+                    }
+                    auth.unshift('Mar 11 06:40:02 web-01 sshd[2900]: Accepted publickey for alex from 10.0.4.22 port 44110 ssh2');
+                    auth.push('Mar 11 ' + at(t + 60 + rnd(300)) + ' web-01 sshd[3190]: Failed publickey for alex from 10.0.4.22 port 44180 ssh2');
+                    const files = {
+                        '/var/log/syslog': f('-rw-r-----', syslog.join('\n') + '\n', 'root'),
+                        '/var/log/auth.log': f('-rw-r-----', auth.join('\n') + '\n', 'root'),
+                        '/home/alex': null
+                    };
+                    return { fs: fsTree(files), cwd: '/home/alex', procs: BASE_PROCS(), net: [], services: {}, vars: { n: String(keep.length), time } };
+                },
+                tasks: [
+                    { id: 'n', desc: 'Answer how many lines in /var/log/syslog are NOT from CRON', answer: (T) => T.vars.n, check: (T) => T.answers.has(T.vars.n), wrong: 'That isn\'t how many non-CRON lines there are.' },
+                    { id: 'time', desc: 'Answer the time (HH:MM:SS) of the newest failed password guess in /var/log/auth.log', answer: (T) => T.vars.time, check: (T) => T.answers.has(T.vars.time), wrong: 'That isn\'t the time of the newest failed password guess.' }
+                ]
+            },
+            {
+                id: 'ch-trail', after: 'log-timeline', icon: '👣', title: 'Challenge: Busiest Visitor', par: 6, xp: 60,
+                blurb: 'Rank a web log\'s visitors, then follow the top one into the login log.',
+                scenario: 'Something hammered this website. Find who, then find what else\nthey tried.' + CHALLENGE_SCENARIO,
+                debrief: 'You ranked visitors with cut | sort | uniq -c and followed the top address across logs with grep -r. Same address on the website and on SSH: one attacker trying two doors.',
+                build() {
+                    const ip = pick(['203.0.113.', '198.51.100.']) + (10 + rnd(240));
+                    const user = pick(['deploy', 'backup', 'ci', 'jenkins', 'ftpuser']);
+                    const visitors = ['10.0.4.22', '10.0.4.31', '192.0.2.' + (10 + rnd(40)), '192.0.2.' + (60 + rnd(40)), '198.51.100.' + (2 + rnd(6))];
+                    const pages = ['/', '/starfall', '/careers', '/press-kit.zip', '/starfall/faq'];
+                    const probes = ['/.env', '/wp-login.php', '/admin', '/.git/config', '/backup.zip', '/phpmyadmin/', '/config.php.bak', '/server-status', '/db.sql', '/.aws/credentials'];
+                    const hits = 6 + rnd(4);
+                    const rows = [];
+                    visitors.forEach((v) => { for (let i = 0, n = 1 + rnd(3); i < n; i++) rows.push([v, pick(pages), 200]); });
+                    probes.slice(0, hits).forEach((pg) => rows.push([ip, pg, 404]));
+                    rows.sort(() => Math.random() - 0.5);
+                    const access = rows.map(([who, pg, code], i) => who + ' - - [11/Mar/2026:15:' + String(i * 2 % 60).padStart(2, '0') + ':0' + rnd(10) + ' +0000] "GET ' + pg + ' HTTP/1.1" ' + code + ' ' + (150 + rnd(9000)));
+                    const auth = [
+                        'Mar 11 14:58:12 web-01 sshd[3102]: Accepted publickey for alex from 10.0.4.22 port 45010 ssh2',
+                        'Mar 11 15:20:31 web-01 sshd[3150]: Failed password for root from ' + visitors[4] + ' port 50001 ssh2'
+                    ];
+                    for (let i = 0; i < 2 + rnd(3); i++) auth.push('Mar 11 15:3' + i + ':1' + rnd(10) + ' web-01 sshd[31' + (60 + i) + ']: Failed password for ' + user + ' from ' + ip + ' port ' + (50100 + rnd(900)) + ' ssh2');
+                    const files = {
+                        '/var/log/nginx/access.log': f('-rw-r-----', access.join('\n') + '\n', 'www-data'),
+                        '/var/log/auth.log': f('-rw-r-----', auth.join('\n') + '\n', 'root'),
+                        '/var/log/syslog': f('-rw-r-----', 'Mar 11 15:00:01 web-01 CRON[3001]: (root) CMD (run-parts /etc/cron.hourly)\n', 'root'),
+                        '/home/alex': null
+                    };
+                    return { fs: fsTree(files), cwd: '/home/alex', procs: BASE_PROCS(), net: [], services: {}, vars: { ip, user } };
+                },
+                tasks: [
+                    { id: 'ip', desc: 'Answer the address that sent the most requests to the website', answer: (T) => T.vars.ip, check: (T) => T.answers.has(T.vars.ip), wrong: 'That isn\'t the busiest address in the web log.' },
+                    { id: 'user', desc: 'That address also tried to log in over SSH: answer the username it tried', answer: (T) => T.vars.user, check: (T) => T.answers.has(T.vars.user), wrong: 'That isn\'t the account it tried.' }
+                ]
+            },
+            {
                 id: 'ch-jobs', after: 'jobs', icon: '⚙️', title: 'Challenge: Runaway Process', par: 6, xp: 60,
                 blurb: 'Something is eating the CPU and keeps coming back. Stop it and find out why.',
                 scenario: 'This server is crawling. Something is using almost all the CPU,\nand it seems to start itself again on a schedule.' + CHALLENGE_SCENARIO,
@@ -3526,6 +3906,58 @@ permalink: /cyber-quest/
                 tasks: [
                     { id: 'kill', desc: 'Stop the process that is using almost all the CPU', check: (T) => T.killedPids.has(T.vars.pid) },
                     { id: 'job', desc: 'Answer the name of the scheduled job file that starts it', answer: (T) => T.vars.job, check: (T) => T.answers.has(T.vars.job), wrong: 'That job doesn\'t start it.' }
+                ]
+            },
+            {
+                id: 'ch-fperms', after: 'file-perms', icon: '🔑', title: 'Challenge: Permission Slip', par: 5, xp: 60,
+                blurb: 'Read a permission as a number, then fix two files that say too much.',
+                scenario: 'A shared folder where nobody has thought about permissions.' + CHALLENGE_SCENARIO,
+                debrief: 'You turned letters into a number in your head (r=4, w=2, x=1, one digit per group), closed a file anyone could change, and made a secret private.',
+                build() {
+                    const modes = ['-rwxr-x---', '-rw-r-----', '-rwxr--r--', '-rw-rw-r--', '-rwx------', '-rwxrwxr-x'];
+                    const mode = pick(modes);
+                    const names = ['report.pdf', 'build.sh', 'roadmap.md', 'budget.xlsx', 'backup.sh', 'notes.txt'];
+                    const a = 'release.sh', [b, c] = names.sort(() => Math.random() - 0.5);
+                    const secret = pick(['api-token.txt', 'db.env', 'wallet.key', '.credentials']);
+                    const files = {
+                        ['/srv/projects/' + a]: f(mode, 'contents\n', 'alex', 'staff'),
+                        ['/srv/projects/' + b]: f('-rw-rw-rw-', 'contents\n', 'sam', 'staff'),
+                        ['/srv/projects/' + c]: f('-rw-r--r--', 'contents\n', 'alex', 'staff'),
+                        ['/srv/projects/' + secret]: f('-rw-r--r--', 'TOKEN=training-only-not-real\n', 'alex', 'staff'),
+                        '/home/alex': null
+                    };
+                    return { fs: fsTree(files), cwd: '/srv/projects', procs: BASE_PROCS(), net: [], services: {}, vars: { file: a, num: modeNum(mode), open: '/srv/projects/' + b, secret: '/srv/projects/' + secret } };
+                },
+                tasks: [
+                    { id: 'num', desc: 'Answer the permissions of release.sh as a 3-digit number', answer: (T) => T.vars.num, check: (T) => T.answers.has(T.vars.num), wrong: 'That isn\'t its number. One digit each for owner, group and others.' },
+                    { id: 'open', desc: 'One file can be changed by everyone: stop others writing to it', check: (T) => { const n = T.node(T.vars.open); return !!n && n.mode[8] === '-'; } },
+                    { id: 'secret', desc: 'Make the file holding a token readable and writable only by its owner', check: (T) => { const n = T.node(T.vars.secret); return !!n && n.mode === '-rw-------'; } }
+                ]
+            },
+            {
+                id: 'ch-svc', after: 'services', icon: '🚪', title: 'Challenge: Close the Doors', par: 9, xp: 65,
+                blurb: 'Count a server\'s doors, shut the useless one and lock the rest with a firewall.',
+                scenario: 'A server nobody has hardened. It has one service it doesn\'t need\nand a database facing the internet.' + CHALLENGE_SCENARIO,
+                debrief: 'You found the service nobody needed and switched it off for good, hid the database behind the firewall without breaking the website, and kept your own SSH door open before locking up.',
+                build() {
+                    const bad = pick([{ svc: 'telnet', port: 23, proc: 'telnetd' }, { svc: 'ftp', port: 21, proc: 'vsftpd' }]);
+                    const db = pick([{ svc: 'mysql', port: 3306, proc: 'mysqld' }, { svc: 'postgresql', port: 5432, proc: 'postgres' }]);
+                    const local = pick([{ svc: 'redis', port: 6379, proc: 'redis' }, { svc: 'cups', port: 631, proc: 'cupsd' }]);
+                    const net = [
+                        { proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd' },
+                        { proto: 'tcp', port: bad.port, addr: '0.0.0.0', proc: bad.proc, svc: bad.svc },
+                        { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx' },
+                        { proto: 'tcp', port: db.port, addr: '0.0.0.0', proc: db.proc },
+                        { proto: 'tcp', port: local.port, addr: '127.0.0.1', proc: local.proc }
+                    ].sort(() => Math.random() - 0.5);
+                    const services = { ssh: 'active', nginx: 'active', [db.svc]: 'active', [local.svc]: 'active', [bad.svc]: 'active' };
+                    return { fs: fsTree({ '/home/alex': null }), cwd: '/home/alex', procs: BASE_PROCS(), net, services, vars: { svc: bad.svc, db: String(db.port), local: String(local.port) } };
+                },
+                tasks: [
+                    { id: 'local', desc: 'Answer the port that only the server itself can reach', answer: (T) => T.vars.local, check: (T) => T.answers.has(T.vars.local), wrong: 'That port can be reached from outside, or isn\'t listening.' },
+                    { id: 'bad', desc: 'Switch off the unencrypted login or file service, now and at boot', check: (T) => T.stoppedSvc.has(T.vars.svc) && T.disabledSvc.has(T.vars.svc) },
+                    { id: 'db', desc: 'Keep the database running, but block its port from the internet', check: (T) => T.ufw.deny.has(T.vars.db) && !T.stoppedSvc.has('mysql') && !T.stoppedSvc.has('postgresql') },
+                    { id: 'fw', desc: 'Turn the firewall on without locking out SSH or the website', check: (T) => T.ufw.enabled && T.ufw.allow.has('22') && T.ufw.allow.has('443') }
                 ]
             },
             {
@@ -3868,6 +4300,7 @@ permalink: /cyber-quest/
                     if (fl.includes('c')) return { out: [String(hits.length)] };
                     return { out: hits.map((l) => ({ text: l, html: colorize(l) })) };
                 }
+                if (cmd === 'sort' || cmd === 'uniq' || cmd === 'cut') return textOp(cmd, a, lines);
                 if (cmd === 'wc' && a.includes('-l')) return { out: [String(lines.length)] };
                 if (cmd === 'head') { const n = num(a, 10); return { out: lines.slice(0, n) }; }
                 if (cmd === 'tail') { const n = num(a, 10); return { out: lines.slice(-n) }; }
@@ -3934,6 +4367,13 @@ permalink: /cyber-quest/
                         }
                         return { err: ['✘ Not quite. ' + (t.wrong || 'Look again and try another answer.')] };
                     }
+                    case 'sort': case 'uniq': case 'cut': {
+                        // The file is the last word, unless it is a flag or the value of -d / -f.
+                        const last = a.length > 1 ? a[a.length - 1] : null, before = a[a.length - 2];
+                        if (!last || last.startsWith('-') || before === '-d' || before === '-f') return { err: [cmd + ': give it a file (' + cmd + ' access.log) or pipe into it (… | ' + cmd + ')'] };
+                        const n = this.cat([last]);
+                        return n.out && n.out.some((l) => typeof l === 'string') ? textOp(cmd, a, n.out.filter((l) => typeof l === 'string')) : n;
+                    }
                     case 'head': { const n = this.cat(pos); if (n.out) n.out = n.out.slice(0, num(args, 10)); return n; }
                     case 'tail': { const n = this.cat(pos); if (n.out) n.out = n.out.slice(-num(args, 10)); return n; }
                     case 'grep': return this.grep(args);
@@ -3942,6 +4382,12 @@ permalink: /cyber-quest/
                     case 'top': return this.ps();
                     case 'kill': return this.kill(pos);
                     case 'chmod': return this.chmod(pos);
+                    case 'stat': {
+                        if (!pos[0]) return { err: ['stat: missing operand (try: stat notes.txt)'] };
+                        const n = this.nodeAt(pos[0]);
+                        if (!n) return { err: ['stat: cannot statx \'' + pos[0] + '\': No such file or directory'] };
+                        return { out: ['  File: ' + pos[0], 'Access: (0' + modeNum(n.mode) + '/' + n.mode + ')', ' Owner: ' + (n.owner || 'alex') + '   Group: ' + (n.group || n.owner || 'alex')] };
+                    }
                     case 'rm': return this.rm(pos, flags);
                     case 'ss': case 'netstat': return this.ss();
                     case 'ufw': return this.ufw(args);
@@ -3999,6 +4445,7 @@ permalink: /cyber-quest/
                 const i = fl.includes('i');
                 const r = fl.includes('r') || fl.includes('R');
                 const c = fl.includes('c');
+                const v = fl.includes('v');
                 const rest = args.filter((x) => !x.startsWith('-'));
                 const pat = rest[0] || '';
                 const targets = rest.slice(1);
@@ -4012,7 +4459,7 @@ permalink: /cyber-quest/
                     }
                     this.T.read.add(abs);
                     node.content.replace(/\n$/, '').split('\n').forEach((l) => {
-                        if (re.test(l)) out.push({ text: l, html: (prefix ? '<span class="c-path">' + esc(abs) + ':</span>' : '') + colorize(l) });
+                        if (re.test(l) !== v) out.push({ text: l, html: (prefix ? '<span class="c-path">' + esc(abs) + ':</span>' : '') + colorize(l) });
                     });
                 };
                 if (!targets.length) return { err: ['usage: grep [-i] [-r] PATTERN FILE'] };
@@ -4150,14 +4597,27 @@ permalink: /cyber-quest/
             systemctl(args) {
                 const sub = args[0]; const svc = (args[1] || '').replace('.service', '');
                 const T = this.T;
+                const SVC_DESC = { ssh: 'OpenSSH server (remote logins)', nginx: 'nginx web server', mysql: 'MySQL database', postgresql: 'PostgreSQL database', redis: 'Redis cache', telnet: 'Telnet server (no encryption)', ftp: 'vsftpd FTP server (no encryption)', cups: 'Printing service' };
+                if (sub === 'list-units' || sub === 'list') {
+                    const out = [{ text: 'UNIT                ACTIVE    SUB', html: '<span class="c-head">UNIT                ACTIVE    SUB</span>' }];
+                    Object.keys(T.services).forEach((k) => {
+                        const off = T.stoppedSvc.has(k);
+                        const line = (k + '.service').padEnd(19) + ' ' + (off ? 'inactive' : 'active').padEnd(9) + ' ' + (off ? 'dead' : 'running') + '  ' + (SVC_DESC[k] || k);
+                        out.push({ text: line, indent: 30 });
+                    });
+                    out.push({ text: '', html: '<span class="dim">' + Object.keys(T.services).length + ' services listed. Check one with: systemctl status &lt;name&gt;</span>' });
+                    return { out };
+                }
                 if (sub === 'status') {
-                    const st = T.stoppedSvc.has(svc) ? 'inactive (dead)' : (T.services[svc] ? 'active (running)' : 'could not be found');
-                    return { out: [svc + '.service — ' + svc, '   Active: ' + st] };
+                    if (!(svc in T.services)) return { err: ['Unit ' + svc + '.service could not be found.'] };
+                    const st = T.stoppedSvc.has(svc) ? 'inactive (dead)' : 'active (running)';
+                    const port = T.net.find((x) => x.svc === svc || x.proc.startsWith(svc));
+                    return { out: ['● ' + svc + '.service - ' + (SVC_DESC[svc] || svc), '     Loaded: loaded (' + (T.disabledSvc.has(svc) ? 'disabled' : 'enabled') + ' at boot)', '     Active: ' + st].concat(port && !T.stoppedSvc.has(svc) ? ['     Listen: ' + port.addr + ':' + port.port] : []) };
                 }
                 if (sub === 'stop') { if (!(svc in T.services)) return { err: ['Failed to stop ' + svc + '.service: Unit not found.'] }; T.stoppedSvc.add(svc); return { out: [{ html: '<span class="ok">[+] stopped ' + esc(svc) + '</span>' }] }; }
                 if (sub === 'disable') { T.disabledSvc.add(svc); return { out: [{ html: '<span class="ok">[+] disabled ' + esc(svc) + ' (won\'t start at boot)</span>' }] }; }
                 if (sub === 'start') { T.stoppedSvc.delete(svc); return { out: ['[+] started ' + svc] }; }
-                return { err: ['systemctl: unknown command (try: systemctl status|stop|disable <service>)'] };
+                return { err: ['systemctl: unknown command (try: systemctl list-units, or systemctl status|stop|disable <service>)'] };
             },
 
             sha(pos) {
@@ -4330,6 +4790,33 @@ permalink: /cyber-quest/
             const short = a.find((x) => /^-\d+$/.test(x)); // tail -5
             return short ? parseInt(short.slice(1), 10) : def;
         }
+        // sort, uniq and cut work the same on a file and after a pipe.
+        function textOp(cmd, a, lines) {
+            const flag = (ch) => a.some((x) => new RegExp('^-[a-z]*' + ch).test(x));
+            if (cmd === 'sort') {
+                const key = (l) => parseFloat(l.trim()) || 0;
+                const out = lines.slice().sort((x, y) => (flag('n') ? key(x) - key(y) : x < y ? -1 : x > y ? 1 : 0));
+                return { out: flag('r') ? out.reverse() : out };
+            }
+            if (cmd === 'uniq') {
+                const runs = [];
+                lines.forEach((l) => { const last = runs[runs.length - 1]; if (last && last.l === l) last.n++; else runs.push({ l, n: 1 }); });
+                return { out: runs.map((r) => (flag('c') ? String(r.n).padStart(7) + ' ' + r.l : r.l)) };
+            }
+            // cut -d ' ' -f 1: split each line at the delimiter and keep the numbered fields.
+            let delim = ' ', fields = '';
+            for (let k = 1; k < a.length; k++) {
+                const x = a[k];
+                if (x === '-d') delim = a[++k];
+                else if (/^-d./.test(x)) delim = x.slice(2);
+                else if (x === '-f') fields = a[++k] || '';
+                else if (/^-f./.test(x)) fields = x.slice(2);
+            }
+            if (!delim || delim === '"' || delim === "'") delim = ' ';
+            const nums = String(fields).split(',').map((n) => parseInt(n, 10)).filter((n) => n > 0);
+            if (!nums.length) return { err: ['cut: say which column with -f, e.g. cut -d " " -f 1 access.log'] };
+            return { out: lines.map((l) => { const parts = l.split(delim); return nums.map((n) => parts[n - 1] || '').join(delim); }) };
+        }
         function hlMatch(line, pat, ci) {
             if (!pat) return esc(line);
             try {
@@ -4379,7 +4866,7 @@ permalink: /cyber-quest/
         const lsClass = (n, name) => n.type === 'dir' ? 'c-dir' : /x/.test(n.mode || '') ? 'c-exec' : name[0] === '.' ? 'c-hidden' : '';
         function lsLine(n, name) {
             const size = n.type === 'dir' ? '4096' : String((n.content || '').length);
-            const head = n.mode + ' ' + (n.owner || 'alex').padEnd(8) + ' ' + size.padStart(5) + ' ';
+            const head = n.mode + ' ' + (n.owner || 'alex').padEnd(8) + ' ' + (n.group || n.owner || 'alex').padEnd(8) + ' ' + size.padStart(5) + ' ';
             const w = /[w]/.test((n.mode || '').slice(7));
             return { text: head + name, indent: head.length, html: (w ? '<span class="c-bad">' + esc(n.mode) + '</span>' + esc(head.slice(n.mode.length)) : esc(head)) + '<span class="' + lsClass(n, name) + '">' + esc(name) + '</span>' };
         }
@@ -4390,6 +4877,10 @@ permalink: /cyber-quest/
             if (spec === '-0006' || spec === '/0006') return mode[7] === 'r' || mode[8] === 'w';
             return false;
         }
+        // -rw-r----- → "640": each group of three letters adds up r=4, w=2, x=1.
+        function modeNum(mode) {
+            return [1, 4, 7].map((i) => (mode[i] === 'r' ? 4 : 0) + (mode[i + 1] === 'w' ? 2 : 0) + (/[xst]/.test(mode[i + 2]) ? 1 : 0)).join('');
+        }
         function applyChmod(mode, spec) {
             const arr = mode.split('');
             if (/^[0-7]{3,4}$/.test(spec)) {
@@ -4398,22 +4889,26 @@ permalink: /cyber-quest/
                 for (let g = 0; g < 3; g++) { const b = map[digits[g]]; arr[1 + g * 3] = b[0]; arr[2 + g * 3] = b[1]; arr[3 + g * 3] = b[2]; }
                 return arr.join('');
             }
-            const m = spec.match(/^([ugoa]+)([+-])([rwx]+)$/);
-            if (!m) return null;
-            const who = m[1].includes('a') ? 'ugo' : m[1];
-            const add = m[2] === '+';
             const off = { u: 0, g: 3, o: 6 };
             const col = { r: 1, w: 2, x: 3 };
-            for (const w of who) for (const p of m[3]) { const idx = off[w] + col[p]; arr[idx] = add ? p : '-'; }
+            for (const part of spec.split(',')) {
+                const m = part.match(/^([ugoa]*)([+=-])([rwx]*)$/);
+                if (!m || (m[2] !== '=' && !m[3])) return null;
+                const who = !m[1] || m[1].includes('a') ? 'ugo' : m[1];
+                for (const w of who) {
+                    if (m[2] === '=') ['r', 'w', 'x'].forEach((p) => { arr[off[w] + col[p]] = '-'; });
+                    for (const p of m[3]) arr[off[w] + col[p]] = m[2] === '-' ? '-' : p;
+                }
+            }
             return arr.join('');
         }
         // `help`: one command per line, grouped, with descriptions in a column that wraps
         // cleanly on a phone (each row hangs under the description column).
         const HELP_GROUPS = [
             ['Moving around', [['pwd', 'where am I'], ['ls [-a -l] [dir]', 'list files'], ['cd <dir>', 'change directory'], ['find <dir> -name <name>', 'find files']]],
-            ['Reading files', [['cat <file>', 'read a file'], ['head / tail [-n 5] <file>', 'first / last lines'], ['grep [-i -c -r] <word> <file>', 'search in files'], ['wc -l <file>', 'count lines'], ['sha256sum <file>', 'checksum a file']]],
+            ['Reading files', [['cat <file>', 'read a file'], ['head / tail [-n 5] <file>', 'first / last lines'], ['grep [-i -c -r] <word> <file>', 'search in files'], ['grep -v <word> <file>', 'lines without it'], ['cut -d " " -f 1 <file>', 'keep one column'], ['sort | uniq -c', 'count repeats'], ['wc -l <file>', 'count lines'], ['sha256sum <file>', 'checksum a file']]],
             ['Processes and jobs', [['ps aux', 'running processes'], ['kill <pid>', 'stop a process'], ['crontab -l', 'your scheduled jobs']]],
-            ['Security', [['whoami / id', 'who am I'], ['chmod 600 <file>', 'change permissions'], ['ss -tlnp', 'listening ports'], ['systemctl stop <svc>', 'stop a service'], ['ufw deny <port>', 'firewall rule']]],
+            ['Security', [['whoami / id', 'who am I'], ['stat <file>', 'permissions as a number'], ['chmod 600 / o-w <file>', 'change permissions'], ['systemctl list-units', 'list services'], ['ss -tlnp', 'listening ports'], ['systemctl stop <svc>', 'stop a service'], ['ufw deny <port>', 'firewall rule']]],
             ['This game', [['answer <text>', 'answer a question'], ['man <cmd>', 'explain a command'], ['hint', 'your next step'], ['clear', 'wipe the screen'], ['exit', 'log out']]]
         ];
         function helpOut() {
@@ -4427,14 +4922,18 @@ permalink: /cyber-quest/
         }
         const MAN = {
             ls: 'ls — list directory contents. -a shows hidden (dotfiles), -l shows details.',
-            grep: 'grep — print lines matching a pattern. -i ignores case, -r searches a directory.',
-            chmod: 'chmod — change file permissions. e.g. chmod 640 file = owner read/write, group read, others nothing.',
+            grep: 'grep — print lines matching a pattern. -i ignores case, -v shows the lines that do NOT match, -c counts, -r searches a whole directory. Quote a phrase: grep "Failed password" auth.log',
+            sort: 'sort — put lines in order. -n sorts by number, -r reverses (biggest first). Often: … | sort | uniq -c | sort -rn',
+            uniq: 'uniq — squash repeated neighbouring lines into one. -c puts a count in front. Sort first, so repeats sit together.',
+            cut: 'cut — keep only some columns. cut -d " " -f 1 access.log splits each line at spaces and keeps the 1st column.',
+            chmod: 'chmod — change file permissions. As numbers, one digit per group (owner, group, others), adding r=4 w=2 x=1: chmod 640 file = owner rw (4+2), group r (4), others nothing (0). As letters: chmod o-w file removes write from others, chmod u=rw,go= file is the same as 600.',
+            stat: 'stat — show a file\'s details, including its permissions as a number and as letters: Access: (0644/-rw-r--r--).',
             kill: 'kill — send a signal to a process by PID. kill -9 forces it.',
             ufw: 'ufw — uncomplicated firewall. ufw deny <port> blocks a port; ufw deny from <ip> blocks an address.',
             ss: 'ss — show listening sockets. -t tcp, -l listening, -n numeric, -p process.',
             find: 'find — search for files. -perm -0002 finds world-writable, -name matches a name, -type f files only.',
             ps: 'ps — report running processes. "ps aux" shows every process with CPU and memory.',
-            systemctl: 'systemctl — control services. stop halts now, disable stops it starting at boot.',
+            systemctl: 'systemctl — control services. list-units lists them, status checks one, stop halts it now, disable stops it starting at boot.',
             cd: 'cd — change directory. cd /etc goes to an absolute path, cd .. goes up one, cd ~ (or just cd) goes home.',
             pwd: 'pwd — print working directory: the folder you are in right now.',
             cat: 'cat — print a file. Works with relative (notes.txt) or absolute (/etc/hostname) paths.',
@@ -4911,7 +5410,7 @@ permalink: /cyber-quest/
             },
             {
                 id: 'ch2', num: 2, title: 'Knock Knock', day: 'Tuesday', icon: '📜', xp: 100,
-                synopsis: 'Learn where Linux keeps its logs and how to read them. Late that night, someone starts guessing passwords.',
+                synopsis: 'Learn where Linux keeps its logs, then read, filter and cross-check them like a detective. Late that night, someone starts guessing passwords.',
                 beats: [
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 15:20', art: '🗺️', lines: [
@@ -4928,6 +5427,33 @@ permalink: /cyber-quest/
                         ]
                     },
                     { type: 'train', lab: 'reading-logs', host: 'web-01', intro: '🧑🏾‍💻 Mira: “The newest lines are at the bottom, and grep is your best friend.”' },
+                    // Beats 4-9 were added later: loadProgress() shifts old ch2 saves past them (STORY_REV 3).
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 16:40', art: '🧹', lines: [
+                            ['sam', 'Okay, I tried your grep thing on syslog. It\'s still four screens of CRON saying it ran a job.', 'worried'],
+                            ['mira', 'That\'s noise. Real logs are mostly noise. The skill isn\'t reading, it\'s throwing lines away until only the interesting ones are left.'],
+                            ['mira', 'Alex, part two: filters. Take it slow, and try each command a couple of different ways.']
+                        ]
+                    },
+                    { type: 'train', lab: 'log-filters', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Small commands, chained together. Read each pipe left to right.”' },
+                    {
+                        type: 'ask', who: 'mira', q: 'What does grep -v CRON syslog print?',
+                        options: ['Every line of syslog that does NOT contain CRON', 'Only the CRON lines', 'How many CRON lines there are', 'The newest CRON line'], answer: 0,
+                        explain: '-v flips grep around: it keeps every line that does not match. It\'s the quickest way to throw away noise you already understand. Counting would be -c, and the newest match is … | tail -n 1.'
+                    },
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 17:20', art: '👣', lines: [
+                            ['dana', 'Quick one: the website crawled for a few minutes after lunch. Press were trying to download the trailer. Was it just busy?', 'worried'],
+                            ['mira', 'Maybe. Or maybe someone was poking at it. The web server writes down every single visitor. Let\'s find out who.'],
+                            ['mira', 'Part three, Alex: count who\'s knocking, then follow them from log to log. Detectives call it following the trail.']
+                        ]
+                    },
+                    { type: 'train', lab: 'log-timeline', host: 'web-01', intro: '🧑🏾‍💻 Mira: “One address, many logs. Count first, then follow it.”' },
+                    {
+                        type: 'ask', who: 'mira', q: 'The same address asked the website for /.env and /backup.zip, then failed SSH logins for “deploy”. What do you make of it?',
+                        options: ['One attacker looking for a way in: first secrets on the website, then passwords', 'Two different people who share an internet connection', 'A search engine indexing the site', 'Nothing. 404 means it didn\'t work, so ignore it'], answer: 0,
+                        explain: 'Same address, same afternoon, two doors tried: that\'s one attacker doing reconnaissance. A 404 means this attempt failed, not that the attacker gave up, so you block the address and keep watching. Linking events across logs is how you see the whole story.'
+                    },
                     {
                         type: 'ask', who: 'mira', q: 'In auth.log: 30 “Failed password” lines from one address, then one “Accepted” from the same address. What happened?',
                         options: ['Someone guessed a password, and got in', 'A user forgot their password, then remembered', 'The server rebooted', 'Nothing. That\'s normal noise'], answer: 0,
@@ -5009,12 +5535,38 @@ permalink: /cyber-quest/
             },
             {
                 id: 'ch4', num: 4, title: 'Close the Doors', day: 'Thursday', icon: '🚪', xp: 130,
-                synopsis: 'Learn permissions, services and firewalls. Then a scanner starts knocking on every door, one by one.',
+                synopsis: 'Decode file permissions (where do 600 and 755 come from?), count the server\'s doors and lock them with a firewall. Then a scanner starts knocking on every door, one by one.',
                 beats: [
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 09:30', art: '🚪', lines: [
                             ['mira', 'Black Lantern got in by guessing a password and hid with a schedule. Today we shrink what they can even reach.'],
                             ['mira', 'Two ideas: permissions (who can read a file) and services (which programs listen to the internet).']
+                        ]
+                    },
+                    // Beats 1-6 were added later: loadProgress() shifts old ch4 saves past them (STORY_REV 3).
+                    { type: 'train', lab: 'file-perms', host: 'web-01', intro: '🧑🏾‍💻 Mira: “First, files. Ten little letters decide who can read every file on this server. Let\'s decode them.”' },
+                    {
+                        type: 'ask', who: 'mira', q: 'A file shows -rw-r-----. What number is that?',
+                        options: ['640', '644', '600', '750'], answer: 0,
+                        explain: 'Split it: owner rw- = 4+2 = 6, group r-- = 4, others --- = 0. So 640: I read and write, my team reads, nobody else gets in. 644 would let everyone read it.'
+                    },
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 10:45', art: '🔌', lines: [
+                            ['sam', 'Wait, so files have locks. What about the server itself? Can anyone just… connect to it?', 'worried'],
+                            ['mira', 'Only through a door: a port, with a service listening behind it. Most attacks start with someone counting those doors.'],
+                            ['mira', 'Alex, let\'s count ours on a test box. Then we close the ones nobody needs.']
+                        ]
+                    },
+                    { type: 'train', lab: 'services', host: 'test-01', intro: '🧑🏾‍💻 Mira: “Every open port is a door. Count them, close the useless ones, lock the rest.”' },
+                    {
+                        type: 'ask', who: 'mira', q: 'The website needs its database, but MySQL listens on 0.0.0.0:3306. Best fix?',
+                        options: ['Keep it running and block 3306 at the firewall', 'Stop MySQL', 'Leave it: it has a password', 'Change it to port 3307'], answer: 0,
+                        explain: 'Stopping it takes the website down, a password alone just invites guessing, and moving the port only fools a scanner for seconds. A firewall rule keeps it working for the server and invisible to everyone else.'
+                    },
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 11:30', art: '🛠️', lines: [
+                            ['mira', 'That was a test box. Now the real one: web-01. A leaky key and an old service. Same skills, less hand-holding.'],
+                            ['sam', 'If you find a password file I left lying around… no you won\'t. Probably.', 'happy']
                         ]
                     },
                     { type: 'train', lab: 'perms', host: 'web-01', intro: '🧑🏾‍💻 Mira: “Every open port is a door. Let\'s count ours.”' },

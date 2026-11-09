@@ -52,7 +52,11 @@ const SOLVE = {
   'ch-find': (v) => ['find /srv/shared -name launch-key.txt', 'cat ' + v.path, 'answer ' + v.code, 'answer ' + v.dir],
   'ch-map': (v) => ['cat /etc/passwd', 'answer ' + v.user, 'ls /var/log', 'answer ' + v.logs, 'ls -a /tmp', 'ls -a /var/tmp', 'answer ' + v.code],
   'ch-logs': (v) => ['grep Failed /var/log/auth.log', 'answer ' + v.ip, 'answer ' + v.n, 'grep Accepted /var/log/auth.log', 'answer ' + v.user],
+  'ch-filter': (v) => ['grep -v CRON /var/log/syslog | wc -l', 'answer ' + v.n, 'grep "Failed password" /var/log/auth.log | tail -n 1', 'answer ' + v.time],
+  'ch-trail': (v) => ['cut -d " " -f 1 /var/log/nginx/access.log | sort | uniq -c | sort -rn | head -n 1', 'answer ' + v.ip, 'grep -r ' + v.ip + ' /var/log', 'answer ' + v.user],
   'ch-jobs': (v) => ['ps aux', 'kill ' + v.pid, 'ls /etc/cron.d', 'answer ' + v.job],
+  'ch-fperms': (v) => ['ls -l', 'answer ' + v.num, 'chmod o-w ' + v.open, 'chmod 600 ' + v.secret],
+  'ch-svc': (v) => ['ss -tlnp', 'answer ' + v.local, 'systemctl stop ' + v.svc, 'systemctl disable ' + v.svc, 'ufw deny ' + v.db, 'ufw allow 22', 'ufw allow 443', 'ufw enable'],
   'ch-perms': (v) => ['ls -l ~/.ssh', 'chmod 600 ' + v.key, 'ss -tlnp', 'systemctl stop ' + v.svc, 'ufw deny ' + v.port, 'ufw enable'],
   'ch-final': (v) => ['find /srv/shared -name cert-key.txt', 'cat ' + v.path, 'answer ' + v.code, 'grep Failed /var/log/auth.log', 'answer ' + v.ip, 'ps aux', 'kill ' + v.pid, 'ls -l ~/.ssh', 'chmod 600 ' + v.key]
 };

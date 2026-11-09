@@ -8,7 +8,11 @@ const TRAIN = {
   'lost-and-found': ['ls', 'cat sam-note.txt', 'cd /srv/shared', 'ls', 'cd marketing', 'ls', 'cat README.txt', 'cd ../engineering/releases', 'ls', 'ls -a', 'cd .archive', 'ls', 'cd 2026-03', 'cat release-checklist.txt', 'pwd', 'find /srv/shared -name starfall-logo.png', 'cd /srv/shared/art/logos/wip/v3', 'ls'],
   'linux-map': ['ls /', 'cd /etc', 'ls', 'cat hostname', 'ls /var/log', 'cd ~', 'pwd', 'ls -a /tmp'],
   'reading-logs': ['tail syslog', 'grep -i error syslog', 'cat auth.log', 'grep -c Failed auth.log', 'answer 198.51.100.23'],
+  'log-filters': ['head -n 3 syslog', 'grep -v CRON syslog', 'grep -i error syslog | grep app', 'grep "Failed password" auth.log', 'grep "Failed password" auth.log | tail -n 1', 'answer 09:15:20', 'answer 09:13:48'],
+  'log-timeline': ['ls nginx', 'head nginx/access.log', 'cut -d " " -f 1 nginx/access.log', 'cut -d " " -f 1 nginx/access.log | sort | uniq -c | sort -rn | head -n 1', 'answer 203.0.113.45', 'grep -r 203.0.113.45 /var/log', 'answer deploy'],
   jobs: ['ps aux', 'kill 3310', 'cat /etc/crontab', 'ls /etc/cron.d', 'crontab -l'],
+  'file-perms': ['ls -l', 'answer rw-', 'answer r--', 'stat notes.txt', 'answer 755', 'chmod o-w salaries.csv', 'chmod 600 secrets.env', 'ls -l'],
+  services: ['systemctl list-units', 'ss -tlnp', 'answer 6379', 'systemctl status telnet', 'systemctl stop telnet', 'systemctl disable telnet', 'ufw deny 3306', 'ufw allow 22', 'ufw allow 443', 'ufw enable', 'ufw status'],
   perms: ['ls -l ~/.ssh', 'chmod 600 ~/.ssh/id_ed25519', 'ss -tlnp', 'systemctl stop ftp', 'ufw deny 21', 'ufw enable'],
   'Deleting safely': ['cat /etc/cron.d/old-test', 'rm /etc/cron.d/old-test', 'ls /etc/cron.d'],
   'Restore from backup': ['ls /backup/starfall', 'restore-backup /srv/starfall', 'ls /srv/starfall']
@@ -123,7 +127,7 @@ const TRAIN = {
   await page.click('#st-choices [data-go="home"]');
   const prog = await ev(() => window.__cyberQuest.progress);
   assert(['ch1', 'ch2', 'ch3', 'ch4', 'ch5'].every((id) => prog.story[id] && prog.story[id].done), 'every chapter is saved as done');
-  assert(['first-contact', 'lost-and-found', 'linux-map', 'reading-logs', 'jobs', 'perms'].every((id) => prog.labs[id] && prog.labs[id].done), 'training beats clear their labs');
+  assert(['first-contact', 'lost-and-found', 'linux-map', 'reading-logs', 'log-filters', 'log-timeline', 'jobs', 'file-perms', 'services', 'perms'].every((id) => prog.labs[id] && prog.labs[id].done), 'training beats clear their labs');
   await noHScroll();
   assert(errors.length === 0, 'console errors: ' + errors.join(' | '));
   console.log('PASS story');

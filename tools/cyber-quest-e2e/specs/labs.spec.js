@@ -7,7 +7,11 @@ const LABS = {
   'lost-and-found': ['ls', 'cat sam-note.txt', 'cd /srv/shared', 'ls', 'cd marketing', 'ls', 'cat README.txt', 'cd ../engineering/releases', 'ls', 'ls -a', 'cd .archive', 'ls', 'cd 2026-03', 'cat release-checklist.txt', 'pwd', 'find /srv/shared -name starfall-logo.png', 'cd /srv/shared/art/logos/wip/v3', 'ls'],
   'linux-map': ['ls /', 'cd /etc', 'ls', 'cat hostname', 'ls /var/log', 'cd ~', 'pwd', 'ls -a /tmp'],
   'reading-logs': ['tail -n 3 syslog', 'grep -i error syslog', 'cat auth.log', 'grep -c Failed auth.log', 'grep "Failed password" auth.log | wc -l', 'answer 10.0.4.22', 'answer 198.51.100.23'],
+  'log-filters': ['head -n 3 syslog', 'grep -v CRON syslog', 'grep -i error syslog | grep app', 'grep "Failed password" auth.log', 'grep "Failed password" auth.log | tail -n 1', 'answer 09:15:20', 'answer 09:13:48'],
+  'log-timeline': ['ls nginx', 'head nginx/access.log', 'cut -d " " -f 1 nginx/access.log', 'cut -d " " -f 1 nginx/access.log | sort | uniq -c | sort -rn | head -n 1', 'answer 203.0.113.45', 'grep -r 203.0.113.45 /var/log', 'answer deploy'],
   jobs: ['ps aux', 'kill 3310', 'cat /etc/crontab', 'ls /etc/cron.d', 'crontab -l'],
+  'file-perms': ['ls -l', 'answer rw-', 'answer r--', 'stat notes.txt', 'answer 755', 'chmod o-w salaries.csv', 'chmod 600 secrets.env', 'ls -l'],
+  services: ['systemctl list-units', 'ss -tlnp', 'answer 6379', 'systemctl status telnet', 'systemctl stop telnet', 'systemctl disable telnet', 'ufw deny 3306', 'ufw allow 22', 'ufw allow 443', 'ufw enable', 'ufw status'],
   perms: ['ls -l ~/.ssh', 'chmod 600 ~/.ssh/id_ed25519', 'ss -tlnp', 'systemctl stop ftp', 'ufw deny 21', 'ufw enable'],
   intruder: ['ps aux', 'kill 6621', 'ls /etc/cron.d', 'cat /etc/cron.d/apache-update', 'grep Accepted /var/log/auth.log', 'ufw deny from 203.0.113.66'],
   lockdown: ['ls -l', 'chmod 640 config.php', 'ss -tlnp', 'systemctl stop telnet', 'ufw deny 3306']
@@ -28,6 +32,27 @@ const LABS = {
       const out = await ev(() => window.__cyberQuest.ops.out);
       assert(/Session 42/.test(out) && !/Mar 09 06:00:44/.test(out.split('tail -n 3 syslog')[1].split('grep -i')[0]), 'tail -n 3 shows only the last lines');
       assert(/Not quite/.test(out), 'a wrong answer is rejected');
+    }
+    if (id === 'log-filters') {
+      const out = await ev(() => window.__cyberQuest.ops.out);
+      const inv = out.split('grep -v CRON syslog')[1].split('grep -i error')[0];
+      assert(!/CRON\[/.test(inv) && /disk usage/.test(inv), 'grep -v drops the matching lines and keeps the rest');
+      const chain = out.split('| grep app')[1].split('grep "Failed')[0];
+      assert(/database connection refused/.test(chain) && !/nginx/.test(chain), 'grep | grep narrows twice');
+    }
+    if (id === 'file-perms') {
+      const out = await ev(() => window.__cyberQuest.ops.out);
+      assert(/\(0644\/-rw-r--r--\)/.test(out), 'stat shows permissions as a number and as letters');
+      assert(/-rw-rw-r--\s+dana\s+staff/.test(out) && /-rw-------\s+alex\s+staff/.test(out), 'ls -l shows owner and group, and the chmods took effect');
+    }
+    if (id === 'services') {
+      const out = await ev(() => window.__cyberQuest.ops.out);
+      assert(/telnet\.service\s+active/.test(out) && /enabled at boot/.test(out) && /Status: active/.test(out), 'systemctl list-units/status and ufw status report the state');
+    }
+    if (id === 'log-timeline') {
+      const out = await ev(() => window.__cyberQuest.ops.out);
+      assert(/\b8 203\.0\.113\.45/.test(out.split('sort -rn | head -n 1')[1].split('answer')[0]), 'cut | sort | uniq -c | sort -rn ranks the busiest address first');
+      assert(/auth\.log:.*deploy/.test(out), 'grep -r names the file each match came from');
     }
     assert(await ev(() => window.__cyberQuest.shell._ready) && !(await ev(() => window.__cyberQuest.ops.done)), id + ': objectives done, waiting for exit');
     await type('exit');
@@ -88,6 +113,16 @@ const LABS = {
   await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch1', beat: 4 } })));
   await open();
   assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 4, 'a current save keeps its beat');
+  // rev 3 inserted Chapter 2's filter and trail parts after its beat 3.
+  await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch2', beat: 5 } })));
+  await open();
+  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 11, 'an old ch2 save past Reading Logs moves 6 beats on');
+  await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch2', beat: 3 } })));
+  await open();
+  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 3, 'an old ch2 save before the new parts stays put');
+  await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch4', beat: 1 } })));
+  await open();
+  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 7, 'an old ch4 save at its training moves 6 beats on');
   await noHScroll();
   assert(errors.length === 0, 'console errors: ' + errors.join(' | '));
   console.log('PASS labs');
