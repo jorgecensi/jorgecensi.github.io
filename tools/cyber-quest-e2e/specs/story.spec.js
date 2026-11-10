@@ -139,6 +139,7 @@ const TRAIN = {
     assert(sc === 'story', 'unexpected screen ' + sc);
     const st = await ev(() => { const s = window.__cyberQuest.story; return { ask: !!s.askBeat, answer: s.askBeat && s.askBeat.answer, next: !!document.querySelector('[data-story-next]'), end: !!document.querySelector('#st-choices [data-go="home"]') }; });
     if (st.ask) {
+      if (/Warm-up/.test(await page.innerText('#st-loc'))) seen.warmups = (seen.warmups || 0) + 1;
       if (!seen.wrongAnswer) {
         const wrong = await ev(() => [...document.querySelectorAll('#st-choices [data-ask]')].map((b) => Number(b.dataset.ask)).find((k) => k !== window.__cyberQuest.story.askBeat.answer));
         await page.click(`[data-ask="${wrong}"]`);
@@ -148,7 +149,17 @@ const TRAIN = {
       }
       await page.click(`[data-ask="${st.answer}"]`);
       await page.click('[data-story-tap]');
-    } else if (st.next) await page.click('[data-story-next]');
+    } else if (st.next) {
+      if (!seen.report) {
+        // Chapter 1's report card: graded parts, first-try answers, commands learned, rank.
+        const rep = await page.innerText('#st-report');
+        seen.report = /Phishing wave/.test(rep) && /Final exam/.test(rep) && /2 of 3 first try/.test(rep) && /Commands you can now use/i.test(rep) && /XP to /.test(rep);
+        assert(seen.report, 'chapter 1 ends with a report card: ' + rep);
+        assert(await ev(() => { const all = document.querySelectorAll('#st-progress i'); return all.length > 10 && document.querySelectorAll('#st-progress i.done').length === all.length && document.querySelectorAll('#st-progress i.live').length === 1; }), 'the progress bar is full and marks the live beat');
+        await shot('story-report');
+      }
+      await page.click('[data-story-next]');
+    }
     else if (st.end) done = true;
     else { said.push(await page.innerText('#st-text')); await page.click('#st-dialog'); }
   }
@@ -159,6 +170,7 @@ const TRAIN = {
   assert(seen.miner, 'the miner respawns while its cron job exists');
   assert(seen.lockout, 'blocking port 22 triggers the lockout warning');
   assert(seen.c2, 'the C2 relaunches the encryptor while its line is open');
+  assert(seen.warmups === 4, 'chapters 2 to 5 each open with one warm-up question (got ' + seen.warmups + ')');
   assert(seen.waves === 3 && seen.oldError, 'the live log incident runs three waves and rejects an old error');
   assert(seen.forbidden && seen.late, 'locking a public file is flagged, and the late upload arrives');
   // The story remembers: the phishing wave was failed once, and no incident was breached.
@@ -174,6 +186,7 @@ const TRAIN = {
   await page.click('#st-choices [data-go="home"]');
   const prog = await ev(() => window.__cyberQuest.progress);
   assert(['ch1', 'ch2', 'ch3', 'ch4', 'ch5'].every((id) => prog.story[id] && prog.story[id].done), 'every chapter is saved as done');
+  assert(prog.settings.rankSeen > 0 && !prog.storyRun, 'promotions were announced and no chapter run is left over');
   assert(['first-contact', 'lost-and-found', 'linux-map', 'reading-logs', 'log-filters', 'log-timeline', 'jobs', 'file-perms', 'services', 'perms'].every((id) => prog.labs[id] && prog.labs[id].done), 'training beats clear their labs');
   await noHScroll();
   assert(errors.length === 0, 'console errors: ' + errors.join(' | '));

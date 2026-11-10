@@ -16,7 +16,7 @@ runs each spec with a 420 s timeout (`SPEC_TIMEOUT=`). Screenshots land in
 
 | Spec | What it covers | Time |
 |---|---|---|
-| `story.spec.js` | All 5 story chapters end to end: scenes, questions (one wrong answer first), every training and incident beat with real commands, the phishing rush (a deliberate fail, then a win), and each live mechanic: the miner respawning from cron, the SSH lockout warning, the ransomware C2 relaunch, the live log's three waves and the late upload. Also checks that debrief scenes react to how the player did (`progress.memo`). | ~3.5 min |
+| `story.spec.js` | All 5 story chapters end to end: scenes, questions (one wrong answer first), every training and incident beat with real commands, the phishing rush (a deliberate fail, then a win), and each live mechanic: the miner respawning from cron, the SSH lockout warning, the ransomware C2 relaunch, the live log's three waves and the late upload. Also checks that debrief scenes react to how the player did (`progress.memo`), the chapter report card, the progress bar and the warm-up question that opens chapters 2 to 5. | ~3.5 min |
 | `incident-fail.spec.js` | Lets the chapter 2 brute-force attack run out: the meter climbs, `auth.log` grows, the incident ends in “Breached”, and “Try again” restarts at 0%. | ~90 s |
 | `missions.spec.js` | Every Training Grounds quiz mission, tier unlocking, the password forge, a boss timeout, reaching the top rank. | ~1 min |
 | `labs.spec.js` | Every terminal lab by following its lessons, shell details (`tail -n`, `grep -c`, quoted args, `answer`, `man`), lab locking, old-save compatibility. | ~30 s |

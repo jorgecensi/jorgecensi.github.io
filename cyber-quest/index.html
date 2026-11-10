@@ -603,6 +603,22 @@ permalink: /cyber-quest/
         .grounds-title { display: block; font-size: 1.1rem; font-weight: 800; margin-bottom: 2px; }
 
         .story-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        /* One segment per beat: how far through the chapter you are, and where the alarms are. */
+        .st-progress { display: flex; gap: 2px; margin: 0 2px 10px; }
+        .st-progress i { flex: 1; height: 5px; border-radius: 3px; background: var(--line); }
+        .st-progress i.live { background: #7f1d1d; }
+        .st-progress i.done { background: var(--accent); }
+        .st-progress i.live.done { background: #f43f5e; }
+        .st-progress i.now { background: #e2e8f0; }
+        .st-report { margin: 4px 0 14px; font-size: 0.9rem; }
+        .st-report .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+        .st-report .row .stars { font-size: 0.8rem; white-space: nowrap; }
+        .st-report .lbl { margin: 12px 0 6px; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+        .st-report .skills { display: flex; flex-wrap: wrap; gap: 6px; }
+        .st-report .skills code { font-size: 0.78rem; background: var(--panel-2); padding: 2px 7px; border-radius: 6px; }
+        .st-report .rank { margin-top: 12px; }
+        .st-report .rank .bar { margin: 6px 0 4px; }
+        .st-report .promo { color: #fbbf24; font-weight: 700; }
         .story-loc { flex: 1; min-width: 0; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
         .story-loc b { display: block; font-family: system-ui, sans-serif; font-size: 0.95rem; color: var(--text); }
         /* Scene backgrounds and character sprites: /img/cq/ (built with tools/pixel-sprite-sheet). */
@@ -898,6 +914,9 @@ permalink: /cyber-quest/
                 <ul>
                     <li>How you do changes what people say next: a phishing mail you let through, how fast you blocked an attack, whether a file leaked. Nothing is ever lost, and a breach always offers a free retry.</li>
                     <li>A wrong answer to one of Mira's questions tells you why that choice is tempting and why it fails. Then you pick again.</li>
+                    <li>The bar under the chapter title shows how far through the chapter you are. Red segments are the live moments.</li>
+                    <li>From Chapter 2 on, each chapter opens with a 🔁 warm-up: one question from an earlier day, usually one you missed first time. Coming back to things is how they stick.</li>
+                    <li>A finished chapter shows a report: stars for each graded part, how many questions you got first try, the commands you learned and your rank. Stars are kept if you leave mid-chapter and come back.</li>
                 </ul>
             </div>
             <div class="guide-sec">
@@ -991,10 +1010,12 @@ permalink: /cyber-quest/
                 <div class="story-loc"><b id="st-chapter"></b><span id="st-loc"></span></div>
                 <button class="icon-btn" data-sound aria-label="Sound on or off">🔊</button>
             </div>
+            <div class="st-progress" id="st-progress" aria-hidden="true"></div>
             <div class="stage" id="st-stage"><div class="stage-art" id="st-art"></div><div class="actor" id="st-actor" hidden aria-hidden="true"></div><div class="stage-card" id="st-card"></div></div>
             <div class="dialog" id="st-dialog" tabindex="0" aria-live="polite">
                 <div class="speaker"><span class="avatar" id="st-avatar"></span><div><b id="st-name"></b><small id="st-role"></small></div></div>
                 <p class="line" id="st-text"></p>
+                <div class="st-report" id="st-report" hidden></div>
                 <div class="choices" id="st-choices"></div>
                 <div class="st-feedback" id="st-feedback"></div>
                 <div class="tap" id="st-tap">tap to continue ▸</div>
@@ -1026,7 +1047,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611100905';
+    const SW_VERSION = '2611101400';
 
     (() => {
         'use strict';
@@ -2377,12 +2398,22 @@ permalink: /cyber-quest/
         }
 
         // ── Home / guide ──────────────────────────────────────────────────
+        const rankAt = (xp) => { let r = 0; while (r + 1 < RANKS.length && xp >= RANKS[r + 1].xp) r++; return r; };
+        // Announce a promotion once, wherever the XP came from. Older saves start from their current rank.
+        function checkRank(quiet) {
+            const r = rankAt(totalXp()), seen = progress.settings.rankSeen;
+            if (seen == null || r <= seen) { if (seen == null || r < seen) { progress.settings.rankSeen = r; saveProgress(); } return false; }
+            progress.settings.rankSeen = r;
+            saveProgress();
+            if (!quiet) { toast('⬆️ Promoted to <b>' + esc(RANKS[r].name) + '</b>', 3600); Sfx.win(); }
+            return true;
+        }
         function renderHome() {
             renderStoryHero();
             Daily.render();
+            checkRank();
             const xp = totalXp();
-            let r = 0;
-            while (r + 1 < RANKS.length && xp >= RANKS[r + 1].xp) r++;
+            const r = rankAt(xp);
             $('rank-name').textContent = RANKS[r].name;
             $('rank-xp').textContent = `${xp} XP`;
             const next = RANKS[r + 1];
@@ -6323,10 +6354,11 @@ permalink: /cyber-quest/
                 el.innerHTML = html;
             }
         };
+        const askKey = (b) => b.q.slice(0, 48); // a question's key in progress.memo.asks
         const fmtLine = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
 
         const Story = {
-            ch: null, i: 0, line: 0, results: [], typing: false, typer: null, onTap: null, askBeat: null,
+            ch: null, i: 0, line: 0, typing: false, typer: null, onTap: null, askBeat: null,
 
             chapter(id) { return CHAPTERS.find((c) => c.id === id); },
             // Where "Continue" should take the player.
@@ -6336,10 +6368,19 @@ permalink: /cyber-quest/
                 const ch = CHAPTERS.find((c) => !storyDone(c.id));
                 return ch ? { ch, beat: 0 } : null;
             },
+            // The chapter run in progress: stars per graded beat and first-try answers. It is saved,
+            // so leaving and resuming mid-chapter keeps the stars already earned.
+            run() {
+                const r = progress.storyRun;
+                if (!r || r.ch !== this.ch.id) progress.storyRun = { ch: this.ch.id, results: {}, asked: 0, first: 0 };
+                return progress.storyRun;
+            },
             open(id, beat) {
                 this.ch = this.chapter(id);
-                this.results = [];
                 this.i = beat || 0;
+                if (!this.i) progress.storyRun = null;
+                this.run();
+                $('st-report').hidden = true;
                 show('story');
                 // Warm the cache so backgrounds and faces don't pop in mid-scene.
                 if (!this.preloaded) { this.preloaded = true; STORY_ART.forEach((src) => { new Image().src = src; }); }
@@ -6360,11 +6401,32 @@ permalink: /cyber-quest/
                 $('st-card').className = 'stage-card show'; $('st-stage').classList.add('carded');
                 this.speak(null, 'Tap to begin.');
                 this.actor(null);
-                this.onTap = () => { $('st-card').className = 'stage-card'; $('st-stage').classList.remove('carded'); this.play(); };
+                this.progressBar(-1);
+                this.onTap = () => { $('st-card').className = 'stage-card'; $('st-stage').classList.remove('carded'); if (!this.warmup()) this.play(); };
+            },
+            progressBar(at) {
+                $('st-progress').innerHTML = this.ch.beats.map((b, k) =>
+                    '<i class="' + (b.type === 'incident' || b.type === 'triage' ? 'live ' : '') + (k < at ? 'done' : k === at ? 'now' : '') + '"></i>').join('');
+            },
+            // Spaced practice: each chapter after the first opens with one question from an earlier
+            // chapter, preferring one the player got wrong first time. It is not a beat, so it is
+            // never saved as a position and never counts towards the chapter.
+            warmup() {
+                const before = CHAPTERS.slice(0, CHAPTERS.indexOf(this.ch));
+                const pool = [];
+                before.forEach((c) => c.beats.forEach((b) => { if (b.type === 'ask') pool.push(b); }));
+                if (!pool.length) return false;
+                const missed = pool.filter((b) => (progress.memo.asks || {})[askKey(b)]);
+                const b = pick(missed.length ? missed : pool);
+                this.warm = true;
+                $('st-loc').textContent = '🔁 Warm-up · from an earlier day';
+                this.ask(b);
+                return true;
             },
             play() {
                 $('st-card').className = 'stage-card'; $('st-stage').classList.remove('carded');
                 if (this.i >= this.ch.beats.length) return this.complete();
+                this.progressBar(this.i);
                 progress.storyAt = { ch: this.ch.id, beat: this.i };
                 saveProgress();
                 const b = this.ch.beats[this.i];
@@ -6379,7 +6441,7 @@ permalink: /cyber-quest/
                 Ops.run(src, { mode: 'story', onDone: (r) => this.after(r) });
             },
             after(r) {
-                if (r && r.stars) this.results.push(r.stars);
+                if (r && r.stars) { this.run().results[this.i] = r.stars; saveProgress(); }
                 show('story');
                 this.i++;
                 this.play();
@@ -6478,6 +6540,7 @@ permalink: /cyber-quest/
                 $('st-tap').hidden = true;
                 this.onTap = null;
                 this.askBeat = b;
+                this.askMissed = false;
                 const order = shuffle(b.options.map((_, k) => k));
                 $('st-choices').innerHTML = order.map((k) => '<button class="opt" data-ask="' + k + '">' + esc(b.options[k]) + '</button>').join('');
             },
@@ -6490,15 +6553,23 @@ permalink: /cyber-quest/
                     document.querySelectorAll('#st-choices .opt').forEach((x) => { x.disabled = true; });
                     btn.classList.add('correct');
                     $('st-feedback').className = 'st-feedback good';
-                    $('st-feedback').innerHTML = '✔ ' + fmtLine(b.explain) + '<div class="btn-row"><button class="btn" data-story-tap>Continue ▸</button></div>';
+                    // First-try answers are counted for the chapter report; a miss is remembered for a later warm-up.
+                    const first = !this.askMissed, warm = this.warm, run = this.run();
+                    progress.memo.asks = progress.memo.asks || {};
+                    if (first) delete progress.memo.asks[askKey(b)]; else progress.memo.asks[askKey(b)] = 1;
+                    if (!warm) { run.asked++; if (first) run.first++; }
+                    saveProgress();
+                    $('st-feedback').innerHTML = '✔ ' + (first ? '<b>First try.</b> ' : '') + fmtLine(b.explain) + '<div class="btn-row"><button class="btn" data-story-tap>Continue ▸</button></div>';
                     this.actor(b.who || 'mira', 'happy');
                     Sfx.ok();
                     this.askBeat = null;
-                    this.onTap = () => { this.i++; this.play(); };
+                    this.warm = false;
+                    this.onTap = () => { if (!warm) this.i++; this.play(); };
                     const btnNext = document.querySelector('[data-story-tap]');
                     if (btnNext) btnNext.focus({ preventScroll: true });
                 } else {
                     btn.disabled = true;
+                    this.askMissed = true;
                     btn.classList.add('wrong');
                     $('st-feedback').className = 'st-feedback bad';
                     // Each wrong option says why it is tempting and why it fails (`why`, by option index).
@@ -6507,16 +6578,42 @@ permalink: /cyber-quest/
                     Sfx.hit();
                 }
             },
+            // The chapter's report card: how each graded part went, first-try answers, the commands
+            // learned, and how far the XP moved the rank. Reflection is part of the reward.
+            report(run, xpBefore) {
+                const ch = this.ch, xp = totalXp(), r = rankAt(xp), next = RANKS[r + 1];
+                const name = (b) => (b.type === 'triage' ? '🎣 Phishing wave' : b.type === 'incident' ? b.icon + ' ' + b.title
+                    : b.lab && (LABS.find((l) => l.id === b.lab) || {}).challenge ? '🎓 Final exam' : (b.icon || '💻') + ' ' + (b.title || 'Training'));
+                const rows = Object.keys(run.results).map(Number).sort((a, b) => a - b).filter((k) => ch.beats[k])
+                    .map((k) => '<div class="row"><span>' + esc(name(ch.beats[k])) + '</span><span class="stars">' + starHtml(run.results[k]) + '</span></div>');
+                if (run.asked) rows.push('<div class="row"><span>💬 Mira\'s questions</span><span>' + run.first + ' of ' + run.asked + ' first try</span></div>');
+                const skills = [];
+                ch.beats.forEach((b) => { const l = b.lab && LABS.find((x) => x.id === b.lab); ((l && l.skills) || []).forEach((sk) => { if (!skills.includes(sk)) skills.push(sk); }); });
+                const promoted = rankAt(xpBefore) < r;
+                if (promoted) checkRank(true);
+                const pct = next ? ((xp - RANKS[r].xp) / (next.xp - RANKS[r].xp)) * 100 : 100;
+                $('st-report').innerHTML = rows.join('') +
+                    (skills.length ? '<div class="lbl">Commands you can now use</div><div class="skills">' + skills.slice(0, 14).map((sk) => '<code>' + esc(sk) + '</code>').join('') + '</div>' : '') +
+                    '<div class="rank">' + (promoted ? '<span class="promo">⬆️ Promoted to ' + esc(RANKS[r].name) + '</span>' : '<b>' + esc(RANKS[r].name) + '</b>') + ' · ' + xp + ' XP' +
+                    '<div class="bar"><i style="width:' + Math.round(pct) + '%"></i></div><span class="dim">' + (next ? (next.xp - xp) + ' XP to ' + esc(next.name) : 'Top rank reached') + '</span></div>';
+                $('st-report').hidden = false;
+            },
             complete() {
                 const ch = this.ch;
-                const stars = this.results.length ? Math.round(this.results.reduce((a, x) => a + x, 0) / this.results.length) : 3;
+                const run = this.run();
+                const results = Object.values(run.results);
+                const stars = results.length ? Math.round(results.reduce((a, x) => a + x, 0) / results.length) : 3;
                 const prev = progress.story[ch.id] || {};
                 const first = !prev.done;
+                const xpBefore = totalXp();
                 progress.story[ch.id] = { done: true, stars: Math.max(prev.stars || 0, stars), xp: ch.xp };
                 const nextCh = CHAPTERS[CHAPTERS.indexOf(ch) + 1];
                 progress.storyAt = nextCh ? { ch: nextCh.id, beat: 0 } : null;
+                progress.storyRun = null;
                 saveProgress();
                 Sfx.win();
+                this.progressBar(ch.beats.length);
+                this.report(run, xpBefore);
                 this.mood('calm', 'Chapter complete', '🏆');
                 this.actor(null);
                 const last = !nextCh;
