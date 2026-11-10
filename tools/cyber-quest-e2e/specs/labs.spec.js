@@ -116,13 +116,19 @@ const LABS = {
   // rev 3 inserted Chapter 2's filter and trail parts after its beat 3.
   await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch2', beat: 5 } })));
   await open();
-  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 11, 'an old ch2 save past Reading Logs moves 6 beats on');
+  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 14, 'an old ch2 save past Reading Logs moves 6 beats on, then 3 more for the live log');
   await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch2', beat: 3 } })));
   await open();
   assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 3, 'an old ch2 save before the new parts stays put');
   await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 2, missions: {}, labs: {}, story: {}, storyAt: { ch: 'ch4', beat: 1 } })));
   await open();
-  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 7, 'an old ch4 save at its training moves 6 beats on');
+  assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === 10, 'an old ch4 save at its training moves 6 beats on, then 3 more for the open folder');
+  // rev 4 inserted a live incident into Chapter 2 (after beat 6) and Chapter 4 (after beat 2).
+  for (const [ch, beat, want] of [['ch2', 7, 10], ['ch2', 6, 6], ['ch4', 3, 6], ['ch4', 2, 2]]) {
+    await ev((a) => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 3, missions: {}, labs: {}, story: {}, storyAt: { ch: a[0], beat: a[1] } })), [ch, beat]);
+    await open();
+    assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === want, 'a rev 3 ' + ch + ' save at beat ' + beat + ' lands on ' + want);
+  }
   await noHScroll();
   assert(errors.length === 0, 'console errors: ' + errors.join(' | '));
   console.log('PASS labs');

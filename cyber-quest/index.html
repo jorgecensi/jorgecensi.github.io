@@ -110,6 +110,11 @@ permalink: /cyber-quest/
             font-size: 1.6rem; background: var(--panel-2);
         }
         .mission.boss .m-icon { background: #3a1020; }
+        #daily-card { margin: 0 0 14px; }
+        .mission.daily { border-color: #f59e0b66; }
+        .mission.daily.done { border-color: var(--line); }
+        .mission.daily .streak { font-weight: 800; font-size: 1.05rem; white-space: nowrap; color: #fbbf24; }
+        .mission.daily .streak.off { opacity: 0.4; filter: grayscale(1); }
         .mission .m-body { flex: 1; min-width: 0; }
         .mission h3 { margin: 0; font-size: 1rem; }
         .mission p { margin: 2px 0 0; font-size: 0.83rem; color: var(--muted); }
@@ -752,6 +757,8 @@ permalink: /cyber-quest/
                 </div>
             </div>
 
+            <div id="daily-card" hidden></div>
+
             <div class="story-hero" id="story-hero"></div>
 
             <details class="grounds" id="grounds">
@@ -881,8 +888,24 @@ permalink: /cyber-quest/
                     <li><b>🏆 Challenges</b> (Training Grounds) test a Basics lab with no lessons, no hints and no shortcut buttons. Goals say what to achieve, not which command to type, and every run is different, so you have to really know the commands. <code>help</code> and <code>man</code> still work. Fewer commands earn more stars.</li>
                     <li>When every objective is done, <b>log out</b> with <code>exit</code> (or <code>logout</code>) to see your result, just as you'd close a real server session. In an incident the clock stops as soon as the threat is contained, so take your time reading.</li>
                     <li><b>🚨 Incidents</b> unlock after the Basics: you use what you learned to catch an intruder and harden the server, with lessons that point back to the Basics.</li>
+                    <li>The story has short <b>live moments</b> between lessons too: a log that is still being written, a folder being raided. They use only what the lesson before them taught.</li>
                     <li>Stuck? Type <code>hint</code> for the exact command, <code>help</code> for every command, or <code>man ls</code> to explain one.</li>
                     <li>It's a sandbox in your browser on a fake filesystem — nothing touches a real machine. Labs unlock in order and earn XP like missions.</li>
+                </ul>
+            </div>
+            <div class="guide-sec">
+                <h3>📖 The story remembers</h3>
+                <ul>
+                    <li>How you do changes what people say next: a phishing mail you let through, how fast you blocked an attack, whether a file leaked. Nothing is ever lost, and a breach always offers a free retry.</li>
+                    <li>A wrong answer to one of Mira's questions tells you why that choice is tempting and why it fails. Then you pick again.</li>
+                </ul>
+            </div>
+            <div class="guide-sec">
+                <h3>🗓️ Daily shift</h3>
+                <ul>
+                    <li>One short terminal job a day, drawn from what you've already learned: a no-hint challenge, or an incident from a chapter you've finished.</li>
+                    <li>The first shift each day is worth +15 XP and grows your 🔥 streak. Miss a day and the streak starts again.</li>
+                    <li>It appears once you've cleared your first Basics lab with a challenge.</li>
                 </ul>
             </div>
             <div class="guide-sec">
@@ -1003,7 +1026,7 @@ permalink: /cyber-quest/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611091136';
+    const SW_VERSION = '2611101200';
 
     (() => {
         'use strict';
@@ -2267,7 +2290,7 @@ permalink: /cyber-quest/
 
         // ── Progress ──────────────────────────────────────────────────────
         const STORE_KEY = 'cyber-quest-progress-v1';
-        const STORY_REV = 3; // bump when beats are inserted into a released chapter, and migrate in loadProgress()
+        const STORY_REV = 4; // bump when beats are inserted into a released chapter, and migrate in loadProgress()
         let progress = loadProgress();
 
         function loadProgress() {
@@ -2277,17 +2300,21 @@ permalink: /cyber-quest/
                     p.labs = p.labs || {};
                     p.story = p.story || {};
                     p.settings = p.settings || {};
+                    p.memo = p.memo || {};
                     // rev 2 inserted two beats into ch1 after beat 1: move saves that were past them.
                     if ((p.rev || 1) < 2 && p.storyAt && p.storyAt.ch === 'ch1' && p.storyAt.beat >= 2) p.storyAt.beat += 2;
                     // rev 3 inserted six beats into ch2 after beat 3 (Filter the Noise, Follow the Trail).
                     if ((p.rev || 1) < 3 && p.storyAt && p.storyAt.ch === 'ch2' && p.storyAt.beat >= 4) p.storyAt.beat += 6;
                     // rev 3 also inserted six beats into ch4 after beat 0 (Who Can Read This?, Doors and Locks).
                     if ((p.rev || 1) < 3 && p.storyAt && p.storyAt.ch === 'ch4' && p.storyAt.beat >= 1) p.storyAt.beat += 6;
+                    // rev 4 inserted three beats into ch2 after beat 6 (Whack-a-log) and three into ch4 after beat 2 (Open to the world).
+                    if ((p.rev || 1) < 4 && p.storyAt && p.storyAt.ch === 'ch2' && p.storyAt.beat >= 7) p.storyAt.beat += 3;
+                    if ((p.rev || 1) < 4 && p.storyAt && p.storyAt.ch === 'ch4' && p.storyAt.beat >= 3) p.storyAt.beat += 3;
                     p.rev = STORY_REV;
                     return p;
                 }
             } catch (e) { /* storage blocked */ }
-            return { v: 1, rev: STORY_REV, missions: {}, labs: {}, story: {}, settings: {} };
+            return { v: 1, rev: STORY_REV, missions: {}, labs: {}, story: {}, settings: {}, memo: {} };
         }
         function saveProgress() {
             progress.rev = STORY_REV;
@@ -2295,7 +2322,18 @@ permalink: /cyber-quest/
         }
         const totalXp = () => Object.values(progress.missions).reduce((s, m) => s + (m.xp || 0), 0)
             + Object.values(progress.labs || {}).reduce((s, l) => s + (l.xp || 0), 0)
-            + Object.values(progress.story || {}).reduce((s, c) => s + (c.xp || 0), 0);
+            + Object.values(progress.story || {}).reduce((s, c) => s + (c.xp || 0), 0)
+            + ((progress.daily && progress.daily.xp) || 0);
+
+        // What the story remembers about how the player did, so later scenes can react.
+        // memo.triage = { missed: [subjects], retried }, memo.inc[<incident id>] = { peak, secs, hints, breaches, … }.
+        const M = {
+            get triage() { return progress.memo.triage || null; },
+            inc(id) { return (progress.memo.inc || {})[id] || null; },
+            // Phishing mails the player let through on their first go at the wave.
+            get missed() { return (progress.memo.triage && progress.memo.triage.missed) || []; },
+            get breaches() { return Object.values(progress.memo.inc || {}).reduce((n, x) => n + (x.breaches || 0), 0) + (this.triage && this.triage.retried ? 1 : 0); }
+        };
         const starsFor = (id) => (progress.missions[id] && progress.missions[id].stars) || 0;
         function isUnlocked(i) {
             const m = MISSIONS[i];
@@ -2341,6 +2379,7 @@ permalink: /cyber-quest/
         // ── Home / guide ──────────────────────────────────────────────────
         function renderHome() {
             renderStoryHero();
+            Daily.render();
             const xp = totalXp();
             let r = 0;
             while (r + 1 < RANKS.length && xp >= RANKS[r + 1].xp) r++;
@@ -4030,6 +4069,59 @@ permalink: /cyber-quest/
             { id: 'ops', name: 'Incidents', icon: '🚨', blurb: 'Put the basics to work on a real(istic) attack.' }
         ];
 
+        // ── Daily shift ───────────────────────────────────────────────────
+        // One short terminal job a day, drawn from what the player has already been taught:
+        // the no-hint challenges of cleared Basics labs and the incidents of finished chapters.
+        // progress.daily = { day: 'YYYY-MM-DD' (last shift done), streak, best, xp }.
+        const DAILY_XP = 15;
+        const Daily = {
+            now: () => new Date(), // specs replace this to travel in time
+            key(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); },
+            today() { return this.key(this.now()); },
+            yesterday() { const d = this.now(); d.setDate(d.getDate() - 1); return this.key(d); },
+            pool() {
+                const incs = [];
+                CHAPTERS.forEach((ch) => { if (storyDone(ch.id)) ch.beats.forEach((b) => { if (b.type === 'incident') incs.push(b); }); });
+                return LABS.filter((l) => l.challenge && labDone(l.after)).concat(incs);
+            },
+            // The same job all day, a different one tomorrow.
+            job() {
+                const pool = this.pool();
+                if (!pool.length) return null;
+                const d = this.now();
+                const n = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+                return pool[n % pool.length];
+            },
+            doneToday() { return !!progress.daily && progress.daily.day === this.today(); },
+            // A streak is alive if the last shift was today or yesterday.
+            streak() {
+                const d = progress.daily;
+                return d && (d.day === this.today() || d.day === this.yesterday()) ? d.streak : 0;
+            },
+            start() { const j = this.job(); if (j) Ops.run(j, { mode: 'daily' }); },
+            complete(stars) {
+                if (this.doneToday()) return { first: false, streak: progress.daily.streak };
+                const d = progress.daily || { streak: 0, best: 0, xp: 0 };
+                const streak = this.streak() + 1;
+                progress.daily = { day: this.today(), streak, best: Math.max(d.best || 0, streak), xp: (d.xp || 0) + DAILY_XP, stars };
+                saveProgress();
+                return { first: true, streak };
+            },
+            render() {
+                const el = $('daily-card');
+                const j = this.job();
+                el.hidden = !j;
+                if (!j) return;
+                const done = this.doneToday(), streak = this.streak();
+                el.innerHTML = '<button class="mission daily' + (done ? ' done' : '') + '" data-daily>' +
+                    '<span class="m-icon">' + (done ? '✅' : '🗓️') + '</span>' +
+                    '<span class="m-body"><h3>Daily shift</h3><p>' + (done
+                        ? 'Done for today. A new shift opens tomorrow. Tap to practise this one again.'
+                        : esc(j.title.replace(/^Challenge: /, '')) + ' · about 2 minutes · +' + DAILY_XP + ' XP') + '</p></span>' +
+                    '<span class="streak' + (streak ? '' : ' off') + '" aria-label="' + streak + '-day streak">🔥 ' + streak + '</span></button>';
+            }
+        };
+
         // Tiny synth for alarms and feedback; silent when muted or when audio is unavailable.
         const Sfx = {
             ctx: null,
@@ -4087,6 +4179,7 @@ permalink: /cyber-quest/
                 this.mode = opts.mode || 'lab';
                 this.onDone = opts.onDone || null;
                 this.host = src.host || 'web-01';
+                this.breaches = opts.breaches || 0;
                 this._finished = false;
                 this._ready = false; this._exitNow = false;
                 l.tasks.forEach((t) => { t._was = false; });
@@ -4210,8 +4303,8 @@ permalink: /cyber-quest/
                 $('ops-done-text').innerHTML = esc(this.lab.incident.failText) + ' <span class="dim">Nothing is lost: you can try again right away.</span>';
                 $('ops-done').className = 'term-done show bad';
                 $('ops-continue').textContent = '↻ Try again';
-                const src = this.lab, mode = this.mode, onDone = this.onDone;
-                this._next = () => this.run(src, { mode, onDone });
+                const src = this.lab, mode = this.mode, onDone = this.onDone, breaches = this.breaches + 1;
+                this._next = () => this.run(src, { mode, onDone, breaches });
                 this.showDone();
             },
             continue() {
@@ -4728,6 +4821,22 @@ permalink: /cyber-quest/
                 this._finished = true;
                 const l = this.lab;
                 $('ops-continue').textContent = 'Continue';
+                if (this.mode === 'daily') {
+                    const inc = this.inc;
+                    this.stopIncident();
+                    const used = this.T.history.filter((c) => !/^(help|man|clear|exit|logout)\b/.test(c)).length;
+                    const stars = l.incident ? (inc.peak < 35 ? 3 : inc.peak < 70 ? 2 : 1) : (used <= l.par ? 3 : used <= l.par * 2 ? 2 : 1);
+                    const r = Daily.complete(stars);
+                    Sfx.win();
+                    $('ops-done-title').textContent = '🗓️ Shift done';
+                    $('ops-done-text').innerHTML = '<span class="stars">' + starHtml(stars) + '</span><br>' +
+                        (r.first ? '<b>🔥 ' + r.streak + '-day streak</b> · +' + DAILY_XP + ' XP<br>' : '<span class="dim">Already done today: this one was just for practice.</span><br>') +
+                        esc(l.debrief || '') + (r.first ? ' <span class="dim">A new shift opens tomorrow.</span>' : '');
+                    $('ops-done').className = 'term-done show';
+                    this._next = () => show('home');
+                    this.showDone();
+                    return;
+                }
                 if (this.mode === 'story') {
                     const inc = this.inc;
                     this.stopIncident();
@@ -4735,6 +4844,12 @@ permalink: /cyber-quest/
                     if (l.incident) {
                         stars = inc.peak < 35 ? 3 : inc.peak < 70 ? 2 : 1;
                         if (this.T.hints >= 2) stars = Math.max(1, stars - 1);
+                        // The story remembers how each incident went, so the debrief can react.
+                        if (l.id) {
+                            progress.memo.inc = progress.memo.inc || {};
+                            progress.memo.inc[l.id] = Object.assign({ peak: Math.round(inc.peak), secs: Math.round(inc.t), hints: this.T.hints, breaches: this.breaches }, inc.stats || {});
+                            saveProgress();
+                        }
                         Sfx.win();
                     } else Sfx.ok();
                     let examLine = '';
@@ -4978,7 +5093,7 @@ permalink: /cyber-quest/
         // Chapter 2 incident: a live SSH password-guessing attack.
         const BRUTE_IP = '203.0.113.66';
         const INC_BRUTE = {
-            type: 'incident', title: 'SSH under attack', icon: '🔴', host: 'web-01',
+            id: 'brute', type: 'incident', title: 'SSH under attack', icon: '🔴', host: 'web-01',
             intro: '🧑🏾‍💻 Mira (on the phone): “Find their address in <code>/var/log/auth.log</code>, then block it with <code>ufw deny from</code>. You\'ve got this.”',
             chips: ['tail /var/log/auth.log', 'grep Failed /var/log/auth.log', 'ufw status', 'hint'],
             debrief: 'You read a log under pressure, found the attacker and blocked them at the firewall before they guessed right. That\'s real incident response.',
@@ -5033,7 +5148,7 @@ permalink: /cyber-quest/
         const MINER_CRON = '/etc/cron.d/sys-update';
         const minerAlive = (T) => T.procs.some((p) => p.cmd === MINER);
         const INC_MINER = {
-            type: 'incident', title: 'Ghost in the machine', icon: '🔥', host: 'build-01',
+            id: 'miner', type: 'incident', title: 'Ghost in the machine', icon: '🔥', host: 'build-01',
             intro: '🧑🏾‍💻 Mira: “Find what\'s eating the CPU and kill it. If it comes back, something is restarting it. You know where schedules live.”',
             chips: ['ps aux', 'ls /etc/cron.d', 'hint'],
             debrief: 'You killed the miner, found its persistence (a cron job re-downloading it every minute), deleted the job and the program, and made sure it stayed dead.',
@@ -5090,7 +5205,7 @@ permalink: /cyber-quest/
             return !!s && !(s.svc && T.stoppedSvc.has(s.svc)) && !T.ufw.deny.has(String(port));
         };
         const INC_SCAN = {
-            type: 'incident', title: 'Port scan', icon: '📡', host: 'web-01',
+            id: 'scan', type: 'incident', title: 'Port scan', icon: '📡', host: 'web-01',
             intro: '🧑🏾‍💻 Mira: “See what\'s listening with <code>ss -tlnp</code>, then close FTP, Telnet, the dev panel and the database with <code>systemctl stop</code> or <code>ufw deny</code>. Leave 22 and 443 alone!”',
             chips: ['ss -tlnp', 'systemctl stop ftp', 'ufw deny 3306', 'ufw status', 'hint'],
             debrief: 'You shrank the attack surface while the attacker watched: dangerous services stopped, the database firewalled, and SSH and the website still up.',
@@ -5156,6 +5271,206 @@ permalink: /cyber-quest/
             }
         };
 
+        // Chapter 2 micro-incident: programs fail one after another, and the live log names each one.
+        // Three waves. The newest error line is the one that matters: old errors stay in the log as decoys.
+        const NOISE_PROGS = {
+            cache: ['ERROR out of memory, dropping connections', 'error: eviction failed, cache is full'],
+            uploads: ['Error: disk quota exceeded for /srv/uploads', 'ERROR write failed: no space left'],
+            search: ['error: index is locked by another process', 'ERROR query timed out after 30s'],
+            mailer: ['ERROR connection to smtp refused', 'Error: 41 messages stuck in the queue'],
+            thumbs: ['Error: worker crashed resizing trailer-poster.png', 'ERROR too many open files'],
+            payments: ['ERROR upstream gateway timed out', 'error: retry limit reached']
+        };
+        const INC_NOISE = {
+            id: 'noise', type: 'incident', title: 'Whack-a-log', icon: '📈', host: 'web-01',
+            intro: '🧑🏾‍💻 Mira: “Programs on web-01 are falling over, one after another. The <b>newest</b> error in <code>syslog</code> names the one failing right now: its name sits just before the <code>[number]</code>. Tell Sam with <code>answer &lt;name&gt;</code> and Sam restarts it.”',
+            chips: ['tail syslog', 'grep -i error syslog', 'grep -i error syslog | tail -n 1', 'hint'],
+            debrief: 'You filtered a log while it was still being written, and trusted the newest line over the loudest one. Old errors stay in a log forever: the timestamp tells you which problem is live.',
+            build() {
+                const cron = (t, pid) => 'Mar 10 ' + t + ' web-01 CRON[' + pid + ']: (root) CMD (/usr/lib/php/sessionclean)';
+                return {
+                    fs: d({
+                        home: d({ alex: d({}) }, 'drwxr-xr-x', 'root'),
+                        var: d({ log: d({
+                            syslog: f('-rw-r-----', [
+                                cron('16:15:01', 3101),
+                                'Mar 10 16:21:40 web-01 app[1201]: error: database connection refused',
+                                'Mar 10 16:21:44 web-01 app[1201]: reconnected to database',
+                                cron('16:30:01', 3140),
+                                'Mar 10 16:41:12 web-01 systemd[1]: Started Session 51 of user sam.',
+                                cron('16:45:01', 3177),
+                                'Mar 10 16:52:30 web-01 nginx[980]: GET /trailer 200',
+                                ''
+                            ].join('\n'), 'root'),
+                            'auth.log': f('-rw-r-----', 'Mar 10 16:41:12 web-01 sshd[3160]: Accepted publickey for sam from 10.0.4.31 port 40222 ssh2\n', 'root')
+                        }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root')
+                    }, 'drwxr-xr-x', 'root'),
+                    cwd: '/var/log',
+                    procs: baseProcs().concat([{ user: 'www-data', pid: 980, cpu: '2.1', mem: '1.2', cmd: 'nginx: worker process' }]),
+                    net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd', svc: 'ssh' }, { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx', svc: 'nginx' }],
+                    services: { ssh: 'active', nginx: 'active' },
+                    // waves: the three programs that will fail, in order. cur: index of the one failing now (-1 = quiet).
+                    vars: { waves: shuffle(Object.keys(NOISE_PROGS)).slice(0, 3), cur: -1, fixed: 0, wrong: 0, nextAt: 2, n: 0 }
+                };
+            },
+            cmds: {
+                answer(args, ops) {
+                    const v = ops.T.vars, guess = args.join(' ').trim().toLowerCase();
+                    if (!guess) return { err: ['usage: answer <name of the failing program>'] };
+                    if (ops._ready) return { out: ['All quiet. Nothing to answer.'] };
+                    if (v.cur < 0) return { out: ['Nothing is failing right now. Keep an eye on the log.'] };
+                    const name = v.waves[v.cur];
+                    if (guess === name) {
+                        v.fixed++; v.cur = -1; v.nextAt = ops.inc.t + 6;
+                        ops.ctx().log('/var/log/syslog', 'Mar 10 ' + clockAt(16, 55, Math.round(ops.inc.t) * 4) + ' web-01 systemd[1]: Restarted ' + name + '.service');
+                        ops.alert('🧑‍🔧 Sam: Restarted ' + name + '. ' + (v.fixed < 3 ? 'Quiet… for now.' : 'Everything is green!'), 'good');
+                        return { out: [{ html: '<span class="ok">✔ ' + esc(name) + ' restarted (' + v.fixed + '/3)</span>' }] };
+                    }
+                    v.wrong++;
+                    ops.inc.danger = Math.min(100, ops.inc.danger + 6);
+                    const old = v.waves.slice(0, v.fixed).includes(guess) || guess === 'app';
+                    ops.alert('🧑‍🔧 Sam: ' + (old ? guess + ' is already fine. That\'s an old error!' : 'Restarted ' + guess + '… still erroring.'), 'bad');
+                    return { err: ['✘ Not ' + guess + '. ' + (old ? 'That error is old. Only the newest line is live: add | tail -n 1' : 'Read the name just before the [number] in the newest error line.')] };
+                }
+            },
+            tasks: [
+                { id: 'grep', desc: 'Filter the live log down to its errors', hint: 'Type: grep -i error syslog | tail -n 1', check: (T) => T.vars.fixed > 0 || T.ran(/grep\b.*err/i) },
+                { id: 'fix', desc: 'Name 3 failing programs (answer <name>)', hint: 'Type: grep -i error syslog | tail -n 1   then: answer <the name before the [number]>', check: (T) => T.vars.fixed >= 3 }
+            ],
+            incident: {
+                label: 'Website error rate',
+                rate: (T) => (T.vars.cur >= 0 ? 1.3 : 0),
+                every: [
+                    {
+                        // Background chatter, so the errors have something to hide in.
+                        period: 1.3, fn: (c) => {
+                            const v = c.T.vars, n = ++v.n, t = clockAt(16, 55, Math.round(c.inc.t) * 4);
+                            const noise = [
+                                'CRON[' + (3200 + n) + ']: (root) CMD (/usr/lib/php/sessionclean)',
+                                'nginx[980]: GET /trailer 200',
+                                'systemd[1]: Started Session ' + (52 + n) + ' of user www-data.',
+                                'nginx[980]: GET /press-kit.zip 200',
+                                'kernel: [ 9412.' + (10 + n) + '] eth0: link is up'
+                            ];
+                            c.log('/var/log/syslog', 'Mar 10 ' + t + ' web-01 ' + noise[n % noise.length]);
+                        }
+                    },
+                    {
+                        period: 0.5, fn: (c) => {
+                            const v = c.T.vars;
+                            c.inc.stats = { wrong: v.wrong };
+                            if (v.cur >= 0 || v.fixed >= 3 || c.inc.t < v.nextAt) return;
+                            v.cur = v.fixed;
+                            v.errAt = c.inc.t;
+                            c.alert('SIEM: new errors on web-01' + (v.fixed ? '. Something else is failing now' : ''), 'warn');
+                        }
+                    },
+                    {
+                        period: 0.5, fn: (c) => {
+                            const v = c.T.vars;
+                            if (v.cur < 0 || c.inc.t < v.errAt) return;
+                            v.errAt = c.inc.t + 3.5;
+                            const name = v.waves[v.cur], msgs = NOISE_PROGS[name];
+                            v.e = (v.e || 0) + 1;
+                            c.log('/var/log/syslog', 'Mar 10 ' + clockAt(16, 55, Math.round(c.inc.t) * 4 + 1) + ' web-01 ' + name + '[' + (1800 + v.cur * 111) + ']: ' + msgs[v.e % msgs.length]);
+                        }
+                    }
+                ],
+                events: [
+                    { at: 28, fn: (c) => { if (!c.T.vars.fixed) c.say('mira', 'grep -i error syslog | tail -n 1. The name before the [number] is your answer.'); } }
+                ],
+                failText: 'The errors piled up until the website fell over, with the press watching. This time: grep -i error syslog | tail -n 1 shows the newest error, and the name before the [number] is the failing program. Then: answer <name>.'
+            }
+        };
+
+        // Chapter 4 micro-incident: private files sitting in a web-served folder, readable by "others",
+        // while a crawler downloads whatever it can. Lock the private ones, keep the public ones public.
+        const DL = '/srv/www/downloads';
+        const LEAK_PUBLIC = ['index.html', 'press-kit.zip', 'trailer.mp4'];
+        const LEAK_PRIVATE = ['api-keys.env', 'db-backup.sql', 'payroll.csv'];
+        const LEAK_LATE = 'launch-codes.txt';
+        const othersRead = (n) => !!n && n.mode[7] === 'r';
+        const leakExposed = (T) => LEAK_PRIVATE.concat(LEAK_LATE).filter((x) => othersRead(T.node(DL + '/' + x)));
+        const INC_LEAK = {
+            id: 'leak', type: 'incident', title: 'Open to the world', icon: '📂', host: 'web-01',
+            intro: '🧑🏾‍💻 Mira: “Everything in <code>downloads</code> is served by the website, to anyone the <b>others</b> letters allow. Public: <code>index.html</code>, <code>press-kit.zip</code>, <code>trailer.mp4</code>. Every other file is private: <code>chmod 600</code> it. Start with <code>ls -l</code>.”',
+            chips: ['ls -l', 'hint'],
+            debrief: 'The last three letters of a file\'s permissions decide what strangers can do. You took r away from “others” on the private files and left the public ones public: least privilege, under pressure.',
+            build() {
+                return {
+                    fs: d({
+                        home: d({ alex: d({}) }, 'drwxr-xr-x', 'root'),
+                        srv: d({ www: d({ downloads: d({
+                            'index.html': f('-rw-r--r--', '<h1>Starfall press downloads</h1>\n', 'sam', 'www-data'),
+                            'press-kit.zip': f('-rw-r--r--', '(zip archive: logos, screenshots, fact sheet)\n', 'sam', 'www-data'),
+                            'trailer.mp4': f('-rw-r--r--', '(video, 48 MB)\n', 'sam', 'www-data'),
+                            'api-keys.env': f('-rw-rw-rw-', 'GAMEVAULT_API_KEY=gv_test_not_a_real_key\n', 'sam', 'www-data'),
+                            'db-backup.sql': f('-rw-r--r--', '-- players table: 40,112 rows\n', 'sam', 'www-data'),
+                            'payroll.csv': f('-rw-rw-r--', 'name,salary\n(12 rows)\n', 'sam', 'www-data')
+                        }, 'drwxr-xr-x', 'sam', 'www-data') }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root'),
+                        var: d({ log: d({ nginx: d({ 'access.log': f('-rw-r-----', '192.0.2.66 - - [12/Mar/2026:10:14:02] "GET /downloads/ HTTP/1.1" 200\n', 'root') }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root') }, 'drwxr-xr-x', 'root')
+                    }, 'drwxr-xr-x', 'root'),
+                    cwd: DL,
+                    procs: baseProcs().concat([{ user: 'www-data', pid: 980, cpu: '0.9', mem: '1.2', cmd: 'nginx: worker process' }]),
+                    net: [{ proto: 'tcp', port: 22, addr: '0.0.0.0', proc: 'sshd', svc: 'ssh' }, { proto: 'tcp', port: 443, addr: '0.0.0.0', proc: 'nginx', svc: 'nginx' }],
+                    services: { ssh: 'active', nginx: 'active' }
+                };
+            },
+            tasks: [
+                { id: 'ls', desc: 'Read the permissions in the folder (ls -l)', hint: 'Type: ls -l', check: (T) => T.ran(/^\s*(ls\b.*\s-\w*l|stat\b)/) },
+                {
+                    // True only once Sam's late upload has landed and been locked too, so the leak can't come back.
+                    id: 'lock', desc: 'Lock the private files (chmod 600)', hint: 'Type: chmod 600 <file>   for each file that is not index.html, press-kit.zip or trailer.mp4',
+                    check: (T) => T.flags.has('late') && leakExposed(T).length === 0
+                },
+                { id: 'public', desc: 'Keep the 3 public files readable', hint: 'A public file needs r for others. Type: chmod 644 <file>', check: (T) => LEAK_PUBLIC.every((x) => othersRead(T.node(DL + '/' + x))) }
+            ],
+            incident: {
+                label: 'Private files exposed',
+                rate: (T) => (leakExposed(T).length ? 0.3 : 0),
+                every: [
+                    {
+                        // The crawler takes one exposed private file per visit.
+                        period: 15, start: 20, fn: (c) => {
+                            const inc = c.inc;
+                            inc.leaked = inc.leaked || [];
+                            const name = leakExposed(c.T).find((x) => !inc.leaked.includes(x));
+                            const stamp = '192.0.2.66 - - [12/Mar/2026:' + clockAt(10, 14, 2 + Math.round(inc.t)) + '] "GET /downloads/';
+                            if (!name) { c.log('/var/log/nginx/access.log', stamp + ' HTTP/1.1" 403'); return c.alert('🛡️ The crawler came back and got “403 Forbidden”.', 'good'); }
+                            inc.leaked.push(name);
+                            inc.stats = { leaks: inc.leaked.length };
+                            c.bump(22);
+                            c.log('/var/log/nginx/access.log', stamp + name + ' HTTP/1.1" 200');
+                            c.alert('💥 192.0.2.66 downloaded ' + name + '!', 'bad');
+                            if (inc.leaked.length === 1) c.say('lantern', 'Thank you for ' + name + '. What else is in here? 🏮');
+                        }
+                    },
+                    {
+                        period: 0.5, fn: (c) => {
+                            const T = c.T, inc = c.inc;
+                            inc.stats = { leaks: (inc.leaked || []).length };
+                            // Sam's upload script strikes again, once the first three are locked (or after half a minute).
+                            if (!T.flags.has('late') && (inc.t >= 30 || LEAK_PRIVATE.every((x) => !othersRead(T.node(DL + '/' + x))))) {
+                                T.flags.add('late');
+                                c.node(DL).children[LEAK_LATE] = f('-rw-r--r--', 'STARFALL-LAUNCH-0000 (placeholder)\n', 'sam', 'www-data');
+                                c.say('sam', 'Uh. My script just uploaded one more: ' + LEAK_LATE + '. Sorry! (ls -l again)');
+                            }
+                            if (!inc.pubWarned && !LEAK_PUBLIC.every((x) => othersRead(T.node(DL + '/' + x)))) {
+                                inc.pubWarned = true;
+                                c.bump(10);
+                                c.say('dana', 'The press page says “403 Forbidden”! Journalists are emailing me. (chmod 644 the public file)');
+                            }
+                        }
+                    }
+                ],
+                events: [
+                    { at: 1, fn: (c) => c.alert('IDS: 192.0.2.66 is crawling /downloads on web-01', 'warn') },
+                    { at: 14, fn: (c) => { if (!c.T.ran(/^\s*ls\b.*-\w*l/)) c.say('mira', 'ls -l first. Look at the last three letters of each line: r there means anyone can read it.'); } }
+                ],
+                failText: 'Black Lantern walked out with the keys, the player database and the payroll. This time: ls -l, then chmod 600 on every file that isn\'t the page, the press kit or the trailer.'
+            }
+        };
+
         // Chapter 5 incident: ransomware encrypting the launch files, with a C2 that can relaunch it.
         const C2_IP = '198.51.100.77';
         const SHARE = '/srv/starfall';
@@ -5166,7 +5481,7 @@ permalink: /cyber-quest/
         const lockdAlive = (T) => T.procs.some((p) => p.cmd === LOCKD);
         const lockedCount = (T) => { const dir = T.node(SHARE); return dir ? Object.keys(dir.children).filter((n) => n.endsWith('.locked')).length : 0; };
         const INC_RANSOM = {
-            type: 'incident', title: 'Ransomware', icon: '🔒', host: 'files-01',
+            id: 'ransom', type: 'incident', title: 'Ransomware', icon: '🔒', host: 'files-01',
             intro: '🧑🏾‍💻 Mira: “Find the process doing the encrypting and kill it. Then find where it phones home and block that, or they\'ll just start it again.”',
             chips: ['ps aux', 'ls ' + SHARE, 'ss -tnp', 'hint'],
             debrief: 'Contained: the encryptor is dead and its line home is cut, so it can\'t be relaunched. Now for the calm part: getting the files back.',
@@ -5361,16 +5676,19 @@ permalink: /cyber-quest/
                     {
                         type: 'ask', who: 'mira', q: 'An email from “IT Support” asks you to confirm your password at a link before it expires today. What do you do?',
                         options: ['Report it: IT never needs your password', 'Click the link, but don\'t type anything', 'Reply and ask whether it\'s real', 'Forward it to everyone as a warning'], answer: 0,
+                        why: [null, 'Even opening the page tells the attacker your address is live, and some pages attack the browser itself. Don\'t visit: report.', 'Your reply goes to the attacker, who will happily say yes, it\'s real.', 'That puts the bad link in twelve more inboxes. Report it to security and let them warn people.'],
                         explain: 'Right. A real IT team never needs your password. Replying talks to the attacker, and forwarding spreads the link.'
                     },
                     {
                         type: 'ask', who: 'mira', q: 'How do you spot a fake sender?',
                         options: ['Read the address after the name: ours is exactly brightsidegames.com', 'Check the logo looks right', 'If it uses my name, it\'s real', 'Look for spelling mistakes'], answer: 0,
+                        why: [null, 'A logo is just a picture. Anyone can copy one in seconds.', 'Your name is on the company website. Attackers use it precisely so the email feels familiar.', 'That used to work, but modern phishing is spell-checked. Clean spelling proves nothing.'],
                         explain: 'Names and logos are free to copy. The domain after the @ is the hard part to fake, so watch for lookalikes like brightside-games.co, or “rn” pretending to be “m”.'
                     },
                     {
                         type: 'ask', who: 'mira', q: 'Last one. Which trick catches even careful people?',
                         options: ['Urgency: “do it in the next hour or else”', 'Very long, detailed emails', 'Emails sent at lunchtime', 'Emails with no pictures'], answer: 0,
+                        why: [null, 'Detail can dress up a lie, but it also gives a careful reader more to check. What stops them checking at all?', 'A careful reader is careful at any hour. What makes them stop being careful?', 'Plain emails are normal. Think about what makes a careful person rush.'],
                         explain: 'Pressure stops you thinking. When an email rushes you, that\'s exactly when to slow down and check.'
                     },
                     {
@@ -5394,7 +5712,19 @@ permalink: /cyber-quest/
                     },
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Mon 12:10', art: '🍕', lines: [
-                            ['mira', 'Not bad for day one. Look at the senders: lookalike domains, all registered last week. Someone planned this.', 'happy'],
+                            (M) => {
+                                const t = M.triage || { missed: [] };
+                                if (t.retried) return [
+                                    ['mira', 'That first wave got past you, and the second didn\'t. That\'s the job: get fooled once, in practice, and never the same way again.'],
+                                    ['sam', 'I\'m resetting the passwords from round one. All of them. It\'s fine. I love resetting passwords.', 'worried']
+                                ];
+                                if (t.missed.length) return [
+                                    ['mira', 'Not bad for day one. “' + t.missed[0] + '” got through, though.'],
+                                    ['sam', 'I may have clicked it. I\'m changing my password right now.', 'worried']
+                                ];
+                                return ['mira', 'Eight out of eight on day one. I\'ve worked with people ten years in who would have clicked the payroll one.', 'happy'];
+                            },
+                            ['mira', 'Look at the senders: lookalike domains, all registered last week. Someone planned this.'],
                             ['sam', 'One of them was signed “BL”. Who\'s BL?', 'worried'],
                             ['mira', 'No idea yet. But someone is very interested in Starfall.', 'worried'],
                             [null, 'Somewhere out there, someone has just written your company\'s name on a list.']
@@ -5439,11 +5769,35 @@ permalink: /cyber-quest/
                     {
                         type: 'ask', who: 'mira', q: 'What does grep -v CRON syslog print?',
                         options: ['Every line of syslog that does NOT contain CRON', 'Only the CRON lines', 'How many CRON lines there are', 'The newest CRON line'], answer: 0,
+                        why: [null, 'That is plain `grep CRON syslog`. The -v flips it around.', 'Counting is `-c`. The -v decides which lines are kept.', 'The newest CRON line would be `grep CRON syslog | tail -n 1`.'],
                         explain: '-v flips grep around: it keeps every line that does not match. It\'s the quickest way to throw away noise you already understand. Counting would be -c, and the newest match is … | tail -n 1.'
+                    },
+                    // Beats 7-9 were added later: loadProgress() shifts old ch2 saves past them (STORY_REV 4).
+                    {
+                        type: 'scene', mood: 'alarm', loc: 'Brightside Games HQ · Tue 16:55', art: '📈', lines: [
+                            ['siem', '⚠ web-01: error rate climbing. Programs are restarting.'],
+                            ['dana', 'The trailer page keeps hiccuping, and I have press on it right now!', 'worried'],
+                            ['mira', 'Part three can wait. Alex, that log is being written as we speak, and the newest error names whatever is failing right now.'],
+                            ['sam', 'Give me a name and I\'ll restart it. Restarting things is my whole skill set.', 'happy'],
+                            ['mira', 'Filter the noise, exactly like you just practised. Go!']
+                        ]
+                    },
+                    INC_NOISE,
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 17:10', art: '🧯', lines: [
+                            (M) => {
+                                const r = M.inc('noise') || {};
+                                if (r.breaches) return ['mira', 'Second time lucky. On a real launch day that first try is an hour of downtime, which is exactly why we practise here.'];
+                                if (!r.wrong && r.peak < 35) return ['mira', 'Three for three, and the press never noticed. You read a live log faster than I do before coffee.', 'happy'];
+                                return ['mira', 'It stayed up. A restart or two hit the wrong program, though. Trust the newest line, not the loudest one.'];
+                            },
+                            ['sam', 'Three different programs in ten minutes. Is the server just having a bad day?', 'worried'],
+                            ['mira', 'Servers do have bad days. But three in a row usually means something is leaning on it. Hold that thought.']
+                        ]
                     },
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Tue 17:20', art: '👣', lines: [
-                            ['dana', 'Quick one: the website crawled for a few minutes after lunch. Press were trying to download the trailer. Was it just busy?', 'worried'],
+                            ['dana', 'So that\'s the second wobble today. It crawled for a few minutes after lunch too, while press were downloading the trailer. Is it just busy?', 'worried'],
                             ['mira', 'Maybe. Or maybe someone was poking at it. The web server writes down every single visitor. Let\'s find out who.'],
                             ['mira', 'Part three, Alex: count who\'s knocking, then follow them from log to log. Detectives call it following the trail.']
                         ]
@@ -5452,16 +5806,19 @@ permalink: /cyber-quest/
                     {
                         type: 'ask', who: 'mira', q: 'The same address asked the website for /.env and /backup.zip, then failed SSH logins for “deploy”. What do you make of it?',
                         options: ['One attacker looking for a way in: first secrets on the website, then passwords', 'Two different people who share an internet connection', 'A search engine indexing the site', 'Nothing. 404 means it didn\'t work, so ignore it'], answer: 0,
+                        why: [null, 'Possible, but two strangers behind one address, both probing the same server in one afternoon? The simplest story has one visitor.', 'Search engines follow links on your pages. They don\'t ask for /.env or guess SSH passwords.', 'The 404 only means that file wasn\'t there. The asking is the warning.'],
                         explain: 'Same address, same afternoon, two doors tried: that\'s one attacker doing reconnaissance. A 404 means this attempt failed, not that the attacker gave up, so you block the address and keep watching. Linking events across logs is how you see the whole story.'
                     },
                     {
                         type: 'ask', who: 'mira', q: 'In auth.log: 30 “Failed password” lines from one address, then one “Accepted” from the same address. What happened?',
                         options: ['Someone guessed a password, and got in', 'A user forgot their password, then remembered', 'The server rebooted', 'Nothing. That\'s normal noise'], answer: 0,
+                        why: [null, 'A person gives up or asks for a reset after a handful of tries. Thirty in a row is a program guessing.', 'A reboot writes its own lines in syslog, and it doesn\'t type passwords.', 'Failed guesses alone are everyday noise. The `Accepted` after them changes everything.'],
                         explain: 'A password-guessing attack that worked. That “Accepted” line is the one that should make your stomach drop.'
                     },
                     {
                         type: 'ask', who: 'mira', q: 'You\'ve found the address hammering SSH. Fastest way to stop it?',
                         options: ['Block it at the firewall: ufw deny from <address>', 'Email the attacker', 'Restart the server', 'Delete the auth log'], answer: 0,
+                        why: [null, 'You don\'t know who they are, and they would not stop if you asked nicely.', 'The server comes back up and so does the guessing, and the website was down in between.', 'The attack carries on. You would only blind yourself and destroy the evidence.'],
                         explain: 'Block it at the firewall. And never delete logs: they\'re your evidence.'
                     },
                     {
@@ -5475,7 +5832,13 @@ permalink: /cyber-quest/
                     INC_BRUTE,
                     {
                         type: 'scene', mood: 'night', loc: 'Brightside Games HQ · Wed 00:20', art: '☕', lines: [
-                            ['mira', 'Blocked. Breathe. Nice work.', 'happy'],
+                            (M) => {
+                                const r = M.inc('brute') || {};
+                                if (r.breaches) return ['mira', 'Blocked. Breathe. They got in on the first try and you still came back and shut the door. Real attackers don\'t give you a second go, so let\'s make the first one count.'];
+                                if (r.secs && r.secs <= 30) return ['mira', 'Blocked in ' + r.secs + ' seconds. I hadn\'t even found my car keys.', 'happy'];
+                                return ['mira', 'Blocked. Breathe. Nice work.', 'happy'];
+                            },
+                            (M) => (M.missed.length ? ['mira', 'The first passwords they tried came straight from yesterday\'s phishing page. Good thing Sam had already changed them.'] : null),
                             ['mira', 'Look at the usernames they tried: root, admin, sam, starfall…'],
                             ['sam', '…my password was starfall2026.', 'worried'],
                             ['mira', 'Was. Change it tonight. And Sam? Turn on two-factor.'],
@@ -5507,6 +5870,7 @@ permalink: /cyber-quest/
                     {
                         type: 'ask', who: 'mira', q: 'You kill a malicious process. A minute later it\'s back with a new PID. Where do you look?',
                         options: ['Scheduled jobs: /etc/crontab, /etc/cron.d and crontab -l', 'Restart the server and hope', 'Kill it again every minute', 'The website\'s homepage'], answer: 0,
+                        why: [null, 'Scheduled jobs survive a restart, so it would come straight back.', 'Then you are doing by hand, forever, what a schedule does for the attacker automatically. Find what starts it.', 'The homepage is what visitors see. What on a server starts programs on a timer?'],
                         explain: 'Something is restarting it, and cron is the usual suspect. Attackers call it persistence.'
                     },
                     {
@@ -5519,7 +5883,13 @@ permalink: /cyber-quest/
                     INC_MINER,
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Wed 11:30', art: '🧯', lines: [
-                            ['mira', 'Clean. And look where that cron job downloaded from: 198.51.100.40.', 'neutral'],
+                            (M) => {
+                                const r = M.inc('miner') || {};
+                                if (r.breaches) return ['mira', 'Clean, in the end. It cooked that server once before you got it, and build-01 will forgive you. Eventually.'];
+                                if (r.peak < 35) return ['mira', 'Clean, and fast. It barely had time to mine a coin\'s worth of our electricity.', 'happy'];
+                                return ['mira', 'Clean. The electricity bill will have a little bump in it, but the server is ours again.'];
+                            },
+                            ['mira', 'And look where that cron job downloaded from: 198.51.100.40.', 'neutral'],
                             ['sam', 'Same crew?'],
                             ['mira', 'Same crew. They got onto build-01 with an old password nobody ever changed.'],
                             ['mira', 'Tomorrow we close every door we don\'t need.']
@@ -5548,7 +5918,32 @@ permalink: /cyber-quest/
                     {
                         type: 'ask', who: 'mira', q: 'A file shows -rw-r-----. What number is that?',
                         options: ['640', '644', '600', '750'], answer: 0,
+                        why: [null, '644 is rw-r--r--, where others can read. Here the last three letters are ---, which is 0.', '600 is rw-------. Here the group has r--, which is 4.', '750 is rwxr-x---. There is no x anywhere in this one.'],
                         explain: 'Split it: owner rw- = 4+2 = 6, group r-- = 4, others --- = 0. So 640: I read and write, my team reads, nobody else gets in. 644 would let everyone read it.'
+                    },
+                    // Beats 3-5 were added later: loadProgress() shifts old ch4 saves past them (STORY_REV 4).
+                    {
+                        type: 'scene', mood: 'alarm', loc: 'Brightside Games HQ · Thu 10:14', art: '📂', lines: [
+                            ['siem', '🔴 web-01: 192.0.2.66 is listing every file in /downloads.'],
+                            ['sam', 'That\'s where my upload script puts the press kit. And… possibly everything else I uploaded this week.', 'worried'],
+                            ['mira', 'Then private files are sitting in a folder the whole internet can read, and someone is helping themselves.'],
+                            ['mira', 'The page, the press kit and the trailer stay public. Everything else: owner only. You know the letters now. Go!']
+                        ]
+                    },
+                    INC_LEAK,
+                    {
+                        type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 10:30', art: '🔐', lines: [
+                            (M) => {
+                                const r = M.inc('leak') || {};
+                                if (!r.leaks) return [['mira', 'Nothing private left that folder. Not one file.', 'happy'], ['lantern', '403. 403. 403. You\'re no fun.']];
+                                return [
+                                    ['mira', 'They got ' + (r.leaks === 1 ? 'one file' : r.leaks + ' files') + ' before the rest were locked. Tonight we change every key and password that was in there.', 'worried'],
+                                    ['mira', 'A leak you know about is one you can clean up. The ones that hurt are the ones nobody noticed.']
+                                ];
+                            },
+                            ['sam', 'I\'ve fixed the script. It saves to a private folder now. And I\'ve stopped naming things “downloads”.', 'worried'],
+                            ['mira', 'Any file on a server is one careless chmod away from public. Remember how that felt.']
+                        ]
                     },
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 10:45', art: '🔌', lines: [
@@ -5561,6 +5956,7 @@ permalink: /cyber-quest/
                     {
                         type: 'ask', who: 'mira', q: 'The website needs its database, but MySQL listens on 0.0.0.0:3306. Best fix?',
                         options: ['Keep it running and block 3306 at the firewall', 'Stop MySQL', 'Leave it: it has a password', 'Change it to port 3307'], answer: 0,
+                        why: [null, 'The website needs its database. Stop MySQL and the site goes down with it.', 'A password the whole internet can guess at all day is only a matter of time. Don\'t let them reach the door.', 'A scanner tries every port in seconds and finds it again.'],
                         explain: 'Stopping it takes the website down, a password alone just invites guessing, and moving the port only fools a scanner for seconds. A firewall rule keeps it working for the server and invisible to everyone else.'
                     },
                     {
@@ -5573,11 +5969,13 @@ permalink: /cyber-quest/
                     {
                         type: 'ask', who: 'mira', q: 'Which port should a web server open to the whole internet?',
                         options: ['443: HTTPS, the website itself', '3306: the MySQL database', '23: Telnet', '21: FTP'], answer: 0,
+                        why: [null, 'The database only talks to the website on the same server, never to strangers.', 'Telnet sends everything, passwords included, as readable text. It shouldn\'t be running at all.', 'FTP sends passwords unencrypted too, and nobody needs it to see a website.'],
                         explain: 'Only what customers need: the website. Databases, Telnet and FTP should never face the internet.'
                     },
                     {
                         type: 'ask', who: 'mira', q: 'A service is listening but nobody uses it. Best move?',
                         options: ['Stop it, disable it at boot, and block its port', 'Leave it, just in case', 'Rename it', 'Move it to another port number'], answer: 0,
+                        why: [null, '“Just in case” is how forgotten services get broken into years later: nobody updates what nobody uses.', 'Renaming changes what you call it. It still listens on the same port.', 'A scanner checks all 65,535 ports in seconds.'],
                         explain: 'Every running service is a door. If nobody needs it, close it. Moving it to another port only slows a scanner down by seconds.'
                     },
                     {
@@ -5591,7 +5989,12 @@ permalink: /cyber-quest/
                     {
                         type: 'scene', mood: 'calm', loc: 'Brightside Games HQ · Thu 15:00', art: '🌇', lines: [
                             ['sam', 'The scanner just… gave up?', 'happy'],
-                            ['mira', 'Nothing worth knocking on. That\'s the goal.', 'happy'],
+                            (M) => {
+                                const r = M.inc('scan') || {};
+                                if (r.breaches) return ['mira', 'It gave up the second time. The first time it found plenty, so tonight we assume they have a map of the old doors.'];
+                                if (r.peak >= 25) return ['mira', 'It found a door or two open before you got there. Closed now, and they know we\'re watching.'];
+                                return ['mira', 'Nothing worth knocking on. That\'s the goal.', 'happy'];
+                            },
                             ['dana', 'Launch is tomorrow. Tell me we\'re ready.', 'worried'],
                             ['mira', 'As ready as anyone gets. If they come again, it\'ll be loud.']
                         ]
@@ -5619,16 +6022,19 @@ permalink: /cyber-quest/
                     {
                         type: 'ask', who: 'mira', q: 'Ransomware starts encrypting the shared drive. What\'s your first move?',
                         options: ['Contain it: kill the process and cut its connection', 'Pay before the price goes up', 'Wait to see which files it takes', 'Email everyone to ask who clicked something'], answer: 0,
+                        why: [null, 'Paying funds the next attack and guarantees nothing. Plenty of victims pay and never get a working key.', 'Every second you wait, more files are gone.', 'Who clicked matters tomorrow. Right now files are being destroyed.'],
                         explain: 'Contain first. Every second it runs, more files are lost, and paying guarantees nothing.'
                     },
                     {
                         type: 'ask', who: 'mira', q: 'Why cut its network connection as well as killing the process?',
                         options: ['While the line home is open, they can relaunch it remotely', 'It makes the server faster', 'It deletes the ransomware', 'It\'s not needed'], answer: 0,
+                        why: [null, 'Speed isn\'t the problem here.', 'Blocking a connection deletes nothing: the program is still on the disk. Think about who is on the other end of that line.', 'Kill it without cutting the line and watch: they start it again from their side.'],
                         explain: 'Ransomware usually phones home to a command server (“C2”). While that line is open, they can simply start it again.'
                     },
                     {
                         type: 'ask', who: 'mira', q: 'What makes a ransomware attack survivable?',
                         options: ['A recent backup kept apart from the server', 'A strong screen lock', 'More antivirus', 'A bigger hard drive'], answer: 0,
+                        why: [null, 'A screen lock stops someone at your desk. Ransomware arrives over the network.', 'It helps, but new ransomware slips past antivirus every week. Assume one gets through: then what?', 'More space just means more files to encrypt.'],
                         explain: 'A backup ransomware can\'t reach. That\'s what turns a disaster into a bad afternoon.'
                     },
                     {
@@ -5645,6 +6051,9 @@ permalink: /cyber-quest/
                         type: 'scene', mood: 'calm', bg: 'party', loc: 'Brightside Games HQ · Fri 12:00', art: '🎆', lines: [
                             [null, '12:00. Starfall goes live. Forty thousand players in the first hour.'],
                             ['dana', 'We launched. On time. And nobody outside this room will ever know how close that was.', 'happy'],
+                            (M) => (M.breaches
+                                ? ['mira', 'We got knocked down ' + (M.breaches === 1 ? 'once' : M.breaches + ' times') + ' this week, and got back up every time. That counts for more than a clean record.']
+                                : ['mira', 'A whole week of Black Lantern, and not one breach. I\'ve never seen a first week like it.', 'happy']),
                             ['mira', 'That\'s the job. When we win, nothing happens.', 'happy'],
                             ['sam', 'I turned on two-factor. For everything. Even the coffee machine.', 'happy'],
                             ['mira', 'Welcome to the team, analyst. Officially.', 'happy'],
@@ -5959,7 +6368,7 @@ permalink: /cyber-quest/
                 progress.storyAt = { ch: this.ch.id, beat: this.i };
                 saveProgress();
                 const b = this.ch.beats[this.i];
-                if (b.type === 'scene') { this.mood(b.mood, b.loc, b.art, b.bg); this.line = 0; return this.showLine(); }
+                if (b.type === 'scene') { this.mood(b.mood, b.loc, b.art, b.bg); this.line = 0; this.lines = this.resolve(b); return this.showLine(); }
                 // Other beats keep the setting of the scene before them (also when resuming mid-chapter).
                 const prev = this.ch.beats.slice(0, this.i).reverse().find((x) => x.type === 'scene');
                 if (prev) this.mood(prev.mood, prev.loc, prev.art, prev.bg);
@@ -5975,13 +6384,24 @@ permalink: /cyber-quest/
                 this.i++;
                 this.play();
             },
+            // A scene line is [who, text, face?], or a function of the story memory (M) that
+            // returns a line, a list of lines, or nothing: that is how scenes react to the player.
+            resolve(b) {
+                const out = [];
+                b.lines.forEach((l) => {
+                    const r = typeof l === 'function' ? l(M) : l;
+                    if (!r) return;
+                    if (Array.isArray(r[0])) out.push(...r); else out.push(r);
+                });
+                return out;
+            },
             showLine() {
-                const b = this.ch.beats[this.i];
-                const [who, text, face] = b.lines[this.line];
+                const lines = this.lines;
+                const [who, text, face] = lines[this.line];
                 this.speak(who, text, face);
                 this.onTap = () => {
                     this.line++;
-                    if (this.line < b.lines.length) this.showLine();
+                    if (this.line < lines.length) this.showLine();
                     else { this.i++; this.play(); }
                 };
             },
@@ -6081,7 +6501,8 @@ permalink: /cyber-quest/
                     btn.disabled = true;
                     btn.classList.add('wrong');
                     $('st-feedback').className = 'st-feedback bad';
-                    $('st-feedback').textContent = 'Not quite. Think about what the attacker wants, and try another answer.';
+                    // Each wrong option says why it is tempting and why it fails (`why`, by option index).
+                    $('st-feedback').innerHTML = 'Not quite. ' + fmtLine((b.why && b.why[k]) || 'Think about what the attacker wants, and try another answer.');
                     this.actor(b.who || 'mira', 'worried');
                     Sfx.hit();
                 }
@@ -6117,7 +6538,8 @@ permalink: /cyber-quest/
         // Fast mail-triage incident: report phishing, allow real mail, before the timer runs out.
         const Triage = {
             timer: null,
-            run(beat, onDone) {
+            run(beat, onDone, retry) {
+                this.retry = !!retry;
                 this.beat = beat;
                 this.onDone = onDone;
                 this.queue = beat.mails.map((m, i) => Object.assign({ id: i, arriveAt: 1.2 + i * beat.gap }, m));
@@ -6206,6 +6628,9 @@ permalink: /cyber-quest/
                 this.stop();
                 $('tr-inbox').innerHTML = '';
                 const stars = this.peak <= 10 ? 3 : this.peak <= 40 ? 2 : 1;
+                // The story remembers the first go at the wave: later scenes react to what got through.
+                if (!this.retry) progress.memo.triage = { missed: this.results.filter((r) => r.m.phish && !r.right).map((r) => r.m.subject), retried: !won };
+                saveProgress();
                 const list = '<ul class="tr-results">' + this.results.map((r) =>
                     '<li>' + (r.right ? '✔' : '✘') + ' <b>' + esc(r.m.subject) + '</b>: ' + (r.m.phish ? 'phishing. ' : 'real. ') + esc(r.m.why) + '</li>').join('') + '</ul>';
                 if (won) {
@@ -6220,7 +6645,7 @@ permalink: /cyber-quest/
                     $('tr-done-text').innerHTML = '<p>Accounts were stolen and malware landed on a laptop. Nothing is lost, so try again. Read the sender\'s address first, and watch for deadlines and lookalike domains.</p>' + list;
                     $('tr-done').className = 'term-done show bad';
                     $('tr-continue').textContent = '↻ Try again';
-                    this._next = () => this.run(this.beat, this.onDone);
+                    this._next = () => this.run(this.beat, this.onDone, true);
                 }
                 if (won) $('tr-done').className = 'term-done show';
             }
@@ -6260,6 +6685,7 @@ permalink: /cyber-quest/
             if (S.screen === 'story' && e.target.closest('#st-dialog') && !e.target.closest('button')) return Story.tap();
             const tr = e.target.closest('[data-tr]');
             if (tr) return Triage.decide(Number(tr.dataset.id), tr.dataset.tr, false);
+            if (e.target.closest('[data-daily]')) return Daily.start();
             const go = e.target.closest('[data-go]');
             if (go) return show(go.dataset.go);
             const lab = e.target.closest('[data-lab]');
@@ -6368,6 +6794,7 @@ permalink: /cyber-quest/
                 get state() { return { screen: S.screen, mission: S.mission && S.mission.id, idx: S.idx, total: S.queue.length, shields: S.shields, answered: S.answered, kind: S.queue[S.idx] && S.queue[S.idx].kind }; },
                 get progress() { return JSON.parse(JSON.stringify(progress)); },
                 map: WorldMap,
+                daily: Daily,
                 missions: MISSIONS.map((m) => m.id),
                 analysePassword,
                 answerCorrect() {
