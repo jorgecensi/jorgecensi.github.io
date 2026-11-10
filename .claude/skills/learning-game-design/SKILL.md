@@ -44,7 +44,14 @@ where it ended instead of where it started.
    Grounds, collapsed under the campaign, so the main screen reads as a game.
 10. **Mobile first.** Tappable shortcut chips for typed commands, big targets,
    and safe-area padding.
-11. **Accessibility.** Respect reduced motion, cap flashing (no more than 3 per
+11. **Show progress and make the ending a reward.** A long chapter needs a bar
+    that shows how far in the player is and where the pressure moments are. The
+    end screen should reflect back what they did and learned (graded parts,
+    first-try answers, the skills gained, rank), not just stars.
+12. **Bring things back.** One question from an earlier chapter at the start of
+    each new one, preferring what the player got wrong, is cheap and is what
+    makes it stick. Never let a score depend on a single sitting: save the run.
+13. **Accessibility.** Respect reduced motion, cap flashing (no more than 3 per
     second; slow pulses only), and offer a mute toggle.
 
 ## Before building, decide

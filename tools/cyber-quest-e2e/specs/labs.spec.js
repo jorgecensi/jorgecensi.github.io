@@ -129,6 +129,15 @@ const LABS = {
     await open();
     assert(await ev(() => window.__cyberQuest.progress.storyAt.beat) === want, 'a rev 3 ' + ch + ' save at beat ' + beat + ' lands on ' + want);
   }
+  // Stars earned earlier in a chapter survive leaving and resuming; starting the chapter over clears them.
+  await ev(() => localStorage.setItem('cyber-quest-progress-v1', JSON.stringify({ v: 1, rev: 4, missions: {}, labs: {}, story: {}, settings: {}, memo: {}, storyAt: { ch: 'ch1', beat: 12 }, storyRun: { ch: 'ch1', results: { 9: 1 }, asked: 3, first: 1 } })));
+  await open();
+  await ev(() => window.__cyberQuest.story.open('ch1', 12));
+  assert(await ev(() => window.__cyberQuest.progress.storyRun.results[9]) === 1, 'resuming a chapter keeps the stars already earned');
+  await ev(() => window.__cyberQuest.story.open('ch1', 0));
+  assert(await ev(() => Object.keys(window.__cyberQuest.progress.storyRun.results).length) === 0, 'starting a chapter over clears its run');
+  await ev(() => window.__cyberQuest.story.open('ch2', 3));
+  assert(await ev(() => window.__cyberQuest.progress.storyRun.ch) === 'ch2', 'a run belongs to one chapter');
   await noHScroll();
   assert(errors.length === 0, 'console errors: ' + errors.join(' | '));
   console.log('PASS labs');
