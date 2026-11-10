@@ -1,6 +1,7 @@
 // Plays the whole story campaign the way a player would: taps through scenes, answers
 // questions (one wrong first), types real commands in every training and incident beat,
-// and checks each live mechanic fires (miner respawn, SSH lockout warning, C2 relaunch).
+// and checks each live mechanic fires (miner respawn, SSH lockout warning, C2 relaunch, the
+// live log's three waves, the late upload) and that scenes react to how the player did.
 const { launch, assert, sleep, SOLVE } = require('./_helpers');
 
 const TRAIN = {
@@ -21,6 +22,7 @@ const TRAIN = {
 (async () => {
   const { browser, page, errors, ev, open, screen, type, feed, shot, noHScroll } = await launch();
   const seen = { miner: false, lockout: false, c2: false, wrongAnswer: false };
+  const said = []; // every dialogue line shown, to check scenes react to how the player did
   let triageAttempt = 0;
 
   const procPid = (name) => ev((n) => { const x = window.__cyberQuest.shell.T.procs.find((q) => q.cmd.includes(n)); return x && x.pid; }, name);
@@ -41,6 +43,38 @@ const TRAIN = {
       await sleep(3000);
       await type('grep Failed /var/log/auth.log');
       await type('ufw deny from 203.0.113.66');
+    } else if (key === 'Whack-a-log') {
+      // Three programs fail in turn; the newest error line names the one that is live.
+      const vars = () => ev(() => { const v = window.__cyberQuest.shell.T.vars; return { waves: v.waves, cur: v.cur, fixed: v.fixed }; });
+      for (let w = 0; w < 3; w++) {
+        for (let i = 0; i < 40 && (await vars()).cur < 0; i++) await sleep(300);
+        await sleep(900); // let the first error line of this wave land in the log
+        const v = await vars();
+        if (w === 1) { // an old error is a decoy: naming it costs threat and Sam says so
+          await type('answer ' + v.waves[0]);
+          seen.oldError = /already fine/.test(await feed());
+        }
+        await type('grep -i error syslog | tail -n 1');
+        const name = await ev(() => ([...document.querySelectorAll('#ops-out > div')].pop().textContent.match(/web-01 (\w+)\[/) || [])[1]);
+        assert(name === v.waves[v.cur], 'the newest error names the failing program: ' + name + ' vs ' + v.waves[v.cur]);
+        if (w === 1) await shot('story-noise');
+        await type('answer ' + name);
+      }
+      seen.waves = (await vars()).fixed;
+    } else if (key === 'Open to the world') {
+      await type('ls -l');
+      await type('chmod 600 index.html'); // lock a public file on purpose
+      await sleep(900);
+      seen.forbidden = /403 Forbidden/.test(await feed());
+      await type('chmod 644 index.html');
+      for (const f of ['api-keys.env', 'db-backup.sql', 'payroll.csv']) await type('chmod 600 ' + f);
+      // Sam's script uploads one more once the first three are locked.
+      await page.waitForFunction(() => window.__cyberQuest.shell.T.flags.has('late'), null, { timeout: 5000 });
+      seen.late = /launch-codes\.txt/.test(await feed());
+      await type('ls -l');
+      await shot('story-leak');
+      assert(!(await ev(() => window.__cyberQuest.shell._ready)), 'the folder is not safe until the late upload is locked too');
+      await type('chmod o-r launch-codes.txt');
     } else if (key === 'Ghost in the machine') {
       await type('ps aux'); await type('kill 4242');
       for (let i = 0; i < 40 && !/is back/.test(await feed()); i++) await sleep(500);
@@ -108,13 +142,15 @@ const TRAIN = {
       if (!seen.wrongAnswer) {
         const wrong = await ev(() => [...document.querySelectorAll('#st-choices [data-ask]')].map((b) => Number(b.dataset.ask)).find((k) => k !== window.__cyberQuest.story.askBeat.answer));
         await page.click(`[data-ask="${wrong}"]`);
-        seen.wrongAnswer = /Not quite/.test(await page.innerText('#st-feedback'));
+        const fb = await page.innerText('#st-feedback');
+        // Each wrong option explains itself instead of a generic "try again".
+        seen.wrongAnswer = /Not quite/.test(fb) && !/what the attacker wants/.test(fb) && fb.length > 40;
       }
       await page.click(`[data-ask="${st.answer}"]`);
       await page.click('[data-story-tap]');
     } else if (st.next) await page.click('[data-story-next]');
     else if (st.end) done = true;
-    else await page.click('#st-dialog');
+    else { said.push(await page.innerText('#st-text')); await page.click('#st-dialog'); }
   }
   assert(done, 'reached the end of chapter 5');
   await shot('story-end');
@@ -123,6 +159,17 @@ const TRAIN = {
   assert(seen.miner, 'the miner respawns while its cron job exists');
   assert(seen.lockout, 'blocking port 22 triggers the lockout warning');
   assert(seen.c2, 'the C2 relaunches the encryptor while its line is open');
+  assert(seen.waves === 3 && seen.oldError, 'the live log incident runs three waves and rejects an old error');
+  assert(seen.forbidden && seen.late, 'locking a public file is flagged, and the late upload arrives');
+  // The story remembers: the phishing wave was failed once, and no incident was breached.
+  const all = said.join('\n');
+  assert(/resetting the passwords from round one/.test(all), 'the debrief reacts to a failed first phishing wave');
+  assert(/Blocked in \d+ seconds/.test(all), 'the brute-force debrief quotes the response time');
+  assert(/403\. 403\. 403\./.test(all), 'a leak-free folder gets its own debrief');
+  assert(/knocked down once this week/.test(all), 'the ending counts the week\'s breaches');
+  const memo = await ev(() => window.__cyberQuest.progress.memo);
+  assert(memo.triage.retried && memo.triage.missed.length >= 3, 'the first phishing wave is remembered');
+  assert(['brute', 'noise', 'miner', 'leak', 'scan', 'ransom'].every((id) => memo.inc[id] && memo.inc[id].breaches === 0), 'every incident is remembered: ' + JSON.stringify(memo.inc));
 
   await page.click('#st-choices [data-go="home"]');
   const prog = await ev(() => window.__cyberQuest.progress);

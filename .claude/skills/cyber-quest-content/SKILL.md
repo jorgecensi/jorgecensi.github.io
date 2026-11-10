@@ -21,6 +21,10 @@ This skill is the how-to: skeletons, steps and the mistakes we already made.
   an `ask`. Incident lessons and tips point back to where the skill was taught.
 - **Rhythm per chapter:** calm scene → train → ask(s) → alarm scene → incident
   or triage → calm debrief that moves the story on → no-hint final exam.
+  Don't stack more than two `train` beats without a live moment: add a short
+  incident (60-90 s, only the skill just taught) like `INC_NOISE` or `INC_LEAK`.
+- **Debriefs react, difficulty doesn't.** Use the story memory (`M`) to change
+  what people say after an incident. Never use it to make a later beat harder.
 - **Defensive and fictional only.** The player defends; never script attacking
   someone, exploit payloads or real malware code. IPs come from the RFC 5737
   ranges (192.0.2.x, 198.51.100.x, 203.0.113.x), credentials are fake, and
@@ -40,10 +44,16 @@ Story beats live in `CHAPTERS[n].beats`. Incident and long training beats are
   loc: 'Brightside Games HQ · Sat 10:00', art: '☕', lines: [
     [null, 'Narration, in italics.'],
     ['mira', 'A line.', 'happy'],        // face: neutral | talk | worried | happy (SIEM: alarm)
+
+    // A line can react to how the player did: a function of M (the story memory) that
+    // returns a line, a list of lines, or nothing. M.triage, M.missed, M.inc('<incident id>'), M.breaches.
+    (M) => ((M.inc('brute') || {}).breaches ? ['mira', 'Second time lucky.'] : ['mira', 'First try!', 'happy']),
 ] },
 
-// Question with no clock (the asker smiles or frowns automatically)
+// Question with no clock (the asker smiles or frowns automatically).
+// `why` has one sentence per wrong option, by option index: why it tempts, why it fails.
 { type: 'ask', who: 'mira', q: 'Question?', options: ['Right answer', 'Wrong', 'Wrong', 'Wrong'], answer: 0,
+  why: [null, 'Why option 1 fails.', 'Why option 2 fails.', 'Why option 3 fails.'],
   explain: 'Why it\'s right, and why the tempting wrong one is wrong.' },
 
 // Training that reuses a Terminal lab (it also clears that lab in the Training Grounds)
@@ -51,6 +61,7 @@ Story beats live in `CHAPTERS[n].beats`. Incident and long training beats are
 
 // Live incident: a terminal beat with an incident block
 const INC_X = {
+  id: 'x',                                   // memo key (progress.memo.inc.x): never rename
   type: 'incident', title: 'Short name', icon: '🔥', host: 'web-01',
   intro: 'Mira says what to do, in HTML.', chips: ['ps aux', 'hint'],
   debrief: 'What the player just did, in security terms.',
@@ -105,6 +116,8 @@ A phishing rush is `{ type: 'triage', gap: 4.5, window: 13, mails: [{ name, addr
    - `labs.spec.js`: add a new lab's commands to `LABS`. Every lab and incident ends with the player typing
      `exit`; the specs type it for you after the listed commands.
    - `missions.spec.js` picks up new missions automatically.
+   - `daily.spec.js`: a new incident joins the daily pool once its chapter is
+     done, so add a solver for its `id` in that spec's `play()`.
 4. `jekyll build`, then `tools/cyber-quest-e2e/run.sh` (about 6 min), then
    screenshots of the new scenes with the `mobile-ui-check` skill.
 5. Update AGENTS.md if a convention changed, and the in-app "How to play" page
