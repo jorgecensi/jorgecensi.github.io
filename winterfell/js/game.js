@@ -311,7 +311,7 @@ function buildWorld() {
     const place = (x, z, yard) => {
         BRAZIERS.push({ x, z, yard, on: true });
         obstacle(x - 0.4, x + 0.4, z - 0.4, z + 0.4);
-        bz.push(box(0.14, 1.0, 0.14, x, 0.5, z), box(0.8, 0.25, 0.8, x, 1.1, z));
+        bz.push(cyl(0.05, 0.07, 1.0, x, 0.5, z, 0, 6), cyl(0.44, 0.24, 0.3, x, 1.12, z, 0, 10), cyl(0.3, 0.34, 0.06, x, 0.03, z, 0, 8));
     };
     for (const x of [-30, -10, 10, 30]) place(x, -5, false);
     place(-7.5, 33.5, false); place(7.5, 33.5, false);
@@ -363,7 +363,7 @@ function buildWorld() {
     addMesh(merge(trunks), wood);
     addMesh(merge(pines), new THREE.MeshLambertMaterial({ color: 0x1c2e26 }));
     const wt = new THREE.CylinderGeometry(0.8, 1.3, 7, 9); wt.translate(GROVE.treeX, 3.5, GROVE.treeZ);
-    addMesh(merge([wt, box(0.5, 4, 0.5, GROVE.treeX - 1.6, 7.2, GROVE.treeZ, 0, 0.7), box(0.5, 4, 0.5, GROVE.treeX + 1.6, 7.2, GROVE.treeZ, 0, -0.7)]),
+    addMesh(merge([wt, box(0.5, 4, 0.5, GROVE.treeX - 1.6, 7.2, GROVE.treeZ, 0, 0.7), box(0.5, 4, 0.5, GROVE.treeX + 1.6, 7.2, GROVE.treeZ, 0, -0.7)], 1.2),
         new THREE.MeshLambertMaterial({ color: 0xf0ece4, map: tex(TX.bark) }));
     const leaves = [];
     for (const [dx, dy, dz, r] of [[0, 9.5, 0, 3.6], [-3, 8.6, 0.5, 2.8], [3, 8.6, -0.5, 2.8], [0.5, 8.8, 2.6, 2.6], [-0.5, 8.8, -2.6, 2.6]]) {
@@ -502,9 +502,17 @@ const WP = {
     // A wight: thin, stooped, a rag hanging off it.
     body: part(merge([
         cyl(0.2, 0.15, 0.58, 0, 1.14, 0.06, 0.3, 8, 0.6), cap(0.065, 0.34, 0, 1.37, 0.15, 0, Math.PI / 2),
-        ball(0.115, 0, 1.55, 0.23, 0.9, 1.12, 1), box(0.12, 0.05, 0.1, 0, 1.45, 0.28), ball(0.16, 0, 0.88, 0, 1, 0.6, 0.7),
-        box(0.3, 0.5, 0.02, 0, 0.72, -0.1, 0.15)
+        ball(0.16, 0, 0.88, 0, 1, 0.6, 0.7), box(0.3, 0.5, 0.02, 0, 0.72, -0.1, 0.15), box(0.26, 0.42, 0.02, 0.02, 0.74, 0.13, -0.1)
     ]), skin, W_CAP, true),
+    head: part(merge([ball(0.115, 0, 1.55, 0.23, 0.9, 1.12, 1), box(0.12, 0.05, 0.1, 0, 1.45, 0.28), cyl(0.04, 0.05, 0.14, 0, 1.43, 0.17, 0.5)]), skin, W_CAP, true),
+    // Boss gear: an ice blade in the right hand, and the Night King's crown of horns.
+    blade: part(merge([cyl(0.001, 0.045, 1.1, 0, -1.15, 0.02, 0, 4, 0.3)]),
+        new THREE.MeshBasicMaterial({ color: 0xc4ecff, transparent: true, opacity: 0.85 }), 8),
+    crown: part(merge([0, 1, 2, 3, 4, 5, 6].map((i) => {
+        const a = (i - 3) * 0.5, g = new THREE.ConeGeometry(0.022, 0.16 - Math.abs(i - 3) * 0.02, 4);
+        g.translate(Math.sin(a) * 0.1, 1.71, 0.23 + Math.cos(a) * 0.1);
+        return g;
+    })), new THREE.MeshLambertMaterial({ color: 0x9fd0f0, emissive: 0x1c3a52 }), 2),
     eyes: part(merge([box(0.05, 0.035, 0.03, -0.045, 1.57, 0.335), box(0.05, 0.035, 0.03, 0.045, 1.57, 0.335)]),
         new THREE.MeshBasicMaterial({ color: 0x7fdcff, fog: false }), W_CAP),
     armL: part(wArmGeo, skin, W_CAP, true), armR: part(wArmGeo, skin, W_CAP, true),
@@ -512,9 +520,15 @@ const WP = {
 };
 const AP = {
     body: part(merge([
-        cyl(0.25, 0.19, 0.6, 0, 1.16, 0, 0, 10, 0.62), cap(0.09, 0.42, 0, 1.42, 0, 0, Math.PI / 2), cyl(0.06, 0.07, 0.1, 0, 1.5, 0),
-        ball(0.125, 0, 1.63, 0, 0.95, 1.1, 1), ball(0.2, 0, 0.88, 0, 1.05, 0.6, 0.7)
+        cyl(0.25, 0.19, 0.6, 0, 1.16, 0, 0, 10, 0.62), cap(0.09, 0.42, 0, 1.42, 0, 0, Math.PI / 2), ball(0.2, 0, 0.88, 0, 1.05, 0.6, 0.7),
+        box(0.42, 0.07, 0.3, 0, 0.9, 0)
     ]), skin, A_CAP, true),
+    head: part(merge([ball(0.125, 0, 1.63, 0, 0.95, 1.1, 1), cyl(0.06, 0.07, 0.12, 0, 1.5, 0)]), skin, A_CAP, true),
+    // Northmen wear fur at the shoulders and a cloak; riders wear a long braid.
+    cloak: part(merge([cap(0.14, 0.46, 0, 1.44, -0.02, 0, Math.PI / 2), box(0.52, 0.8, 0.04, 0, 1.0, -0.17, -0.07)]),
+        new THREE.MeshLambertMaterial({ color: 0x2c2723 }), 40),
+    braid: part(merge([cap(0.035, 0.34, 0, 1.46, -0.15, 0.25), ball(0.1, 0, 1.67, -0.04, 1, 0.9, 1)]),
+        new THREE.MeshLambertMaterial({ color: 0x14100d }), 60),
     armL: part(armGeo, skin, A_CAP, true), armR: part(armGeo, skin, A_CAP, true),
     legL: part(legGeo, skin, A_CAP, true), legR: part(legGeo, skin, A_CAP, true),
     arakh: part(merge([box(0.03, 0.6, 0.08, 0, -0.95, 0), box(0.03, 0.45, 0.07, 0, -1.42, 0.08, 0.35)]), steel, 60),
@@ -536,6 +550,15 @@ const HP = {
     body: part(horseGeo, skin, H_CAP, true),
     leg: part(merge([cap(0.055, 0.78, 0, -0.45, 0), box(0.1, 0.1, 0.13, 0, -0.92, 0.01)]), skin, H_CAP * 4, true)
 };
+// A soft dark disc under every figure, so they stand on the ground instead of floating over it.
+const shadows = part((() => { const g = new THREE.CircleGeometry(0.5, 14); g.rotateX(-Math.PI / 2); return g; })(),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.38, depthWrite: false }), W_CAP + A_CAP + 4);
+const _sh = new THREE.Matrix4();
+function shadow(x, z, r) {
+    _sh.makeScale(r, 1, r);
+    _sh.setPosition(x, G.act === 4 ? 0.1 : 0.04, z);
+    put(shadows, _sh);
+}
 const _root = new THREE.Matrix4(), _l = new THREE.Matrix4(), _w = new THREE.Matrix4();
 const _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
 function limb(m, px, py, pz, ang, colour) {
@@ -555,11 +578,15 @@ function drawWight(f) {
     setRoot(f, 0, f.moving ? Math.sin(f.t) * 0.07 : 0);
     const walk = f.moving ? Math.sin(f.t) * 0.75 : 0;
     put(WP.body, _root, f.col);
+    put(WP.head, _root, f.skin);
     put(WP.eyes, _root);
+    if (f.king) put(WP.crown, _root);
+    if (f.state === 'alive' && f.y < 3) shadow(f.x, f.z, f.scale * (f.heavy ? 1.2 : 0.9));
     let ar = -1.25 - walk * 0.25;
     if (f.atkT > 0) ar = lerp(-0.3, -2.8, clamp(f.atkT / 0.5, 0, 1));
-    limb(WP.armL, 0.3, 1.38, 0.08, -1.25 + walk * 0.25, f.col);
-    limb(WP.armR, -0.3, 1.38, 0.08, ar, f.col);
+    limb(WP.armL, 0.3, 1.38, 0.08, -1.25 + walk * 0.25, f.skin);
+    limb(WP.armR, -0.3, 1.38, 0.08, ar, f.skin);
+    if (f.boss) put(WP.blade, _w);
     limb(WP.legL, 0.13, 0.86, 0, walk, f.col);
     limb(WP.legR, -0.13, 0.86, 0, -walk, f.col);
 }
@@ -579,16 +606,19 @@ function drawAlly(f) {
             limb(HP.leg, sx, 0.95, sz, f.moving ? Math.sin(f.t + i * 1.7) * 0.85 : 0, f.hcol);
         }
     }
+    if (f.state === 'alive') shadow(f.x, f.z, riding ? 1.5 : 0.9);
     setRoot(f, riding ? 0.72 + bob : 0);
     const walk = f.moving && !riding ? Math.sin(f.t) * 0.7 : 0;
     put(AP.body, _root, f.col);
+    put(AP.head, _root, f.skin);
     const legA = riding ? -0.45 : walk;
     limb(AP.legL, riding ? 0.3 : 0.13, 0.86, 0, legA, f.col);
     limb(AP.legR, riding ? -0.3 : -0.13, 0.86, 0, riding ? legA : -walk, f.col);
     const strike = f.atkT > 0 ? Math.sin(clamp(f.atkT / 0.3, 0, 1) * Math.PI) : 0;
     if (riding) {
-        limb(AP.armL, 0.32, 1.42, 0, -0.9, f.col);
-        limb(AP.armR, -0.32, 1.42, 0, -2.55 + Math.sin(f.t * 0.7) * 0.2, f.col);
+        put(AP.braid, _root);
+        limb(AP.armL, 0.32, 1.42, 0, -0.9, f.skin);
+        limb(AP.armR, -0.32, 1.42, 0, -2.55 + Math.sin(f.t * 0.7) * 0.2, f.skin);
         put(AP.arakh, _w);
         if (f.flame) put(AP.flame, _w);
     } else if (f.kind === 'unsullied') {
@@ -598,6 +628,7 @@ function drawAlly(f) {
         limb(AP.armR, -0.32, 1.42, 0, -0.28 - strike * 0.5, f.col);
         put(AP.spear, _w);
     } else {
+        put(AP.cloak, _root);
         limb(AP.armL, 0.32, 1.42, 0, walk * 0.6, f.col);
         limb(AP.armR, -0.32, 1.42, 0, -1.9 + strike * 1.3, f.col);
         put(AP.sword, _w);
@@ -727,7 +758,12 @@ const P = {
 const wights = [], allies = [];
 const input = { keys: new Set(), sx: 0, sy: 0, attack: false, held: false };
 
-const WCOLS = [0x7d8791, 0x66707c, 0x8b8f8a, 0x5a6470, 0x77808f].map((c) => new THREE.Color(c));
+// Wights wear dark rags over grey-blue skin; the living have warmer faces.
+const WCOLS = [0x3a3f47, 0x2f3339, 0x45413b, 0x33383f, 0x3d3a36].map((c) => new THREE.Color(c));
+const WSKIN = [0x8d98a3, 0x7c8894, 0x9a9f9c, 0x73808c].map((c) => new THREE.Color(c));
+const SKINS = { rider: [0x8a5c3c, 0x7a4e32, 0x95683f], unsullied: [0x6b4a36, 0x55392a, 0x7a5a44], north: [0xb08c74, 0xa37e68, 0x96705a] };
+for (const k in SKINS) SKINS[k] = SKINS[k].map((c) => new THREE.Color(c));
+const BOSS_CLOTH = new THREE.Color(0x3a4756);
 const HCOLS = [0x3b2a1d, 0x2a211b, 0x57422f, 0x1d1a18, 0x6a5540].map((c) => new THREE.Color(c));
 const RCOLS = [0x6e4c33, 0x5c3f2b, 0x7a5a3d].map((c) => new THREE.Color(c));
 const ICE = new THREE.Color(0xa9d6ee), KING = new THREE.Color(0x6fa8d8);
@@ -739,7 +775,7 @@ function spawnWight(x, z, o = {}) {
     const w = {
         x, z, y: o.y || 0, vy: 0, yaw: Math.PI, hp: o.hp || 1, state: 'alive', t: rand(TAU), fall: 0, fallDir: -1, sink: 0, dead: 0,
         atkT: 0, wind: 0, cd: rand(0.2, 0.9), scan: rand(0.4), stagger: 0, scale: o.scale || rand(0.92, 1.08),
-        speed: o.speed || rand(4.8, 6.2), col: o.col || pick(WCOLS), tgt: null, moving: false, dieAt: -1, hunter: rand() < 0.3,
+        speed: o.speed || rand(4.8, 6.2), col: o.col ? BOSS_CLOTH : pick(WCOLS), skin: o.col || pick(WSKIN), tgt: null, moving: false, dieAt: -1, hunter: rand() < 0.3,
         heavy: !!o.heavy, boss: !!(o.walker || o.king), walker: !!o.walker, king: !!o.king,
         dmg: o.dmg || 0, reach: o.reach || 0, windT: o.windT || 0.42, cdB: o.cdB || 1.1, maxHp: o.hp || 1
     };
@@ -750,7 +786,7 @@ function mkAlly(kind, x, z, yaw) {
     const a = {
         kind, x, z, y: 0, yaw, hp: kind === 'unsullied' ? 4 : 12, state: 'alive', t: rand(TAU), fall: 0, fallDir: 1, sink: 0, dead: 0,
         atkT: 0, cd: rand(1), scan: rand(0.4), scale: rand(0.96, 1.06), col: kind === 'unsullied' ? UCOL : kind === 'rider' ? pick(RCOLS) : pick(NCOLS),
-        hcol: pick(HCOLS), tgt: null, moving: false, flame: false, hx: x, hz: z, ox: 0, oz: 0, dieAt: -1, flee: false
+        skin: pick(SKINS[kind]), hcol: pick(HCOLS), tgt: null, moving: false, flame: false, hx: x, hz: z, ox: 0, oz: 0, dieAt: -1, flee: false
     };
     allies.push(a);
     return a;
@@ -764,6 +800,14 @@ let subTimer = 0, cardTimer = 0, crossTimer = 0;
 function say(text, secs = 4.5) { el.sub.textContent = text; el.sub.classList.add('on'); subTimer = secs; }
 function card(small, big) { el.card.firstElementChild.textContent = small; el.card.lastElementChild.textContent = big; el.card.classList.add('on'); cardTimer = 3.4; }
 function objective(text, showBar) { el.obj.textContent = text; el.bar.style.display = showBar ? 'block' : 'none'; }
+/** Cut to black and fade back in: used when an act moves the player somewhere else. */
+function fadeIn() {
+    el.fade.style.transition = 'none';
+    el.fade.classList.add('on');
+    void el.fade.offsetWidth;
+    el.fade.style.transition = '';
+    el.fade.classList.remove('on');
+}
 function once(key) { if (G.flags[key]) return false; G.flags[key] = true; return true; }
 const ACT_NAMES = ['', 'Act I · The Charge', 'Act II · The Line', 'Act III · The Castle', 'Act IV · The Halls', 'Act V · The Godswood'];
 
@@ -912,7 +956,7 @@ function strike() {
         damageWight(w, dmg, true);
         if (!w.heavy) nudge(w, (w.x - P.x) / d * 0.5, (w.z - P.z) / d * 0.5);
     }
-    if (hits.length) { el.cross.classList.add('hit'); crossTimer = 0.12; P.shake = Math.min(1, P.shake + 0.15); }
+    if (hits.length) { el.cross.classList.add('hit'); crossTimer = 0.12; P.shake = Math.min(1, P.shake + 0.15); hitStop = 0.045; }
 }
 function nudge(o, dx, dz) {
     if (G.act === 4) hallMove(o, o.x + dx, o.z + dz, 0.3); else { o.x += dx; o.z += dz; }
@@ -1368,8 +1412,8 @@ function simAct5(dt) {
         const k = t / GROVE_SECS;
         el.barI.style.width = Math.min(100, k * 100) + '%';
         if (G.spawnT <= 0) {
-            G.spawnT = lerp(0.9, 0.4, k);
-            if (alive() < lerp(14, 40, k)) { const [x, z] = ring(39, 0, TAU); spawnWight(x, z, { hp: rand() < 0.3 ? 2 : 1 }); }
+            G.spawnT = lerp(0.8, 0.32, k);
+            if (alive() < lerp(16, 46, k)) { const [x, z] = ring(39, 0, TAU); spawnWight(x, z, { hp: rand() < 0.3 ? 2 : 1 }); }
         }
         if (t >= GROVE_SECS) {
             G.phase = 'walkers'; G.t = 0;
@@ -1379,7 +1423,7 @@ function simAct5(dt) {
             for (const w of wights) if (w.state === 'alive' && rand() < 0.7) w.dieAt = rand(0.2, 2);
             for (let i = 0; i < 4; i++) {       // they come from the north, opposite the way you came in
                 const [x, z] = ring(37, Math.PI - 0.9 + i * 0.6, Math.PI - 0.9 + i * 0.6);
-                spawnWight(x, z, { walker: true, heavy: true, hp: 12, scale: 1.22, speed: 2.4, col: ICE, dmg: 16, reach: 2.5, windT: 0.9, cdB: 2.2 });
+                spawnWight(x, z, { walker: true, heavy: true, hp: 14, scale: 1.22, speed: 3, col: ICE, dmg: 18, reach: 2.6, windT: 0.8, cdB: 1.8 });
             }
         }
         return;
@@ -1394,7 +1438,7 @@ function simAct5(dt) {
             Sfx.play('screech'); Sfx.play('horn', { rate: 0.5 }); Sfx.setAmbience(AMBIENCE.king);
             say('The last one shatters. Then the Night King steps out of the dark.', 6);
             objective('Bring down the Night King before he reaches the tree', true);
-            spawnWight(GROVE.x, GROVE.z - 37, { king: true, heavy: true, hp: 60, scale: 1.45, speed: 1.5, col: KING, dmg: 24, reach: 3, windT: 0.9, cdB: 2.2 });
+            spawnWight(GROVE.x, GROVE.z - 37, { king: true, heavy: true, hp: 70, scale: 1.45, speed: 1.7, col: KING, dmg: 26, reach: 3.1, windT: 0.85, cdB: 1.9 });
         }
         return;
     }
@@ -1408,10 +1452,10 @@ function simAct5(dt) {
         // He only wins by walking there unopposed; a fight that drifts under the tree does not count.
         if (Math.hypot(king.x - GROVE.treeX, king.z - GROVE.treeZ) < 3.4 && Math.hypot(P.x - king.x, P.z - king.z) > 7) { die('The Night King reaches the weirwood. The long night does not end.'); return; }
         if (G.spawnT <= 0) {
-            G.spawnT = 11;
+            G.spawnT = 8;
             if (once('raise')) say('He lifts his arms. The dead get back up.', 4.5);
             Sfx.play('screech', { vol: 0.7 });
-            for (let i = 0; i < 5; i++) { const a = rand(TAU), r = rand(11, 17); spawnWight(clampGrove(P.x + Math.sin(a) * r, 0), clampGrove(P.z + Math.cos(a) * r, 1)); }
+            for (let i = 0; i < 6; i++) { const a = rand(TAU), r = rand(9, 15); spawnWight(clampGrove(P.x + Math.sin(a) * r, 0), clampGrove(P.z + Math.cos(a) * r, 1)); }
         }
     }
 }
@@ -1425,6 +1469,7 @@ function beginHalls() {
     Object.assign(P, { x: 200, z: -2.5, yaw: 0, pitch: 0, mounted: false });
     for (let i = 0; i < 9; i++) spawnWight(rand(190, 210), rand(-28, -14), { speed: rand(4.4, 5.4), hp: i % 3 ? 1 : 2 });
     for (let i = 0; i < 5; i++) spawnWight(rand(198.5, 201.5), rand(-48, -36), { speed: rand(4.4, 5.4) });
+    fadeIn();
     Sfx.play('gate');
     card('Act IV', 'The Halls');
     objective('Fight through the keep to the godswood', true);
@@ -1443,6 +1488,7 @@ function beginGrove() {
         mkAlly('north', GROVE.treeX + Math.sin(a) * 6, GROVE.treeZ + Math.cos(a) * 6, a);
     }
     G.uTotal = allies.length;
+    fadeIn();
     card('Act V', 'The Godswood');
     objective('Defend the weirwood', true);
     equip('dagger');
@@ -1595,6 +1641,7 @@ function render(dt, t) {
     snow.pts.visible = G.act !== 4 || G.mode === 'menu';
     for (const w of wights) drawWight(w);
     for (const a of allies) if (a.state !== 'gone') drawAlly(a);
+    flush(shadows);
     for (const k in WP) flush(WP[k]);
     for (const k in AP) flush(AP[k]);
     flush(HP.body); flush(HP.leg);
@@ -1657,12 +1704,14 @@ function updateHud(dt) {
 }
 
 // ── Main loop ──
-let last = performance.now(), acc = 0, manual = false;
+let last = performance.now(), acc = 0, manual = false, hitStop = 0;
 function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
-    if (G.mode === 'play' && !manual) {
+    // A landed blow freezes the world for a few hundredths of a second, which gives it weight.
+    if (hitStop > 0) hitStop -= dt;
+    else if (G.mode === 'play' && !manual) {
         acc += dt;
         let n = 0;
         while (acc >= STEP && n < 6) { sim(STEP); acc -= STEP; n++; if (G.mode !== 'play') break; }

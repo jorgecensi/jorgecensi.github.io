@@ -570,7 +570,7 @@ function makeBark() {
 function makeSky() {
   const W = 2048, H = 1024, HH = 512, rnd = mulberry32(8501);
   const HOR = [7, 11, 22], ZEN = [2, 4, 11];
-  const MX = Math.round(W / 3), MY = HH - 128, MR = 28;
+  const MX = Math.round(W / 3), MY = HH - 128, MR = 14;
   const mk = 1 / Math.cos(((HH - MY) / HH) * Math.PI / 2);   // x stretch at the moon's height
 
   // Two lattices of different pitch, so the cloud shapes don't follow a grid.

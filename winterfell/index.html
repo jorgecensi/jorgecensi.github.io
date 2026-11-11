@@ -73,7 +73,8 @@ body.playing #hud { display: block; }
     text-align: center; opacity: 0; transition: opacity 1s; text-shadow: 0 2px 12px #000; }
 #card.on { opacity: 1; }
 #card small { letter-spacing: .4em; font-size: 13px; color: var(--dim); text-transform: uppercase; }
-#card span { font-size: clamp(30px, 7vw, 58px); letter-spacing: .08em; margin-top: 8px; }
+#card span { font-size: clamp(26px, 6.4vw, 58px); letter-spacing: .08em; margin-top: 8px; }
+#shade { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,.5) 100%); }
 #vign { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(200,16,46,.75) 100%); }
 #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 1.2s; }
 #fade.on { opacity: 1; }
@@ -92,7 +93,9 @@ body.playing.touch #touch { display: block; }
     color: var(--ink); font-size: 34px; pointer-events: auto; }
 #atk:active { background: rgba(255,154,60,.4); }
 body.touch #cross { display: none; }
-body.touch #sub { bottom: calc(190px + var(--safe-bottom)); }
+/* On touch the bottom of the screen belongs to the thumbs, so narration sits under the objective. */
+body.touch #sub { bottom: auto; top: calc(78px + var(--safe-top)); font-size: 16px; }
+body.touch #card { justify-content: flex-start; padding-top: 34vh; }
 @media (pointer: coarse) { .keys { display: none; } }
 
 /* ── Panels ── */
@@ -137,6 +140,7 @@ button { font-family: inherit; cursor: pointer; }
 <canvas id="view"></canvas>
 
 <div id="hud">
+    <div id="shade"></div>
     <div id="vign"></div>
     <div id="top">
         <div id="objbox">
