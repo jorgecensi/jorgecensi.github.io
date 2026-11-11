@@ -1,0 +1,11 @@
+{
+  "name": "winterfell-e2e",
+  "private": true,
+  "description": "Playwright regression specs for the Battle of Winterfell game",
+  "scripts": {
+    "test": "./run.sh"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
