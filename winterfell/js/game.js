@@ -3,7 +3,7 @@
 //   Act II  stand with the Unsullied, then fall back across the trench
 //   Act III hold the castle courtyard until dawn
 // Simulation runs in fixed 60 Hz steps (sim()); rendering is per animation frame.
-import * as THREE from '../vendor/three.module.min.js';
+import * as THREE from '../lib/three.module.min.js';
 import { Sfx } from './sfx.js';
 
 const $ = (id) => document.getElementById(id);

@@ -42,14 +42,14 @@ bundle exec jekyll serve --host 0.0.0.0 --port 4000 --livereload
 ### Battle of Winterfell (`/winterfell`)
 
 - **First-person three.js game in three acts**: Act I rides out with the Dothraki (phases `muster` → `charge` → `clash` → `retreat` → `afoot`), Act II holds the Unsullied line and falls back over the trench (`hold` → `fallback`), Act III defends the courtyard until dawn (`siege` → `dawn`). An unofficial fan game: keep the "not affiliated" line on the title screen.
-- **Files**: `winterfell/index.html` is only the shell (HUD, menus, touch controls, service-worker block). The game is `winterfell/js/game.js` (one ES module) and all sound is synthesised in `winterfell/js/sfx.js` (Web Audio, no audio files). three.js r170 is vendored in `winterfell/vendor/`. There is no build step.
+- **Files**: `winterfell/index.html` is only the shell (HUD, menus, touch controls, service-worker block). The game is `winterfell/js/game.js` (one ES module) and all sound is synthesised in `winterfell/js/sfx.js` (Web Audio, no audio files). three.js r170 is vendored in `winterfell/lib/` (not `vendor/`: `.gitignore` ignores every directory with that name, so it would never be committed). There is no build step.
 - **Layout is in metres, north (the dead) is -Z**: the constants at the top of `game.js` place the muster line, the clash, the Unsullied line, the trench with its one bridge, and the gate. `obstacles` are axis-aligned boxes for walkers; wights are funnelled through the bridge and the gate in `simWights()`, so move those together if the layout changes.
 - **Crowds are instanced**: wights, allies and horses are plain objects drawn each frame into `InstancedMesh` parts (`WP`, `AP`, `HP`) by `drawWight()`/`drawAlly()`. Figures face local +Z. Raise the `*_CAP` constants before spawning more of anything. Point lights are a fixed pool of four moved to the nearest fires (`updateLights()`); don't add lights per fire or per flame.
 - **Simulation is a fixed 60 Hz step** (`sim()`, accumulator in `frame()`); rendering and HUD run per animation frame. Keep gameplay out of `render()`.
 - **Balance knobs**: `HOLD_SECS`, `SIEGE_SECS`, `CLASH_SECS`, `GIANT_AT`, the spawn `lerp()`s in `simAct2()`/`simAct3()`, and `G.gap` (the minimum time between two wights starting an attack on the player, which is what stops a crowd from killing instantly).
 - **`?debug=1` exposes `window.__winterfell`** (`state`, `start(act)`, `step(n)`, `god()`, `bot()`, `key()`, `look()`, `attack()`, `spawn()`). `bot()` is a test pilot that can play every act; `step()` switches the page to manual stepping for the rest of the load.
 - **E2E specs live in `tools/winterfell-e2e/`**: run `./run.sh`. Headless Chromium needs `--use-gl=swiftshader --enable-unsafe-swiftshader` for WebGL. Read its README first.
-- **Bump `SW_VERSION`/`CACHE_VERSION` together** on any change under `winterfell/`, and add new files to `PRECACHE_URLS` in `winterfell/sw.js`. Changes under `winterfell/vendor/` don't trigger the auto-bump workflow.
+- **Bump `SW_VERSION`/`CACHE_VERSION` together** on any change under `winterfell/`, and add new files to `PRECACHE_URLS` in `winterfell/sw.js`. Changes under `winterfell/lib/` don't trigger the auto-bump workflow.
 
 ### Chroma app (`/chroma`)
 
