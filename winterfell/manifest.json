@@ -1,0 +1,31 @@
+{
+  "id": "/winterfell/",
+  "name": "Battle of Winterfell",
+  "short_name": "Winterfell",
+  "description": "A first-person 3D battle in three acts: charge with the Dothraki into the dark, hold the line with the Unsullied, then defend the castle courtyard until dawn.",
+  "start_url": "/winterfell/",
+  "scope": "/winterfell/",
+  "display": "standalone",
+  "background_color": "#05070d",
+  "theme_color": "#05070d",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/img/winterfell-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/img/winterfell-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "action"],
+  "lang": "en-US",
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

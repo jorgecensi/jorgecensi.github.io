@@ -22,6 +22,7 @@ a PWA).
 - `cyber-quest/` — Cybersecurity game: a story campaign where you defend a game studio from live attacks, plus Training Grounds with quizzes in three tiers, beginner to advanced: phishing and passwords, then headers/networks/crypto/malware, then web vulns, log hunting, architecture and incident response (PWA); plus **Terminal Ops**, guided command-line basics and incident labs in a simulated Linux shell
 - `music-theory/` — Music theory trainer (PWA): a guided ear-first Learn path (hear it, play it, then learn why) plus free-play scales, chords, intervals and quizzes
 - `conquerors/` — Strava-powered territory game: a heatmap of conquered ~200 m map tiles, quests to unexplored streets, levels and achievements (PWA)
+- `winterfell/` — Battle of Winterfell, a first-person 3D game (three.js) in three acts: the Dothraki charge, holding the line with the Unsullied, and defending the castle courtyard until dawn (PWA)
 - `binary/` — Binary number trainer (PWA, also available in `pt-BR/binary/`)
 - `tennis-planner.html` — Tennis match/availability planner (PWA)
 - `squeak-the-geek.html` — Browser game (PWA)
