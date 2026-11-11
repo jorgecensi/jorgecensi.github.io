@@ -6,6 +6,7 @@ const PRECACHE_URLS = [
     '/winterfell/manifest.json',
     '/winterfell/js/game.js',
     '/winterfell/js/sfx.js',
+    '/winterfell/js/textures.js',
     '/winterfell/lib/three.module.min.js',
     '/img/winterfell-icon-192.png',
     '/img/winterfell-icon-512.png',

@@ -23,7 +23,7 @@ runs each spec with a 420 s timeout (`SPEC_TIMEOUT=`). Logs and screenshots land
 
 `window.__winterfell`:
 
-- `state` → `{ mode, act, phase, t, hp, kills, x, z, mounted, wights, allies, trenchLit, flame }`.
+- `state` → `{ mode, act, phase, t, hp, kills, x, z, mounted, weapon, wights, allies, trenchLit, flame }`.
   `mode` is `menu` | `play` | `paused` | `dead` | `won`. Phases: act 1 `muster → charge → clash →
   retreat → afoot`, act 2 `hold → fallback`, act 3 `siege` (ends by reaching the keep door),
   act 4 `halls`, act 5 `grove → walkers → king → dawn`. `t` is seconds in the current phase.

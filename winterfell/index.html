@@ -59,6 +59,11 @@ body.playing #hud { display: block; }
 #flame i { display: block; height: 100%; width: 0; background: var(--fire); }
 #cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
     background: rgba(255,255,255,.55); }
+#way { position: absolute; left: 0; top: 0; display: none; will-change: transform; }
+#way i { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; transform: rotate(45deg);
+    border: 2px solid var(--fire); background: rgba(255,154,60,.25); box-shadow: 0 0 10px rgba(255,154,60,.6); }
+#way span { position: absolute; left: -30px; top: 15px; width: 60px; text-align: center; font: 12px system-ui, sans-serif;
+    color: var(--ink); text-shadow: 0 1px 3px #000; }
 #cross.hit { background: #fff; box-shadow: 0 0 0 5px rgba(255,255,255,.25); }
 #sub { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(64px + var(--safe-bottom));
     width: min(92vw, 640px); text-align: center; font-size: 18px; font-style: italic; line-height: 1.35;
@@ -142,6 +147,7 @@ button { font-family: inherit; cursor: pointer; }
         <div id="stats"><b id="kills">0</b> slain<br><span id="allies"></span></div>
         <button id="pause" aria-label="Pause">❚❚</button>
     </div>
+    <div id="way"><i></i><span></span></div>
     <div id="cross"></div>
     <div id="card"><small></small><span></span></div>
     <div id="sub"></div>
