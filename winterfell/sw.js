@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'dev';
+const CACHE_VERSION = '2611112057';
 const CACHE_NAME = `winterfell-${CACHE_VERSION}`;
 const OFFLINE_URL = '/winterfell/';
 const PRECACHE_URLS = [
