@@ -1,0 +1,238 @@
+---
+layout: null
+permalink: /winterfell/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>Battle of Winterfell</title>
+<meta name="description" content="A first-person fan game of the Long Night: charge with the Dothraki, hold the line with the Unsullied, then fall back into the castle and survive until dawn.">
+<meta name="theme-color" content="#05070d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Winterfell">
+<link rel="manifest" href="/winterfell/manifest.json">
+<link rel="icon" href="/img/favicon.ico">
+<link rel="apple-touch-icon" href="/img/winterfell-icon-192.png">
+<style>
+:root {
+    --bg: #05070d;
+    --ink: #e8edf5;
+    --dim: #93a0b8;
+    --ice: #7fd4ff;
+    --fire: #ff9a3c;
+    --blood: #c8102e;
+    --panel: rgba(8, 12, 22, .86);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden;
+    font-family: Georgia, 'Times New Roman', serif; overscroll-behavior: none; }
+body { touch-action: none; user-select: none; -webkit-user-select: none; }
+#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* ── HUD ── */
+#hud { position: fixed; inset: 0; pointer-events: none; display: none; }
+body.playing #hud { display: block; }
+#top { position: absolute; left: calc(12px + var(--safe-left)); right: calc(12px + var(--safe-right));
+    top: calc(10px + var(--safe-top)); display: flex; gap: 12px; align-items: flex-start; }
+#objbox { flex: 1; min-width: 0; text-shadow: 0 1px 4px #000; }
+#act { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--dim); }
+#obj { font-size: 17px; margin-top: 2px; }
+#objbar { height: 4px; margin-top: 6px; max-width: 260px; background: rgba(255,255,255,.14); border-radius: 2px; overflow: hidden; display: none; }
+#objbar i { display: block; height: 100%; width: 0; background: var(--ice); }
+#stats { text-align: right; font-size: 13px; color: var(--dim); text-shadow: 0 1px 4px #000; white-space: nowrap; }
+#stats b { color: var(--ink); font-size: 17px; font-weight: normal; }
+#pause { pointer-events: auto; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
+    background: rgba(0,0,0,.35); color: var(--ink); font-size: 16px; }
+#hpwrap { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(18px + var(--safe-bottom));
+    width: min(46vw, 320px); }
+#hp { height: 8px; background: rgba(255,255,255,.14); border-radius: 4px; overflow: hidden; }
+#hp i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #8c1022, #e23b4e); }
+#flame { margin-top: 5px; height: 4px; border-radius: 2px; overflow: hidden; background: transparent; }
+#flame i { display: block; height: 100%; width: 0; background: var(--fire); }
+#cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+    background: rgba(255,255,255,.55); }
+#cross.hit { background: #fff; box-shadow: 0 0 0 5px rgba(255,255,255,.25); }
+#sub { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(64px + var(--safe-bottom));
+    width: min(92vw, 640px); text-align: center; font-size: 18px; font-style: italic; line-height: 1.35;
+    text-shadow: 0 1px 6px #000, 0 0 2px #000; opacity: 0; transition: opacity .5s; }
+#sub.on { opacity: 1; }
+#card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; opacity: 0; transition: opacity 1s; text-shadow: 0 2px 12px #000; }
+#card.on { opacity: 1; }
+#card small { letter-spacing: .4em; font-size: 13px; color: var(--dim); text-transform: uppercase; }
+#card span { font-size: clamp(30px, 7vw, 58px); letter-spacing: .08em; margin-top: 8px; }
+#vign { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(200,16,46,.75) 100%); }
+#fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 1.2s; }
+#fade.on { opacity: 1; }
+
+/* ── Touch controls ── */
+#touch { position: fixed; inset: 0; pointer-events: none; display: none; }
+body.playing.touch #touch { display: block; }
+#stick { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.22); background: rgba(255,255,255,.05);
+    left: calc(84px + var(--safe-left)); bottom: calc(40px + var(--safe-bottom)); top: auto; }
+#stick.live { bottom: auto; }
+#nub { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
+    background: rgba(255,255,255,.28); }
+#atk { position: absolute; right: calc(26px + var(--safe-right)); bottom: calc(46px + var(--safe-bottom));
+    width: 92px; height: 92px; border-radius: 50%; border: 2px solid rgba(255,154,60,.7); background: rgba(255,154,60,.16);
+    color: var(--ink); font-size: 34px; pointer-events: auto; }
+#atk:active { background: rgba(255,154,60,.4); }
+body.touch #cross { display: none; }
+body.touch #sub { bottom: calc(190px + var(--safe-bottom)); }
+@media (pointer: coarse) { .keys { display: none; } }
+
+/* ── Panels ── */
+.screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column;
+    padding: calc(20px + var(--safe-top)) calc(20px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(20px + var(--safe-left));
+    text-align: center; overflow-y: auto; touch-action: pan-y; }
+.screen.on { display: flex; }
+#menu { background: linear-gradient(180deg, rgba(5,7,13,.2) 0%, rgba(5,7,13,.78) 60%, rgba(5,7,13,.95) 100%); justify-content: flex-end; }
+#menu h1 { font-size: clamp(34px, 9vw, 76px); letter-spacing: .1em; margin: 0; font-weight: normal; text-shadow: 0 0 30px rgba(127,212,255,.35), 0 2px 10px #000; }
+#menu .tag { letter-spacing: .5em; font-size: 13px; color: var(--ice); text-transform: uppercase; margin: 0 0 10px; }
+#menu p.lead { max-width: 520px; color: var(--dim); line-height: 1.5; font-size: 15px; margin: 14px auto 18px; }
+.btns { display: flex; flex-direction: column; gap: 10px; width: min(320px, 100%); margin: 0 auto; }
+button { font-family: inherit; cursor: pointer; }
+.btn { padding: 14px 18px; font-size: 17px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.28); border-radius: 4px; }
+.btn.primary { background: rgba(255,154,60,.18); border-color: var(--fire); }
+.btn:hover { background: rgba(255,255,255,.14); }
+.btn.small { font-size: 13px; padding: 10px 14px; color: var(--dim); }
+.keys { color: var(--dim); font-size: 13px; line-height: 1.7; margin: 16px auto 0; max-width: 560px; font-family: system-ui, sans-serif; }
+.keys kbd { border: 1px solid rgba(255,255,255,.3); border-radius: 3px; padding: 0 5px; font-size: 12px; color: var(--ink); }
+.fine { color: #5d6a82; font-size: 11px; margin-top: 14px; font-family: system-ui, sans-serif; }
+.fine a { color: inherit; }
+.panel { background: var(--panel); }
+.panel h2 { font-weight: normal; font-size: clamp(26px, 6vw, 44px); letter-spacing: .1em; margin: 0 0 6px; }
+.panel p { color: var(--dim); max-width: 460px; line-height: 1.5; margin: 6px auto 18px; }
+#dead h2 { color: var(--ice); }
+#won { background: rgba(20, 14, 8, .55); }
+#won h2 { color: #ffd9a0; }
+.tally { display: flex; gap: 22px; justify-content: center; margin: 6px 0 20px; }
+.tally div { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.tally b { display: block; font-size: 30px; color: var(--ink); font-weight: normal; letter-spacing: 0; }
+#update { display: none; }
+@media (max-height: 460px) {
+    #menu p.lead, .keys { display: none; }
+    .btns { flex-direction: row; flex-wrap: wrap; width: auto; justify-content: center; }
+    .btn { padding: 10px 14px; font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { #card, #sub, #fade { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="hud">
+    <div id="vign"></div>
+    <div id="top">
+        <div id="objbox">
+            <div id="act"></div>
+            <div id="obj"></div>
+            <div id="objbar"><i></i></div>
+        </div>
+        <div id="stats"><b id="kills">0</b> slain<br><span id="allies"></span></div>
+        <button id="pause" aria-label="Pause">❚❚</button>
+    </div>
+    <div id="cross"></div>
+    <div id="card"><small></small><span></span></div>
+    <div id="sub"></div>
+    <div id="hpwrap">
+        <div id="hp"><i></i></div>
+        <div id="flame"><i></i></div>
+    </div>
+</div>
+
+<div id="touch">
+    <div id="stick"><div id="nub"></div></div>
+    <button id="atk" aria-label="Attack">⚔️</button>
+</div>
+
+<div id="menu" class="screen on">
+    <p class="tag">The Long Night</p>
+    <h1>Battle of Winterfell</h1>
+    <p class="lead">Ride out with the horde. Fall back to the spears. Fall back to the walls. Stay alive until dawn.</p>
+    <div class="btns">
+        <button class="btn primary" id="btn-start">Begin</button>
+        <button class="btn" id="btn-continue" hidden>Continue</button>
+        <button class="btn small" id="btn-sound">Sound: on</button>
+        <button class="btn small" id="update">Update ready · reload</button>
+    </div>
+    <div class="keys" id="keys">
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move / steer · <kbd>Mouse</kbd> look · <kbd>Click</kbd> or <kbd>Space</kbd> strike ·
+        <kbd>Shift</kbd> sprint · <kbd>Q</kbd><kbd>E</kbd> turn · <kbd>Esc</kbd> pause
+    </div>
+    <div class="fine">Unofficial fan game. Not affiliated with HBO or George R. R. Martin. · <a href="/">jorgecensi.com</a></div>
+</div>
+
+<div id="paused" class="screen panel">
+    <h2>Paused</h2>
+    <p id="paused-obj"></p>
+    <div class="btns">
+        <button class="btn primary" id="btn-resume">Resume</button>
+        <button class="btn" id="btn-restart">Restart this act</button>
+        <button class="btn small" id="btn-sound2">Sound: on</button>
+        <button class="btn small" id="btn-quit">Quit to title</button>
+    </div>
+</div>
+
+<div id="dead" class="screen panel">
+    <h2>You rise again</h2>
+    <p id="dead-text">Your eyes open, and they are blue.</p>
+    <div class="btns">
+        <button class="btn primary" id="btn-retry">Try again</button>
+        <button class="btn small" id="btn-quit2">Quit to title</button>
+    </div>
+</div>
+
+<div id="won" class="screen panel">
+    <h2>Dawn</h2>
+    <p>The dead fall where they stand. The long night is over, and you are still breathing.</p>
+    <div class="tally">
+        <div><b id="won-kills">0</b>slain</div>
+        <div><b id="won-time">0:00</b>time</div>
+        <div><b id="won-allies">0</b>defenders alive</div>
+    </div>
+    <div class="btns">
+        <button class="btn primary" id="btn-again">Play again</button>
+        <button class="btn small" id="btn-quit3">Title</button>
+    </div>
+</div>
+
+<div id="fade"></div>
+
+<script>
+const SW_VERSION = 'dev';
+window.SW_VERSION = SW_VERSION;
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('/winterfell/sw.js?v=' + SW_VERSION, { scope: '/winterfell/' }).then((reg) => {
+        const offer = (worker) => {
+            if (!worker || !navigator.serviceWorker.controller) return;
+            const btn = document.getElementById('update');
+            btn.style.display = 'block';
+            btn.onclick = () => worker.postMessage({ type: 'SKIP_WAITING' });
+        };
+        if (reg.waiting) offer(reg.waiting);
+        reg.addEventListener('updatefound', () => {
+            const w = reg.installing;
+            if (w) w.addEventListener('statechange', () => { if (w.state === 'installed') offer(w); });
+        });
+    }).catch(() => {});
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        // Only reload for an update, and never in the middle of a fight.
+        if (hadController && !document.body.classList.contains('playing')) location.reload();
+    });
+}
+</script>
+<script type="module" src="/winterfell/js/game.js"></script>
+</body>
+</html>
