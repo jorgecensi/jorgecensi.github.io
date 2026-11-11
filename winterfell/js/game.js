@@ -1,7 +1,9 @@
 // Battle of Winterfell: a first-person fan game in three acts.
 //   Act I   ride out with the Dothraki, watch the lights go out, ride back
 //   Act II  stand with the Unsullied, then fall back across the trench
-//   Act III hold the castle courtyard until dawn
+//   Act III hold the castle courtyard, then fall back into the keep
+//   Act IV  fight through the dark halls to the godswood
+//   Act V   defend the weirwood, kill the White Walkers, bring down the Night King
 // Simulation runs in fixed 60 Hz steps (sim()); rendering is per animation frame.
 import * as THREE from '../lib/three.module.min.js';
 import { Sfx } from './sfx.js';
@@ -21,7 +23,37 @@ const Z_LINE = -14;        // front rank of the Unsullied
 const TRENCH_Z0 = 8, TRENCH_Z1 = 12, BRIDGE_HALF = 4;
 const WALL_Z = 40, GATE_HALF = 5;
 const YARD_X = 44.5, YARD_Z1 = 100;
-const HOLD_SECS = 75, SIEGE_SECS = 105, CLASH_SECS = 20, GIANT_AT = 48;
+const HOLD_SECS = 75, SIEGE_SECS = 80, CLASH_SECS = 20, GIANT_AT = 38, GROVE_SECS = 50;
+// Act IV is built off to the east and Act V to the west, where the fog hides them from the field.
+// The halls are a union of walkable rectangles that overlap by a metre at each doorway.
+const HALL = [
+    { x0: 188, x1: 212, z0: -30, z1: 0 },          // great hall
+    { x0: 197.5, x1: 202.5, z0: -55, z1: -29 },    // north passage
+    { x0: 197.5, x1: 222, z0: -55, z1: -50 },      // east passage
+    { x0: 217, x1: 222, z0: -82, z1: -50 }         // passage to the godswood door
+];
+const HALL_BLOCKS = [{ x0: 193, x1: 195, z0: -24, z1: -7 }, { x0: 205, x1: 207, z0: -24, z1: -7 }];   // the long tables
+const HALL_JOINTS = [[200, -30], [200, -52.5], [219.5, -52.5]];
+const HALL_EXIT_Z = -80;
+const GROVE = { x: -200, z: 0, r: 36, treeX: -200, treeZ: -12 };
+const inRect = (r, x, z, m) => x >= r.x0 + m && x <= r.x1 - m && z >= r.z0 + m && z <= r.z1 - m;
+function hallOK(x, z, r, tables) {
+    let ok = false;
+    for (const h of HALL) if (inRect(h, x, z, r)) { ok = true; break; }
+    if (!ok) return false;
+    if (tables) for (const b of HALL_BLOCKS) if (inRect(b, x, z, -r)) return false;
+    return true;
+}
+/** Move with wall sliding. Only the player is stopped by the tables; the dead scramble over them. */
+function hallMove(o, nx, nz, r, tables) {
+    if (hallOK(nx, nz, r, tables)) { o.x = nx; o.z = nz; } else if (hallOK(nx, o.z, r, tables)) o.x = nx; else if (hallOK(o.x, nz, r, tables)) o.z = nz;
+}
+/** First and last hall rectangle that contains a point (they differ inside a doorway). */
+function hallSeg(x, z) {
+    let lo = -1, hi = -1;
+    for (let i = 0; i < HALL.length; i++) if (inRect(HALL[i], x, z, 0)) { if (lo < 0) lo = i; hi = i; }
+    return [lo, hi];
+}
 const STEP = 1 / 60;
 
 const NIGHT = new THREE.Color(0x070b16);
@@ -222,6 +254,46 @@ function buildWorld() {
     for (const x of [-30, -10, 10, 30]) place(x, -5, false);
     place(-7.5, 33.5, false); place(7.5, 33.5, false);
     for (const [x, z] of [[-24, 54], [24, 54], [-26, 80], [26, 80], [0, 66]]) place(x, z, true);
+    for (const [x, z] of [[190, -4], [210, -4], [190, -27], [210, -27], [198.3, -42], [211, -54.3], [221.3, -66]]) place(x, z, true);
+    for (const [x, z] of [[-207, -7], [-193, -7], [-200, 12]]) place(x, z, true);
+
+    // Act IV: the halls. Walls go on every rectangle edge that does not open into another rectangle.
+    const anyHall = (x, z) => HALL.some((h) => inRect(h, x, z, 0));
+    const hw = [], WH = 6;
+    for (const h of HALL) {
+        for (let x = h.x0; x < h.x1; x += 1) {
+            const cx = Math.min(x + 0.5, h.x1 - 0.5);
+            if (!anyHall(cx, h.z0 - 0.3)) hw.push(box(1, WH, 0.5, cx, WH / 2, h.z0 - 0.25));
+            if (!anyHall(cx, h.z1 + 0.3)) hw.push(box(1, WH, 0.5, cx, WH / 2, h.z1 + 0.25));
+        }
+        for (let z = h.z0; z < h.z1; z += 1) {
+            const cz = Math.min(z + 0.5, h.z1 - 0.5);
+            if (!anyHall(h.x0 - 0.3, cz)) hw.push(box(0.5, WH, 1, h.x0 - 0.25, WH / 2, cz));
+            if (!anyHall(h.x1 + 0.3, cz)) hw.push(box(0.5, WH, 1, h.x1 + 0.25, WH / 2, cz));
+        }
+    }
+    addMesh(merge(hw), stone);
+    addMesh(merge([box(40, 0.1, 88, 205, 0.03, -41), box(40, 0.4, 88, 205, WH + 0.2, -41)]), darkStone);
+    addMesh(merge([box(2, 0.9, 17, 194, 0.45, -15.5), box(2, 0.9, 17, 206, 0.45, -15.5), box(4.6, 5, 0.3, 219.5, 2.5, -81.8), box(8, 5, 0.3, 200, 2.5, -0.2)]), wood);
+
+    // Act V: the godswood. A ring of pines around a clearing, and the weirwood.
+    const trunks = [], pines = [];
+    for (let i = 0; i < 120; i++) {
+        const a = rand(TAU), r = rand(39.5, 64), x = GROVE.x + Math.sin(a) * r, z = GROVE.z + Math.cos(a) * r, hgt = rand(6, 10);
+        const t = new THREE.CylinderGeometry(0.28, 0.4, 3, 6); t.translate(x, 1.5, z); trunks.push(t);
+        const c = new THREE.ConeGeometry(rand(2, 3), hgt, 7); c.translate(x, 2.4 + hgt / 2, z); pines.push(c);
+    }
+    addMesh(merge(trunks), wood);
+    addMesh(merge(pines), new THREE.MeshLambertMaterial({ color: 0x1c2e26 }));
+    const wt = new THREE.CylinderGeometry(0.8, 1.3, 7, 9); wt.translate(GROVE.treeX, 3.5, GROVE.treeZ);
+    addMesh(merge([wt, box(0.5, 4, 0.5, GROVE.treeX - 1.6, 7.2, GROVE.treeZ, 0, 0.7), box(0.5, 4, 0.5, GROVE.treeX + 1.6, 7.2, GROVE.treeZ, 0, -0.7)]),
+        new THREE.MeshLambertMaterial({ color: 0xd8d2c4 }));
+    const leaves = [];
+    for (const [dx, dy, dz, r] of [[0, 9.5, 0, 3.6], [-3, 8.6, 0.5, 2.8], [3, 8.6, -0.5, 2.8], [0.5, 8.8, 2.6, 2.6], [-0.5, 8.8, -2.6, 2.6]]) {
+        const g = new THREE.IcosahedronGeometry(r, 0); g.translate(GROVE.treeX + dx, dy, GROVE.treeZ + dz); leaves.push(g);
+    }
+    addMesh(merge(leaves), new THREE.MeshLambertMaterial({ color: 0x8c1d1d }));
+    obstacle(GROVE.treeX - 1.3, GROVE.treeX + 1.3, GROVE.treeZ - 1.3, GROVE.treeZ + 1.3);
     addMesh(merge(bz), iron);
 }
 buildWorld();
@@ -275,7 +347,7 @@ const snow = (() => {
     pts.frustumCulled = false;
     scene.add(pts);
     return {
-        mat,
+        mat, pts,
         update(dt, cx, cz) {
             for (let i = 0; i < N; i++) {
                 let x = pos[i * 3] - 2.2 * dt, y = pos[i * 3 + 1] - (2.4 + (i % 5) * 0.3) * dt, z = pos[i * 3 + 2] + 1.2 * dt;
@@ -474,7 +546,7 @@ scene.add(mount);
 // ── Game state ──
 const G = {
     mode: 'menu', act: 1, phase: '', t: 0, time: 0, kills: 0, clock: 0,
-    hordeZ: Z_MUSTER, hordeV: 0, trenchLit: false, litT: -1, dawn: 0, gap: 0, spawnT: 0,
+    hordeZ: Z_MUSTER, hordeV: 0, trenchLit: false, litT: -1, dawn: 0, gap: 0, hgap: 0, spawnT: 0,
     giant: false, uTotal: 0, god: false, bot: false, flags: {}
 };
 const P = {
@@ -487,6 +559,7 @@ const input = { keys: new Set(), sx: 0, sy: 0, attack: false, held: false };
 const WCOLS = [0x7d8791, 0x66707c, 0x8b8f8a, 0x5a6470, 0x77808f].map((c) => new THREE.Color(c));
 const HCOLS = [0x3b2a1d, 0x2a211b, 0x57422f, 0x1d1a18, 0x6a5540].map((c) => new THREE.Color(c));
 const RCOLS = [0x6e4c33, 0x5c3f2b, 0x7a5a3d].map((c) => new THREE.Color(c));
+const ICE = new THREE.Color(0xa9d6ee), KING = new THREE.Color(0x6fa8d8);
 const UCOL = new THREE.Color(0x3a3d47), NCOLS = [0x5a4d42, 0x4b4f58, 0x62574a].map((c) => new THREE.Color(c));
 const pick = (a) => a[(Math.random() * a.length) | 0];
 
@@ -495,7 +568,9 @@ function spawnWight(x, z, o = {}) {
     const w = {
         x, z, y: o.y || 0, vy: 0, yaw: Math.PI, hp: o.hp || 1, state: 'alive', t: rand(TAU), fall: 0, fallDir: -1, sink: 0, dead: 0,
         atkT: 0, wind: 0, cd: rand(0.2, 0.9), scan: rand(0.4), stagger: 0, scale: o.scale || rand(0.92, 1.08),
-        speed: o.speed || rand(4.8, 6.2), col: pick(WCOLS), tgt: null, moving: false, giant: !!o.giant, dieAt: -1, hunter: rand() < 0.3
+        speed: o.speed || rand(4.8, 6.2), col: o.col || pick(WCOLS), tgt: null, moving: false, dieAt: -1, hunter: rand() < 0.3,
+        heavy: !!o.heavy, boss: !!(o.walker || o.king), walker: !!o.walker, king: !!o.king,
+        dmg: o.dmg || 0, reach: o.reach || 0, windT: o.windT || 0.42, cdB: o.cdB || 1.1, maxHp: o.hp || 1
     };
     wights.push(w);
     return w;
@@ -519,7 +594,7 @@ function say(text, secs = 4.5) { el.sub.textContent = text; el.sub.classList.add
 function card(small, big) { el.card.firstElementChild.textContent = small; el.card.lastElementChild.textContent = big; el.card.classList.add('on'); cardTimer = 3.4; }
 function objective(text, showBar) { el.obj.textContent = text; el.bar.style.display = showBar ? 'block' : 'none'; }
 function once(key) { if (G.flags[key]) return false; G.flags[key] = true; return true; }
-const ACT_NAMES = ['', 'Act I · The Charge', 'Act II · The Line', 'Act III · The Castle'];
+const ACT_NAMES = ['', 'Act I · The Charge', 'Act II · The Line', 'Act III · The Castle', 'Act IV · The Halls', 'Act V · The Godswood'];
 
 function showScreen(id) {
     for (const s of document.querySelectorAll('.screen')) s.classList.toggle('on', s.id === id);
@@ -528,7 +603,7 @@ function showScreen(id) {
 function refreshMenu() {
     const c = $('btn-continue');
     c.hidden = !(progress.act > 1);
-    c.textContent = 'Continue · Act ' + ['', 'I', 'II', 'III'][progress.act];
+    c.textContent = 'Continue · Act ' + ['', 'I', 'II', 'III', 'IV', 'V'][progress.act];
     const label = 'Sound: ' + (progress.muted ? 'off' : 'on');
     $('btn-sound').textContent = label;
     $('btn-sound2').textContent = label;
@@ -578,10 +653,11 @@ function startAct(n) {
         Object.assign(P, { x: 0, z: Z_LINE - 0.5, yaw: 0, mounted: false });
         makeUnsullied();
         beginHold();
-    } else {
+    } else if (n === 3) {
         Object.assign(P, { x: 0, z: WALL_Z + 6, yaw: Math.PI, mounted: false });
         beginSiege();
-    }
+    } else if (n === 4) beginHalls();
+    else beginGrove();
 }
 function beginHold() {
     G.act = 2; G.phase = 'hold'; G.t = 0; G.spawnT = 0;
@@ -617,10 +693,10 @@ function hurt(d) {
     Sfx.play('hurt');
     if (P.hp <= 0) die();
 }
-function die() {
+function die(text) {
     P.hp = 0; G.mode = 'dead';
     Sfx.stopAll(); Sfx.play('screech', { vol: 0.8 });
-    $('dead-text').textContent = pick([
+    $('dead-text').textContent = text || pick([
         'Your eyes open, and they are blue.',
         'The cold takes you. Then something else does.',
         'You fall in the snow. You do not stay there.'
@@ -632,10 +708,10 @@ function die() {
 }
 function damageWight(w, dmg, byPlayer) {
     if (w.state !== 'alive') return;
-    w.hp -= dmg; w.stagger = w.giant ? 0.12 : 0.3; w.wind = 0; w.atkT = 0;
+    w.hp -= dmg; w.stagger = w.heavy ? 0.12 : 0.3; if (!w.heavy) { w.wind = 0; w.atkT = 0; }
     if (w.hp <= 0) {
         w.state = 'dying'; w.fallDir = -1;
-        if (byPlayer) { G.kills++; Sfx.play('kill'); }
+        if (byPlayer) { G.kills++; Sfx.play(w.boss ? 'shatter' : 'kill'); }
     } else if (byPlayer) Sfx.play('hit');
 }
 function strike() {
@@ -654,9 +730,12 @@ function strike() {
     for (let i = 0; i < hits.length && i < max; i++) {
         const w = hits[i][1], d = hits[i][0] || 1;
         damageWight(w, dmg, true);
-        if (!w.giant) { w.x += (w.x - P.x) / d * 0.5; w.z += (w.z - P.z) / d * 0.5; }
+        if (!w.heavy) nudge(w, (w.x - P.x) / d * 0.5, (w.z - P.z) / d * 0.5);
     }
     if (hits.length) { el.cross.classList.add('hit'); crossTimer = 0.12; P.shake = Math.min(1, P.shake + 0.15); }
+}
+function nudge(o, dx, dz) {
+    if (G.act === 4) hallMove(o, o.x + dx, o.z + dz, 0.3); else { o.x += dx; o.z += dz; }
 }
 function resolve(o, r) {
     for (const b of obstacles) {
@@ -675,7 +754,7 @@ function resolve(o, r) {
 
 // ── Player ──
 function simPlayer(dt) {
-    const k = input.keys;
+    const k = input.keys, px0 = P.x, pz0 = P.z;
     let my = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0) + input.sy;
     let mx = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0) + input.sx;
     const turn = (k.has('KeyE') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyQ') || k.has('ArrowLeft') ? 1 : 0);
@@ -703,10 +782,14 @@ function simPlayer(dt) {
         P.bobT += Math.min(1, len) * sp * dt;
         const stepN = Math.floor(P.bobT / 2.1);
         if (stepN !== P.stepN) { P.stepN = stepN; Sfx.play('step', { vol: 0.5 }); }
-        resolve(P, 0.45);
+        if (G.act === 4) { const nx = P.x, nz = P.z; P.x = px0; P.z = pz0; hallMove(P, nx, nz, 0.45, true); }
+        else resolve(P, 0.45);
     }
-    P.x = clamp(P.x, -84, 84);
-    P.z = Math.max(P.z, -335);
+    if (G.act <= 3) { P.x = clamp(P.x, -84, 84); P.z = Math.max(P.z, -335); }
+    else if (G.act === 5) {
+        const dx = P.x - GROVE.x, dz = P.z - GROVE.z, d = Math.hypot(dx, dz);
+        if (d > GROVE.r) { P.x = GROVE.x + dx / d * GROVE.r; P.z = GROVE.z + dz / d * GROVE.r; }
+    }
     if (G.act === 1 && G.phase !== 'afoot' && G.phase !== 'retreat') P.z = Math.min(P.z, Z_LINE - 8);
     if (G.act === 2 && G.phase === 'hold') P.z = Math.min(P.z, 6);
     if (G.act === 3) P.z = Math.max(P.z, gateObstacle.on ? WALL_Z + 1.7 : WALL_Z - 12);
@@ -757,7 +840,7 @@ function nearestWight(x, z, maxD) {
     return best;
 }
 function simWights(dt) {
-    G.gap -= dt;
+    G.gap -= dt; G.hgap -= dt;
     const lit = G.trenchLit, n = wights.length;
     for (let i = n - 1; i >= 0; i--) {
         const w = wights[i];
@@ -780,16 +863,26 @@ function simWights(dt) {
         if (w.scan <= 0) {
             w.scan = 0.4 + rand(0.3);
             const dp = Math.hypot(P.x - w.x, P.z - w.z);
-            const a = G.act === 1 ? null : nearestAlly(w.x, w.z, 10);
-            w.tgt = a && Math.hypot(a.x - w.x, a.z - w.z) < dp * (G.act === 3 ? 0.6 : 0.85) ? a : null;
+            const a = G.act === 1 || w.king ? null : nearestAlly(w.x, w.z, 10);
+            w.tgt = a && Math.hypot(a.x - w.x, a.z - w.z) < dp * (G.act >= 3 ? 0.6 : 0.85) ? a : null;
         }
         if (w.tgt && w.tgt.state !== 'alive') w.tgt = null;
         let tx = w.tgt ? w.tgt.x : P.x, tz = w.tgt ? w.tgt.z : P.z;
         // In Act II the dead walk at the spear line, not all at the player.
         if (!w.tgt && !w.hunter && G.act === 2 && w.z < Z_LINE - 3 && Math.hypot(P.x - w.x, P.z - w.z) > 9) { tx = w.x; tz = Z_LINE + 1; }
-        const reach = w.giant ? 3.6 : (!w.tgt && P.mounted ? 2.2 : 1.55);
+        // The Night King walks for the weirwood unless the player gets in his way.
+        let passing = false;
+        if (w.king && Math.hypot(P.x - w.x, P.z - w.z) > 7) { tx = GROVE.treeX; tz = GROVE.treeZ - 2; passing = true; }
+        const reach = w.reach || (!w.tgt && P.mounted ? 2.2 : 1.55);
         let gx = tx, gz = tz, blocked = false;
-        if (G.act >= 2) {       // funnel through the bridge and the gate; stop at a burning trench
+        if (G.act === 4) {      // follow the passages round the corners
+            const ws = hallSeg(w.x, w.z), ps = hallSeg(P.x, P.z);
+            if (ws[1] >= 0 && ps[0] >= 0) {
+                if (ws[1] < ps[0]) { gx = HALL_JOINTS[ws[1]][0]; gz = HALL_JOINTS[ws[1]][1]; }
+                else if (ws[0] > ps[1]) { gx = HALL_JOINTS[ws[0] - 1][0]; gz = HALL_JOINTS[ws[0] - 1][1]; }
+            }
+        }
+        if (G.act === 2 || G.act === 3) {       // funnel through the bridge and the gate; stop at a burning trench
             if (w.z < TRENCH_Z0 - 0.3 && (tz > TRENCH_Z0 || lit)) {
                 if (lit) { if (tz > TRENCH_Z0 - 1.2) { gx = w.x; gz = TRENCH_Z0 - 1.4; blocked = true; } }
                 else if (Math.abs(w.x) > 3.2) { gx = clamp(tx, -2.8, 2.8); gz = TRENCH_Z0 - 1; }
@@ -801,29 +894,31 @@ function simWights(dt) {
         }
         const dT = Math.hypot(tx - w.x, tz - w.z);
         const dx = gx - w.x, dz = gz - w.z, d = Math.hypot(dx, dz);
-        const inReach = dT < reach && !blocked;
+        const inReach = dT < reach && !blocked && !passing;
         if (w.wind > 0) {
             w.wind -= dt; w.moving = false;
             if (w.wind <= 0) {
                 if (w.tgt) {
-                    if (dT < reach + 0.7) { w.tgt.hp -= w.giant ? 6 : 1; if (w.tgt.hp <= 0) { w.tgt.state = 'dying'; w.tgt.fallDir = -1; } }
-                } else if (dT < reach + 0.6) hurt(w.giant ? 30 : (P.mounted ? 8 : 10));
+                    if (dT < reach + 0.7) { w.tgt.hp -= w.heavy ? 6 : 1; if (w.tgt.hp <= 0) { w.tgt.state = 'dying'; w.tgt.fallDir = -1; } }
+                } else if (dT < reach + 0.6) hurt(w.dmg || (P.mounted ? 8 : 10));
             }
         } else if (inReach) {
             w.moving = false;
             w.yaw = Math.atan2(tx - w.x, tz - w.z);
-            if (w.cd <= 0 && (w.tgt || w.giant || G.gap <= 0)) {
-                if (!w.tgt && !w.giant) G.gap = P.mounted ? 0.8 : 0.5;
-                w.wind = w.giant ? 0.8 : 0.42; w.atkT = w.wind + 0.12; w.cd = (w.giant ? 2.2 : 1.1) + rand(0.5);
+            if (w.cd <= 0 && (w.tgt || (w.heavy ? G.hgap <= 0 : G.gap <= 0))) {
+                if (!w.tgt) { if (w.heavy) G.hgap = 1.1; else G.gap = P.mounted ? 0.8 : 0.5; }
+                w.wind = w.windT; w.atkT = w.wind + 0.12; w.cd = w.cdB + rand(0.5);
                 if (rand() < 0.12) Sfx.play('screech', { vol: 0.35, pan: clamp((w.x - P.x) / 12, -1, 1) });
             }
         } else if (d > 0.25) {
             const sp = w.speed * dt;
-            w.x += dx / d * sp; w.z += dz / d * sp;
+            nudge(w, dx / d * sp, dz / d * sp);
             w.yaw = Math.atan2(dx, dz); w.t += w.speed * dt * 1.7; w.moving = true;
         } else { w.moving = false; if (blocked) w.yaw = 0; }
-        if (lit && w.z > TRENCH_Z0 - 0.4 && w.z < TRENCH_Z1 + 0.4) { w.state = 'dying'; continue; }   // caught on the burning bridge
-        if (G.act >= 2 && w.z > 4) resolve(w, w.giant ? 1.2 : 0.35);
+        if (G.act === 2 || G.act === 3) {
+            if (lit && w.z > TRENCH_Z0 - 0.4 && w.z < TRENCH_Z1 + 0.4) { w.state = 'dying'; continue; }   // caught on the burning bridge
+            if (w.z > 4) resolve(w, w.heavy ? 1.2 : 0.35);
+        }
     }
     // Keep them from stacking on one spot.
     for (let i = 0; i < wights.length; i++) {
@@ -837,8 +932,8 @@ function simWights(dt) {
             const d2 = dx * dx + dz * dz;
             if (d2 > 0.64 || d2 < 1e-6) continue;
             const d = Math.sqrt(d2), push = (0.8 - d) * 0.5;
-            if (!a.giant) { a.x -= dx / d * push; a.z -= dz / d * push; }
-            if (!b.giant) { b.x += dx / d * push; b.z += dz / d * push; }
+            if (!a.heavy) nudge(a, -dx / d * push, -dz / d * push);
+            if (!b.heavy) nudge(b, dx / d * push, dz / d * push);
         }
     }
 }
@@ -866,7 +961,7 @@ function simAllies(dt) {
             if (a.kind === 'north' && d > reach - 0.3) { a.x += dx / d * 3.6 * dt; a.z += dz / d * 3.6 * dt; a.t += dt * 7; a.moving = true; resolve(a, 0.35); }
             if (d < reach && a.cd <= 0) {
                 a.cd = 1.15 + rand(0.6); a.atkT = 0.3;
-                if (rand() < (a.kind === 'north' ? 0.5 : 0.45)) damageWight(w, 1, false);
+                if (!w.boss && rand() < (a.kind === 'north' ? 0.5 : 0.45)) damageWight(w, 1, false);
             }
         } else if (a.kind === 'north') {
             const dx = a.hx - a.x, dz = a.hz - a.z, d = Math.hypot(dx, dz);
@@ -1030,8 +1125,8 @@ function simAct2(dt) {
 function simAct3(dt) {
     const t = G.t;
     if (G.phase === 'siege') {
-        const k = t / SIEGE_SECS;
-        el.barI.style.width = Math.min(100, k * 100) + '%';
+        const k = Math.min(1, t / SIEGE_SECS);
+        el.barI.style.width = k * 100 + '%';
         G.spawnT -= dt;
         if (t > 4 && G.spawnT <= 0) {
             G.spawnT = lerp(1.0, 0.4, k);
@@ -1053,22 +1148,128 @@ function simAct3(dt) {
             Sfx.play('gate'); Sfx.play('screech');
             P.shake = 1;
             say('THE GATE! Something huge is coming through.', 5);
-            spawnWight(0, WALL_Z - 5, { giant: true, scale: 2.7, hp: 14, speed: 2.7 });
+            spawnWight(0, WALL_Z - 5, { heavy: true, scale: 2.7, hp: 14, speed: 2.7, dmg: 30, reach: 3.6, windT: 0.8, cdB: 2.2 });
         }
-        if (t > 78 && once('s2')) { Sfx.play('dragon'); say('Somewhere above the clouds, dragons are screaming.', 4.5); }
+        if (t > 62 && once('s2')) { Sfx.play('dragon'); say('Somewhere above the clouds, dragons are screaming.', 4.5); }
         if (t >= SIEGE_SECS) {
-            G.phase = 'dawn'; G.t = 0;
-            Sfx.play('shatter'); Sfx.setAmbience({ battle: 0, drums: 0, fire: 0.3, wind: 0.4 });
-            for (const w of wights) if (w.state === 'alive') w.dieAt = rand(0.1, 1.6);
-            say('A cry from the godswood. Then every one of them falls.', 6);
-            objective('Dawn');
+            if (once('keep')) {
+                Sfx.play('horn', { rate: 0.9 });
+                say('The yard is lost. FALL BACK into the keep!', 6);
+                objective('Fall back into the keep');
+            }
+            if (Math.abs(P.x) < 5 && P.z > 78.6) beginHalls();
+        }
+    }
+}
+
+function simAct4(dt) {
+    const lo = hallSeg(P.x, P.z)[0];
+    el.barI.style.width = clamp((-P.z + Math.max(0, P.x - 200)) / 100 * 100, 0, 100) + '%';
+    const pack = (n, x0, x1, z0, z1) => { for (let i = 0; i < n; i++) spawnWight(rand(x0, x1), rand(z0, z1), { speed: rand(4.4, 5.6), hp: i % 3 ? 1 : 2 }); };
+    if (lo >= 1 && once('h1')) { pack(4, 196, 204, -6, -2); pack(6, 208, 220, -53.5, -51.5); say('They followed you in.', 4); Sfx.play('screech', { vol: 0.6 }); }
+    if (lo >= 2 && once('h2')) pack(7, 218.2, 220.8, -68, -57);
+    if (lo >= 3 && once('h3')) { pack(7, 218.2, 220.8, -80, -71); say('Cold air ahead. The godswood door.', 4); }
+    G.spawnT -= dt;
+    if (G.spawnT <= 0) {
+        G.spawnT = 3.2;
+        const j = lo > 0 ? HALL_JOINTS[lo - 1] : [200, -1.5];
+        if (alive() < 14 && Math.hypot(j[0] - P.x, j[1] - P.z) > 8) spawnWight(j[0] + rand(-0.8, 0.8), j[1], { speed: rand(5, 6) });
+    }
+    if (lo === 3 && P.z < HALL_EXIT_Z) beginGrove();
+}
+
+function simAct5(dt) {
+    const t = G.t, ring = (r, a0, a1) => { const a = rand(a0, a1); return [GROVE.x + Math.sin(a) * r, GROVE.z + Math.cos(a) * r]; };
+    G.spawnT -= dt;
+    if (G.phase === 'grove') {
+        const k = t / GROVE_SECS;
+        el.barI.style.width = Math.min(100, k * 100) + '%';
+        if (G.spawnT <= 0) {
+            G.spawnT = lerp(0.9, 0.4, k);
+            if (alive() < lerp(14, 40, k)) { const [x, z] = ring(39, 0, TAU); spawnWight(x, z, { hp: rand() < 0.3 ? 2 : 1 }); }
+        }
+        if (t >= GROVE_SECS) {
+            G.phase = 'walkers'; G.t = 0;
+            Sfx.play('horn', { rate: 0.6 }); Sfx.setAmbience(AMBIENCE.walkers);
+            say('The dead stop. They part. Something else walks out of the trees.', 6);
+            objective('Kill the White Walkers', true);
+            for (const w of wights) if (w.state === 'alive' && rand() < 0.7) w.dieAt = rand(0.2, 2);
+            for (let i = 0; i < 4; i++) {       // they come from the north, opposite the way you came in
+                const [x, z] = ring(37, Math.PI - 0.9 + i * 0.6, Math.PI - 0.9 + i * 0.6);
+                spawnWight(x, z, { walker: true, heavy: true, hp: 6, scale: 1.22, speed: 2.4, col: ICE, dmg: 16, reach: 2.5, windT: 0.9, cdB: 2.2 });
+            }
         }
         return;
     }
-    if (G.phase === 'dawn') {
-        G.dawn = clamp((t - 1.5) / 6, 0, 1);
-        if (t > 8.5) win();
+    if (G.phase === 'walkers') {
+        let left = 0;
+        for (const w of wights) if (w.walker && w.state === 'alive') left++;
+        el.barI.style.width = (4 - left) / 4 * 100 + '%';
+        if (G.spawnT <= 0) { G.spawnT = 2.2; if (alive() < 8) { const [x, z] = ring(39, 0, TAU); spawnWight(x, z); } }
+        if (left === 0) {
+            G.phase = 'king'; G.t = 0; G.spawnT = 9;
+            Sfx.play('screech'); Sfx.play('horn', { rate: 0.5 }); Sfx.setAmbience(AMBIENCE.king);
+            say('The last one shatters. Then the Night King steps out of the dark.', 6);
+            objective('Bring down the Night King before he reaches the tree', true);
+            spawnWight(GROVE.x, GROVE.z - 37, { king: true, heavy: true, hp: 30, scale: 1.45, speed: 1.5, col: KING, dmg: 24, reach: 3, windT: 0.9, cdB: 2.2 });
+        }
+        return;
     }
+    if (G.phase === 'king') {
+        const king = wights.find((w) => w.king);
+        if (!king || king.state !== 'alive') {
+            beginDawn('The Night King breaks like ice. Then every one of them falls.');
+            return;
+        }
+        el.barI.style.width = clamp(king.hp / king.maxHp * 100, 0, 100) + '%';
+        // He only wins by walking there unopposed; a fight that drifts under the tree does not count.
+        if (Math.hypot(king.x - GROVE.treeX, king.z - GROVE.treeZ) < 3.4 && Math.hypot(P.x - king.x, P.z - king.z) > 7) { die('The Night King reaches the weirwood. The long night does not end.'); return; }
+        if (G.spawnT <= 0) {
+            G.spawnT = 11;
+            if (once('raise')) say('He lifts his arms. The dead get back up.', 4.5);
+            Sfx.play('screech', { vol: 0.7 });
+            for (let i = 0; i < 5; i++) { const a = rand(TAU), r = rand(11, 17); spawnWight(clampGrove(P.x + Math.sin(a) * r, 0), clampGrove(P.z + Math.cos(a) * r, 1)); }
+        }
+    }
+}
+function clampGrove(v, axis) { const c = axis ? GROVE.z : GROVE.x; return clamp(v, c - 26, c + 26); }
+function beginHalls() {
+    G.act = 4; G.phase = 'halls'; G.t = 0; G.spawnT = 3; G.flags = {};
+    if (progress.act < 4) { progress.act = 4; save(); }
+    el.act.textContent = ACT_NAMES[4];
+    wights.length = 0; allies.length = 0;
+    G.trenchLit = false; trenchEmitter.src.on = false;
+    Object.assign(P, { x: 200, z: -2.5, yaw: 0, pitch: 0, mounted: false });
+    for (let i = 0; i < 9; i++) spawnWight(rand(190, 210), rand(-28, -14), { speed: rand(4.4, 5.4), hp: i % 3 ? 1 : 2 });
+    for (let i = 0; i < 5; i++) spawnWight(rand(198.5, 201.5), rand(-48, -36), { speed: rand(4.4, 5.4) });
+    Sfx.play('gate');
+    card('Act IV', 'The Halls');
+    objective('Fight through the keep to the godswood', true);
+    say('The door is barred behind you. The keep is dark, and it is not empty.', 5.5);
+    Sfx.setAmbience(Object.assign({ wind: 0, battle: 0, fire: 0, gallop: 0, drums: 0 }, AMBIENCE.halls));
+}
+function beginGrove() {
+    G.act = 5; G.phase = 'grove'; G.t = 0; G.spawnT = 2; G.flags = {};
+    if (progress.act < 5) { progress.act = 5; save(); }
+    el.act.textContent = ACT_NAMES[5];
+    wights.length = 0; allies.length = 0;
+    Object.assign(P, { x: GROVE.x, z: GROVE.z + 33, yaw: 0, pitch: 0, mounted: false });
+    for (let i = 0; i < 8; i++) {
+        const a = i / 8 * TAU;
+        mkAlly('north', GROVE.treeX + Math.sin(a) * 6, GROVE.treeZ + Math.cos(a) * 6, a);
+    }
+    G.uTotal = allies.length;
+    card('Act V', 'The Godswood');
+    objective('Defend the weirwood', true);
+    say('Someone presses dragonglass into your hand. Hold the tree.', 6);
+    Sfx.setAmbience(Object.assign({ wind: 0, battle: 0, fire: 0, gallop: 0, drums: 0 }, AMBIENCE.grove));
+}
+function beginDawn(text) {
+    G.phase = 'dawn'; G.t = 0;
+    Sfx.play('shatter'); Sfx.setAmbience({ battle: 0, drums: 0, fire: 0.3, wind: 0.4 });
+    for (const w of wights) if (w.state === 'alive') w.dieAt = rand(0.1, 1.6);
+    say(text, 6);
+    objective('Dawn');
 }
 function win() {
     G.mode = 'won';
@@ -1085,6 +1286,12 @@ function win() {
 
 // ── Test pilot (debug only): rides and fights well enough to play every act through ──
 function pilot() {
+    // Step back out of a heavy blow while it is winding up, as a player would.
+    for (const h of wights) {
+        if (h.heavy && h.state === 'alive' && h.wind > 0 && !h.tgt && Math.hypot(h.x - P.x, h.z - P.z) < 5) {
+            P.yaw = Math.atan2(-(h.x - P.x), -(h.z - P.z)); input.sy = -1; input.held = true; return;
+        }
+    }
     const w = nearestWight(P.x, P.z, P.mounted ? 4 : 5);
     let tx = P.x, tz = P.z - 10, move = 1;
     if (G.act === 1) {
@@ -1093,8 +1300,19 @@ function pilot() {
     }
     else if (G.act === 2 && G.phase === 'hold') { tx = 0; tz = Z_LINE - 0.5; move = Math.hypot(P.x - tx, P.z - tz) > 1.5 ? 1 : 0; }
     else if (G.act === 2) { tx = 0; tz = P.z < TRENCH_Z1 + 1 && Math.abs(P.x) > 2 ? TRENCH_Z0 - 2 : WALL_Z + 8; }
-    else { tx = 0; tz = 66; move = Math.hypot(P.x - tx, P.z - tz) > 3 ? 1 : 0; }
-    const fleeing = G.phase === 'retreat' || G.phase === 'afoot' || G.phase === 'fallback';
+    else if (G.act === 3) {
+        if (G.flags.keep) { tx = 0; tz = 80; } else { tx = 2; tz = 64; move = Math.hypot(P.x - tx, P.z - tz) > 3 ? 1 : 0; }
+    } else if (G.act === 4) {
+        const hi = hallSeg(P.x, P.z)[1];
+        if (hi < 3) { tx = HALL_JOINTS[Math.max(0, hi)][0]; tz = HALL_JOINTS[Math.max(0, hi)][1]; } else { tx = 219.5; tz = -82; }
+    } else {
+        const king = wights.find((k) => k.king && k.state === 'alive');
+        tx = king ? king.x : GROVE.treeX; tz = king ? king.z : GROVE.treeZ + 5;
+        move = Math.hypot(P.x - tx, P.z - tz) > (king ? 2.4 : 3) ? 1 : 0;
+        if (king && P.z > GROVE.treeZ - 2 && king.z < GROVE.treeZ && Math.abs(P.x - GROVE.treeX) < 2.6) { tx = GROVE.treeX + 4.5; tz = GROVE.treeZ - 1; move = 1; }   // go round the trunk
+        if (king && !(w && Math.hypot(w.x - P.x, w.z - P.z) < 2.6 && !w.king)) { P.yaw = Math.atan2(-(tx - P.x), -(tz - P.z)); input.sy = move; input.held = true; return; }
+    }
+    const fleeing = G.phase === 'retreat' || G.phase === 'afoot' || G.phase === 'fallback' || (G.act === 3 && G.flags.keep);
     if (w && !fleeing && !P.mounted) { tx = w.x; tz = w.z; move = Math.hypot(w.x - P.x, w.z - P.z) > 1.9 ? 1 : 0; }
     P.yaw = Math.atan2(-(tx - P.x), -(tz - P.z));
     input.sy = move; input.held = !!w;
@@ -1108,7 +1326,8 @@ function sim(dt) {
     if (G.mode !== 'play') return;
     simWights(dt);
     simAllies(dt);
-    if (G.act === 1) simAct1(dt); else if (G.act === 2) simAct2(dt); else simAct3(dt);
+    if (G.phase === 'dawn') { G.dawn = clamp((G.t - 1.5) / 6, 0, 1); if (G.t > 8.5) win(); }
+    else [null, simAct1, simAct2, simAct3, simAct4, simAct5][G.act](dt);
 }
 
 // ── Rendering ──
@@ -1177,6 +1396,7 @@ function render(dt, t) {
     } else if (scene.fog.density !== 0.02) {
         scene.background.copy(NIGHT); scene.fog.color.copy(NIGHT); scene.fog.density = 0.02; hemi.intensity = 1.5; snow.mat.opacity = 0.85;
     }
+    snow.pts.visible = G.act !== 4 || G.mode === 'menu';
     for (const w of wights) drawWight(w);
     for (const a of allies) if (a.state !== 'gone') drawAlly(a);
     for (const k in WP) flush(WP[k]);
@@ -1203,7 +1423,7 @@ function updateHud(dt) {
     el.kills.textContent = G.kills;
     const n = aliveAllies();
     el.allies.textContent = G.act === 1 ? (G.phase === 'muster' || G.phase === 'charge' ? 'the horde rides' : '') :
-        n + (G.act === 2 ? ' Unsullied' : ' defenders');
+        G.act === 4 ? 'alone' : n + (G.act === 2 ? ' Unsullied' : G.act === 5 ? ' ironborn' : ' defenders');
 }
 
 // ── Main loop ──
@@ -1246,7 +1466,9 @@ function pause() {
 const AMBIENCE = {
     muster: { wind: 0.7, drums: 0.25 }, charge: { gallop: 1, drums: 0.8, wind: 0.5 }, clash: { battle: 1, gallop: 0.8, drums: 0.8 },
     retreat: { battle: 0.6, gallop: 1, drums: 0.8 }, afoot: { battle: 0.8, drums: 0.8 }, hold: { wind: 0.4, battle: 0.9, fire: 0.3, drums: 0.7 },
-    fallback: { battle: 1, fire: 0.6, drums: 0.8 }, siege: { wind: 0.3, battle: 1, fire: 0.6, drums: 0.6 }, dawn: { wind: 0.4, fire: 0.3 }
+    fallback: { battle: 1, fire: 0.6, drums: 0.8 }, siege: { wind: 0.3, battle: 1, fire: 0.6, drums: 0.6 }, dawn: { wind: 0.4, fire: 0.3 },
+    halls: { wind: 0.12, battle: 0.3, fire: 0.5, drums: 0.5 }, grove: { wind: 0.6, battle: 0.7, fire: 0.4, drums: 0.7 },
+    walkers: { wind: 0.9, battle: 0.2, fire: 0.3, drums: 0.9 }, king: { wind: 1, battle: 0.3, fire: 0.3, drums: 1 }
 };
 function resume() {
     if (G.mode !== 'paused') return;

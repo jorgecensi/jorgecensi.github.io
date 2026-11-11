@@ -41,13 +41,22 @@ bundle exec jekyll serve --host 0.0.0.0 --port 4000 --livereload
 
 ### Battle of Winterfell (`/winterfell`)
 
-- **First-person three.js game in three acts**: Act I rides out with the Dothraki (phases `muster` → `charge` → `clash` → `retreat` → `afoot`), Act II holds the Unsullied line and falls back over the trench (`hold` → `fallback`), Act III defends the courtyard until dawn (`siege` → `dawn`). An unofficial fan game: keep the "not affiliated" line on the title screen.
+- **First-person three.js game in five acts**, each a checkpoint (`progress.act`):
+  - Act I rides out with the Dothraki: `muster` → `charge` → `clash` → `retreat` → `afoot`.
+  - Act II holds the Unsullied line and falls back over the trench: `hold` → `fallback`.
+  - Act III defends the courtyard (`siege`); after `SIEGE_SECS` the player must reach the keep door.
+  - Act IV crosses the keep (`halls`) to the godswood door.
+  - Act V is the godswood: `grove` (defend the weirwood) → `walkers` (four White Walkers) → `king` (the Night King) → `dawn`. The Night King wins if he walks to the tree while the player is more than 7 m away.
+
+  An unofficial fan game: keep the "not affiliated" line on the title screen.
 - **Files**: `winterfell/index.html` is only the shell (HUD, menus, touch controls, service-worker block). The game is `winterfell/js/game.js` (one ES module) and all sound is synthesised in `winterfell/js/sfx.js` (Web Audio, no audio files). three.js r170 is vendored in `winterfell/lib/` (not `vendor/`: `.gitignore` ignores every directory with that name, so it would never be committed). There is no build step.
-- **Layout is in metres, north (the dead) is -Z**: the constants at the top of `game.js` place the muster line, the clash, the Unsullied line, the trench with its one bridge, and the gate. `obstacles` are axis-aligned boxes for walkers; wights are funnelled through the bridge and the gate in `simWights()`, so move those together if the layout changes.
+- **Layout is in metres, north (the dead) is -Z**: the constants at the top of `game.js` place the muster line, the clash, the Unsullied line, the trench with its one bridge, and the gate. `obstacles` are axis-aligned boxes for walkers; wights are funnelled through the bridge and the gate in `simWights()`, so move those together if the layout changes. The halls (around x = 200) and the godswood (around x = -200) sit on the same ground plane, far enough away that fog hides them.
+- **The halls are a union of rectangles** (`HALL`) that overlap by a metre at each doorway; walls are generated from them, movement goes through `hallMove()`, and wights follow `HALL_JOINTS` round corners. Add a room by adding a rectangle and a joint, not by placing walls.
+- **Heavy enemies** (the giant, White Walkers, the Night King) are wights with `heavy: true` and their own `dmg`, `reach`, `windT` and `cdB`. Their blows are slow and telegraphed so the player can step back; `G.hgap` spaces them out. Allies cannot hurt a `boss` (walker or king).
 - **Crowds are instanced**: wights, allies and horses are plain objects drawn each frame into `InstancedMesh` parts (`WP`, `AP`, `HP`) by `drawWight()`/`drawAlly()`. Figures face local +Z. Raise the `*_CAP` constants before spawning more of anything. Point lights are a fixed pool of four moved to the nearest fires (`updateLights()`); don't add lights per fire or per flame.
 - **Simulation is a fixed 60 Hz step** (`sim()`, accumulator in `frame()`); rendering and HUD run per animation frame. Keep gameplay out of `render()`.
-- **Balance knobs**: `HOLD_SECS`, `SIEGE_SECS`, `CLASH_SECS`, `GIANT_AT`, the spawn `lerp()`s in `simAct2()`/`simAct3()`, and `G.gap` (the minimum time between two wights starting an attack on the player, which is what stops a crowd from killing instantly).
-- **`?debug=1` exposes `window.__winterfell`** (`state`, `start(act)`, `step(n)`, `god()`, `bot()`, `key()`, `look()`, `attack()`, `spawn()`). `bot()` is a test pilot that can play every act; `step()` switches the page to manual stepping for the rest of the load.
+- **Balance knobs**: `HOLD_SECS`, `SIEGE_SECS`, `CLASH_SECS`, `GIANT_AT`, `GROVE_SECS`, the spawn `lerp()`s in `simAct2()`/`simAct3()`/`simAct5()`, the boss stats in `simAct5()`, and `G.gap` (the minimum time between two wights starting an attack on the player, which is what stops a crowd from killing instantly).
+- **`?debug=1` exposes `window.__winterfell`** (`state`, `start(act)`, `step(n)`, `god()`, `bot()`, `key()`, `look()`, `attack()`, `spawn()`). `bot()` is a test pilot that can play every act and win without `god()`, so use it to check balance after a change; `step()` switches the page to manual stepping for the rest of the load.
 - **E2E specs live in `tools/winterfell-e2e/`**: run `./run.sh`. Headless Chromium needs `--use-gl=swiftshader --enable-unsafe-swiftshader` for WebGL. Read its README first.
 - **Bump `SW_VERSION`/`CACHE_VERSION` together** on any change under `winterfell/`, and add new files to `PRECACHE_URLS` in `winterfell/sw.js`. Changes under `winterfell/lib/` don't trigger the auto-bump workflow.
 
