@@ -8,6 +8,7 @@
 import * as THREE from '../lib/three.module.min.js';
 import { Sfx } from './sfx.js';
 import { makeTextures } from './textures.js';
+import { buildModels } from './models.js';
 
 const $ = (id) => document.getElementById(id);
 const rand = (a = 1, b) => (b === undefined ? Math.random() * a : a + Math.random() * (b - a));
@@ -16,6 +17,9 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const TAU = Math.PI * 2;
 const DEBUG = new URLSearchParams(location.search).has('debug');
 const STORE_KEY = 'winterfell-progress-v1';
+// High quality (moon shadows, normal maps) is the default on desktop; phones get the lighter path. `?q=high` or `?q=low` overrides.
+const QUALITY = new URLSearchParams(location.search).get('q');
+const HQ = QUALITY ? QUALITY === 'high' : !(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
 // ── World layout (metres). North, where the dead come from, is -Z. ──
 const Z_MUSTER = -30;      // where the horde starts
@@ -78,6 +82,8 @@ try {
     throw e;
 }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+renderer.shadowMap.enabled = HQ;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.35;
 const scene = new THREE.Scene();
@@ -90,8 +96,17 @@ scene.add(camera);
 const hemi = new THREE.HemisphereLight(0x8ea4d6, 0x141a26, 1.5);
 scene.add(hemi);
 const moon = new THREE.DirectionalLight(0x7f96cc, 0.9);
-moon.position.set(40, 80, -30);
+// The light comes from where the moon is painted in the sky (see textures.js): low in the south-east, behind the castle.
+const MOON_DIR = new THREE.Vector3(0.5, 0.45, 0.866).normalize();
+moon.position.copy(MOON_DIR).multiplyScalar(120);
+moon.castShadow = HQ;
+moon.shadow.mapSize.set(2048, 2048);
+moon.shadow.camera.left = moon.shadow.camera.bottom = -46;
+moon.shadow.camera.right = moon.shadow.camera.top = 46;
+moon.shadow.camera.near = 1; moon.shadow.camera.far = 260;
+moon.shadow.bias = -0.0006; moon.shadow.normalBias = 0.06;
 scene.add(moon);
+scene.add(moon.target);
 const swordLight = new THREE.PointLight(0xffac6a, 0, 26, 1.3);
 swordLight.position.set(0.2, 0.9, -2.2);
 camera.add(swordLight);
@@ -126,10 +141,12 @@ function merge(list, tile = 4) {
     let n = 0;
     for (const g of parts) n += g.attributes.position.count;
     const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2);
+    const tinted = parts.some((g) => g.attributes.color), col = tinted ? new Float32Array(n * 3).fill(1) : null;
     let o = 0;
     for (const g of parts) {
         pos.set(g.attributes.position.array, o * 3);
         nor.set(g.attributes.normal.array, o * 3);
+        if (g.attributes.color) col.set(g.attributes.color.array, o * 3);
         o += g.attributes.position.count;
     }
     for (let i = 0; i < n; i++) {
@@ -143,7 +160,16 @@ function merge(list, tile = 4) {
     out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    if (tinted) out.setAttribute('color', new THREE.BufferAttribute(col, 3));
     return out;
+}
+/** A copy of a model geometry placed in the world: scaled, turned about Y, then moved. */
+function at(geo, x, y, z, ry = 0, sc = 1) {
+    const g = geo.clone();
+    if (sc !== 1) g.scale(sc, sc, sc);
+    if (ry) g.rotateY(ry);
+    g.translate(x, y, z);
+    return g;
 }
 function cap(r, len, x = 0, y = 0, z = 0, rx = 0, rz = 0) {
     const g = new THREE.CapsuleGeometry(r, len, 2, 7);
@@ -183,9 +209,10 @@ const flameTex = canvasTex(64, (g, s) => {
     g.fillRect(0, 0, s, s);
 });
 const TX = makeTextures();
-function tex(canvas, rx = 1, ry = 1) {
+const MD = buildModels(THREE);
+function tex(canvas, rx = 1, ry = 1, linear = false) {
     const t = new THREE.CanvasTexture(canvas);
-    t.colorSpace = THREE.SRGBColorSpace;
+    t.colorSpace = linear ? THREE.NoColorSpace : THREE.SRGBColorSpace;
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(rx, ry);
     t.anisotropy = 4;
@@ -206,8 +233,24 @@ const darkStone = new THREE.MeshLambertMaterial({ color: 0xb4b8c4, map: tex(TX.d
 const wood = new THREE.MeshLambertMaterial({ color: 0xc9b8a6, map: tex(TX.wood, 3.3, 3.3) });
 const doorMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: tex(TX.door) });
 const floorMat = new THREE.MeshLambertMaterial({ color: 0xb8b2aa, map: tex(TX.floor) });
-const iron = new THREE.MeshLambertMaterial({ color: 0x1c1d22 });
-function addMesh(geo, mat) { const m = new THREE.Mesh(geo, mat); scene.add(m); return m; }
+const propMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+/** Relief from a normal map, on the high-quality path only. */
+function relief(mat, canvas, rx, ry, strength = 1) {
+    if (!HQ || !canvas) return;
+    mat.normalMap = tex(canvas, rx, ry, true);
+    mat.normalScale.set(strength, strength);
+}
+relief(stone, TX.stoneN, 1.33, 1.33, 1.2);
+relief(darkStone, TX.darkStoneN, 1.33, 1.33, 1.2);
+relief(wood, TX.woodN, 3.3, 3.3, 0.8);
+relief(doorMat, TX.doorN, 1, 1, 1);
+relief(floorMat, TX.floorN, 1, 1, 1);
+function addMesh(geo, mat) {
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = m.receiveShadow = HQ && !mat.isMeshBasicMaterial;
+    scene.add(m);
+    return m;
+}
 
 const BRAZIERS = [];
 let gateObstacle, trenchEmitter;
@@ -233,11 +276,18 @@ function setDoors(name, ry, rx = 0, snap = false) {
 let keepGlow;
 
 function buildWorld() {
-    const ground = addMesh(new THREE.PlaneGeometry(700, 1000), new THREE.MeshLambertMaterial({ color: 0xffffff, map: snowTex }));
+    const snowMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: snowTex });
+    relief(snowMat, TX.snowN, 90, 130, 0.7);
+    if (TX.snowDetail) { snowMat.aoMap = tex(TX.snowDetail, 520, 740, true); snowMat.aoMapIntensity = 1.2; }
+    const ground = addMesh(new THREE.PlaneGeometry(700, 1000), snowMat);
+    ground.castShadow = false;
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(0, 0, -150);
     // The yard is trampled mud, not snow.
-    const yard = addMesh(new THREE.PlaneGeometry(YARD_X * 2, YARD_Z1 - WALL_Z), new THREE.MeshLambertMaterial({ color: 0xb0aca6, map: tex(TX.mud, 14, 9) }));
+    const mudMat = new THREE.MeshLambertMaterial({ color: 0xb0aca6, map: tex(TX.mud, 14, 9) });
+    relief(mudMat, TX.mudN, 14, 9, 1);
+    const yard = addMesh(new THREE.PlaneGeometry(YARD_X * 2, YARD_Z1 - WALL_Z), mudMat);
+    yard.castShadow = false;
     yard.rotation.x = -Math.PI / 2;
     yard.position.set(0, 0.02, (WALL_Z + YARD_Z1) / 2 + 1);
 
@@ -311,7 +361,7 @@ function buildWorld() {
     const place = (x, z, yard) => {
         BRAZIERS.push({ x, z, yard, on: true });
         obstacle(x - 0.4, x + 0.4, z - 0.4, z + 0.4);
-        bz.push(cyl(0.05, 0.07, 1.0, x, 0.5, z, 0, 6), cyl(0.44, 0.24, 0.3, x, 1.12, z, 0, 10), cyl(0.3, 0.34, 0.06, x, 0.03, z, 0, 8));
+        bz.push(at(MD.props.brazier, x, 0, z, rand(TAU)));
     };
     for (const x of [-30, -10, 10, 30]) place(x, -5, false);
     place(-7.5, 33.5, false); place(7.5, 33.5, false);
@@ -354,24 +404,27 @@ function buildWorld() {
     cold.position.set(219.5, 2.3, -81.97);
 
     // Act V: the godswood. A ring of pines around a clearing, and the weirwood.
-    const trunks = [], pines = [];
+    const pines = [];
     for (let i = 0; i < 120; i++) {
-        const a = rand(TAU), r = rand(39.5, 64), x = GROVE.x + Math.sin(a) * r, z = GROVE.z + Math.cos(a) * r, hgt = rand(6, 10);
-        const t = new THREE.CylinderGeometry(0.28, 0.4, 3, 6); t.translate(x, 1.5, z); trunks.push(t);
-        const c = new THREE.ConeGeometry(rand(2, 3), hgt, 7); c.translate(x, 2.4 + hgt / 2, z); pines.push(c);
+        const a = rand(TAU), r = rand(39.5, 64);
+        pines.push(at(MD.props.pines[i % MD.props.pines.length], GROVE.x + Math.sin(a) * r, 0, GROVE.z + Math.cos(a) * r, rand(TAU), rand(0.8, 1.25)));
     }
-    addMesh(merge(trunks), wood);
-    addMesh(merge(pines), new THREE.MeshLambertMaterial({ color: 0x1c2e26 }));
-    const wt = new THREE.CylinderGeometry(0.8, 1.3, 7, 9); wt.translate(GROVE.treeX, 3.5, GROVE.treeZ);
-    addMesh(merge([wt, box(0.5, 4, 0.5, GROVE.treeX - 1.6, 7.2, GROVE.treeZ, 0, 0.7), box(0.5, 4, 0.5, GROVE.treeX + 1.6, 7.2, GROVE.treeZ, 0, -0.7)], 1.2),
-        new THREE.MeshLambertMaterial({ color: 0xf0ece4, map: tex(TX.bark) }));
-    const leaves = [];
-    for (const [dx, dy, dz, r] of [[0, 9.5, 0, 3.6], [-3, 8.6, 0.5, 2.8], [3, 8.6, -0.5, 2.8], [0.5, 8.8, 2.6, 2.6], [-0.5, 8.8, -2.6, 2.6]]) {
-        const g = new THREE.IcosahedronGeometry(r, 0); g.translate(GROVE.treeX + dx, dy, GROVE.treeZ + dz); leaves.push(g);
+    addMesh(merge(pines), propMat);
+    addMesh(at(MD.props.weirwood, GROVE.treeX, 0, GROVE.treeZ), propMat);
+    addMesh(at(MD.props.weirwoodLeaves, GROVE.treeX, 0, GROVE.treeZ), propMat);
+    // Dressing: banners by the gate and the keep door, barricades out on the flanks, dead trees on the field.
+    for (const [x, z, ry] of [[-14.5, 35, 0], [14.5, 35, 0], [-6.6, 79.4, Math.PI], [6.6, 79.4, Math.PI]]) bz.push(at(MD.props.banner, x, 0, z, ry));
+    for (const side of [-1, 1]) for (let x = 44; x <= 84; x += 4) {
+        bz.push(at(MD.props.barricade, side * x, 0, -17, rand(-0.12, 0.12)));
+        obstacle(side * x - 1.6, side * x + 1.6, -17.6, -16.4);
     }
-    addMesh(merge(leaves), new THREE.MeshLambertMaterial({ color: 0x8c1d1d }));
+    for (let i = 0; i < 16; i++) {
+        const x = rand(48, 82) * (i % 2 ? 1 : -1), z = rand(-230, -32);
+        bz.push(at(MD.props.deadTree, x, 0, z, rand(TAU), rand(0.8, 1.3)));
+        obstacle(x - 0.35, x + 0.35, z - 0.35, z + 0.35);
+    }
     obstacle(GROVE.treeX - 1.3, GROVE.treeX + 1.3, GROVE.treeZ - 1.3, GROVE.treeZ + 1.3);
-    addMesh(merge(bz), iron);
+    addMesh(merge(bz), propMat);
 }
 buildWorld();
 
@@ -475,6 +528,8 @@ const WHITE = new THREE.Color(1, 1, 1);
 function part(geo, mat, cap, coloured) {
     const m = new THREE.InstancedMesh(geo, mat, cap);
     m.cap = cap; m.n = 0; m.count = 0; m.frustumCulled = false;
+    m.castShadow = HQ && !mat.isMeshBasicMaterial && !mat.transparent;
+    m.receiveShadow = m.castShadow;
     if (coloured) for (let i = 0; i < cap; i++) m.setColorAt(i, WHITE);
     scene.add(m);
     return m;
@@ -490,69 +545,42 @@ function flush(m) {
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
 }
-const skin = new THREE.MeshLambertMaterial({ color: 0xffffff });
-const steel = new THREE.MeshPhongMaterial({ color: 0x9aa3b2, specular: 0x556070, shininess: 50 });
-// Limbs hang from their pivot (shoulder or hip) at the origin, so one rotation swings them.
-const armGeo = merge([cap(0.055, 0.44, 0, -0.28, 0), ball(0.066, 0, -0.6, 0)]);
-const legGeo = merge([cap(0.08, 0.62, 0, -0.39, 0), box(0.13, 0.08, 0.26, 0, -0.82, 0.05)]);
-const wArmGeo = merge([cap(0.04, 0.46, 0, -0.28, 0), ball(0.052, 0, -0.6, 0, 1, 1.4, 1)]);
-const wLegGeo = merge([cap(0.058, 0.64, 0, -0.39, 0), box(0.1, 0.07, 0.22, 0, -0.82, 0.04)]);
+// Figure parts are instanced. Vertex colours bake in creases, belts and boots; the per-instance colour sets cloth or skin.
+const figMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+const gearMat = new THREE.MeshPhongMaterial({ vertexColors: true, specular: 0x3c444e, shininess: 45 });
 const W_CAP = 130, A_CAP = 150, H_CAP = 52;
+const UPPER = 0.30, THIGH = 0.43;      // limb segment lengths: shoulder to elbow, hip to knee
 const WP = {
-    // A wight: thin, stooped, a rag hanging off it.
-    body: part(merge([
-        cyl(0.2, 0.15, 0.58, 0, 1.14, 0.06, 0.3, 8, 0.6), cap(0.065, 0.34, 0, 1.37, 0.15, 0, Math.PI / 2),
-        ball(0.16, 0, 0.88, 0, 1, 0.6, 0.7), box(0.3, 0.5, 0.02, 0, 0.72, -0.1, 0.15), box(0.26, 0.42, 0.02, 0.02, 0.74, 0.13, -0.1)
-    ]), skin, W_CAP, true),
-    head: part(merge([ball(0.115, 0, 1.55, 0.23, 0.9, 1.12, 1), box(0.12, 0.05, 0.1, 0, 1.45, 0.28), cyl(0.04, 0.05, 0.14, 0, 1.43, 0.17, 0.5)]), skin, W_CAP, true),
-    // Boss gear: an ice blade in the right hand, and the Night King's crown of horns.
-    blade: part(merge([cyl(0.001, 0.045, 1.1, 0, -1.15, 0.02, 0, 4, 0.3)]),
-        new THREE.MeshBasicMaterial({ color: 0xc4ecff, transparent: true, opacity: 0.85 }), 8),
-    crown: part(merge([0, 1, 2, 3, 4, 5, 6].map((i) => {
-        const a = (i - 3) * 0.5, g = new THREE.ConeGeometry(0.022, 0.16 - Math.abs(i - 3) * 0.02, 4);
-        g.translate(Math.sin(a) * 0.1, 1.71, 0.23 + Math.cos(a) * 0.1);
-        return g;
-    })), new THREE.MeshLambertMaterial({ color: 0x9fd0f0, emissive: 0x1c3a52 }), 2),
-    eyes: part(merge([box(0.05, 0.035, 0.03, -0.045, 1.57, 0.335), box(0.05, 0.035, 0.03, 0.045, 1.57, 0.335)]),
+    torso: part(MD.wight.torso, figMat, W_CAP, true),
+    head: part(MD.wight.head, figMat, W_CAP, true),
+    eyes: part(merge([ball(0.017, -0.045, 1.57, 0.322, 1.2, 0.9, 0.6), ball(0.017, 0.045, 1.57, 0.322, 1.2, 0.9, 0.6)]),
         new THREE.MeshBasicMaterial({ color: 0x7fdcff, fog: false }), W_CAP),
-    armL: part(wArmGeo, skin, W_CAP, true), armR: part(wArmGeo, skin, W_CAP, true),
-    legL: part(wLegGeo, skin, W_CAP, true), legR: part(wLegGeo, skin, W_CAP, true)
+    uArm: part(MD.wight.upperArm, figMat, W_CAP * 2, true), fArm: part(MD.wight.foreArm, figMat, W_CAP * 2, true),
+    thigh: part(MD.wight.thigh, figMat, W_CAP * 2, true), shin: part(MD.wight.shin, figMat, W_CAP * 2, true),
+    // Boss gear: an ice blade in the right hand, and the Night King's crown of horns.
+    blade: part(MD.gear.iceBlade, new THREE.MeshPhongMaterial({ vertexColors: true, specular: 0xffffff, shininess: 120, emissive: 0x20455e, transparent: true, opacity: 0.9 }), 8),
+    crown: part(MD.gear.crown, new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x1c3a52 }), 2)
 };
 const AP = {
-    body: part(merge([
-        cyl(0.25, 0.19, 0.6, 0, 1.16, 0, 0, 10, 0.62), cap(0.09, 0.42, 0, 1.42, 0, 0, Math.PI / 2), ball(0.2, 0, 0.88, 0, 1.05, 0.6, 0.7),
-        box(0.42, 0.07, 0.3, 0, 0.9, 0)
-    ]), skin, A_CAP, true),
-    head: part(merge([ball(0.125, 0, 1.63, 0, 0.95, 1.1, 1), cyl(0.06, 0.07, 0.12, 0, 1.5, 0)]), skin, A_CAP, true),
-    // Northmen wear fur at the shoulders and a cloak; riders wear a long braid.
-    cloak: part(merge([cap(0.14, 0.46, 0, 1.44, -0.02, 0, Math.PI / 2), box(0.52, 0.8, 0.04, 0, 1.0, -0.17, -0.07)]),
-        new THREE.MeshLambertMaterial({ color: 0x2c2723 }), 40),
-    braid: part(merge([cap(0.035, 0.34, 0, 1.46, -0.15, 0.25), ball(0.1, 0, 1.67, -0.04, 1, 0.9, 1)]),
-        new THREE.MeshLambertMaterial({ color: 0x14100d }), 60),
-    armL: part(armGeo, skin, A_CAP, true), armR: part(armGeo, skin, A_CAP, true),
-    legL: part(legGeo, skin, A_CAP, true), legR: part(legGeo, skin, A_CAP, true),
-    arakh: part(merge([box(0.03, 0.6, 0.08, 0, -0.95, 0), box(0.03, 0.45, 0.07, 0, -1.42, 0.08, 0.35)]), steel, 60),
-    flame: part((() => { const g = new THREE.OctahedronGeometry(0.2); g.scale(1, 2.6, 1); g.translate(0, -1.25, 0.04); return g; })(),
-        new THREE.MeshBasicMaterial({ color: 0xff9a3c, fog: false }), 60),
-    spear: part(merge([cyl(0.018, 0.018, 2.5, 0, -0.58, 0.75, Math.PI / 2, 6), cyl(0.001, 0.045, 0.34, 0, -0.58, 2.15, Math.PI / 2, 6)]), steel, 100),
-    sword: part(merge([box(0.045, 0.9, 0.012, 0, -1.02, 0), box(0.2, 0.03, 0.04, 0, -0.6, 0)]), steel, 30),
-    shield: part(cyl(0.34, 0.34, 0.05, 0, -0.42, 0.16, Math.PI / 2, 14), new THREE.MeshLambertMaterial({ color: 0x23252c }), 100),
-    helm: part((() => { const c = new THREE.ConeGeometry(0.035, 0.24, 6).toNonIndexed(); c.translate(0, 1.9, 0); return merge([ball(0.142, 0, 1.66, -0.01, 1, 1, 1.08), c]); })(),
-        new THREE.MeshLambertMaterial({ color: 0x30333c }), 100)
+    torso: part(MD.human.torso, figMat, A_CAP, true),
+    head: part(MD.human.head, figMat, A_CAP, true),
+    uArm: part(MD.human.upperArm, figMat, A_CAP * 2, true), fArm: part(MD.human.foreArm, figMat, A_CAP * 2, true),
+    thigh: part(MD.human.thigh, figMat, A_CAP * 2, true), shin: part(MD.human.shin, figMat, A_CAP * 2, true),
+    // Northmen wear fur at the shoulders and a cloak; riders wear a long braid; Unsullied a spiked helm.
+    cloak: part(MD.gear.cloak, propMat, 40), braid: part(MD.gear.braid, propMat, 60), helm: part(MD.gear.helm, gearMat, 100),
+    // Held gear lives in forearm space: the hand is 0.30 below the elbow.
+    arakh: part(MD.gear.arakh, gearMat, 60), spear: part(MD.gear.spear, gearMat, 100),
+    sword: part(MD.gear.sword, gearMat, 30), shield: part(MD.gear.shield, gearMat, 100),
+    flame: part((() => { const g = new THREE.OctahedronGeometry(0.2); g.scale(1, 2.6, 1); g.translate(0, -1.05, 0.04); return g; })(),
+        new THREE.MeshBasicMaterial({ color: 0xff9a3c, fog: false }), 60)
 };
-const horseGeo = merge([
-    cap(0.3, 1.1, 0, 1.27, 0, Math.PI / 2), ball(0.33, 0, 1.3, 0.55, 0.95, 1.05, 1),          // barrel and chest
-    cyl(0.13, 0.21, 0.9, 0, 1.78, 0.86, 0.68, 8), cap(0.1, 0.36, 0, 2.08, 1.3, 1.25),          // neck and head
-    box(0.05, 0.14, 0.05, -0.07, 2.3, 1.12), box(0.05, 0.14, 0.05, 0.07, 2.3, 1.12),            // ears
-    box(0.05, 0.8, 0.16, 0, 1.86, 0.7, 0.68), cap(0.05, 0.55, 0, 1.12, -0.98, -0.35)            // mane and tail
-]);
 const HP = {
-    body: part(horseGeo, skin, H_CAP, true),
-    leg: part(merge([cap(0.055, 0.78, 0, -0.45, 0), box(0.1, 0.1, 0.13, 0, -0.92, 0.01)]), skin, H_CAP * 4, true)
+    body: part(MD.horse.body, figMat, H_CAP, true),
+    leg: part(MD.horse.leg, figMat, H_CAP * 4, true)
 };
 // A soft dark disc under every figure, so they stand on the ground instead of floating over it.
 const shadows = part((() => { const g = new THREE.CircleGeometry(0.5, 14); g.rotateX(-Math.PI / 2); return g; })(),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.38, depthWrite: false }), W_CAP + A_CAP + 4);
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: HQ ? 0.24 : 0.38, depthWrite: false }), W_CAP + A_CAP + 4);
 const _sh = new THREE.Matrix4();
 function shadow(x, z, r) {
     _sh.makeScale(r, 1, r);
@@ -561,12 +589,6 @@ function shadow(x, z, r) {
 }
 const _root = new THREE.Matrix4(), _l = new THREE.Matrix4(), _w = new THREE.Matrix4();
 const _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
-function limb(m, px, py, pz, ang, colour) {
-    _l.makeRotationX(ang);
-    _l.setPosition(px, py, pz);
-    _w.multiplyMatrices(_root, _l);
-    put(m, _w, colour);
-}
 function setRoot(f, lift, sway = 0) {
     _e.set(f.fall * f.fallDir * 1.5, f.yaw, sway, 'YXZ');
     _q.setFromEuler(_e);
@@ -574,21 +596,38 @@ function setRoot(f, lift, sway = 0) {
     _s.set(f.scale, f.scale, f.scale);
     _root.compose(_p, _q, _s);
 }
+const _w2 = new THREE.Matrix4();
+/**
+ * Draw a jointed limb. The upper part swings by a1 at (px, py, pz); the lower part hangs `len` below and bends by a2.
+ * Positive angles swing backwards. The lower part's matrix is left in _w for whatever the hand holds.
+ */
+function limb2(up, lo, px, py, pz, a1, a2, len, colour, colour2) {
+    _l.makeRotationX(a1);
+    _l.setPosition(px, py, pz);
+    _w2.multiplyMatrices(_root, _l);
+    put(up, _w2, colour);
+    _l.makeRotationX(a2);
+    _l.setPosition(0, -len, 0);
+    _w.multiplyMatrices(_w2, _l);
+    put(lo, _w, colour2 || colour);
+}
 function drawWight(f) {
     setRoot(f, 0, f.moving ? Math.sin(f.t) * 0.07 : 0);
-    const walk = f.moving ? Math.sin(f.t) * 0.75 : 0;
-    put(WP.body, _root, f.col);
+    const s = f.moving ? Math.sin(f.t) : 0, c = f.moving ? Math.cos(f.t) : 0, walk = s * 0.75;
+    put(WP.torso, _root, f.col);
     put(WP.head, _root, f.skin);
     put(WP.eyes, _root);
     if (f.king) put(WP.crown, _root);
     if (f.state === 'alive' && f.y < 3) shadow(f.x, f.z, f.scale * (f.heavy ? 1.2 : 0.9));
-    let ar = -1.25 - walk * 0.25;
-    if (f.atkT > 0) ar = lerp(-0.3, -2.8, clamp(f.atkT / 0.5, 0, 1));
-    limb(WP.armL, 0.3, 1.38, 0.08, -1.25 + walk * 0.25, f.skin);
-    limb(WP.armR, -0.3, 1.38, 0.08, ar, f.skin);
+    // Legs: the knee bends as the leg comes through.
+    limb2(WP.thigh, WP.shin, 0.13, 0.86, 0, walk, 0.1 + Math.max(0, c) * 0.9, THIGH, f.col, f.skin);
+    limb2(WP.thigh, WP.shin, -0.13, 0.86, 0, -walk, 0.1 + Math.max(0, -c) * 0.9, THIGH, f.col, f.skin);
+    // Arms reach for the living; the right one comes down as a blow.
+    limb2(WP.uArm, WP.fArm, 0.3, 1.38, 0.08, -1.05 + walk * 0.25, -0.5, UPPER, f.skin);
+    let ar = -1.05 - walk * 0.25, elbow = -0.5;
+    if (f.atkT > 0) { ar = lerp(-0.3, -2.6, clamp(f.atkT / 0.5, 0, 1)); elbow = -0.25; }
+    limb2(WP.uArm, WP.fArm, -0.3, 1.38, 0.08, ar, elbow, UPPER, f.skin);
     if (f.boss) put(WP.blade, _w);
-    limb(WP.legL, 0.13, 0.86, 0, walk, f.col);
-    limb(WP.legR, -0.13, 0.86, 0, -walk, f.col);
 }
 function drawAlly(f) {
     const riding = f.kind === 'rider';
@@ -603,34 +642,42 @@ function drawAlly(f) {
         put(HP.body, _root, f.hcol);
         for (let i = 0; i < 4; i++) {
             const sx = i & 1 ? 0.2 : -0.2, sz = i < 2 ? 0.65 : -0.65;
-            limb(HP.leg, sx, 0.95, sz, f.moving ? Math.sin(f.t + i * 1.7) * 0.85 : 0, f.hcol);
+            _l.makeRotationX(f.moving ? Math.sin(f.t + i * 1.7) * 0.85 : 0);
+            _l.setPosition(sx, 0.95, sz);
+            _w.multiplyMatrices(_root, _l);
+            put(HP.leg, _w, f.hcol);
         }
     }
     if (f.state === 'alive') shadow(f.x, f.z, riding ? 1.5 : 0.9);
     setRoot(f, riding ? 0.72 + bob : 0);
-    const walk = f.moving && !riding ? Math.sin(f.t) * 0.7 : 0;
-    put(AP.body, _root, f.col);
+    const walking = f.moving && !riding;
+    const s = walking ? Math.sin(f.t) : 0, c = walking ? Math.cos(f.t) : 0, walk = s * 0.7;
+    put(AP.torso, _root, f.col);
     put(AP.head, _root, f.skin);
-    const legA = riding ? -0.45 : walk;
-    limb(AP.legL, riding ? 0.3 : 0.13, 0.86, 0, legA, f.col);
-    limb(AP.legR, riding ? -0.3 : -0.13, 0.86, 0, riding ? legA : -walk, f.col);
+    if (riding) {       // seated: thighs forward round the barrel, knees bent
+        limb2(AP.thigh, AP.shin, 0.26, 0.86, 0, -1.15, 1.2, THIGH, f.col);
+        limb2(AP.thigh, AP.shin, -0.26, 0.86, 0, -1.15, 1.2, THIGH, f.col);
+    } else {
+        limb2(AP.thigh, AP.shin, 0.13, 0.86, 0, walk, 0.06 + Math.max(0, c) * 0.85, THIGH, f.col);
+        limb2(AP.thigh, AP.shin, -0.13, 0.86, 0, -walk, 0.06 + Math.max(0, -c) * 0.85, THIGH, f.col);
+    }
     const strike = f.atkT > 0 ? Math.sin(clamp(f.atkT / 0.3, 0, 1) * Math.PI) : 0;
     if (riding) {
         put(AP.braid, _root);
-        limb(AP.armL, 0.32, 1.42, 0, -0.9, f.skin);
-        limb(AP.armR, -0.32, 1.42, 0, -2.55 + Math.sin(f.t * 0.7) * 0.2, f.skin);
+        limb2(AP.uArm, AP.fArm, 0.32, 1.42, 0, -0.55, -0.7, UPPER, f.skin);                                  // reins
+        limb2(AP.uArm, AP.fArm, -0.32, 1.42, 0, -2.2 + Math.sin(f.t * 0.7) * 0.2, -0.35, UPPER, f.skin);      // arakh held high
         put(AP.arakh, _w);
         if (f.flame) put(AP.flame, _w);
     } else if (f.kind === 'unsullied') {
         put(AP.helm, _root);
-        limb(AP.armL, 0.32, 1.42, 0, -0.2, f.col);
+        limb2(AP.uArm, AP.fArm, 0.32, 1.42, 0, -0.15, -0.2, UPPER, f.col);
         put(AP.shield, _w);
-        limb(AP.armR, -0.32, 1.42, 0, -0.28 - strike * 0.5, f.col);
+        limb2(AP.uArm, AP.fArm, -0.32, 1.42, 0, -0.12 - strike * 0.35, -0.2 - strike * 0.3, UPPER, f.col);
         put(AP.spear, _w);
     } else {
         put(AP.cloak, _root);
-        limb(AP.armL, 0.32, 1.42, 0, walk * 0.6, f.col);
-        limb(AP.armR, -0.32, 1.42, 0, -1.9 + strike * 1.3, f.col);
+        limb2(AP.uArm, AP.fArm, 0.32, 1.42, 0, walk * 0.6, -0.25, UPPER, f.col);
+        limb2(AP.uArm, AP.fArm, -0.32, 1.42, 0, -1.2 + strike * 0.9, -0.75 + strike * 0.5, UPPER, f.col);
         put(AP.sword, _w);
     }
 }
@@ -738,11 +785,13 @@ const debris = (() => {
     };
 })();
 const mount = new THREE.Group();
-mount.add(new THREE.Mesh(merge([
-    cap(0.31, 1.1, 0, 1.3, 0.25, Math.PI / 2), cyl(0.14, 0.21, 0.95, 0, 1.62, -0.95, -0.72, 8), cap(0.105, 0.4, 0, 1.9, -1.52, -1.95),
-    box(0.05, 0.15, 0.05, -0.08, 2.12, -1.3), box(0.05, 0.15, 0.05, 0.08, 2.12, -1.3)
-]), new THREE.MeshLambertMaterial({ color: 0x4a3626 })));
-mount.add(new THREE.Mesh(box(0.07, 0.86, 0.2, 0, 1.76, -0.8, -0.72), new THREE.MeshLambertMaterial({ color: 0x17120e })));
+{   // The same horse the riders use, turned to face the way the player looks (-Z).
+    const g = MD.horse.body.clone();
+    g.rotateY(Math.PI);
+    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, color: 0x5a4230 }));
+    m.castShadow = HQ;
+    mount.add(m);
+}
 scene.add(mount);
 
 // ── Game state ──
@@ -808,6 +857,8 @@ function fadeIn() {
     el.fade.style.transition = '';
     el.fade.classList.remove('on');
 }
+/** Tell the sound module what kind of place this act is, for its reverb. */
+function space() { if (Sfx.setSpace) Sfx.setSpace(G.act <= 2 ? 'field' : G.act === 3 ? 'yard' : G.act === 4 ? 'hall' : 'grove'); }
 function once(key) { if (G.flags[key]) return false; G.flags[key] = true; return true; }
 const ACT_NAMES = ['', 'Act I · The Charge', 'Act II · The Line', 'Act III · The Castle', 'Act IV · The Halls', 'Act V · The Godswood'];
 
@@ -849,6 +900,7 @@ function startAct(n) {
     G.act = n;
     if (n > progress.act) { progress.act = n; save(); }
     el.act.textContent = ACT_NAMES[n];
+    space();
     if (n === 1) {
         G.phase = 'muster'; G.hordeZ = Z_MUSTER; G.hordeV = 0;
         equip('arakh');
@@ -880,6 +932,7 @@ function beginHold() {
     G.act = 2; G.phase = 'hold'; G.t = 0; G.spawnT = 0;
     if (progress.act < 2) { progress.act = 2; save(); }
     el.act.textContent = ACT_NAMES[2];
+    space();
     card('Act II', 'The Line');
     objective('Hold the line until the horn', true);
     equip('spear');
@@ -890,6 +943,7 @@ function beginSiege() {
     G.act = 3; G.phase = 'siege'; G.t = 0; G.spawnT = 0;
     if (progress.act < 3) { progress.act = 3; save(); }
     el.act.textContent = ACT_NAMES[3];
+    space();
     for (let i = wights.length - 1; i >= 0; i--) if (wights[i].z < WALL_Z + 1) wights.splice(i, 1);
     allies.length = 0;
     const posts = [[-30, 50], [-15, 48], [15, 48], [30, 50], [-36, 66], [36, 66], [-20, 72], [20, 72], [-8, 60], [8, 60], [-34, 86], [34, 86]];
@@ -934,7 +988,7 @@ function damageWight(w, dmg, byPlayer) {
         if (byPlayer) { G.kills++; Sfx.play(w.boss ? 'shatter' : 'kill'); }
     } else {
         debris.burst(w.x, 1.3 * w.scale, w.z, 4, 2);
-        if (byPlayer) Sfx.play('hit');
+        if (byPlayer) Sfx.play(w.heavy ? 'clang' : 'hit', { weapon: P.weapon });
     }
 }
 function strike() {
@@ -1005,7 +1059,7 @@ function simPlayer(dt) {
         P.z += (fz * my + rz * mx) * sp * dt;
         P.bobT += Math.min(1, len) * sp * dt;
         const stepN = Math.floor(P.bobT / 2.1);
-        if (stepN !== P.stepN) { P.stepN = stepN; Sfx.play('step', { vol: 0.5 }); }
+        if (stepN !== P.stepN) { P.stepN = stepN; Sfx.play('step', { vol: 0.5, surface: G.act === 4 ? 'stone' : G.act === 3 ? 'mud' : Math.abs(P.z - 10) < 2.5 && G.act < 3 ? 'wood' : 'snow' }); }
         if (G.act === 4) { const nx = P.x, nz = P.z; P.x = px0; P.z = pz0; hallMove(P, nx, nz, 0.45, true); }
         else resolve(P, 0.45);
     }
@@ -1023,7 +1077,7 @@ function simPlayer(dt) {
     if ((input.attack || input.held) && P.cd <= 0 && P.fallT <= 0 && G.phase !== 'muster') {
         const W = WEAPONS[P.weapon];
         P.swingT = W.swing; P.cd = W.cd; P.hitPending = true;
-        Sfx.play('swing');
+        Sfx.play('swing', { weapon: P.weapon });
     }
     input.attack = false;
     if (P.swingT > 0) {
@@ -1233,7 +1287,7 @@ function simAct1(dt) {
         }
         if (t > 9.2) {
             G.phase = 'charge'; G.t = 0;
-            Sfx.play('horn'); Sfx.play('whinny', { vol: 0.6 });
+            Sfx.play('horn'); Sfx.play('whinny', { vol: 0.6 }); Sfx.play('charge'); Sfx.setAmbience({ crowd: 0 });
             say('CHARGE!', 2.5);
             objective('Ride with the horde');
             Sfx.setAmbience({ gallop: 1, drums: 0.8, wind: 0.5 });
@@ -1371,7 +1425,7 @@ function simAct3(dt) {
         if (t > GIANT_AT && !G.giant) {
             G.giant = true;
             setDoors('gate', 0, 1.5); gateObstacle.on = false;
-            Sfx.play('gate'); Sfx.play('screech');
+            Sfx.play('gate'); Sfx.play('thud'); Sfx.play('roar');
             P.shake = 1;
             say('THE GATE! Something huge is coming through.', 5);
             spawnWight(0, WALL_Z - 5, { heavy: true, scale: 2.7, hp: 14, speed: 2.7, dmg: 30, reach: 3.6, windT: 0.8, cdB: 2.2 });
@@ -1382,7 +1436,7 @@ function simAct3(dt) {
                 Sfx.play('horn', { rate: 0.9 });
                 say('The yard is lost. FALL BACK into the keep!', 6);
                 objective('Fall back into the keep');
-                setDoors('keep', -1.25); keepGlow.visible = true;
+                setDoors('keep', -1.25); keepGlow.visible = true; Sfx.play('door');
             }
             if (Math.abs(P.x) < 2.7 && P.z > 80.7) beginHalls();
         }
@@ -1464,6 +1518,7 @@ function beginHalls() {
     G.act = 4; G.phase = 'halls'; G.t = 0; G.spawnT = 3; G.flags = {};
     if (progress.act < 4) { progress.act = 4; save(); }
     el.act.textContent = ACT_NAMES[4];
+    space();
     wights.length = 0; allies.length = 0;
     G.trenchLit = false; trenchEmitter.src.on = false;
     Object.assign(P, { x: 200, z: -2.5, yaw: 0, pitch: 0, mounted: false });
@@ -1475,12 +1530,13 @@ function beginHalls() {
     objective('Fight through the keep to the godswood', true);
     equip('torch');
     say('You take a torch from the wall. The keep is dark, and it is not empty.', 5.5);
-    Sfx.setAmbience(Object.assign({ wind: 0, battle: 0, fire: 0, gallop: 0, drums: 0 }, AMBIENCE.halls));
+    Sfx.setAmbience(Object.assign({ wind: 0, battle: 0, fire: 0, gallop: 0, drums: 0, crowd: 0, heart: 0 }, AMBIENCE.halls));
 }
 function beginGrove() {
     G.act = 5; G.phase = 'grove'; G.t = 0; G.spawnT = 2; G.flags = {};
     if (progress.act < 5) { progress.act = 5; save(); }
     el.act.textContent = ACT_NAMES[5];
+    space();
     wights.length = 0; allies.length = 0;
     Object.assign(P, { x: GROVE.x, z: GROVE.z + 33, yaw: 0, pitch: 0, mounted: false });
     for (let i = 0; i < 8; i++) {
@@ -1493,7 +1549,7 @@ function beginGrove() {
     objective('Defend the weirwood', true);
     equip('dagger');
     say('Someone presses a dragonglass dagger into your hand. Hold the tree.', 6);
-    Sfx.setAmbience(Object.assign({ wind: 0, battle: 0, fire: 0, gallop: 0, drums: 0 }, AMBIENCE.grove));
+    Sfx.setAmbience(Object.assign({ wind: 0, battle: 0, fire: 0, gallop: 0, drums: 0, crowd: 0, heart: 0 }, AMBIENCE.grove));
 }
 function beginDawn(text) {
     G.phase = 'dawn'; G.t = 0;
@@ -1650,6 +1706,8 @@ function render(dt, t) {
         d.rotation.y += (d.userData.ry - d.rotation.y) * Math.min(1, dt * 3);
         d.rotation.x += (d.userData.rx - d.rotation.x) * Math.min(1, dt * 5);
     }
+    moon.target.position.set(camera.position.x, 0, camera.position.z);
+    moon.position.copy(MOON_DIR).multiplyScalar(120).add(moon.target.position);
     sky.position.copy(camera.position);
     sky.material.opacity = 1 - G.dawn;
     debris.update(dt);
@@ -1684,7 +1742,7 @@ function updateWay() {
     el.way.style.transform = `translate(${((x * 0.5 + 0.5) * window.innerWidth).toFixed(1)}px,${((-y * 0.5 + 0.5) * window.innerHeight).toFixed(1)}px)`;
     el.wayD.textContent = Math.round(d) + ' m';
 }
-let hudT = 0;
+let hudT = 0, heartLvl = 0;
 function updateHud(dt) {
     if (subTimer > 0) { subTimer -= dt; if (subTimer <= 0) el.sub.classList.remove('on'); }
     if (cardTimer > 0) { cardTimer -= dt; if (cardTimer <= 0) el.card.classList.remove('on'); }
@@ -1694,6 +1752,9 @@ function updateHud(dt) {
     hudT -= dt;
     if (hudT > 0) return;
     hudT = 0.12;
+    // A heartbeat creeps in as health runs out.
+    const heart = P.hp < 40 && G.mode === 'play' ? Math.round((40 - P.hp) / 8) / 5 : 0;
+    if (heart !== heartLvl) { heartLvl = heart; Sfx.setAmbience({ heart }); }
     el.hp.style.width = clamp(P.hp, 0, 100) + '%';
     const W = WEAPONS[P.weapon];
     el.flame.style.width = (W.lit || (P.mounted && P.flame > 0) ? 100 : W.burns ? clamp(P.flame / 30 * 100, 0, 100) : 0) + '%';
@@ -1743,8 +1804,8 @@ function pause() {
     if (document.pointerLockElement) document.exitPointerLock();
 }
 const AMBIENCE = {
-    muster: { wind: 0.7, drums: 0.25 }, charge: { gallop: 1, drums: 0.8, wind: 0.5 }, clash: { battle: 1, gallop: 0.8, drums: 0.8 },
-    retreat: { battle: 0.6, gallop: 1, drums: 0.8 }, afoot: { battle: 0.8, drums: 0.8 }, hold: { wind: 0.4, battle: 0.9, fire: 0.3, drums: 0.7 },
+    muster: { wind: 0.7, drums: 0.25, crowd: 0.8 }, charge: { gallop: 1, drums: 0.8, wind: 0.5 }, clash: { battle: 1, gallop: 0.8, drums: 0.8 },
+    retreat: { battle: 0.6, gallop: 1, drums: 0.8 }, afoot: { battle: 0.8, drums: 0.8 }, hold: { wind: 0.4, battle: 0.9, fire: 0.3, drums: 0.7, crowd: 0.5 },
     fallback: { battle: 1, fire: 0.6, drums: 0.8 }, siege: { wind: 0.3, battle: 1, fire: 0.6, drums: 0.6 }, dawn: { wind: 0.4, fire: 0.3 },
     halls: { wind: 0.12, battle: 0.3, fire: 0.5, drums: 0.5 }, grove: { wind: 0.6, battle: 0.7, fire: 0.4, drums: 0.7 },
     walkers: { wind: 0.9, battle: 0.2, fire: 0.3, drums: 0.9 }, king: { wind: 1, battle: 0.3, fire: 0.3, drums: 1 }
@@ -1753,7 +1814,7 @@ function resume() {
     if (G.mode !== 'paused') return;
     G.mode = 'play';
     Sfx.unlock();
-    Sfx.setAmbience(Object.assign({ wind: 0, battle: 0, fire: 0, gallop: 0, drums: 0 }, AMBIENCE[G.phase]));
+    Sfx.setAmbience(Object.assign({ wind: 0, battle: 0, fire: 0, gallop: 0, drums: 0, crowd: 0, heart: 0 }, AMBIENCE[G.phase]));
     showScreen(null);
     lockPointer();
 }

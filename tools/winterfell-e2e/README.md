@@ -69,3 +69,4 @@ under `winterfell-progress-v1` (`{ v: 1, act, best, muted }`).
   below 25), so hp is not 100 throughout a god-mode run.
 - **Pointer lock**: Begin, Resume and Try again ask for pointer lock; in headless Chromium the
   request does nothing visible and the game carries on, so specs need no special handling.
+- **Quality path.** The game picks high quality (moon shadows, normal maps) on desktop and low on touch devices. The specs run the default desktop path; add `&q=low` to the URL to exercise the phone path.

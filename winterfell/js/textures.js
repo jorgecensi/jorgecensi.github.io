@@ -2,7 +2,18 @@
 // No dependencies and no image files. Everything is seeded, so every load
 // gives the same pixels.
 //
-//   makeTextures() -> { stone, darkStone, wood, door, snow, mud, floor, bark, sky }
+//   makeTextures() -> { stone, darkStone, wood, door, snow, mud, floor, bark, sky,
+//                       stoneN, darkStoneN, floorN, woodN, doorN, snowN, mudN, barkN,
+//                       snowDetail }
+//
+// The `*N` canvases are tangent-space normal maps (OpenGL convention: +Y up
+// the image, flat = 128,128,255), the same size as their colour texture and
+// tiling the same way (doorN is clamped, like door). Each is derived from a
+// height field painted alongside the colour. Suggested normalScale (1 = the
+// default, applied to both axes): stoneN 1.0, darkStoneN 1.0, floorN 0.8,
+// woodN 0.8, doorN 1.0, snowN 0.6, mudN 1.0, barkN 1.0.
+// `snowDetail` is 256 x 256 greyscale grain (mean 128) that tiles; overlay it at
+// a much smaller scale than `snow` (about 0.5 m per tile).
 //
 // All of them tile in both directions except `door` (one leaf, 256 x 512) and
 // `sky` (2048 x 1024 equirectangular: wraps in x only, zenith on the top row,
@@ -15,6 +26,7 @@
 //   snow              4 m
 //   mud               2.5 m
 //   bark              1 m around the trunk, 1 m up it
+//   snowDetail        0.5 m
 
 const TAU = Math.PI * 2;
 
@@ -126,6 +138,30 @@ function wrapDraw(ctx, w, h, fn) {
   }
 }
 
+// Height field -> tangent-space normal map canvas (Sobel, wrapping when `wrap`).
+// `k` is the slope gain: a height step of 1 over one pixel gives a slope of k.
+function normalMap(H, w, h, k, wrap = true) {
+  const cv = canvas(w, h), ctx = cv.getContext('2d');
+  const img = ctx.createImageData(w, h), px = img.data;
+  for (let y = 0; y < h; y++) {
+    const ym = wrap ? (y + h - 1) % h : Math.max(y - 1, 0);
+    const yp = wrap ? (y + 1) % h : Math.min(y + 1, h - 1);
+    const r0 = ym * w, r1 = y * w, r2 = yp * w;
+    for (let x = 0; x < w; x++) {
+      const xm = wrap ? (x + w - 1) % w : Math.max(x - 1, 0);
+      const xp = wrap ? (x + 1) % w : Math.min(x + 1, w - 1);
+      const gx = (H[r0 + xp] + 2 * H[r1 + xp] + H[r2 + xp] - H[r0 + xm] - 2 * H[r1 + xm] - H[r2 + xm]) * 0.125;
+      const gy = (H[r2 + xm] + 2 * H[r2 + x] + H[r2 + xp] - H[r0 + xm] - 2 * H[r0 + x] - H[r0 + xp]) * 0.125;
+      const nx = -gx * k, ny = gy * k;          // +Y is up the image
+      const il = 127.5 / Math.sqrt(nx * nx + ny * ny + 1);
+      const p = (r1 + x) * 4;
+      px[p] = 127.5 + nx * il; px[p + 1] = 127.5 + ny * il; px[p + 2] = 127.5 + il; px[p + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+
 // ---------------------------------------------------------------- masonry
 
 function stoneLayout(S, rnd) {
@@ -186,6 +222,7 @@ function masonry(o) {
 
   const cv = canvas(S, S), ctx = cv.getContext('2d');
   const img = ctx.createImageData(S, S), px = img.data;
+  const H = new Float32Array(S * S);   // height field for the normal map
   const [br, bg, bb] = o.base, [mr, mg, mb] = o.mortar;
   const wamp = o.warp, mw = o.mortarW;
 
@@ -238,6 +275,9 @@ function masonry(o) {
       }
 
       // Mortar: dark and recessed, a little gritty.
+      const face = 0.55 + (B.tone - 1) * o.hTone + 0.2 * sstep(m, m + o.bevel, d)
+        + o.dome * sstep(m, m + o.domeR, d) + (fine - 0.5) * o.hGrain;
+      H[i] = face + (0.04 + g * 0.1 - face) * mort;
       const mv = 0.75 + g * 0.5;
       R += (mr * mv - R) * mort; G += (mg * mv - G) * mort; Bl += (mb * mv - Bl) * mort;
 
@@ -257,6 +297,7 @@ function masonry(o) {
   ctx.putImageData(img, 0, 0);
 
   // Cracks.
+  const crackPts = [];
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for (let c = 0; c < o.cracks; c++) {
     let x = rnd() * S, y = rnd() * S, a = Math.PI / 2 + (rnd() - 0.5) * 1.6;
@@ -275,8 +316,20 @@ function masonry(o) {
       ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1; line(1, 1);
       ctx.strokeStyle = 'rgba(18,18,20,0.55)'; ctx.lineWidth = 1.3; line(0, 0);
     });
+    crackPts.push(pts);
   }
-  return cv;
+  if (crackPts.length) {   // cracks are recessed too
+    const hc = canvas(S, S), hx = hc.getContext('2d');
+    hx.lineCap = 'round'; hx.lineJoin = 'round'; hx.strokeStyle = '#fff'; hx.lineWidth = 2;
+    for (const pts of crackPts) wrapDraw(hx, S, S, () => {
+      hx.beginPath();
+      pts.forEach((q, j) => (j ? hx.lineTo(q[0], q[1]) : hx.moveTo(q[0], q[1])));
+      hx.stroke();
+    });
+    const a = hx.getImageData(0, 0, S, S).data;
+    for (let i = 0; i < S * S; i++) H[i] -= 0.3 * (a[i * 4 + 3] / 255);
+  }
+  return { cv, H };
 }
 
 // ------------------------------------------------------------------ planks
@@ -320,6 +373,7 @@ function planks(w, h, o) {
   const cv = canvas(w, h), ctx = cv.getContext('2d');
   const img = ctx.createImageData(w, h), px = img.data;
   const [br, bg, bb] = o.base;
+  const HF = new Float32Array(w * h);
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -339,17 +393,22 @@ function planks(w, h, o) {
         knot = Math.max(knot, sstep(k.r * 1.1, k.r * 0.2, d));
       }
       const t = gc + p.gOff;
-      const prof = 0.55 * n1(t * 0.33) + 0.45 * n1(t * 1.15);
+      const na = n1(t * 0.33), nb = n1(t * 1.15);
+      const prof = 0.55 * na + 0.45 * nb;
       const a = A[yy * w + x];
       let v = p.tone * (1 + (prof - 0.5) * o.grain + (a - 0.5) * o.streak);
       v *= 1 - 0.5 * knot;
       const e = Math.min(u, p.w - 1 - u);
       v *= 0.3 + 0.7 * sstep(0.2, 2.6, e);                // plank gap
       v *= 1 + 0.05 * sstep(5, 2.6, e) * sstep(1.5, 2.6, e);
+      let jf = 1;
       if (p.joint >= 0) {
         let dj = Math.abs(y - p.joint); if (dj > h / 2) dj = h - dj;
         v *= 0.4 + 0.6 * sstep(0.3, 2.2, dj);
+        jf = 0.15 + 0.85 * sstep(0.3, 2.2, dj);
       }
+      HF[y * w + x] = (0.4 + (p.tone - 1) * 0.5 + (na - 0.5) * 0.3 + (nb - 0.5) * 0.08 + (a - 0.5) * 0.1 + 0.08 * knot)
+        * sstep(0.2, 2.6, e) * jf;
       v *= 0.975 + rnd() * 0.05;
       const lo = LO[yy * w + ((x + p.offY) % w)];
       v *= 0.9 + lo * 0.2;
@@ -362,17 +421,20 @@ function planks(w, h, o) {
     }
   }
   ctx.putImageData(img, 0, 0);
-  return cv;
+  return { cv, H: HF };
 }
 
 function makeDoor() {
   const W = 256, H = 512;
-  const cv = planks(W, H, {
+  const { cv, H: plankH } = planks(W, H, {
     seed: 4101, count: 5, base: [176, 124, 72], toneVar: 0.16, grain: 0.34,
     streak: 0.2, knots: 0.5, grey: 0.12, joints: false,
   });
   const ctx = cv.getContext('2d');
   const rnd = mulberry32(4102);
+  // Parallel height drawing (grey = raised iron); no extra rnd calls.
+  const hcv = canvas(W, H), hq = hcv.getContext('2d');
+  hq.fillStyle = '#000'; hq.fillRect(0, 0, W, H);
 
   // Shadow round the leaf, where it sits in the frame.
   const edge = (x0, y0, x1, y1, rx, ry, rw, rh) => {
@@ -390,6 +452,10 @@ function makeDoor() {
     g.addColorStop(0, '#5d6068'); g.addColorStop(0.45, '#2c2d32'); g.addColorStop(1, '#101114');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    const hg = hq.createRadialGradient(x, y, 0, x, y, r);   // domed rivet head
+    hg.addColorStop(0, '#fff'); hg.addColorStop(0.6, '#e6e6e6'); hg.addColorStop(1, '#b0b0b0');
+    hq.fillStyle = hg;
+    hq.beginPath(); hq.arc(x, y, r, 0, TAU); hq.fill();
   };
 
   const strapYs = [76, 256, 436], SH = 34;
@@ -406,13 +472,21 @@ function makeDoor() {
     g.addColorStop(0, '#34363c'); g.addColorStop(0.25, '#232428');
     g.addColorStop(0.8, '#17181b'); g.addColorStop(1, '#0e0f11');
     ctx.fillStyle = g; shape(0); ctx.fill();
+    hq.fillStyle = '#8c8c8c';   // strap, raised
+    hq.beginPath();
+    hq.moveTo(0, top); hq.lineTo(206, top);
+    hq.lineTo(220, top - 7); hq.lineTo(246, sy); hq.lineTo(220, bot + 7);
+    hq.lineTo(206, bot); hq.lineTo(0, bot); hq.closePath(); hq.fill();
     ctx.strokeStyle = 'rgba(150,160,180,0.16)'; ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.moveTo(0, top + 1); ctx.lineTo(206, top + 1); ctx.lineTo(220, top - 6); ctx.stroke();
     // Hammer marks.
     for (let i = 0; i < 26; i++) {
-      const hx = rnd() * 205, hy = top + 4 + rnd() * (SH - 8);
+      const hx_ = rnd() * 205, hy = top + 4 + rnd() * (SH - 8);
       ctx.fillStyle = rnd() < 0.5 ? 'rgba(0,0,0,0.22)' : 'rgba(120,125,140,0.10)';
-      ctx.beginPath(); ctx.ellipse(hx, hy, 3 + rnd() * 5, 1.5 + rnd() * 2.5, rnd() * 3, 0, TAU); ctx.fill();
+      const ea = 3 + rnd() * 5, eb = 1.5 + rnd() * 2.5, er = rnd() * 3;
+      ctx.beginPath(); ctx.ellipse(hx_, hy, ea, eb, er, 0, TAU); ctx.fill();
+      hq.fillStyle = 'rgba(0,0,0,0.12)';
+      hq.beginPath(); hq.ellipse(hx_, hy, ea, eb, er, 0, TAU); hq.fill();
     }
     for (const rx of [22, 66, 110, 154, 198]) stud(rx, sy, 5.2);
     stud(226, sy, 4.2);
@@ -441,6 +515,11 @@ function makeDoor() {
   ctx.strokeStyle = 'rgba(125,132,148,0.55)'; ctx.lineWidth = 1.8;
   ctx.beginPath(); ctx.arc(hx, hy + rr, rr + 1.4, Math.PI * 1.05, Math.PI * 1.75); ctx.stroke();
   ctx.beginPath(); ctx.arc(hx, hy + rr, rr - 1.6, Math.PI * 0.1, Math.PI * 0.7); ctx.stroke();
+  hq.fillStyle = '#a0a0a0'; hq.beginPath(); hq.arc(hx, hy, 14, 0, TAU); hq.fill();   // plate
+  hq.strokeStyle = '#c8c8c8'; hq.lineWidth = 6.5;                                       // ring
+  hq.beginPath(); hq.arc(hx, hy + rr, rr, 0, TAU); hq.stroke();
+  hq.strokeStyle = '#e8e8e8'; hq.lineWidth = 2.5;
+  hq.beginPath(); hq.arc(hx, hy + rr, rr, 0, TAU); hq.stroke();
   stud(hx, hy, 5);
 
   // Break up the drawn iron so nothing is a flat fill.
@@ -451,7 +530,21 @@ function makeDoor() {
     px[p] *= k; px[p + 1] *= k; px[p + 2] *= k;
   }
   ctx.putImageData(img, 0, 0);
-  return cv;
+
+  // Door height: raised iron (softened by a 3 x 3 blur) over gently grained wood.
+  const ir = hq.getImageData(0, 0, W, H).data, I0 = new Float32Array(W * H), I1 = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) I0[i] = ir[i * 4] / 255;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let sum = 0;
+    for (let j = -1; j <= 1; j++) {
+      const yy = Math.min(H - 1, Math.max(0, y + j));
+      for (let i = -1; i <= 1; i++) sum += I0[yy * W + Math.min(W - 1, Math.max(0, x + i))];
+    }
+    I1[y * W + x] = sum / 9;
+  }
+  const HD = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) HD[i] = I1[i] + plankH[i] * 0.3 * (1 - Math.min(1, I1[i] * 4));
+  return { cv, H: HD };
 }
 
 // -------------------------------------------------------------------- snow
@@ -488,8 +581,10 @@ function makeSnow() {
 
   const cv = canvas(S, S), ctx = cv.getContext('2d');
   const img = ctx.createImageData(S, S), px = img.data;
+  const H = new Float32Array(S * S);
   for (let i = 0; i < S * S; i++) {
     const tr = sstep(0.4, 0.65, T[i]);
+    H[i] = D[i] * 1.6 + F[i] * (0.12 + 0.2 * tr) + dent[i] * 0.8;
     let v = (D[i] - 0.5) * 19 + (F[i] - 0.5) * (7 + 9 * tr) - tr * 4;
     const d = dent[i];
     v += d * 11;
@@ -501,7 +596,7 @@ function makeSnow() {
     px[p + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
-  return cv;
+  return { cv, H };
 }
 
 // --------------------------------------------------------------------- mud
@@ -519,6 +614,7 @@ function makeMud() {
   }
   const cv = canvas(S, S), ctx = cv.getContext('2d');
   const img = ctx.createImageData(S, S), px = img.data;
+  const H = new Float32Array(S * S);
   for (let i = 0; i < S * S; i++) {
     const b = Bf[i], ridge = Math.abs(Rg[i] - 0.5) * 2;
     let v = 0.72 + b * 0.56;
@@ -530,12 +626,13 @@ function makeMud() {
     // Dirty snow and ice lie in the smoother patches.
     const ice = 0.72 * sstep(0.51, 0.72, A[i] + (b - 0.5) * 0.55 + Math.min(0, dent[i]) * 0.12);
     const iv = 0.86 + b * 0.26 + (s - 0.5) * 0.05;
+    H[i] = b * 0.9 * (1 - 0.65 * ice) + Rg[i] * 0.5 - 0.35 * (1 - sstep(0, 0.3, ridge)) + dent[i] * 0.5;
     R += (140 * iv - R) * ice; G += (146 * iv - G) * ice; Bl += (154 * iv - Bl) * ice;
     const p = i * 4;
     px[p] = R; px[p + 1] = G; px[p + 2] = Bl; px[p + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
-  return cv;
+  return { cv, H };
 }
 
 // -------------------------------------------------------------------- bark
@@ -547,6 +644,7 @@ function makeBark() {
   const S3 = fbm(S, S, 64, 6, 2, 7404);
   const cv = canvas(S, S), ctx = cv.getContext('2d');
   const img = ctx.createImageData(S, S), px = img.data;
+  const H = new Float32Array(S * S);
   for (let i = 0; i < S * S; i++) {
     const lo = S2[i];
     const f = S1[i] + (lo - 0.5) * 0.35;
@@ -555,6 +653,7 @@ function makeBark() {
     let v = 0.9 + lo * 0.16 + (S3[i] - 0.5) * 0.12 + (rnd() - 0.5) * 0.04;
     // Each plate of bark is slightly raised: lighter one side of a fissure.
     v += 0.05 * sstep(0.5, 0.75, fr) * sstep(1, 0.75, fr);
+    H[i] = (0.5 + 0.5 * Math.cos(TAU * fr)) * 0.45 - fiss * 1.0 + (lo - 0.5) * 0.15 + (S3[i] - 0.5) * 0.08;
     let R = 192 * v, G = 186 * v, Bl = 175 * v;
     const k = fiss * 0.62;
     R += (104 - R) * k; G += (102 - G) * k; Bl += (104 - Bl) * k;
@@ -562,7 +661,7 @@ function makeBark() {
     px[p] = R; px[p + 1] = G; px[p + 2] = Bl; px[p + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
-  return cv;
+  return { cv, H };
 }
 
 // --------------------------------------------------------------------- sky
@@ -602,6 +701,25 @@ function makeSky() {
   ctx.fillStyle = '#070b16'; ctx.fillRect(0, 0, W, H);
   const img = ctx.createImageData(W, HH), px = img.data;
 
+  // Moon surface: soft maria (x right, y down, in disc radii) plus fine mottling.
+  const MN = fbm(64, 64, 4, 4, 3, 8506);
+  const MARIA = [[-0.42, -0.02, 0.36, 0.9], [-0.2, -0.42, 0.26, 1], [0.14, -0.42, 0.17, 0.9],
+    [0.3, -0.12, 0.2, 1], [0.62, -0.24, 0.1, 0.8], [-0.12, 0.4, 0.17, 0.75], [0.5, 0.14, 0.12, 0.65],
+    [-0.62, 0.3, 0.14, 0.6]];
+  const moonTone = (ux, uy, r) => {
+    let mare = 0;
+    for (const [cx, cy, cr, a] of MARIA) {
+      const q = ((ux - cx) * (ux - cx) + (uy - cy) * (uy - cy)) / (cr * cr);
+      if (q < 4) mare += a * Math.exp(-q * 1.3);
+    }
+    const n = MN[Math.min(63, ((uy * 0.5 + 0.5) * 64) | 0) * 64 + Math.min(63, ((ux * 0.5 + 0.5) * 64) | 0)];
+    mare = Math.min(1, mare) * (0.7 + 0.6 * n);
+    let v = 1 - 0.3 * mare + (n - 0.5) * 0.12;
+    const ty = Math.exp(-((ux + 0.1) * (ux + 0.1) + (uy - 0.72) * (uy - 0.72)) / 0.006);   // bright crater with rays
+    v += 0.12 * ty;
+    return v * (1 - 0.24 * sstep(0.55, 1, r));                                              // darker limb
+  };
+
   let dseed = 8505;
   for (let y = 0; y < HH; y++) {
     const t = y / (HH - 1), elev = (1 - t) * Math.PI / 2;
@@ -622,13 +740,13 @@ function makeSky() {
         const dx = (x - MX) / mk, dy = y - MY;
         if (dx > -420 && dx < 420) {
           const d = Math.sqrt(dx * dx + dy * dy), e = Math.max(0, d - MR);
-          glow = (0.34 * Math.exp(-e / 26) + 0.13 * Math.exp(-e / 105)) * sstep(255, 130, d);
-          disc = sstep(MR + 1, MR - 1, d);
-          R += 105 * glow; G += 120 * glow; B += 155 * glow;
+          glow = (0.34 * Math.exp(-e / 26) + 0.13 * Math.exp(-e / 105)) * sstep(255, 130, d);   // lights nearby cloud
+          const halo = (0.07 * Math.exp(-e / 8) + 0.1 * Math.exp(-e / 100)) * sstep(255, 130, d);
+          disc = sstep(MR + 0.8, MR - 0.8, d);
+          R += 105 * halo; G += 120 * halo; B += 155 * halo;
           if (disc > 0) {
-            const mv = 0.74 + 0.5 * M[(y * W + ((x * 3) % W))] - 0.16 * sstep(0.45, 0.6, C[i - 37 * W + 90]);
-            const sh = 0.86 + 0.14 * sstep(MR, MR * 0.3, d);   // limb darkening
-            R += (206 * mv * sh - R) * disc; G += (212 * mv * sh - G) * disc; B += (220 * mv * sh - B) * disc;
+            const mv = moonTone(dx / MR, dy / MR, Math.min(1, d / MR));
+            R += (214 * mv - R) * disc; G += (219 * mv - G) * disc; B += (228 * mv - B) * disc;
           }
         }
       }
@@ -636,7 +754,7 @@ function makeSky() {
       if (c > 0) {
         const rim = c * (1 - c) * 4, lit = glow * 1.3;
         const cr = sr * 0.68 + 2 * rim + 70 * lit, cg = sg * 0.7 + 2.5 * rim + 80 * lit, cb = sb * 0.72 + 4 * rim + 104 * lit;
-        const k = c * (disc > 0 ? 0.72 : 0.94);
+        const k = c * (0.94 - 0.66 * disc);   // a thin veil over the disc
         R += (cr - R) * k; G += (cg - G) * k; B += (cb - B) * k;
       }
       R += (HOR[0] - R) * haze; G += (HOR[1] - G) * haze; B += (HOR[2] - B) * haze;
@@ -688,6 +806,38 @@ function makeSky() {
   return cv;
 }
 
+// -------------------------------------------------------------- snow detail
+
+// Fine sparkle and grain, 256 x 256 greyscale, tiling, mean about 128.
+function makeSnowDetail() {
+  const S = 256, rnd = mulberry32(9601);
+  const A = fbm(S, S, 32, 32, 3, 9602, 0.6);
+  const cv = canvas(S, S), ctx = cv.getContext('2d');
+  const img = ctx.createImageData(S, S), px = img.data;
+  const g = new Float32Array(S * S);
+  let sum = 0;
+  for (let i = 0; i < S * S; i++) {
+    const r = rnd();
+    g[i] = (A[i] - 0.5) * 22 + (r - 0.5) * 12;
+    sum += g[i];
+  }
+  for (let k = 0; k < 420; k++) {         // glints: a bright pixel with a faint halo
+    const x = (rnd() * S) | 0, y = (rnd() * S) | 0, a = 14 + rnd() * 26;
+    g[y * S + x] += a;
+    for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      g[((y + oy + S) % S) * S + ((x + ox + S) % S)] += a * 0.22;
+    }
+    sum += a * 1.88;
+  }
+  const mean = sum / (S * S);
+  for (let i = 0; i < S * S; i++) {
+    const v = 128 + g[i] - mean, p = i * 4;
+    px[p] = px[p + 1] = px[p + 2] = v; px[p + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+
 // ------------------------------------------------------------------ export
 
 export function makeTextures() {
@@ -696,25 +846,39 @@ export function makeTextures() {
     base: [134, 133, 136], mortar: [50, 48, 48], mortarW: 4.2, warp: 11, edgeRough: 5,
     toneVar: 0.3, tintVar: 0.05, grain: 0.85, stain: 0.3, bevel: 9, edgeDark: 0.26,
     dir: true, speck: 0.05, lichen: 0.6, frost: 0.55, streak: 0, cracks: 6,
+    hTone: 0.5, hGrain: 0.45, dome: 0, domeR: 1,
   });
   const darkStone = masonry({
     size: 512, seed: 2201, layout: stoneLayout, yoff: 91,
     base: [93, 93, 97], mortar: [34, 33, 35], mortarW: 5, warp: 14, edgeRough: 7,
     toneVar: 0.34, tintVar: 0.04, grain: 0.9, stain: 0.5, bevel: 12, edgeDark: 0.32,
     dir: true, speck: 0.04, lichen: 0.3, frost: 0.3, streak: 0.38, cracks: 10,
+    hTone: 0.5, hGrain: 0.55, dome: 0, domeR: 1,
   });
   const floor = masonry({
     size: 512, seed: 3301, layout: floorLayout, yoff: 23,
     base: [128, 119, 107], mortar: [52, 46, 40], mortarW: 2.4, warp: 5, edgeRough: 2.5,
     toneVar: 0.22, tintVar: 0.05, grain: 0.3, stain: 0.26, bevel: 14, edgeDark: 0.2,
     dir: false, speck: 0.015, lichen: 0, frost: 0, streak: 0, wear: 0.4, cracks: 4,
+    hTone: 0.3, hGrain: 0.12, dome: 0.25, domeR: 70,
   });
   const wood = planks(256, 256, {
     seed: 4001, count: 5, base: [98, 79, 62], toneVar: 0.26, grain: 0.42,
     streak: 0.26, knots: 0.7, grey: 0.5, joints: true,
   });
-  return {
-    stone, darkStone, wood, door: makeDoor(), snow: makeSnow(), mud: makeMud(),
-    floor, bark: makeBark(), sky: makeSky(),
+  const door = makeDoor(), snow = makeSnow(), mud = makeMud(), bark = makeBark();
+  const out = {
+    stone: stone.cv, darkStone: darkStone.cv, wood: wood.cv, door: door.cv, snow: snow.cv, mud: mud.cv,
+    floor: floor.cv, bark: bark.cv, sky: makeSky(),
   };
+  out.stoneN = normalMap(stone.H, 512, 512, 3.2);
+  out.darkStoneN = normalMap(darkStone.H, 512, 512, 3.2);
+  out.floorN = normalMap(floor.H, 512, 512, 3.6);
+  out.woodN = normalMap(wood.H, 256, 256, 3.2);
+  out.doorN = normalMap(door.H, 256, 512, 2.4, false);
+  out.snowN = normalMap(snow.H, 512, 512, 3.0);
+  out.mudN = normalMap(mud.H, 256, 256, 3.0);
+  out.barkN = normalMap(bark.H, 256, 256, 3.0);
+  out.snowDetail = makeSnowDetail();
+  return out;
 }
