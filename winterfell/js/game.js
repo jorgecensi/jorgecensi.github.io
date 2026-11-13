@@ -27,7 +27,12 @@ const Z_CLASH = -250;      // where the horde meets the dead
 const Z_LINE = -14;        // front rank of the Unsullied
 const TRENCH_Z0 = 8, TRENCH_Z1 = 12, BRIDGE_HALF = 4;
 const WALL_Z = 40, GATE_HALF = 5;
-const YARD_X = 44.5, YARD_Z1 = 100;
+// The castle follows the fan map of Winterfell, at about a third of its size: the North Gate at x = 0, the godswood
+// inside the walls to the west, the yard and its buildings to the east, the Great Keep in the middle of the yard.
+const CASTLE = [[-68, 40], [59, 40], [96, 74], [96, 223], [-15.5, 223], [-68, 173]];     // wall corners, clockwise from the north-west
+const KEEP_DOOR = [63, 124];            // the Great Keep's door, on its north face
+const WOOD_WALL_X = -10, WOOD_WALL_Z = 130;     // the godswood's inner walls (east side and south side)
+const MM = { walls: [], blds: [], rounds: [], gates: [[0, 40], [21.7, 223], [96, 90], [-68, 138]] };      // what the minimap draws
 const HOLD_SECS = 75, SIEGE_SECS = 80, CLASH_SECS = 20, GIANT_AT = 38, GROVE_SECS = 50;
 // Act IV is built off to the east and Act V to the west, where the fog hides them from the field.
 // The halls are a union of walkable rectangles that overlap by a metre at each doorway.
@@ -40,7 +45,7 @@ const HALL = [
 const HALL_BLOCKS = [{ x0: 193, x1: 195, z0: -24, z1: -7 }, { x0: 205, x1: 207, z0: -24, z1: -7 }];   // the long tables
 const HALL_JOINTS = [[200, -30], [200, -52.5], [219.5, -52.5]];
 const HALL_EXIT_Z = -80;
-const GROVE = { x: -200, z: 0, r: 36, treeX: -200, treeZ: -12 };
+const GROVE = { x: -38, z: 88, r: 27, treeX: -38, treeZ: 78 };
 const inRect = (r, x, z, m) => x >= r.x0 + m && x <= r.x1 - m && z >= r.z0 + m && z <= r.z1 - m;
 function hallOK(x, z, r, tables) {
     let ok = false;
@@ -284,61 +289,126 @@ function buildWorld() {
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(0, 0, -150);
     // The yard is trampled mud, not snow.
-    const mudMat = new THREE.MeshLambertMaterial({ color: 0xb0aca6, map: tex(TX.mud, 14, 9) });
-    relief(mudMat, TX.mudN, 14, 9, 1);
-    const yard = addMesh(new THREE.PlaneGeometry(YARD_X * 2, YARD_Z1 - WALL_Z), mudMat);
+    const mudMat = new THREE.MeshLambertMaterial({ color: 0xb0aca6, map: tex(TX.mud, 17, 30) });
+    relief(mudMat, TX.mudN, 17, 30, 1);
+    const yard = addMesh(new THREE.PlaneGeometry(105, 183), mudMat);
     yard.castShadow = false;
     yard.rotation.x = -Math.PI / 2;
-    yard.position.set(0, 0.02, (WALL_Z + YARD_Z1) / 2 + 1);
+    yard.position.set(43.5, 0.02, 131.5);
 
-    // Curtain wall with a gate, side walls, back wall.
-    const H = 14;
-    addMesh(merge([
-        box(65, H, 3, -37.5, H / 2, WALL_Z + 0.5), box(65, H, 3, 37.5, H / 2, WALL_Z + 0.5),
-        box(GATE_HALF * 2, 6, 3, 0, H - 3, WALL_Z + 0.5),
-        box(3, H, 60, -46, H / 2, 71), box(3, H, 60, 46, H / 2, 71),
-        box(95, H, 3, 0, H / 2, YARD_Z1 + 1.5)
-    ]), stone);
-    obstacle(-90, -GATE_HALF, WALL_Z - 1, WALL_Z + 2);
-    obstacle(GATE_HALF, 90, WALL_Z - 1, WALL_Z + 2);
-    obstacle(-47.5, -YARD_X, WALL_Z, YARD_Z1 + 3);
-    obstacle(YARD_X, 47.5, WALL_Z, YARD_Z1 + 3);
-    obstacle(-48, 48, YARD_Z1, YARD_Z1 + 3);
-    // Towers
-    const towers = [];
-    for (const [x, z, r, h] of [[-9, 39, 4, 19], [9, 39, 4, 19], [-70, 40, 5, 20], [70, 40, 5, 20], [-46, 101, 5, 22], [46, 101, 5, 22]]) {
-        const g = new THREE.CylinderGeometry(r, r * 1.08, h, 10).toNonIndexed();
-        g.translate(x, h / 2, z);
-        towers.push(g);
-        const roof = new THREE.ConeGeometry(r * 1.15, 5, 10).toNonIndexed();
-        roof.translate(x, h + 2.5, z);
-        towers.push(roof);
-    }
-    addMesh(merge(towers), darkStone);
-    obstacle(-13, -GATE_HALF, 35.5, 42);
-    obstacle(GATE_HALF, 13, 35.5, 42);
-    // Keep
-    addMesh(merge([box(28, 26, 16, 0, 13, 90), box(10, 34, 10, -9, 17, 92)]), darkStone);
-    // The keep door: a pale stone porch, two oak leaves, and firelight behind them once they open.
-    addMesh(merge([box(1, 5.8, 1.2, -3.2, 2.9, 81.5), box(1, 5.8, 1.2, 3.2, 2.9, 81.5), box(7.6, 1.1, 1.5, 0, 6.3, 81.4), box(7, 0.24, 2.2, 0, 0.12, 80.6)], 2.5), stone);
-    pair('keep', 0, 81.86, 2.7, 5.2);
-    keepGlow = addMesh(new THREE.PlaneGeometry(5.4, 5.2), new THREE.MeshBasicMaterial({ color: 0xffb060, fog: false }));
-    keepGlow.rotation.y = Math.PI; keepGlow.position.set(0, 2.6, 81.97); keepGlow.visible = false;
-    obstacle(-14, 14, 82, 98);
-    // Crenellations
-    const cren = [];
-    for (let x = -68; x <= 68; x += 3.2) cren.push(box(1.7, 1.5, 1.1, x, H + 0.75, WALL_Z - 0.4));
-    for (let z = 44; z <= 98; z += 3.2) { cren.push(box(1.1, 1.5, 1.7, -46.9, H + 0.75, z)); cren.push(box(1.1, 1.5, 1.7, 46.9, H + 0.75, z)); }
-    addMesh(merge(cren), stone);
+    const H = 14, stoneG = [], darkG = [], roofG = [], glowG = [];
+    /** A stretch of wall between two points, with merlons, collision and a line on the minimap. */
+    const wall = (x0, z0, x1, z1, h = H, th = 3, crenellated = true) => {
+        const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz), ang = Math.atan2(dx, dz);
+        const g = new THREE.BoxGeometry(th, h, len); g.rotateY(ang); g.translate((x0 + x1) / 2, h / 2, (z0 + z1) / 2);
+        stoneG.push(g);
+        if (crenellated) for (let d = 1.6; d < len - 1; d += 3.2) {
+            const m = new THREE.BoxGeometry(th * 0.5, 1.5, 1.7); m.rotateY(ang);
+            m.translate(x0 + dx / len * d, h + 0.75, z0 + dz / len * d);
+            stoneG.push(m);
+        }
+        if (Math.abs(dx) < 0.01 || Math.abs(dz) < 0.01) obstacle(Math.min(x0, x1) - th / 2, Math.max(x0, x1) + th / 2, Math.min(z0, z1) - th / 2, Math.max(z0, z1) + th / 2);
+        else for (let d = 0; d <= len; d += 1.5) { const x = x0 + dx / len * d, z = z0 + dz / len * d; obstacle(x - 1.6, x + 1.6, z - 1.6, z + 1.6); }
+        MM.walls.push([x0, z0, x1, z1]);
+    };
+    const tower = (x, z, r, h, solid = true) => {
+        const g = new THREE.CylinderGeometry(r, r * 1.08, h, 10); g.translate(x, h / 2, z); darkG.push(g);
+        const roof = new THREE.ConeGeometry(r * 1.15, r * 1.3, 10); roof.translate(x, h + r * 0.65, z); roofG.push(roof);
+        if (solid) obstacle(x - r * 0.8, x + r * 0.8, z - r * 0.8, z + r * 0.8);
+        MM.rounds.push([x, z, r]);
+    };
+    /** A rectangular building with a hipped roof and a few lit windows on its long sides. */
+    const building = (x0, x1, z0, z1, h, lit = 2) => {
+        const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+        darkG.push(box(w, h, d, cx, h / 2, cz));
+        const roof = new THREE.CylinderGeometry(0, 0.7071, 1, 4, 1); roof.rotateY(Math.PI / 4); roof.scale(w * 1.1, Math.min(w, d) * 0.45, d * 1.1);
+        roof.translate(cx, h + Math.min(w, d) * 0.225, cz); roofG.push(roof);
+        for (let i = 0; i < lit; i++) {
+            const t = (i + 0.5) / lit;
+            if (w >= d) { glowG.push(box(0.7, 1.3, 0.1, x0 + w * t, h * 0.62, z0 - 0.06), box(0.7, 1.3, 0.1, x0 + w * t, h * 0.62, z1 + 0.06)); }
+            else { glowG.push(box(0.1, 1.3, 0.7, x0 - 0.06, h * 0.62, z0 + d * t), box(0.1, 1.3, 0.7, x1 + 0.06, h * 0.62, z0 + d * t)); }
+        }
+        obstacle(x0, x1, z0, z1);
+        MM.blds.push([x0, x1, z0, z1]);
+    };
+    /** A plain door on a building face, for show. `ry` turns it to face along X. */
+    const door = (x, z, ry = 0, w = 2.2, h = 3.4) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.16), doorMat);
+        m.position.set(x, h / 2, z); m.rotation.y = ry; m.castShadow = m.receiveShadow = HQ;
+        scene.add(m);
+    };
+
+    // Curtain wall: north wall either side of the gate, then round the corners of the map.
+    wall(CASTLE[0][0], WALL_Z + 0.5, -GATE_HALF, WALL_Z + 0.5);
+    wall(GATE_HALF, WALL_Z + 0.5, CASTLE[1][0], WALL_Z + 0.5);
+    stoneG.push(box(GATE_HALF * 2, 6, 3, 0, H - 3, WALL_Z + 0.5));
+    for (let i = 1; i < CASTLE.length; i++) { const a = CASTLE[i], b = CASTLE[(i + 1) % CASTLE.length]; wall(a[0], a[1], b[0], b[1]); }
+    // Nobody walks round the outside of the castle.
+    obstacle(-95, CASTLE[0][0], WALL_Z - 1, WALL_Z + 2);
+    obstacle(CASTLE[1][0], 95, WALL_Z - 1, WALL_Z + 2);
+    // Gate towers, a tower on every corner, and a few along the long walls.
+    tower(-9, 39, 4, 19, false); tower(9, 39, 4, 19, false);
+    obstacle(-13, -GATE_HALF, 35.5, 42); obstacle(GATE_HALF, 13, 35.5, 42);
+    for (const [x, z] of CASTLE) tower(x, z, 5, 20);
+    for (const [x, z] of [[-34, 40], [30, 40], [96, 122], [96, 172], [40, 223], [-68, 106]]) tower(x, z, 3.6, 18);
+    // The other three gates stay shut: South Gate, East Gate, Hunter's Gate.
+    tower(12.5, 223, 4, 19); tower(31, 223, 4, 19);
+    door(21.7, 221.3, 0, 9, 7.5); door(94.3, 90, Math.PI / 2, 8, 7); door(-66.3, 138, Math.PI / 2, 7, 6.5);
+    tower(96, 83, 3.4, 18); tower(96, 97, 3.4, 18); tower(-68, 131.5, 3.2, 17); tower(-68, 144.5, 3.2, 17);
+
+    // The godswood's own walls, lower than the curtain wall, with one door to the yard.
+    wall(WOOD_WALL_X, 42, WOOD_WALL_X, WOOD_WALL_Z, 8, 1.6);
+    wall(CASTLE[0][0] + 1.5, WOOD_WALL_Z, WOOD_WALL_X, WOOD_WALL_Z, 8, 1.6);
+    door(WOOD_WALL_X + 0.9, 104, Math.PI / 2);
+
+    // Buildings of the yard, placed as on the map.
+    building(15, 25, 48, 56, 4.5, 0);            // Crypts (4): low, by the north wall
+    door(20, 56.1);
+    tower(60, 60, 9, 22);                        // First Keep (5): the old round drum
+    tower(50, 45, 4, 9);                         // Broken Tower (2)
+    building(36, 52, 76, 84, 7);                 // Guards Hall (7)
+    building(17, 27, 95, 105, 8);                // Armory (9)
+    door(22, 94.9);
+    building(5, 19, 117, 127, 7, 3);             // Guest House (12)
+    building(50, 76, 124, 146, 24, 3);           // Great Keep (14)
+    tower(76, 146, 7, 32);
+    building(80, 91, 150, 205, 9, 5);            // the long range by the east wall
+    building(46, 78, 168, 188, 13, 4);           // Great Hall (22)
+    door(62, 167.9, 0, 3, 4.4);
+    tower(40, 157, 3, 8);                        // Sept (20)
+    building(2, 10, 192, 200, 5, 1);             // Smithy (23)
+    building(-36, -14, 180, 187, 5, 0);          // Stables (21)
+    building(-36, -22, 134, 140, 4, 0);          // Kennels (11)
+    tower(-44, 156, 6, 9);                       // Kitchens (16)
+    building(-59.5, -54.5, 159.5, 164.5, 24, 0); // Bell Tower (18)
+    tower(-12, 150, 4, 19);                      // Library Tower (19)
+    tower(-58, 148, 3, 16);                      // Maester's Turret (15)
+    // The covered bridge from the armory to the Great Keep (13), overhead.
+    { const g = new THREE.BoxGeometry(2.6, 3, 34); g.rotateY(Math.atan2(50 - 27, 128 - 104)); g.translate(38.5, 9.5, 116); darkG.push(g); }
+    // Glass Gardens (3): a pale glasshouse in the corner of the godswood.
+    { const m = addMesh(box(18, 5, 9, -55, 2.5, 49.5), new THREE.MeshPhongMaterial({ color: 0x9fb8a0, emissive: 0x1c2a14, transparent: true, opacity: 0.55, shininess: 90 }));
+      m.castShadow = false; obstacle(-64, -46, 45, 54); MM.blds.push([-64, -46, 45, 54]); }
+
+    addMesh(merge(stoneG), stone);
+    addMesh(merge(darkG), darkStone);
+    addMesh(merge(roofG), new THREE.MeshLambertMaterial({ color: 0x23262d }));
+    addMesh(merge(glowG), new THREE.MeshBasicMaterial({ color: 0xffb060 }));
+
+    // The Great Keep's door: a pale stone porch, two oak leaves, and firelight behind them once they open.
+    { const [kx, kz] = KEEP_DOOR;
+      addMesh(merge([box(1, 5.8, 1.2, kx - 3.2, 2.9, kz - 0.5), box(1, 5.8, 1.2, kx + 3.2, 2.9, kz - 0.5), box(7.6, 1.1, 1.5, kx, 6.3, kz - 0.6), box(7, 0.24, 2.2, kx, 0.12, kz - 1.4)], 2.5), stone);
+      pair('keep', kx, kz - 0.14, 2.7, 5.2);
+      keepGlow = addMesh(new THREE.PlaneGeometry(5.4, 5.2), new THREE.MeshBasicMaterial({ color: 0xffb060, fog: false }));
+      keepGlow.rotation.y = Math.PI; keepGlow.position.set(kx, 2.6, kz - 0.03); keepGlow.visible = false; }
     // Gate
     pair('gate', 0, WALL_Z + 0.5, GATE_HALF, 8);
     gateObstacle = obstacle(-GATE_HALF, GATE_HALF, WALL_Z - 0.3, WALL_Z + 1.2, false);
     // Yard clutter
     addMesh(merge([
-        box(2.4, 1.2, 1.4, -30, 0.6, 62), box(1.4, 1.4, 1.4, -32.4, 0.7, 63), box(3, 1, 1.6, 31, 0.5, 70, 0, 0.1),
-        box(1.3, 1.3, 1.3, 33, 0.65, 67.6), box(2.2, 1.6, 2.2, -20, 0.8, 94), box(4, 0.3, 2, 22, 1.0, 92), box(0.3, 1, 0.3, 20.4, 0.5, 91.4), box(0.3, 1, 0.3, 23.6, 0.5, 92.6)
+        box(2.4, 1.2, 1.4, 30, 0.6, 62), box(1.4, 1.4, 1.4, 32.4, 0.7, 63), box(3, 1, 1.6, 44, 0.5, 108, 0, 0.1),
+        box(1.3, 1.3, 1.3, 46, 0.65, 105.6), box(2.2, 1.6, 2.2, 0, 0.8, 110), box(4, 0.3, 2, 14, 1.0, 190), box(0.3, 1, 0.3, 12.4, 0.5, 189.4), box(0.3, 1, 0.3, 15.6, 0.5, 190.6)
     ]), wood);
-    obstacle(-33.3, -28.6, 61.2, 63.8); obstacle(29.4, 33.8, 66.8, 70.9); obstacle(-21.2, -18.8, 92.8, 95.2);
+    obstacle(28.7, 33.4, 61.2, 63.8); obstacle(42.4, 46.8, 104.8, 108.9); obstacle(-1.2, 1.2, 108.8, 111.2);
 
     // Trench: a dark cut with stakes, one plank bridge in the middle.
     const pit = new THREE.MeshBasicMaterial({ color: 0x06070a });
@@ -365,9 +435,9 @@ function buildWorld() {
     };
     for (const x of [-30, -10, 10, 30]) place(x, -5, false);
     place(-7.5, 33.5, false); place(7.5, 33.5, false);
-    for (const [x, z] of [[-24, 54], [24, 54], [-26, 80], [26, 80], [0, 66], [-4.8, 80], [4.8, 80]]) place(x, z, true);
+    for (const [x, z] of [[10, 58], [40, 62], [-2, 92], [30, 112], [KEEP_DOOR[0] - 4.8, 122], [KEEP_DOOR[0] + 4.8, 122], [20, 150], [45, 152], [30, 190], [70, 160]]) place(x, z, true);
     for (const [x, z] of [[190, -4], [210, -4], [190, -27], [210, -27], [198.3, -42], [211, -54.3], [221.3, -66]]) place(x, z, true);
-    for (const [x, z] of [[-207, -7], [-193, -7], [-200, 12]]) place(x, z, true);
+    for (const [x, z] of [[GROVE.treeX - 7, GROVE.treeZ + 5], [GROVE.treeX + 7, GROVE.treeZ + 5], [GROVE.x, GROVE.z + 14]]) place(x, z, true);
 
     // Act IV: the halls. Walls go on every rectangle edge that does not open into another rectangle.
     const anyHall = (x, z) => HALL.some((h) => inRect(h, x, z, 0));
@@ -403,17 +473,21 @@ function buildWorld() {
     const cold = addMesh(new THREE.PlaneGeometry(4.6, 4.6), new THREE.MeshBasicMaterial({ color: 0x8fb8e8, fog: false }));
     cold.position.set(219.5, 2.3, -81.97);
 
-    // Act V: the godswood. A ring of pines around a clearing, and the weirwood.
+    // Act V: the godswood, inside the walls. Pines fill its corners and edges round a clearing, and the weirwood.
     const pines = [];
-    for (let i = 0; i < 120; i++) {
-        const a = rand(TAU), r = rand(39.5, 64);
-        pines.push(at(MD.props.pines[i % MD.props.pines.length], GROVE.x + Math.sin(a) * r, 0, GROVE.z + Math.cos(a) * r, rand(TAU), rand(0.8, 1.25)));
+    for (let i = 0; i < 260 && pines.length < 70; i++) {
+        const x = rand(CASTLE[0][0] + 3, WOOD_WALL_X - 2), z = rand(WALL_Z + 4, WOOD_WALL_Z - 2);
+        if (Math.hypot(x - GROVE.x, z - GROVE.z) < GROVE.r + 2) continue;
+        if (x > -66 && x < -44 && z < 56) continue;                 // the glasshouse
+        if (x > -41 && x < -28 && z < 64) continue;                 // the way Arya comes in
+        pines.push(at(MD.props.pines[pines.length % MD.props.pines.length], x, 0, z, rand(TAU), rand(0.7, 1.1)));
+        MM.rounds.push([x, z, 1.2, 1]);
     }
     addMesh(merge(pines), propMat);
     addMesh(at(MD.props.weirwood, GROVE.treeX, 0, GROVE.treeZ), propMat);
     addMesh(at(MD.props.weirwoodLeaves, GROVE.treeX, 0, GROVE.treeZ), propMat);
     // Dressing: banners by the gate and the keep door, barricades out on the flanks, dead trees on the field.
-    for (const [x, z, ry] of [[-14.5, 35, 0], [14.5, 35, 0], [-6.6, 79.4, Math.PI], [6.6, 79.4, Math.PI]]) bz.push(at(MD.props.banner, x, 0, z, ry));
+    for (const [x, z, ry] of [[-14.5, 35, 0], [14.5, 35, 0], [KEEP_DOOR[0] - 7.5, 123, Math.PI], [KEEP_DOOR[0] + 7.5, 123, Math.PI], [54, 167, Math.PI], [70, 167, Math.PI]]) bz.push(at(MD.props.banner, x, 0, z, ry));
     for (const side of [-1, 1]) for (let x = 44; x <= 84; x += 4) {
         bz.push(at(MD.props.barricade, side * x, 0, -17, rand(-0.12, 0.12)));
         obstacle(side * x - 1.6, side * x + 1.6, -17.6, -16.4);
@@ -971,7 +1045,7 @@ function beginSiege() {
     space();
     for (let i = wights.length - 1; i >= 0; i--) if (wights[i].z < WALL_Z + 1) wights.splice(i, 1);
     allies.length = 0;
-    const posts = [[-30, 50], [-15, 48], [15, 48], [30, 50], [-36, 66], [36, 66], [-20, 72], [20, 72], [-8, 60], [8, 60], [-34, 86], [34, 86]];
+    const posts = [[-2, 50], [12, 64], [32, 50], [44, 66], [4, 74], [24, 76], [-3, 100], [10, 108], [34, 112], [48, 100], [60, 98], [30, 90]];
     for (const [x, z] of posts) mkAlly('north', x, z, 0);
     G.uTotal = allies.length;
     setDoors('gate', 0); gateObstacle.on = true;
@@ -1089,7 +1163,7 @@ function simPlayer(dt) {
         if (G.act === 4) { const nx = P.x, nz = P.z; P.x = px0; P.z = pz0; hallMove(P, nx, nz, 0.45, true); }
         else resolve(P, 0.45);
     }
-    if (G.act <= 3) { P.x = clamp(P.x, -84, 84); P.z = Math.max(P.z, -335); }
+    if (G.act <= 3) { P.x = clamp(P.x, G.act === 3 ? -9 : -84, G.act === 3 ? 95 : 84); P.z = Math.max(P.z, -335); }
     else if (G.act === 5) {
         const dx = P.x - GROVE.x, dz = P.z - GROVE.z, d = Math.hypot(dx, dz);
         if (d > GROVE.r) { P.x = GROVE.x + dx / d * GROVE.r; P.z = GROVE.z + dz / d * GROVE.r; }
@@ -1483,8 +1557,9 @@ function simAct3(dt) {
                 else {
                     const side = rand(3) | 0;      // drop from the front wall or either side wall
                     o.y = 13.5;
-                    if (side === 0) { const x = rand(8, 42) * (rand() < 0.5 ? -1 : 1); spawnWight(x, WALL_Z + 3, o); }
-                    else spawnWight((YARD_X - 1) * (side === 1 ? -1 : 1), rand(46, 96), o);
+                    if (side === 0) spawnWight(rand(8, 46), WALL_Z + 3, o);                      // over the north wall
+                    else if (side === 1) spawnWight(WOOD_WALL_X + 2.4, rand(48, 124), o);        // over the godswood wall
+                    else spawnWight(92.5, rand(82, 146), o);                                     // over the east wall
                 }
             }
         }
@@ -1505,7 +1580,7 @@ function simAct3(dt) {
                 objective('Fall back into the keep');
                 setDoors('keep', -1.25); keepGlow.visible = true; Sfx.play('door');
             }
-            if (Math.abs(P.x) < 2.7 && P.z > 80.7) beginHalls();
+            if (Math.abs(P.x - KEEP_DOOR[0]) < 2.7 && P.z > KEEP_DOOR[1] - 1.2) beginHalls();
         }
     }
 }
@@ -1534,7 +1609,7 @@ function simAct5(dt) {
         el.barI.style.width = Math.min(100, k * 100) + '%';
         if (G.spawnT <= 0) {
             G.spawnT = lerp(0.8, 0.32, k);
-            if (alive() < lerp(16, 46, k)) { const [x, z] = ring(39, 0, TAU); spawnWight(x, z, { hp: rand() < 0.3 ? 2 : 1 }); }
+            if (alive() < lerp(16, 46, k)) { const [x, z] = ring(GROVE.r + 2, 0, TAU); spawnWight(x, z, { hp: rand() < 0.3 ? 2 : 1 }); }
         }
         if (t >= GROVE_SECS) {
             G.phase = 'walkers'; G.t = 0;
@@ -1543,7 +1618,7 @@ function simAct5(dt) {
             say('The dead stop. They part. Something else walks out of the trees.', 6);
             for (const w of wights) if (w.state === 'alive' && rand() < 0.7) w.dieAt = rand(0.2, 2);
             for (let i = 0; i < 4; i++) {       // they come from the north, opposite the way you came in
-                const [x, z] = ring(37, Math.PI - 0.9 + i * 0.6, Math.PI - 0.9 + i * 0.6);
+                const [x, z] = ring(GROVE.r + 1, Math.PI - 0.9 + i * 0.6, Math.PI - 0.9 + i * 0.6);
                 spawnWight(x, z, { walker: true, heavy: true, hp: 14, scale: 1.22, speed: 3.2, col: ICE, dmg: 24, reach: 2.6, windT: 0.75, cdB: 1.5 });
             }
         }
@@ -1554,7 +1629,7 @@ function simAct5(dt) {
         let left = 0;
         for (const w of wights) if (w.walker && w.state === 'alive') left++;
         el.barI.style.width = (4 - left) / 4 * 100 + '%';
-        if (G.spawnT <= 0) { G.spawnT = 2.2; if (alive() < 8) { const [x, z] = ring(39, 0, TAU); spawnWight(x, z); } }
+        if (G.spawnT <= 0) { G.spawnT = 2.2; if (alive() < 8) { const [x, z] = ring(GROVE.r + 2, 0, TAU); spawnWight(x, z); } }
         if ((left === 0 || t > 32) && once('kingcomes')) {
             Sfx.play('screech'); Sfx.play('horn', { rate: 0.5 });
             say('Then the Night King steps out of the dark, and he does not slow down.', 5);
@@ -1629,7 +1704,7 @@ function simAct5(dt) {
     }
 }
 const KING_SPOT = [GROVE.treeX, GROVE.treeZ - 3.6];      // where he stops, facing the tree
-const ARYA_START = [GROVE.treeX + 7, GROVE.treeZ - 35];  // she comes out of the trees behind him
+const ARYA_START = [GROVE.treeX + 5, GROVE.treeZ - 31];  // she comes out of the trees behind him
 const angTo = (x, z) => Math.atan2(-(x - P.x), -(z - P.z));
 function spawnKing(x, z) {
     return spawnWight(clampGrove(x, 0), clampGrove(z, 1), { king: true, heavy: true, hp: 999, scale: 1.45, speed: 2.6, col: KING, dmg: 0, reach: 0.01, windT: 9, cdB: 99 });
@@ -1648,7 +1723,7 @@ function beginFallen() {
     if (!king) king = spawnKing(P.x, P.z - 14);
     // He starts beyond the player, so his road to the tree passes an arm's length from where they lie.
     const dx = P.x - KING_SPOT[0], dz = P.z - KING_SPOT[1], d = Math.hypot(dx, dz) || 1;
-    king.x = P.x + dx / d * 9 - dz / d * 1.7; king.z = P.z + dz / d * 9 + dx / d * 1.7;
+    king.x = clampGrove(P.x + dx / d * 9 - dz / d * 1.7, 0); king.z = clampGrove(P.z + dz / d * 9 + dx / d * 1.7, 1);
     king.speed = clamp((d + 9) / 10.5, 1.5, 4.2);      // about ten seconds, however far the tree is
     P.yaw = angTo(king.x, king.z);
     for (const w of wights) if (!w.king && w.state === 'alive') w.yaw = Math.atan2(GROVE.treeX - w.x, GROVE.treeZ - w.z);
@@ -1686,7 +1761,7 @@ function stabFail() {
     Sfx.play('hurt', { vol: 0.5 });
     say('His grip tightens. Again.', 2);
 }
-function clampGrove(v, axis) { const c = axis ? GROVE.z : GROVE.x; return clamp(v, c - 26, c + 26); }
+function clampGrove(v, axis) { const c = axis ? GROVE.z : GROVE.x; return clamp(v, c - 23, c + 23); }
 function beginHalls() {
     G.act = 4; G.phase = 'halls'; G.t = 0; G.spawnT = 3; G.flags = {};
     if (progress.act < 4) { progress.act = 4; save(); }
@@ -1711,7 +1786,7 @@ function beginGrove() {
     el.act.textContent = ACT_NAMES[5];
     space();
     wights.length = 0; allies.length = 0;
-    Object.assign(P, { x: GROVE.x, z: GROVE.z + 33, yaw: 0, pitch: 0, mounted: false });
+    Object.assign(P, { x: GROVE.x, z: GROVE.z + GROVE.r - 3, yaw: 0, pitch: 0, mounted: false });
     for (let i = 0; i < 8; i++) {
         const a = i / 8 * TAU;
         mkAlly('archer', GROVE.treeX + Math.sin(a) * 6, GROVE.treeZ + Math.cos(a) * 6, a);
@@ -1761,10 +1836,8 @@ function pilot() {
     else if (G.act === 2 && G.phase === 'hold') { tx = 0; tz = Z_LINE - 0.5; move = Math.hypot(P.x - tx, P.z - tz) > 1.5 ? 1 : 0; }
     else if (G.act === 2) { tx = 0; tz = P.z < TRENCH_Z1 + 1 && Math.abs(P.x) > 2 ? TRENCH_Z0 - 2 : WALL_Z + 8; }
     else if (G.act === 3) {
-        if (G.flags.keep) {
-            tx = 0; tz = 81.5;
-            if (Math.abs(P.x) < 1.3 && P.z < 66.8) { tx = 2.6; tz = 67.5; }      // step round the brazier in the middle of the yard
-        } else { tx = 2; tz = 64; move = Math.hypot(P.x - tx, P.z - tz) > 3 ? 1 : 0; }
+        if (G.flags.keep) { tx = KEEP_DOOR[0]; tz = KEEP_DOOR[1] - 0.5; }
+        else { tx = 10; tz = 78; move = Math.hypot(P.x - tx, P.z - tz) > 3 ? 1 : 0; }
     } else if (G.act === 4) {
         const hi = hallSeg(P.x, P.z)[1];
         if (hi < 3) { tx = HALL_JOINTS[Math.max(0, hi)][0]; tz = HALL_JOINTS[Math.max(0, hi)][1]; } else { tx = 219.5; tz = -82; }
@@ -1912,7 +1985,7 @@ function render(dt, t) {
 function wayTarget() {
     if (G.act === 1) return G.phase === 'retreat' || G.phase === 'afoot' ? [0, 2, Z_LINE] : null;
     if (G.act === 2) return G.phase !== 'fallback' ? null : P.z < TRENCH_Z1 ? [0, 1.2, 10] : [0, 3, WALL_Z];
-    if (G.act === 3) return G.flags.keep ? [0, 3, 81.8] : null;
+    if (G.act === 3) return G.flags.keep ? [KEEP_DOOR[0], 3, KEEP_DOOR[1]] : null;
     if (G.act === 4) { const hi = hallSeg(P.x, P.z)[1]; return hi >= 0 && hi < 3 ? [HALL_JOINTS[hi][0], 1.6, HALL_JOINTS[hi][1]] : [219.5, 2.6, -81.8]; }
     if (G.phase === 'fallen' || G.phase === 'arya') { const k = wights.find((w) => w.king && w.state === 'alive'); return k ? [k.x, 3.3, k.z] : null; }
     return null;
@@ -1931,6 +2004,54 @@ function updateWay() {
     el.way.style.display = d < 2.5 ? 'none' : 'block';
     el.way.style.transform = `translate(${((x * 0.5 + 0.5) * window.innerWidth).toFixed(1)}px,${((-y * 0.5 + 0.5) * window.innerHeight).toFixed(1)}px)`;
     el.wayD.textContent = Math.round(d) + ' m';
+}
+// ── Minimap: north up, centred on the player ──
+const mini = $('mini'), mctx = mini.getContext('2d');
+const MINI_PX = 124, MINI_RANGE = 62;       // CSS pixels across, and metres from the centre to the rim
+{ const dpr = Math.min(window.devicePixelRatio || 1, 2); mini.width = mini.height = MINI_PX * dpr; mctx.scale(dpr, dpr); }
+function drawMini() {
+    const c = MINI_PX / 2, k = c / MINI_RANGE, g = mctx;
+    g.save();
+    g.clearRect(0, 0, MINI_PX, MINI_PX);
+    g.beginPath(); g.arc(c, c, c - 1, 0, TAU); g.clip();
+    g.fillStyle = 'rgba(10,14,24,.78)'; g.fillRect(0, 0, MINI_PX, MINI_PX);
+    g.translate(c, c); g.scale(k, k); g.translate(-P.x, -P.z);          // world metres from here on; +Z (south) is down
+    // Ground: the yard, the godswood, the hall floors, the trench.
+    g.fillStyle = 'rgba(120,104,88,.35)'; g.fillRect(-9, 41, 105, 182);
+    g.fillStyle = 'rgba(70,110,80,.4)'; g.fillRect(CASTLE[0][0], 41, WOOD_WALL_X - CASTLE[0][0], WOOD_WALL_Z - 41);
+    g.fillStyle = 'rgba(150,140,130,.55)'; for (const h of HALL) g.fillRect(h.x0, h.z0, h.x1 - h.x0, h.z1 - h.z0);
+    g.fillStyle = G.trenchLit ? '#ff9a3c' : '#1d2230'; g.fillRect(-95, TRENCH_Z0, 190, TRENCH_Z1 - TRENCH_Z0);
+    g.fillStyle = '#6b5a45'; g.fillRect(-BRIDGE_HALF, TRENCH_Z0, BRIDGE_HALF * 2, TRENCH_Z1 - TRENCH_Z0);
+    // Buildings, towers and trees.
+    g.fillStyle = '#4c7f86'; for (const b of MM.blds) g.fillRect(b[0], b[2], b[1] - b[0], b[3] - b[2]);
+    for (const r of MM.rounds) { g.fillStyle = r[3] ? 'rgba(40,96,56,.9)' : '#3f8f96'; g.beginPath(); g.arc(r[0], r[1], r[2], 0, TAU); g.fill(); }
+    g.fillStyle = '#b3262e'; g.beginPath(); g.arc(GROVE.treeX, GROVE.treeZ, 2.4, 0, TAU); g.fill();
+    // Walls, then the gates over them.
+    g.strokeStyle = '#aab4c6'; g.lineWidth = 2.4; g.beginPath();
+    for (const w of MM.walls) { g.moveTo(w[0], w[1]); g.lineTo(w[2], w[3]); }
+    g.stroke();
+    g.fillStyle = '#d8a35a'; for (const gt of MM.gates) g.fillRect(gt[0] - 3.5, gt[1] - 2, 7, 4);
+    g.fillRect(KEEP_DOOR[0] - 2.5, KEEP_DOOR[1] - 1.5, 5, 3);
+    // The living and the dead.
+    g.fillStyle = '#7fe08a'; for (const a of allies) if (a.state === 'alive') g.fillRect(a.x - 1, a.z - 1, 2, 2);
+    for (const w of wights) {
+        if (w.state !== 'alive') continue;
+        const r = w.heavy ? 2.2 : 1.1;
+        g.fillStyle = w.heavy ? '#ffffff' : '#7fd4ff'; g.fillRect(w.x - r, w.z - r, r * 2, r * 2);
+    }
+    g.restore();
+    // Screen-space marks: the objective (pinned to the rim when it is off the map), the player, and north.
+    g.save(); g.translate(c, c);
+    const t = wayTarget();
+    if (t) {
+        let dx = (t[0] - P.x) * k, dz = (t[2] - P.z) * k; const d = Math.hypot(dx, dz), lim = c - 7;
+        if (d > lim) { dx *= lim / d; dz *= lim / d; }
+        g.fillStyle = '#ff9a3c'; g.save(); g.translate(dx, dz); g.rotate(Math.PI / 4); g.fillRect(-3.5, -3.5, 7, 7); g.restore();
+    }
+    g.rotate(-P.yaw);       // yaw 0 faces north (up); turning left is positive yaw
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(0, -7); g.lineTo(4.5, 5); g.lineTo(0, 2.5); g.lineTo(-4.5, 5); g.closePath(); g.fill();
+    g.restore();
+    g.fillStyle = 'rgba(232,237,245,.8)'; g.font = '10px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('N', c, 12);
 }
 let hudT = 0, heartLvl = 0;
 function updateQte() {
@@ -1951,6 +2072,7 @@ function updateHud(dt) {
     hudT -= dt;
     if (hudT > 0) return;
     hudT = 0.12;
+    drawMini();
     // A heartbeat creeps in as health runs out.
     const heart = P.hp < 40 && G.mode === 'play' ? Math.round((40 - P.hp) / 8) / 5 : 0;
     if (heart !== heartLvl) { heartLvl = heart; Sfx.setAmbience({ heart }); }

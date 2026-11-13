@@ -62,6 +62,9 @@ body.playing #hud { display: block; }
 #way { position: absolute; left: 0; top: 0; display: none; will-change: transform; }
 #way i { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; transform: rotate(45deg);
     border: 2px solid var(--fire); background: rgba(255,154,60,.25); box-shadow: 0 0 10px rgba(255,154,60,.6); }
+#mini { position: absolute; right: calc(12px + var(--safe-right)); top: calc(66px + var(--safe-top)); width: 124px; height: 124px;
+    border-radius: 50%; border: 1px solid rgba(255,255,255,.3); box-shadow: 0 2px 10px rgba(0,0,0,.5); }
+@media (max-height: 460px) { #mini { width: 96px; height: 96px; top: calc(60px + var(--safe-top)); } }
 /* Timing prompt: the outer ring closes on the inner one; press while it is lit. */
 #qte { position: absolute; left: 50%; top: 46%; width: 0; height: 0; display: none; }
 #qte b, #qte i { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%; }
@@ -104,7 +107,8 @@ body.playing.touch #touch { display: block; }
 #atk:active { background: rgba(255,154,60,.4); }
 body.touch #cross { display: none; }
 /* On touch the bottom of the screen belongs to the thumbs, so narration sits under the objective. */
-body.touch #sub { bottom: auto; top: calc(78px + var(--safe-top)); font-size: 16px; }
+body.touch #sub { bottom: auto; top: calc(78px + var(--safe-top)); font-size: 16px; left: calc(12px + var(--safe-left)); transform: none;
+    width: calc(100vw - 164px - var(--safe-left) - var(--safe-right)); text-align: left; }
 body.touch #card { justify-content: flex-start; padding-top: 34vh; }
 @media (pointer: coarse) { .keys { display: none; } }
 
@@ -162,6 +166,7 @@ button { font-family: inherit; cursor: pointer; }
         <button id="pause" aria-label="Pause">❚❚</button>
     </div>
     <div id="way"><i></i><span></span></div>
+    <canvas id="mini" aria-label="Minimap"></canvas>
     <div id="qte"><i></i><b></b><span></span></div>
     <div id="cross"></div>
     <div id="card"><small></small><span></span></div>
