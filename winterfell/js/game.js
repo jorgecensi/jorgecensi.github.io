@@ -1761,7 +1761,10 @@ function pilot() {
     else if (G.act === 2 && G.phase === 'hold') { tx = 0; tz = Z_LINE - 0.5; move = Math.hypot(P.x - tx, P.z - tz) > 1.5 ? 1 : 0; }
     else if (G.act === 2) { tx = 0; tz = P.z < TRENCH_Z1 + 1 && Math.abs(P.x) > 2 ? TRENCH_Z0 - 2 : WALL_Z + 8; }
     else if (G.act === 3) {
-        if (G.flags.keep) { tx = 0; tz = 81.5; } else { tx = 2; tz = 64; move = Math.hypot(P.x - tx, P.z - tz) > 3 ? 1 : 0; }
+        if (G.flags.keep) {
+            tx = 0; tz = 81.5;
+            if (Math.abs(P.x) < 1.3 && P.z < 66.8) { tx = 2.6; tz = 67.5; }      // step round the brazier in the middle of the yard
+        } else { tx = 2; tz = 64; move = Math.hypot(P.x - tx, P.z - tz) > 3 ? 1 : 0; }
     } else if (G.act === 4) {
         const hi = hallSeg(P.x, P.z)[1];
         if (hi < 3) { tx = HALL_JOINTS[Math.max(0, hi)][0]; tz = HALL_JOINTS[Math.max(0, hi)][1]; } else { tx = 219.5; tz = -82; }
