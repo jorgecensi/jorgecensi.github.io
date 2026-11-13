@@ -1,7 +1,7 @@
 // Playthrough: the built-in test pilot, invulnerable, plays all five acts, from the charge to the Night King and dawn.
 const { run, assert, HZ } = require('./_helpers');
 
-const ORDER = ['1:muster', '1:charge', '1:clash', '1:retreat', '1:afoot', '2:hold', '2:fallback', '3:siege', '4:halls', '5:grove', '5:walkers', '5:king', '5:dawn'];
+const ORDER = ['1:muster', '1:charge', '1:clash', '1:retreat', '1:afoot', '2:hold', '2:fallback', '3:siege', '4:halls', '5:grove', '5:walkers', '5:fallen', '5:arya', '5:leap', '5:dawn'];
 const PHASE_BUDGET = 240;   // game seconds any one phase may take (the longest, the siege, is about 85 s)
 const TOTAL_BUDGET = 900;   // game seconds for the whole run (about 6 minutes in practice)
 const CHUNK = 10 * HZ;      // steps per round trip to the page

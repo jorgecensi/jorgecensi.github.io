@@ -16,7 +16,7 @@ runs each spec with a 420 s timeout (`SPEC_TIMEOUT=`). Logs and screenshots land
 | Spec | What it covers | Time |
 |---|---|---|
 | `smoke.spec.js` | Loads with no page errors, failed requests or console errors; the menu shows; the real Begin button starts act 1 (`muster`, mounted); the WebGL canvas draws a scene (not one flat colour) on the menu and in play; Escape pauses and freezes the clock, Resume resumes. Runs in real time. | ~5 s |
-| `playthrough.spec.js` | `god(true)` + `bot(true)` from act 1 to the Night King and dawn, checked every simulation step: the fourteen phases in order, mounted until the horse falls (`afoot`), the trench lit during the fallback, the `#won` screen and its tally, `progress.act` back to 1 and a best run saved. | ~8 s |
+| `playthrough.spec.js` | `god(true)` + `bot(true)` from act 1 to the Night King and dawn, checked every simulation step: the sixteen phases in order, mounted until the horse falls (`afoot`), the trench lit during the fallback, the `#won` screen and its tally, `progress.act` back to 1 and a best run saved. | ~8 s |
 | `combat.spec.js` | A strike kills a wight 1.8 m ahead and not one behind; an idle player in act 3 is hurt and dies, the `#dead` screen shows and Try again restarts act 3 at 100 hp; starting act 2 saves a checkpoint and Continue shows (and works) after a reload. | ~8 s |
 
 ## Debug hook (`?debug=1`)
@@ -26,7 +26,8 @@ runs each spec with a 420 s timeout (`SPEC_TIMEOUT=`). Logs and screenshots land
 - `state` → `{ mode, act, phase, t, hp, kills, x, z, mounted, weapon, wights, allies, trenchLit, flame }`.
   `mode` is `menu` | `play` | `paused` | `dead` | `won`. Phases: act 1 `muster → charge → clash →
   retreat → afoot`, act 2 `hold → fallback`, act 3 `siege` (ends by reaching the keep door),
-  act 4 `halls`, act 5 `grove → walkers → king → dawn`. `t` is seconds in the current phase.
+  act 4 `halls`, act 5 `grove → walkers → fallen → arya → leap → dawn`
+  (`state.qte` is `{ label, go }` while a timing prompt is on screen; the pilot presses when `go` is true). `t` is seconds in the current phase.
 - `start(act)` begins act 1, 2 or 3 (same as the menu buttons).
 - `step(n)` advances n fixed 1/60 s steps synchronously. **One call stops the real-time loop
   from simulating for the rest of that page load**, so time is deterministic (randomness is

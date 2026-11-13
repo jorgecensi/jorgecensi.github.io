@@ -571,6 +571,20 @@ const AP = {
     // Held gear lives in forearm space: the hand is 0.30 below the elbow.
     arakh: part(MD.gear.arakh, gearMat, 60), spear: part(MD.gear.spear, gearMat, 100),
     sword: part(MD.gear.sword, gearMat, 30), shield: part(MD.gear.shield, gearMat, 100),
+    // A bow held in the left hand (forearm space), and the arrows in flight (world space, pointing +Z).
+    bow: part((() => {
+        // An arc in the forearm's YZ plane, gripped at the hand, bulging away from the archer, with a straight string.
+        const R = 0.62, pts = [], segs = [];
+        for (let i = 0; i <= 8; i++) { const a = -0.75 + i * 0.1875; pts.push([-0.3 + R - R * Math.cos(a), R * Math.sin(a)]); }
+        for (let i = 0; i < 8; i++) {
+            const [y0, z0] = pts[i], [y1, z1] = pts[i + 1];
+            segs.push(cyl(0.013, 0.013, Math.hypot(y1 - y0, z1 - z0) + 0.01, 0, (y0 + y1) / 2, (z0 + z1) / 2, Math.atan2(z1 - z0, y1 - y0), 5));
+        }
+        segs.push(cyl(0.004, 0.004, pts[8][1] * 2, 0, pts[0][0], 0, Math.PI / 2, 3));
+        return merge(segs);
+    })(), new THREE.MeshLambertMaterial({ color: 0x3a2a1c }), 20),
+    arrow: part(merge([cyl(0.008, 0.008, 0.8, 0, 0, 0, Math.PI / 2, 4), cyl(0.001, 0.02, 0.07, 0, 0, 0.43, Math.PI / 2, 4)]),
+        new THREE.MeshLambertMaterial({ color: 0x8a7558 }), 48),
     flame: part((() => { const g = new THREE.OctahedronGeometry(0.2); g.scale(1, 2.6, 1); g.translate(0, -1.05, 0.04); return g; })(),
         new THREE.MeshBasicMaterial({ color: 0xff9a3c, fog: false }), 60)
 };
@@ -596,7 +610,7 @@ function setRoot(f, lift, sway = 0) {
     _s.set(f.scale, f.scale, f.scale);
     _root.compose(_p, _q, _s);
 }
-const _w2 = new THREE.Matrix4();
+const _w2 = new THREE.Matrix4(), _zAxis = new THREE.Vector3(0, 0, 1);
 /**
  * Draw a jointed limb. The upper part swings by a1 at (px, py, pz); the lower part hangs `len` below and bends by a2.
  * Positive angles swing backwards. The lower part's matrix is left in _w for whatever the hand holds.
@@ -674,6 +688,12 @@ function drawAlly(f) {
         put(AP.shield, _w);
         limb2(AP.uArm, AP.fArm, -0.32, 1.42, 0, -0.12 - strike * 0.35, -0.2 - strike * 0.3, UPPER, f.col);
         put(AP.spear, _w);
+    } else if (f.kind === 'archer') {
+        put(AP.cloak, _root);
+        // Bow arm straight out, string hand drawn back to the jaw and snapping forward on release.
+        limb2(AP.uArm, AP.fArm, 0.32, 1.42, 0, -1.5, -0.05, UPPER, f.col);
+        put(AP.bow, _w);
+        limb2(AP.uArm, AP.fArm, -0.32, 1.42, 0, -1.25, -1.9 + strike * 1.2, UPPER, f.col);
     } else {
         put(AP.cloak, _root);
         limb2(AP.uArm, AP.fArm, 0.32, 1.42, 0, walk * 0.6, -0.25, UPPER, f.col);
@@ -797,6 +817,7 @@ scene.add(mount);
 // ── Game state ──
 const G = {
     mode: 'menu', act: 1, phase: '', t: 0, time: 0, kills: 0, clock: 0,
+    cut: false, still: false, qte: null, drop: -1, run: 0,
     hordeZ: Z_MUSTER, hordeV: 0, trenchLit: false, litT: -1, dawn: 0, gap: 0, hgap: 0, spawnT: 0,
     giant: false, uTotal: 0, god: false, bot: false, flags: {}
 };
@@ -810,8 +831,10 @@ const input = { keys: new Set(), sx: 0, sy: 0, attack: false, held: false };
 // Wights wear dark rags over grey-blue skin; the living have warmer faces.
 const WCOLS = [0x3a3f47, 0x2f3339, 0x45413b, 0x33383f, 0x3d3a36].map((c) => new THREE.Color(c));
 const WSKIN = [0x8d98a3, 0x7c8894, 0x9a9f9c, 0x73808c].map((c) => new THREE.Color(c));
+const arrows = [];
 const SKINS = { rider: [0x8a5c3c, 0x7a4e32, 0x95683f], unsullied: [0x6b4a36, 0x55392a, 0x7a5a44], north: [0xb08c74, 0xa37e68, 0x96705a] };
 for (const k in SKINS) SKINS[k] = SKINS[k].map((c) => new THREE.Color(c));
+SKINS.archer = SKINS.north;
 const BOSS_CLOTH = new THREE.Color(0x3a4756);
 const HCOLS = [0x3b2a1d, 0x2a211b, 0x57422f, 0x1d1a18, 0x6a5540].map((c) => new THREE.Color(c));
 const RCOLS = [0x6e4c33, 0x5c3f2b, 0x7a5a3d].map((c) => new THREE.Color(c));
@@ -833,7 +856,7 @@ function spawnWight(x, z, o = {}) {
 }
 function mkAlly(kind, x, z, yaw) {
     const a = {
-        kind, x, z, y: 0, yaw, hp: kind === 'unsullied' ? 4 : 12, state: 'alive', t: rand(TAU), fall: 0, fallDir: 1, sink: 0, dead: 0,
+        kind, x, z, y: 0, yaw, hp: kind === 'unsullied' ? 4 : kind === 'archer' ? 7 : 12, state: 'alive', t: rand(TAU), fall: 0, fallDir: 1, sink: 0, dead: 0,
         atkT: 0, cd: rand(1), scan: rand(0.4), scale: rand(0.96, 1.06), col: kind === 'unsullied' ? UCOL : kind === 'rider' ? pick(RCOLS) : pick(NCOLS),
         skin: pick(SKINS[kind]), hcol: pick(HCOLS), tgt: null, moving: false, flame: false, hx: x, hz: z, ox: 0, oz: 0, dieAt: -1, flee: false
     };
@@ -844,7 +867,8 @@ const aliveAllies = () => { let n = 0; for (const a of allies) if (a.state === '
 
 // ── HUD helpers ──
 const el = { obj: $('obj'), act: $('act'), bar: $('objbar'), barI: $('objbar').firstElementChild, kills: $('kills'), allies: $('allies'),
-    hp: $('hp').firstElementChild, flame: $('flame').firstElementChild, sub: $('sub'), card: $('card'), vign: $('vign'), cross: $('cross'), fade: $('fade'), way: $('way'), wayD: $('way').lastElementChild };
+    hp: $('hp').firstElementChild, flame: $('flame').firstElementChild, sub: $('sub'), card: $('card'), vign: $('vign'), cross: $('cross'), fade: $('fade'), way: $('way'), wayD: $('way').lastElementChild,
+    qte: $('qte'), qteRing: $('qte').firstElementChild, qteLabel: $('qte').lastElementChild };
 let subTimer = 0, cardTimer = 0, crossTimer = 0;
 function say(text, secs = 4.5) { el.sub.textContent = text; el.sub.classList.add('on'); subTimer = secs; }
 function card(small, big) { el.card.firstElementChild.textContent = small; el.card.lastElementChild.textContent = big; el.card.classList.add('on'); cardTimer = 3.4; }
@@ -878,6 +902,7 @@ function refreshMenu() {
 // ── Act setup ──
 function resetWorld() {
     wights.length = 0; allies.length = 0;
+    G.cut = false; G.still = false; G.qte = null; G.drop = -1;
     G.t = 0; G.trenchLit = false; G.litT = -1; G.dawn = 0; G.gap = 0; G.spawnT = 0; G.giant = false; G.flags = {};
     trenchEmitter.src.on = false;
     setDoors('gate', 1.4, 0, true); gateObstacle.on = false;
@@ -964,7 +989,7 @@ function hurt(d) {
     if (G.god || G.mode !== 'play' || G.phase === 'dawn') return;
     P.hp -= d; P.lastHurt = G.clock; P.shake = Math.min(1, P.shake + 0.5); P.vign = 1;
     Sfx.play('hurt');
-    if (P.hp <= 0) die();
+    if (P.hp <= 0) { if (G.act === 5 && G.phase === 'walkers') beginFallen(); else die(); }
 }
 function die(text) {
     P.hp = 0; G.mode = 'dead';
@@ -1032,6 +1057,7 @@ function resolve(o, r) {
 
 // ── Player ──
 function simPlayer(dt) {
+    if (G.cut) { P.swingT = 0; return; }      // a scripted scene is moving the camera; it reads input.attack itself
     const k = input.keys, px0 = P.x, pz0 = P.z;
     let my = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0) + input.sy;
     let mx = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0) + input.sx;
@@ -1139,6 +1165,15 @@ function simWights(dt) {
             continue;
         }
         if (w.stagger > 0) { w.stagger -= dt; w.moving = false; continue; }
+        if (G.still) {      // the dead part and stand; only the Night King moves, to the weirwood
+            w.moving = false;
+            if (w.king) {
+                const dx = KING_SPOT[0] - w.x, dz = KING_SPOT[1] - w.z, d = Math.hypot(dx, dz);
+                if (d > 0.15) { w.x += dx / d * w.speed * dt; w.z += dz / d * w.speed * dt; w.yaw = Math.atan2(dx, dz); w.t += w.speed * dt * 1.7; w.moving = true; }
+                else w.yaw += clamp(((G.phase === 'leap' && G.t > 0.25 ? Math.atan2(P.x - w.x, P.z - w.z) : 0) - w.yaw), -6 * dt, 6 * dt);
+            }
+            continue;
+        }
         w.scan -= dt;
         if (w.scan <= 0) {
             w.scan = 0.4 + rand(0.3);
@@ -1152,7 +1187,6 @@ function simWights(dt) {
         if (!w.tgt && !w.hunter && G.act === 2 && w.z < Z_LINE - 3 && Math.hypot(P.x - w.x, P.z - w.z) > 9) { tx = w.x; tz = Z_LINE + 1; }
         // The Night King walks for the weirwood unless the player gets in his way.
         let passing = false;
-        if (w.king && Math.hypot(P.x - w.x, P.z - w.z) > 7) { tx = GROVE.treeX; tz = GROVE.treeZ - 2; passing = true; }
         const reach = w.reach || (!w.tgt && P.mounted ? 2.2 : 1.55);
         let gx = tx, gz = tz, blocked = false;
         if (G.act === 4) {      // follow the passages round the corners
@@ -1230,6 +1264,22 @@ function simAllies(dt) {
         }
         if (a.atkT > 0) a.atkT -= dt;
         if (a.kind === 'rider') { simRider(a, dt); continue; }
+        if (G.still) { a.moving = false; continue; }      // everyone has stopped to watch the Night King
+        if (a.kind === 'archer') {
+            a.cd -= dt; a.scan -= dt;
+            if (a.scan <= 0) { a.scan = 0.4 + rand(0.3); a.tgt = nearestWight(a.x, a.z, 30); }
+            const w = a.tgt;
+            if (w && w.state === 'alive') {
+                a.yaw = Math.atan2(w.x - a.x, w.z - a.z);
+                if (a.cd <= 0) {
+                    a.cd = 1.5 + rand(0.9); a.atkT = 0.3;
+                    const d = Math.hypot(w.x - a.x, w.z - a.z);
+                    if (arrows.length < 46) arrows.push({ x0: a.x, z0: a.z, x: a.x, y: 1.45, z: a.z, dx: 0, dy: 0, dz: 1, w, t: 0, dur: clamp(d / 34, 0.22, 1), arc: d * 0.05 });
+                    Sfx.play('swing', { weapon: 'dagger', vol: 0.22, pan: clamp((a.x - P.x) / 14, -1, 1) });
+                }
+            }
+            continue;
+        }
         a.cd -= dt; a.scan -= dt;
         if (a.scan <= 0) { a.scan = 0.3 + rand(0.25); a.tgt = nearestWight(a.x, a.z, a.kind === 'north' ? 9 : 3.4); }
         const w = a.tgt;
@@ -1247,6 +1297,23 @@ function simAllies(dt) {
             const dx = a.hx - a.x, dz = a.hz - a.z, d = Math.hypot(dx, dz);
             if (d > 1) { a.x += dx / d * 2.5 * dt; a.z += dz / d * 2.5 * dt; a.yaw = Math.atan2(dx, dz); a.t += dt * 6; a.moving = true; }
         } else a.yaw = Math.PI;
+    }
+}
+function simArrows(dt) {
+    for (let i = arrows.length - 1; i >= 0; i--) {
+        const a = arrows[i], w = a.w;
+        a.t += dt;
+        const k = Math.min(1, a.t / a.dur), ty = 1.15 * w.scale;
+        const nx = lerp(a.x0, w.x, k), nz = lerp(a.z0, w.z, k), ny = lerp(1.45, ty, k) + Math.sin(k * Math.PI) * a.arc;
+        a.dx = nx - a.x; a.dy = ny - a.y; a.dz = nz - a.z;
+        a.x = nx; a.y = ny; a.z = nz;
+        if (k >= 1) {
+            if (w.state === 'alive') {
+                if (w.boss) debris.burst(w.x, ty, w.z, 3, 2);      // arrows splinter on the Walkers
+                else if (rand() < 0.75) damageWight(w, 1, false);
+            }
+            arrows[i] = arrows[arrows.length - 1]; arrows.pop();
+        }
     }
 }
 function simRider(r, dt) {
@@ -1472,46 +1539,152 @@ function simAct5(dt) {
         if (t >= GROVE_SECS) {
             G.phase = 'walkers'; G.t = 0;
             Sfx.play('horn', { rate: 0.6 }); Sfx.setAmbience(AMBIENCE.walkers);
+            objective('Hold against the White Walkers', true);
             say('The dead stop. They part. Something else walks out of the trees.', 6);
-            objective('Kill the White Walkers', true);
             for (const w of wights) if (w.state === 'alive' && rand() < 0.7) w.dieAt = rand(0.2, 2);
             for (let i = 0; i < 4; i++) {       // they come from the north, opposite the way you came in
                 const [x, z] = ring(37, Math.PI - 0.9 + i * 0.6, Math.PI - 0.9 + i * 0.6);
-                spawnWight(x, z, { walker: true, heavy: true, hp: 14, scale: 1.22, speed: 3, col: ICE, dmg: 18, reach: 2.6, windT: 0.8, cdB: 1.8 });
+                spawnWight(x, z, { walker: true, heavy: true, hp: 14, scale: 1.22, speed: 3.2, col: ICE, dmg: 24, reach: 2.6, windT: 0.75, cdB: 1.5 });
             }
         }
         return;
     }
     if (G.phase === 'walkers') {
+        // This fight is not winnable: the Walkers cut the player down, or the Night King does when he arrives.
         let left = 0;
         for (const w of wights) if (w.walker && w.state === 'alive') left++;
         el.barI.style.width = (4 - left) / 4 * 100 + '%';
         if (G.spawnT <= 0) { G.spawnT = 2.2; if (alive() < 8) { const [x, z] = ring(39, 0, TAU); spawnWight(x, z); } }
-        if (left === 0) {
-            G.phase = 'king'; G.t = 0; G.spawnT = 9;
-            Sfx.play('screech'); Sfx.play('horn', { rate: 0.5 }); Sfx.setAmbience(AMBIENCE.king);
-            say('The last one shatters. Then the Night King steps out of the dark.', 6);
-            objective('Bring down the Night King before he reaches the tree', true);
-            spawnWight(GROVE.x, GROVE.z - 37, { king: true, heavy: true, hp: 70, scale: 1.45, speed: 1.7, col: KING, dmg: 26, reach: 3.1, windT: 0.85, cdB: 1.9 });
+        if ((left === 0 || t > 32) && once('kingcomes')) {
+            Sfx.play('screech'); Sfx.play('horn', { rate: 0.5 });
+            say('Then the Night King steps out of the dark, and he does not slow down.', 5);
+            spawnKing(P.x + rand(-2, 2), P.z - 16);
         }
+        const king = wights.find((w) => w.king);
+        if (king && Math.hypot(king.x - P.x, king.z - P.z) < 3.6) beginFallen();
         return;
     }
-    if (G.phase === 'king') {
+    if (G.phase === 'fallen') {
+        // On the ground, watching him walk to the tree.
         const king = wights.find((w) => w.king);
-        if (!king || king.state !== 'alive') {
-            beginDawn('The Night King breaks like ice. Then every one of them falls.');
+        if (t > 2.6 && once('f1')) say('The dead stop. They part to let him through.', 4);
+        if (t > 6.4 && once('f2')) say('The Night King walks past you, to the weirwood. You cannot stand.', 5);
+        if (king) P.yaw += clamp(angTo(king.x, king.z) - P.yaw, -1.2 * dt, 1.2 * dt);
+        const there = king && Math.hypot(king.x - KING_SPOT[0], king.z - KING_SPOT[1]) < 0.3;
+        if ((there && t > 9) || t > 20) beginArya();
+        input.attack = false;
+        return;
+    }
+    if (G.phase === 'arya') {
+        // She runs at his back. One press, at the right distance, to leap.
+        const d0 = Math.hypot(ARYA_START[0] - KING_SPOT[0], ARYA_START[1] - KING_SPOT[1]);
+        const slow = G.run > d0 - 11 ? 0.42 : 1;
+        G.run += 8.5 * slow * dt;
+        const left = d0 - G.run, k = G.run / d0;
+        P.x = lerp(ARYA_START[0], KING_SPOT[0], k) + Math.sin(G.run * 0.22) * 1.2 * (1 - k);
+        P.z = lerp(ARYA_START[1], KING_SPOT[1], k);
+        P.yaw = angTo(KING_SPOT[0], KING_SPOT[1]);
+        P.bobT += 11 * slow * dt;
+        const stepN = Math.floor(P.bobT / 2.1);
+        if (stepN !== P.stepN) { P.stepN = stepN; Sfx.play('step', { vol: 0.35, surface: 'snow' }); }
+        // The ring closes on the target as she nears; it is "go" between 6.5 and 4 metres.
+        G.qte = { label: 'JUMP', size: clamp((left - 6.5) / 14, 0, 1), go: left <= 6.5 && left >= 4 };
+        const press = input.attack; input.attack = false;
+        if (press && left < 16) {
+            if (G.qte.go) beginLeap(); else aryaFail('Too soon. Her feet find ice, and the dead turn.');
+        } else if (left < 4) aryaFail('Too late. He hears her.');
+        return;
+    }
+    if (G.phase === 'leap') {
+        const king = wights.find((w) => w.king);
+        if (!king) { beginDawn('Every one of them falls.'); return; }
+        const press = input.attack; input.attack = false;
+        if (t < 0.55) {      // in the air
+            const k = t / 0.55, kx = king.x, kz = king.z;
+            const dx = G.leapX - kx, dz = G.leapZ - kz, d = Math.hypot(dx, dz) || 1, r = lerp(d, 1.25, k);
+            P.x = kx + dx / d * r; P.z = kz + dz / d * r;
             return;
         }
-        el.barI.style.width = clamp(king.hp / king.maxHp * 100, 0, 100) + '%';
-        // He only wins by walking there unopposed; a fight that drifts under the tree does not count.
-        if (Math.hypot(king.x - GROVE.treeX, king.z - GROVE.treeZ) < 3.4 && Math.hypot(P.x - king.x, P.z - king.z) > 7) { die('The Night King reaches the weirwood. The long night does not end.'); return; }
-        if (G.spawnT <= 0) {
-            G.spawnT = 8;
-            if (once('raise')) say('He lifts his arms. The dead get back up.', 4.5);
-            Sfx.play('screech', { vol: 0.7 });
-            for (let i = 0; i < 6; i++) { const a = rand(TAU), r = rand(9, 15); spawnWight(clampGrove(P.x + Math.sin(a) * r, 0), clampGrove(P.z + Math.cos(a) * r, 1)); }
+        if (once('caught')) {
+            Sfx.play('hurt'); Sfx.play('iceCrack'); P.shake = 1; P.vign = 1;
+            say('He turns. His hand closes on her throat.', 3.5);
         }
+        if (t < 1.5) return;
+        // The dagger falls from her left hand; press as it reaches the right.
+        if (G.drop < 0) { G.drop = 0; if (once('dropline')) say('She lets the dagger fall.', 2.5); }
+        G.drop += dt / 1.15;
+        G.qte = { label: 'STAB', size: clamp((0.6 - G.drop) / 0.6, 0, 1), go: G.drop >= 0.6 && G.drop <= 0.9 };
+        if (press && G.drop > 0.12) {
+            if (G.qte.go) {
+                G.qte = null; G.drop = -1; G.cut = false;
+                Sfx.play('hit', { weapon: 'dagger' }); P.shake = 1; hitStop = 0.12;
+                king.state = 'dying'; king.fallDir = -1;
+                debris.burst(king.x, 2, king.z, 60, 7);
+                G.kills++;
+                beginDawn('The dagger drops into her other hand, and into him. The Night King breaks like ice, and every one of them falls.');
+                return;
+            }
+            stabFail();
+        } else if (G.drop > 1.05) stabFail();
     }
+}
+const KING_SPOT = [GROVE.treeX, GROVE.treeZ - 3.6];      // where he stops, facing the tree
+const ARYA_START = [GROVE.treeX + 7, GROVE.treeZ - 35];  // she comes out of the trees behind him
+const angTo = (x, z) => Math.atan2(-(x - P.x), -(z - P.z));
+function spawnKing(x, z) {
+    return spawnWight(clampGrove(x, 0), clampGrove(z, 1), { king: true, heavy: true, hp: 999, scale: 1.45, speed: 2.6, col: KING, dmg: 0, reach: 0.01, windT: 9, cdB: 99 });
+}
+/** The player goes down for good, and from the ground watches the Night King walk to the tree. */
+function beginFallen() {
+    if (G.phase === 'fallen') return;
+    G.phase = 'fallen'; G.t = 0; G.cut = true; G.still = true; G.qte = null;
+    P.hp = 1; P.vign = 1; P.shake = 1; P.pitch = 0.12; P.swingT = 0;
+    input.attack = false; input.held = false; arrows.length = 0;
+    Sfx.play('hurt'); Sfx.play('thud');
+    Sfx.setAmbience({ battle: 0, drums: 0.4, wind: 0.9, heart: 1 });
+    objective('');
+    say('A blow you never saw. You are down.', 3);
+    let king = wights.find((w) => w.king);
+    if (!king) king = spawnKing(P.x, P.z - 14);
+    // He starts beyond the player, so his road to the tree passes an arm's length from where they lie.
+    const dx = P.x - KING_SPOT[0], dz = P.z - KING_SPOT[1], d = Math.hypot(dx, dz) || 1;
+    king.x = P.x + dx / d * 9 - dz / d * 1.7; king.z = P.z + dz / d * 9 + dx / d * 1.7;
+    king.speed = clamp((d + 9) / 10.5, 1.5, 4.2);      // about ten seconds, however far the tree is
+    P.yaw = angTo(king.x, king.z);
+    for (const w of wights) if (!w.king && w.state === 'alive') w.yaw = Math.atan2(GROVE.treeX - w.x, GROVE.treeZ - w.z);
+}
+/** The view moves to Arya, already running. */
+function beginArya() {
+    G.phase = 'arya'; G.t = 0; G.run = 0; G.cut = true; G.still = true; G.drop = -1;
+    G.flags.caught = G.flags.dropline = false;
+    P.hp = 100; P.pitch = 0; P.vign = 0; P.x = ARYA_START[0]; P.z = ARYA_START[1];
+    const king = wights.find((w) => w.king);
+    if (king) { king.x = KING_SPOT[0]; king.z = KING_SPOT[1]; king.yaw = 0; }
+    // Clear her path of anything standing in it.
+    for (const w of wights) if (!w.king && w.state === 'alive' && Math.abs(w.x - lerp(ARYA_START[0], KING_SPOT[0], clamp((ARYA_START[1] - w.z) / (ARYA_START[1] - KING_SPOT[1]), 0, 1))) < 2.5 && w.z < KING_SPOT[1] + 1) w.x += w.x < GROVE.treeX + 3 ? -3.5 : 3.5;
+    equip('dagger');
+    fadeIn();
+    if (once('aryacard')) card('Out of the dark', 'Arya');
+    objective('Leap when the ring closes');
+    say('Someone else is running. No one sees her.', 4);
+    Sfx.setAmbience({ heart: 0.6, wind: 1, drums: 0.9, battle: 0 });
+}
+function aryaFail(text) {
+    say(text, 2.6);
+    Sfx.play('hurt', { vol: 0.6 });
+    beginArya();
+    say(text, 2.6);
+}
+function beginLeap() {
+    G.phase = 'leap'; G.t = 0; G.qte = null; G.leapX = P.x; G.leapZ = P.z;
+    Sfx.play('swing', { weapon: 'dagger' }); Sfx.play('breath');
+    objective('Strike when the ring closes');
+}
+function stabFail() {
+    G.drop = -0.5;      // a breath before the dagger falls again
+    P.vign = 1; P.shake = 0.6;
+    Sfx.play('hurt', { vol: 0.5 });
+    say('His grip tightens. Again.', 2);
 }
 function clampGrove(v, axis) { const c = axis ? GROVE.z : GROVE.x; return clamp(v, c - 26, c + 26); }
 function beginHalls() {
@@ -1541,14 +1714,14 @@ function beginGrove() {
     Object.assign(P, { x: GROVE.x, z: GROVE.z + 33, yaw: 0, pitch: 0, mounted: false });
     for (let i = 0; i < 8; i++) {
         const a = i / 8 * TAU;
-        mkAlly('north', GROVE.treeX + Math.sin(a) * 6, GROVE.treeZ + Math.cos(a) * 6, a);
+        mkAlly('archer', GROVE.treeX + Math.sin(a) * 6, GROVE.treeZ + Math.cos(a) * 6, a);
     }
     G.uTotal = allies.length;
     fadeIn();
     card('Act V', 'The Godswood');
     objective('Defend the weirwood', true);
     equip('dagger');
-    say('Someone presses a dragonglass dagger into your hand. Hold the tree.', 6);
+    say('Archers ring the weirwood. Someone presses a dragonglass dagger into your hand. Keep the dead off them.', 7);
     Sfx.setAmbience(Object.assign({ wind: 0, battle: 0, fire: 0, gallop: 0, drums: 0, crowd: 0, heart: 0 }, AMBIENCE.grove));
 }
 function beginDawn(text) {
@@ -1593,11 +1766,9 @@ function pilot() {
         const hi = hallSeg(P.x, P.z)[1];
         if (hi < 3) { tx = HALL_JOINTS[Math.max(0, hi)][0]; tz = HALL_JOINTS[Math.max(0, hi)][1]; } else { tx = 219.5; tz = -82; }
     } else {
-        const king = wights.find((k) => k.king && k.state === 'alive');
-        tx = king ? king.x : GROVE.treeX; tz = king ? king.z : GROVE.treeZ + 5;
-        move = Math.hypot(P.x - tx, P.z - tz) > (king ? 2.4 : 3) ? 1 : 0;
-        if (king && P.z > GROVE.treeZ - 2 && king.z < GROVE.treeZ && Math.abs(P.x - GROVE.treeX) < 2.6) { tx = GROVE.treeX + 4.5; tz = GROVE.treeZ - 1; move = 1; }   // go round the trunk
-        if (king && !(w && Math.hypot(w.x - P.x, w.z - P.z) < 2.6 && !w.king)) { P.yaw = Math.atan2(-(tx - P.x), -(tz - P.z)); input.sy = move; input.held = true; return; }
+        if (G.cut) { input.sy = 0; input.held = false; input.attack = !!(G.qte && G.qte.go); return; }
+        tx = GROVE.treeX; tz = GROVE.treeZ + 5;
+        move = Math.hypot(P.x - tx, P.z - tz) > 3 ? 1 : 0;
     }
     const fleeing = G.phase === 'retreat' || G.phase === 'afoot' || G.phase === 'fallback' || (G.act === 3 && G.flags.keep);
     if (w && !fleeing && !P.mounted) { tx = w.x; tz = w.z; move = Math.hypot(w.x - P.x, w.z - P.z) > 1.9 ? 1 : 0; }
@@ -1613,6 +1784,7 @@ function sim(dt) {
     if (G.mode !== 'play') return;
     simWights(dt);
     simAllies(dt);
+    simArrows(dt);
     if (G.phase === 'dawn') { G.dawn = clamp((G.t - 1.5) / 6, 0, 1); if (G.t > 8.5) win(); }
     else [null, simAct1, simAct2, simAct3, simAct4, simAct5][G.act](dt);
 }
@@ -1647,6 +1819,9 @@ function render(dt, t) {
         let roll = 0;
         if (P.fallT > 0) { const k = Math.sin(clamp(P.fallT / 1.2, 0, 1) * Math.PI); eye = 1.7 - k * 1.05; roll = k * 0.55; }
         if (G.mode === 'dead') { eye = 0.5; roll = 1.1; }
+        if (G.phase === 'fallen') { eye = 0.42; roll = 0.5; }
+        else if (G.phase === 'arya') eye = 1.5 + Math.sin(P.bobT * 1.5) * 0.06;
+        else if (G.phase === 'leap') eye = G.t < 0.55 ? lerp(1.5, 2.3, Math.sin(G.t / 0.55 * Math.PI / 2)) : 2.3 + Math.sin(t * 9) * 0.015;
         P.shake = Math.max(0, P.shake - dt * 2.5);
         const sh = P.shake * 0.05;
         camera.position.set(P.x + rand(-sh, sh), eye + rand(-sh, sh), P.z);
@@ -1654,13 +1829,17 @@ function render(dt, t) {
         // Weapon in hand
         const W = WEAPONS[P.weapon], wg = W.group;
         for (const k in WEAPONS) WEAPONS[k].group.visible = false;
-        wg.visible = G.mode !== 'dead';
+        wg.visible = G.mode !== 'dead' && G.phase !== 'fallen';
         const s = P.swingT > 0 ? 1 - P.swingT / W.swing : -1;
         const idle = Math.sin(t * 1.7) * 0.012 + (P.mounted ? 0 : Math.sin(P.bobT * 1.5) * 0.012);
         if (W.anim === 'thrust') {
             const e = s >= 0 ? Math.sin(s * Math.PI) : 0;
             wg.position.set(lerp(0.3, 0.16, e), -0.4 + idle + e * 0.05, lerp(-0.3, -1.0, e));
             wg.rotation.set(-1.44, 0.05, 0.04);
+        } else if (G.drop >= 0) {      // the dagger falling from one hand to the other
+            const k = Math.min(1, G.drop);
+            wg.position.set(lerp(-0.34, 0.3, k), lerp(0.2, -0.34, k * k), -0.55);
+            wg.rotation.set(-0.6 - k * 5, 0.3, -0.3 + k * 2.4);
         } else if (W.anim === 'stab') {
             const e = s >= 0 ? Math.sin(s * Math.PI) : 0;
             wg.position.set(lerp(0.32, 0.1, e), lerp(-0.36, -0.26, e) + idle, lerp(-0.52, -0.9, e));
@@ -1697,6 +1876,14 @@ function render(dt, t) {
     snow.pts.visible = G.act !== 4 || G.mode === 'menu';
     for (const w of wights) drawWight(w);
     for (const a of allies) if (a.state !== 'gone') drawAlly(a);
+    for (const a of arrows) {
+        _p.set(a.dx, a.dy, a.dz);
+        if (_p.lengthSq() < 1e-8) continue;
+        _q.setFromUnitVectors(_zAxis, _p.normalize());
+        _p.set(a.x, a.y, a.z); _s.set(1, 1, 1);
+        _root.compose(_p, _q, _s);
+        put(AP.arrow, _root);
+    }
     flush(shadows);
     for (const k in WP) flush(WP[k]);
     for (const k in AP) flush(AP[k]);
@@ -1724,7 +1911,7 @@ function wayTarget() {
     if (G.act === 2) return G.phase !== 'fallback' ? null : P.z < TRENCH_Z1 ? [0, 1.2, 10] : [0, 3, WALL_Z];
     if (G.act === 3) return G.flags.keep ? [0, 3, 81.8] : null;
     if (G.act === 4) { const hi = hallSeg(P.x, P.z)[1]; return hi >= 0 && hi < 3 ? [HALL_JOINTS[hi][0], 1.6, HALL_JOINTS[hi][1]] : [219.5, 2.6, -81.8]; }
-    if (G.phase === 'king') { const k = wights.find((w) => w.king && w.state === 'alive'); return k ? [k.x, 3.2, k.z] : null; }
+    if (G.phase === 'fallen' || G.phase === 'arya') { const k = wights.find((w) => w.king && w.state === 'alive'); return k ? [k.x, 3.3, k.z] : null; }
     return null;
 }
 const _v = new THREE.Vector3();
@@ -1743,7 +1930,16 @@ function updateWay() {
     el.wayD.textContent = Math.round(d) + ' m';
 }
 let hudT = 0, heartLvl = 0;
+function updateQte() {
+    const q = G.mode === 'play' ? G.qte : null;
+    el.qte.style.display = q ? 'block' : 'none';
+    if (!q) return;
+    el.qte.classList.toggle('go', q.go);
+    el.qteRing.style.transform = `scale(${(1 + q.size * 2.6).toFixed(3)})`;
+    el.qteLabel.textContent = q.label;
+}
 function updateHud(dt) {
+    updateQte();
     if (subTimer > 0) { subTimer -= dt; if (subTimer <= 0) el.sub.classList.remove('on'); }
     if (cardTimer > 0) { cardTimer -= dt; if (cardTimer <= 0) el.card.classList.remove('on'); }
     if (crossTimer > 0) { crossTimer -= dt; if (crossTimer <= 0) el.cross.classList.remove('hit'); }
@@ -1761,7 +1957,7 @@ function updateHud(dt) {
     el.kills.textContent = G.kills;
     const n = aliveAllies();
     el.allies.textContent = G.act === 1 ? (G.phase === 'muster' || G.phase === 'charge' ? 'the horde rides' : '') :
-        G.act === 4 ? 'alone' : n + (G.act === 2 ? ' Unsullied' : G.act === 5 ? ' ironborn' : ' defenders');
+        G.act === 4 ? 'alone' : n + (G.act === 2 ? ' Unsullied' : G.act === 5 ? ' archers' : ' defenders');
 }
 
 // ── Main loop ──
@@ -1808,7 +2004,8 @@ const AMBIENCE = {
     retreat: { battle: 0.6, gallop: 1, drums: 0.8 }, afoot: { battle: 0.8, drums: 0.8 }, hold: { wind: 0.4, battle: 0.9, fire: 0.3, drums: 0.7, crowd: 0.5 },
     fallback: { battle: 1, fire: 0.6, drums: 0.8 }, siege: { wind: 0.3, battle: 1, fire: 0.6, drums: 0.6 }, dawn: { wind: 0.4, fire: 0.3 },
     halls: { wind: 0.12, battle: 0.3, fire: 0.5, drums: 0.5 }, grove: { wind: 0.6, battle: 0.7, fire: 0.4, drums: 0.7 },
-    walkers: { wind: 0.9, battle: 0.2, fire: 0.3, drums: 0.9 }, king: { wind: 1, battle: 0.3, fire: 0.3, drums: 1 }
+    walkers: { wind: 0.9, battle: 0.2, fire: 0.3, drums: 0.9 }, fallen: { wind: 0.9, drums: 0.4, heart: 1 },
+    arya: { wind: 1, drums: 0.9, heart: 0.6 }, leap: { wind: 1, drums: 0.9, heart: 0.8 }
 };
 function resume() {
     if (G.mode !== 'paused') return;
@@ -1922,6 +2119,7 @@ if (DEBUG) {
         G, P, wights, allies, progress,
         get state() {
             return { mode: G.mode, act: G.act, phase: G.phase, t: G.t, hp: P.hp, kills: G.kills, x: P.x, z: P.z, mounted: P.mounted, weapon: P.weapon,
+                qte: G.qte ? { label: G.qte.label, go: G.qte.go } : null,
                 wights: alive(), allies: aliveAllies(), trenchLit: G.trenchLit, flame: P.flame };
         },
         start(act = 1) { begin(act); },

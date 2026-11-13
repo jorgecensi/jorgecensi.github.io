@@ -62,6 +62,16 @@ body.playing #hud { display: block; }
 #way { position: absolute; left: 0; top: 0; display: none; will-change: transform; }
 #way i { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; transform: rotate(45deg);
     border: 2px solid var(--fire); background: rgba(255,154,60,.25); box-shadow: 0 0 10px rgba(255,154,60,.6); }
+/* Timing prompt: the outer ring closes on the inner one; press while it is lit. */
+#qte { position: absolute; left: 50%; top: 46%; width: 0; height: 0; display: none; }
+#qte b, #qte i { position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%; }
+#qte b { border: 3px solid rgba(255,255,255,.75); }
+#qte i { border: 3px solid var(--ice); will-change: transform; }
+#qte span { position: absolute; left: -90px; top: 60px; width: 180px; text-align: center; letter-spacing: .3em;
+    font-size: 20px; text-shadow: 0 1px 6px #000; }
+#qte.go b { border-color: var(--fire); background: rgba(255,154,60,.28); box-shadow: 0 0 24px rgba(255,154,60,.8); }
+#qte.go i { border-color: var(--fire); }
+#qte.go span { color: var(--fire); }
 #way span { position: absolute; left: -30px; top: 15px; width: 60px; text-align: center; font: 12px system-ui, sans-serif;
     color: var(--ink); text-shadow: 0 1px 3px #000; }
 #cross.hit { background: #fff; box-shadow: 0 0 0 5px rgba(255,255,255,.25); }
@@ -152,6 +162,7 @@ button { font-family: inherit; cursor: pointer; }
         <button id="pause" aria-label="Pause">❚❚</button>
     </div>
     <div id="way"><i></i><span></span></div>
+    <div id="qte"><i></i><b></b><span></span></div>
     <div id="cross"></div>
     <div id="card"><small></small><span></span></div>
     <div id="sub"></div>
