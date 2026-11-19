@@ -2,7 +2,7 @@
   "id": "/gif-grab/",
   "name": "GIF Grab — Save GIFs from X",
   "short_name": "GIF Grab",
-  "description": "Paste a link to an X (Twitter) post with a GIF and save it, as the original MP4 or converted to a real .gif file.",
+  "description": "Paste a link to an X (Twitter) post with a GIF and save it to your phone or computer.",
   "start_url": "/gif-grab/",
   "scope": "/gif-grab/",
   "display": "standalone",
