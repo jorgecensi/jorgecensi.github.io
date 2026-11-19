@@ -12,8 +12,11 @@ permalink: /gif-grab/
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="GIF Grab">
     <meta name="theme-color" content="#0e1018">
-    <meta name="description" content="Paste a link to an X (Twitter) post with a GIF and save it to your phone or computer.">
+    <meta name="description" content="Paste a link to an X (Twitter) post with a GIF and save it, as the original MP4 or converted to a real .gif file.">
     <title>GIF Grab — Save GIFs from X</title>
+    <!-- X's media hosts answer 403 to any Referer but X's own, and a 403 carries no CORS header,
+         so fetches, the preview and the "Open video" link all go out without one. -->
+    <meta name="referrer" content="no-referrer">
     <link rel="manifest" href="/gif-grab/manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="/img/gif-grab-icon-192.png">
     <link rel="apple-touch-icon" href="/img/gif-grab-icon-192.png">
@@ -157,6 +160,30 @@ permalink: /gif-grab/
         .actions .btn { flex: 1; }
         .actions .btn.wide { flex: 1.6; }
 
+        .opts { display: flex; gap: 8px; margin-top: 12px; }
+        .opts label { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+        select {
+            font: inherit;
+            color: var(--text);
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 9px 10px;
+            min-height: 42px;
+        }
+
+        .progress { margin-top: 12px; }
+        .bar { height: 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+        .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.15s; }
+        .progress .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.85rem; color: var(--muted); }
+        .progress button { min-height: 34px; padding: 6px 12px; font-size: 0.85rem; }
+
+        .result { margin-top: 14px; padding: 12px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); }
+        .result h3 { margin: 0 0 8px; font-size: 0.95rem; }
+        .result .preview { background: repeating-conic-gradient(#222 0 25%, #2b2b2b 0 50%) 0 0 / 16px 16px; }
+
+        .warn { margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
+
         .guide { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); font-size: 0.92rem; }
         .guide p { margin: 0 0 8px; color: var(--muted); }
         .guide ol { margin: 0; padding-left: 1.3em; }
@@ -164,6 +191,9 @@ permalink: /gif-grab/
         .guide b { color: var(--text); }
         .guide details { margin-top: 10px; color: var(--muted); }
         .guide summary { cursor: pointer; }
+        details.guide > summary { color: var(--text); font-weight: 600; }
+        details.guide[open] > summary { margin-bottom: 10px; }
+        .guide .fail { color: var(--danger); }
 
         details.help { color: var(--muted); font-size: 0.9rem; }
         details.help summary { cursor: pointer; color: var(--text); font-weight: 600; }
@@ -223,8 +253,9 @@ permalink: /gif-grab/
         <section class="card">
             <details class="help">
                 <summary>How it works</summary>
-                <p>X stores every GIF as a short silent MP4 video, so that’s the file you save: full quality, small, and it loops in most apps.</p>
-                <p>X’s servers don’t let other websites download their files directly, so GIF Grab finds the video and hands you its link; your browser saves it. Each card shows the steps for your device.</p>
+                <p>X stores every GIF as a short silent MP4 video. <strong>Save MP4</strong> gives you that file as it is: the best quality and the smallest size, and it loops in most apps. On a phone it opens the share sheet, where <em>Save Video</em> puts it in Photos.</p>
+                <p><strong>Make .gif</strong> converts it into a real animated GIF on your device, for places that only take GIFs. A smaller size and fewer frames per second make a lighter file.</p>
+                <p>If a download ever fails, the card opens the steps to save the file by hand on your device.</p>
                 <p>On Android, install this app, then use <em>Share</em> on a post in the X app and pick GIF Grab.</p>
                 <p>To find the post, the link is looked up through the public FxTwitter API (or vxTwitter if that fails); nothing else leaves your device.</p>
             </details>
@@ -234,7 +265,7 @@ permalink: /gif-grab/
     <div class="toast" id="toast" role="status"></div>
 
     <script>
-    const SW_VERSION = '2611190858';
+    const SW_VERSION = '2611191000';
 
     (() => {
         'use strict';
@@ -255,7 +286,7 @@ permalink: /gif-grab/
             const ctl = new AbortController();
             const t = setTimeout(() => ctl.abort(), ms);
             try {
-                return await fetch(url, { signal: ctl.signal, mode: 'cors', credentials: 'omit' });
+                return await fetch(url, { signal: ctl.signal, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
             } finally {
                 clearTimeout(t);
             }
@@ -323,11 +354,306 @@ permalink: /gif-grab/
             throw new LookupError(notFound ? 'notfound' : 'network');
         }
 
+        // ── GIF encoding ─────────────────────────────────────────────────
+        // A small GIF89a writer: one global palette (median cut over frames sampled
+        // across the clip), light ordered dithering, and frame differencing (pixels
+        // that didn't change become transparent, cropped to the changed box), which
+        // is what keeps converted video clips a sensible size.
+
+        class Bytes {
+            constructor() { this.buf = new Uint8Array(1 << 16); this.n = 0; }
+            grow() { const b = new Uint8Array(this.buf.length * 2); b.set(this.buf); this.buf = b; }
+            byte(v) { if (this.n >= this.buf.length) this.grow(); this.buf[this.n++] = v; }
+            u16(v) { this.byte(v & 255); this.byte((v >> 8) & 255); }
+            str(s) { for (let i = 0; i < s.length; i++) this.byte(s.charCodeAt(i)); }
+            done() { return this.buf.subarray(0, this.n); }
+        }
+
+        function medianCut(px, k) {
+            const box = (a) => {
+                let rn = 255, rx = 0, gn = 255, gx = 0, bn = 255, bx = 0;
+                for (let i = 0; i < a.length; i++) {
+                    const c = a[i], r = c >> 16, g = (c >> 8) & 255, b = c & 255;
+                    if (r < rn) rn = r; if (r > rx) rx = r;
+                    if (g < gn) gn = g; if (g > gx) gx = g;
+                    if (b < bn) bn = b; if (b > bx) bx = b;
+                }
+                const rr = rx - rn, gr = gx - gn, br = bx - bn, range = Math.max(rr, gr, br);
+                return { a, range, score: range * Math.sqrt(a.length), sh: range === gr ? 8 : range === rr ? 16 : 0 };
+            };
+            const boxes = [box(px)];
+            while (boxes.length < k) {
+                let bi = -1, best = 0;
+                for (let i = 0; i < boxes.length; i++) {
+                    const b = boxes[i];
+                    if (b.a.length > 1 && b.range > 0 && b.score > best) { best = b.score; bi = i; }
+                }
+                if (bi < 0) break;
+                const { a, sh } = boxes[bi];
+                a.sort((p, q) => ((p >> sh) & 255) - ((q >> sh) & 255));
+                const mid = a.length >> 1;
+                boxes.splice(bi, 1, box(a.subarray(0, mid)), box(a.subarray(mid)));
+            }
+            return boxes.map(({ a }) => {
+                let r = 0, g = 0, b = 0;
+                for (let i = 0; i < a.length; i++) { const c = a[i]; r += c >> 16; g += (c >> 8) & 255; b += c & 255; }
+                const n = a.length || 1;
+                return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+            });
+        }
+
+        const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v / 16 - 0.5) * 8);
+        const TRANSPARENT = 255;
+        const GIF_TOLERANCE = 900;   // ≈ 10 levels per channel
+
+        class GifEncoder {
+            // tol: a pixel whose new colour is within this (weighted, squared) distance of
+            // what's already on screen stays as it is. Camera noise otherwise changes nearly
+            // every pixel every frame, and frame differencing saves nothing.
+            constructor(w, h, palette, tol = GIF_TOLERANCE) {
+                this.w = w; this.h = h; this.tol = tol;
+                this.pal = palette.slice(0, 255);
+                this.lut = new Int16Array(32768).fill(-1);
+                this.codes = new Int32Array(1 << 20);
+                this.gens = new Int32Array(1 << 20);
+                this.gen = 0;
+                this.prev = null;
+                this.pending = null;
+                this.frames = 0;
+                const o = this.out = new Bytes();
+                o.str('GIF89a'); o.u16(w); o.u16(h);
+                o.byte(0xF7); o.byte(0); o.byte(0);                     // 256-colour global table
+                for (let i = 0; i < 256; i++) {
+                    const c = this.pal[i] || [0, 0, 0];
+                    o.byte(c[0]); o.byte(c[1]); o.byte(c[2]);
+                }
+                o.byte(0x21); o.byte(0xFF); o.byte(11); o.str('NETSCAPE2.0'); // loop forever
+                o.byte(3); o.byte(1); o.u16(0); o.byte(0);
+            }
+
+            nearest(key) {
+                const r = (((key >> 10) & 31) << 3) | 4, g = (((key >> 5) & 31) << 3) | 4, b = ((key & 31) << 3) | 4;
+                let best = 0, bd = Infinity;
+                for (let i = 0; i < this.pal.length; i++) {
+                    const c = this.pal[i], dr = c[0] - r, dg = c[1] - g, db = c[2] - b;
+                    const d = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
+                    if (d < bd) { bd = d; best = i; }
+                }
+                return best;
+            }
+
+            index(data) {
+                const { w, h, lut } = this, out = new Uint8Array(w * h);
+                for (let y = 0, p = 0; y < h; y++) {
+                    const row = (y & 3) * 4;
+                    for (let x = 0; x < w; x++, p++) {
+                        const o = p * 4, d = BAYER[row + (x & 3)];
+                        let r = data[o] + d, g = data[o + 1] + d, b = data[o + 2] + d;
+                        r = r < 0 ? 0 : r > 255 ? 255 : r | 0;
+                        g = g < 0 ? 0 : g > 255 ? 255 : g | 0;
+                        b = b < 0 ? 0 : b > 255 ? 255 : b | 0;
+                        const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+                        let c = lut[key];
+                        if (c < 0) c = lut[key] = this.nearest(key);
+                        out[p] = c;
+                    }
+                }
+                return out;
+            }
+
+            addFrame(rgba, delay) {
+                const { w, h, pal, tol } = this, idx = this.index(rgba), prev = this.prev;
+                if (!prev) {
+                    this.pending = { x: 0, y: 0, w, h, pix: idx, delay };
+                    this.prev = idx;
+                    return;
+                }
+                let x0 = w, y0 = h, x1 = -1, y1 = -1;
+                for (let y = 0, p = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++, p++) {
+                        if (idx[p] === prev[p]) continue;
+                        if (tol > 0) {
+                            const c = pal[prev[p]], o = p * 4;
+                            const dr = rgba[o] - c[0], dg = rgba[o + 1] - c[1], db = rgba[o + 2] - c[2];
+                            if (2 * dr * dr + 4 * dg * dg + 3 * db * db < tol) { idx[p] = prev[p]; continue; }
+                        }
+                        if (x < x0) x0 = x; if (x > x1) x1 = x;
+                        if (y < y0) y0 = y; y1 = y;
+                    }
+                }
+                if (x1 < 0) { this.pending.delay += delay; return; } // identical frame: hold the last one longer
+                const fw = x1 - x0 + 1, fh = y1 - y0 + 1, pix = new Uint8Array(fw * fh);
+                for (let y = 0; y < fh; y++) {
+                    for (let x = 0; x < fw; x++) {
+                        const p = (y + y0) * w + x + x0;
+                        pix[y * fw + x] = idx[p] === prev[p] ? TRANSPARENT : idx[p];
+                    }
+                }
+                this.flush();
+                this.pending = { x: x0, y: y0, w: fw, h: fh, pix, delay };
+                this.prev = idx;
+            }
+
+            flush() {
+                const f = this.pending, o = this.out;
+                if (!f) return;
+                this.pending = null;
+                this.frames++;
+                o.byte(0x21); o.byte(0xF9); o.byte(4);
+                o.byte((1 << 2) | 1);                       // disposal: keep; transparent index on
+                o.u16(Math.min(65535, Math.max(2, f.delay))); o.byte(TRANSPARENT); o.byte(0);
+                o.byte(0x2C); o.u16(f.x); o.u16(f.y); o.u16(f.w); o.u16(f.h); o.byte(0);
+                this.lzw(f.pix, 8);
+            }
+
+            lzw(pix, minCode) {
+                const o = this.out, block = new Uint8Array(255);
+                let bl = 0, cur = 0, bits = 0;
+                const put = (b) => {
+                    block[bl++] = b;
+                    if (bl === 255) { o.byte(255); for (let i = 0; i < 255; i++) o.byte(block[i]); bl = 0; }
+                };
+                const emit = (code, size) => {
+                    cur |= code << bits; bits += size;
+                    while (bits >= 8) { put(cur & 255); cur >>>= 8; bits -= 8; }
+                };
+                const clear = 1 << minCode, eoi = clear + 1, codes = this.codes, gens = this.gens;
+                let size = minCode + 1, next = eoi + 1, gen = ++this.gen;
+                o.byte(minCode);
+                emit(clear, size);
+                let prefix = pix[0];
+                for (let i = 1; i < pix.length; i++) {
+                    const k = pix[i], key = (prefix << 8) | k;
+                    if (gens[key] === gen) { prefix = codes[key]; continue; }
+                    emit(prefix, size);
+                    if (next === 4096) {
+                        emit(clear, size);
+                        gen = ++this.gen; size = minCode + 1; next = eoi + 1;
+                    } else {
+                        if (next >= (1 << size)) size++;
+                        codes[key] = next++; gens[key] = gen;
+                    }
+                    prefix = k;
+                }
+                emit(prefix, size);
+                // The decoder adds one more entry on reading that last code; match its width for EOI.
+                if (next < 4096 && next >= (1 << size)) size++;
+                emit(eoi, size);
+                if (bits > 0) put(cur & 255);
+                if (bl) { o.byte(bl); for (let i = 0; i < bl; i++) o.byte(block[i]); }
+                o.byte(0);
+            }
+
+            finish() {
+                this.flush();
+                this.out.byte(0x3B);
+                return new Blob([this.out.done()], { type: 'image/gif' });
+            }
+        }
+
+        // ── Video → frames ──────────────────────────────────────────────
+        function waitFor(el, ev, ms) {
+            return new Promise((resolve, reject) => {
+                let t;
+                const done = (fn, v) => { clearTimeout(t); el.removeEventListener(ev, ok); el.removeEventListener('error', bad); fn(v); };
+                const ok = () => done(resolve);
+                const bad = () => done(reject, new Error('video-error'));
+                el.addEventListener(ev, ok, { once: true });
+                el.addEventListener('error', bad, { once: true });
+                if (ms) t = setTimeout(() => done(ev === 'seeked' ? resolve : reject, new Error('timeout')), ms);
+            });
+        }
+
+        async function seek(v, t) {
+            const p = waitFor(v, 'seeked', 3000);
+            v.currentTime = t;
+            await p;
+        }
+
+        const abortError = () => Object.assign(new Error('aborted'), { name: 'AbortError' });
+
+        async function makeGif(src, { width = 480, fps = 15, maxSecs = 30, tol = GIF_TOLERANCE } = {}, onProgress = () => {}, signal) {
+            const v = document.createElement('video');
+            v.muted = true; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous';
+            v.src = src;
+            try {
+                if (v.readyState < 2) await waitFor(v, 'loadeddata', 20000);
+                let dur = v.duration;
+                if (!isFinite(dur)) {                         // some WebM files report Infinity until the end is seen
+                    await seek(v, 1e7);
+                    dur = isFinite(v.duration) ? v.duration : v.currentTime;
+                }
+                dur = Math.max(0.05, Math.min(dur || 0, maxSecs));
+                const vw = v.videoWidth, vh = v.videoHeight;
+                if (!vw || !vh) throw new Error('video-error');
+                const w = Math.max(1, Math.round(Math.min(width, vw)));
+                const h = Math.max(1, Math.round(vh * w / vw));
+                const cv = document.createElement('canvas');
+                cv.width = w; cv.height = h;
+                const ctx = cv.getContext('2d', { willReadFrequently: true });
+                const last = Math.max(0, dur - 0.02);
+                const grab = async (t) => {
+                    if (signal && signal.aborted) throw abortError();
+                    await seek(v, Math.min(t, last));
+                    ctx.drawImage(v, 0, 0, w, h);
+                    return ctx.getImageData(0, 0, w, h).data;
+                };
+
+                const n = Math.max(1, Math.round(dur * fps));
+                const samplesAt = Math.min(n, 10);
+                const perFrame = Math.max(1, Math.floor(60000 / samplesAt));
+                const step = Math.max(1, Math.floor((w * h) / perFrame));
+                const samples = [];
+                for (let k = 0; k < samplesAt; k++) {
+                    const d = await grab(((k + 0.5) * dur) / samplesAt);
+                    for (let p = 0; p < w * h; p += step) samples.push((d[p * 4] << 16) | (d[p * 4 + 1] << 8) | d[p * 4 + 2]);
+                    onProgress(0.1 * (k + 1) / samplesAt);
+                }
+                const enc = new GifEncoder(w, h, medianCut(Int32Array.from(samples), 255), tol);
+
+                for (let i = 0; i < n; i++) {
+                    const d = await grab(i / fps);
+                    const delay = Math.round(((i + 1) * 100) / fps) - Math.round((i * 100) / fps);
+                    enc.addFrame(d, delay);
+                    onProgress(0.1 + 0.9 * (i + 1) / n);
+                }
+                const blob = enc.finish();
+                return { blob, width: w, height: h, frames: enc.frames, seconds: dur, sourceFrames: n };
+            } finally {
+                v.removeAttribute('src');
+                v.load();
+            }
+        }
+
+        // ── Files ────────────────────────────────────────────────────────
+        function saveBlob(blob, name) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+        }
+
+        function canShareFile(file) {
+            try { return !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) { return false; }
+        }
+
+        async function shareBlob(blob, name) {
+            const file = new File([blob], name, { type: blob.type });
+            try { await navigator.share({ files: [file] }); }
+            catch (e) { if (e.name !== 'AbortError') saveBlob(blob, name); }
+        }
+
+        const fmtSize = (b) => b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`;
+
         // ── UI ───────────────────────────────────────────────────────────
         const $ = (s) => document.querySelector(s);
         const form = $('#form'), input = $('#url'), goBtn = $('#go'), pasteBtn = $('#paste');
         const statusEl = $('#status'), results = $('#results');
-        const state = { post: null, busy: false };
+        const state = { post: null, busy: false, lastGif: null, lastGifInfo: null };
 
         function el(tag, attrs = {}, ...kids) {
             const e = document.createElement(tag);
@@ -400,7 +726,7 @@ permalink: /gif-grab/
                 el('div', { class: 'post-meta' },
                     el('div', { class: 'who' }, post.name || 'Post', ' ', post.handle ? el('span', { text: '@' + post.handle }) : null),
                     post.text ? el('div', { class: 'text', text: post.text }) : null));
-            shown.forEach((m) => card.append(mediaBlock(post, m)));
+            shown.forEach((m, i) => card.append(mediaBlock(post, m, i, shown.length)));
             results.replaceChildren(card);
         }
 
@@ -414,9 +740,8 @@ permalink: /gif-grab/
             return url.toString();
         }
 
-        // X's media hosts send no CORS headers, so a page can show their files but
-        // can't read them (no fetch → blob → download, no canvas). The browser itself
-        // can still save a link, so each card explains how on this device.
+        // Saving by hand: the fallback when the page can't fetch the file itself
+        // (a content blocker, a network error, or X changing its rules).
         function detectPlatform() {
             const forced = new URLSearchParams(location.search).get('platform');
             if (['ios', 'android', 'desktop'].includes(forced)) return forced;
@@ -458,9 +783,19 @@ permalink: /gif-grab/
             return el('ol', {}, ...GUIDES[platform][kind === 'photo' ? 'photo' : 'video']().map((parts) => el('li', {}, ...parts)));
         }
 
-        function guide(m) {
-            const box = el('div', { class: 'guide', 'data-guide': PLATFORM });
-            if (m.kind === 'gif') box.append(el('p', { text: 'X keeps GIFs as short silent videos, so you’ll get an MP4 file. It loops in most apps.' }));
+        function manualSave(m, href) {
+            const box = el('details', { class: 'guide', 'data-guide': PLATFORM },
+                el('summary', { text: 'Didn’t download? Save it by hand' }));
+            const fail = el('p', { class: 'fail', hidden: true });
+            const copy = navigator.clipboard && navigator.clipboard.writeText
+                ? el('button', { type: 'button', 'data-act': 'copy', text: '🔗 Copy link' })
+                : null;
+            if (copy) copy.addEventListener('click', () => copyLink(copy, href));
+            const open = m.kind === 'photo'
+                ? null
+                : el('a', { class: 'btn wide', 'data-act': 'open-video', href, target: '_blank', rel: 'noopener noreferrer', text: '↗ Open video' });
+            box.append(fail);
+            if (open || copy) box.append(el('div', { class: 'actions', style: 'margin: 0 0 10px' }, open, copy));
             box.append(stepsList(PLATFORM, m.kind));
             if (PLATFORM === 'ios' && IOS_OTHER_BROWSER && m.kind !== 'photo') {
                 box.append(el('p', { style: 'margin: 8px 0 0', text: 'If you don’t see that option, open GIF Grab in Safari.' }));
@@ -468,6 +803,13 @@ permalink: /gif-grab/
             const others = Object.keys(GUIDES).filter((k) => k !== PLATFORM);
             box.append(el('details', {}, el('summary', { text: 'On another device' }),
                 ...others.map((k) => el('div', { style: 'margin-top: 8px' }, b(PLATFORM_NAMES[k]), stepsList(k, m.kind)))));
+            // Called when the page couldn't get the file: open the panel and say why.
+            box.failed = (e) => {
+                const why = e && e.message ? e.message : '';
+                fail.textContent = `Couldn’t download it here${why ? ` (${why})` : ''}. You can still save it by hand:`;
+                fail.hidden = false;
+                box.open = true;
+            };
             return box;
         }
 
@@ -481,7 +823,41 @@ permalink: /gif-grab/
             setTimeout(() => { btn.textContent = '🔗 Copy link'; }, 2000);
         }
 
-        function mediaBlock(post, m) {
+        function baseName(post, i, total) {
+            const who = (post.handle || 'x').replace(/[^\w-]/g, '');
+            return `${who}-${post.id}${total > 1 ? '-' + (i + 1) : ''}`;
+        }
+
+        function fetchBlob(m) {
+            if (!m.blobP) {
+                m.blobP = (async () => {
+                    const r = await fetchTimeout(m.kind === 'photo' ? photoUrl(m.url) : m.url, 60000);
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    const blob = await r.blob();
+                    m.blob = blob;
+                    return blob;
+                })();
+                m.blobP.catch(() => { m.blobP = null; });
+            }
+            return m.blobP;
+        }
+
+        // Phones get the share sheet (Save Video / Save Image go straight to Photos).
+        // Sharing has to start inside the tap, so it only works once the file is
+        // already here: GIFs and images are fetched as soon as the card shows.
+        async function deliver(m, fileName) {
+            if (m.blob && PLATFORM !== 'desktop') {
+                const file = new File([m.blob], fileName, { type: m.blob.type || 'application/octet-stream' });
+                if (canShareFile(file)) {
+                    try { await navigator.share({ files: [file] }); return; }
+                    catch (e) { if (e.name === 'AbortError') return; }
+                }
+            }
+            saveBlob(m.blob || await fetchBlob(m), fileName);
+        }
+
+        function mediaBlock(post, m, i, total) {
+            const name = baseName(post, i, total);
             const label = m.kind === 'gif' ? 'GIF' : m.kind === 'video' ? 'VIDEO' : 'IMAGE';
             const view = m.kind === 'photo'
                 ? el('img', { src: photoUrl(m.url), alt: 'Image from the post' })
@@ -490,18 +866,111 @@ permalink: /gif-grab/
             const block = el('div', { class: 'media', 'data-kind': m.kind },
                 el('div', { class: 'preview' }, view, el('span', { class: 'badge', text: label + (m.quote ? ' · QUOTED' : '') })));
             if (m.width && m.height) block.append(el('div', { class: 'info', text: `${m.width} × ${m.height}` }));
+            const manual = manualSave(m, m.kind === 'photo' ? photoUrl(m.url) : m.url);
+            if (m.kind !== 'video') fetchBlob(m).catch(() => {});   // small files: have them ready for the share sheet
 
-            const href = m.kind === 'photo' ? photoUrl(m.url) : m.url;
-            const copy = navigator.clipboard && navigator.clipboard.writeText
-                ? el('button', { type: 'button', 'data-act': 'copy', text: '🔗 Copy link' })
-                : null;
-            if (copy) copy.addEventListener('click', () => copyLink(copy, href));
-            const open = m.kind === 'photo'
-                ? null
-                : el('a', { class: 'btn primary wide', 'data-act': 'open-video', href, target: '_blank', rel: 'noopener', text: '⬇ Open video' });
-            if (open || copy) block.append(el('div', { class: 'actions' }, open, copy));
-            block.append(guide(m));
+            if (m.kind === 'photo') {
+                const save = el('button', { type: 'button', class: 'primary', 'data-act': 'save-photo', text: '⬇ Save image' });
+                save.addEventListener('click', async () => {
+                    save.disabled = true;
+                    try {
+                        const blob = m.blob || await fetchBlob(m);
+                        const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+                        await deliver(m, `${name}.${ext}`);
+                    } catch (e) { manual.failed(e); }
+                    finally { save.disabled = false; }
+                });
+                block.append(el('div', { class: 'actions' }, save), manual);
+                return block;
+            }
+
+            const saveMp4 = el('button', { type: 'button', class: 'primary', 'data-act': 'save-mp4', text: '⬇ Save MP4' });
+            const makeBtn = el('button', { type: 'button', 'data-act': 'make-gif', text: '✨ Make .gif' });
+            const sizeSel = el('select', { 'data-opt': 'size' },
+                el('option', { value: '320', text: 'Small (320 px)' }),
+                el('option', { value: '480', selected: true, text: 'Medium (480 px)' }),
+                el('option', { value: '720', text: 'Large (720 px)' }));
+            const fpsSel = el('select', { 'data-opt': 'fps' },
+                el('option', { value: '10', text: '10 fps' }),
+                el('option', { value: '15', selected: true, text: '15 fps' }),
+                el('option', { value: '20', text: '20 fps' }));
+            const opts = el('div', { class: 'opts' },
+                el('label', {}, 'GIF size', sizeSel),
+                el('label', {}, 'Smoothness', fpsSel));
+            const bar = el('i');
+            const pct = el('span', { text: 'Preparing…' });
+            const cancel = el('button', { type: 'button', 'data-act': 'cancel', text: 'Cancel' });
+            const progress = el('div', { class: 'progress', hidden: true },
+                el('div', { class: 'bar' }, bar), el('div', { class: 'row' }, pct, cancel));
+            const result = el('div', { class: 'result', hidden: true });
+
+            block.append(el('div', { class: 'actions' }, saveMp4, makeBtn), opts, progress, result, manual);
+
+            saveMp4.addEventListener('click', async () => {
+                saveMp4.disabled = true;
+                try { await deliver(m, `${name}.mp4`); }
+                catch (e) { manual.failed(e); }
+                finally { saveMp4.disabled = false; }
+            });
+
+            let ctl = null;
+            cancel.addEventListener('click', () => ctl && ctl.abort());
+
+            makeBtn.addEventListener('click', async () => {
+                if (ctl) return;
+                ctl = new AbortController();
+                makeBtn.disabled = true; sizeSel.disabled = true; fpsSel.disabled = true;
+                result.hidden = true;
+                progress.hidden = false;
+                bar.style.width = '0%';
+                pct.textContent = 'Downloading the clip…';
+                let srcUrl = null;
+                try {
+                    let blob;
+                    try { blob = m.blob || await fetchBlob(m); }
+                    catch (e) { manual.failed(e); throw Object.assign(new Error('fetch'), { handled: true }); }
+                    srcUrl = URL.createObjectURL(blob);
+                    const out = await makeGif(srcUrl, { width: +sizeSel.value, fps: +fpsSel.value }, (f) => {
+                        bar.style.width = `${Math.round(f * 100)}%`;
+                        pct.textContent = f < 0.1 ? 'Picking colours…' : `Converting… ${Math.round(f * 100)}%`;
+                    }, ctl.signal);
+                    state.lastGif = out.blob;
+                    state.lastGifInfo = out;
+                    showResult(result, out, name);
+                } catch (e) {
+                    if (e.name === 'AbortError') pct.textContent = 'Cancelled.';
+                    else if (e.message === 'video-error') pct.textContent = 'This browser can’t read this video, so it can’t be converted here. Save the MP4 instead.';
+                    else pct.textContent = 'Couldn’t convert it.';
+                    setTimeout(() => { if (!ctl) progress.hidden = true; }, 2500);
+                } finally {
+                    if (srcUrl) URL.revokeObjectURL(srcUrl);
+                    if (!result.hidden) progress.hidden = true;
+                    ctl = null;
+                    makeBtn.disabled = false; sizeSel.disabled = false; fpsSel.disabled = false;
+                }
+            });
             return block;
+        }
+
+        function showResult(box, out, name) {
+            const fileName = `${name}.gif`;
+            const url = URL.createObjectURL(out.blob);
+            if (box.dataset.url) URL.revokeObjectURL(box.dataset.url);
+            box.dataset.url = url;
+            const save = el('button', { type: 'button', class: 'primary', 'data-act': 'save-gif', text: '⬇ Save .gif', onclick: () => saveBlob(out.blob, fileName) });
+            const file = new File([out.blob], fileName, { type: 'image/gif' });
+            const share = canShareFile(file)
+                ? el('button', { type: 'button', 'data-act': 'share-gif', text: '↗ Share', onclick: () => shareBlob(out.blob, fileName) })
+                : null;
+            const big = out.blob.size > 15 * 1024 * 1024;
+            box.replaceChildren(...[
+                el('h3', { text: 'Your GIF' }),
+                el('div', { class: 'preview' }, el('img', { src: url, alt: 'The converted GIF' })),
+                el('div', { class: 'info', 'data-gif-info': true, text: `${fmtSize(out.blob.size)} · ${out.width} × ${out.height} · ${out.seconds.toFixed(1)} s` }),
+                big ? el('p', { class: 'warn', text: 'That’s a big file. A smaller size or 10 fps makes a much lighter GIF.' }) : null,
+                el('div', { class: 'actions' }, save, share),
+            ].filter(Boolean));
+            box.hidden = false;
         }
 
         form.addEventListener('submit', (e) => { e.preventDefault(); go(); });
@@ -534,7 +1003,7 @@ permalink: /gif-grab/
         }
 
         if (qs.has('debug')) {
-            window.__gifGrab = { state, parseId, fromFx, fromVx, lookup, go, photoUrl, platform: PLATFORM, SOURCES };
+            window.__gifGrab = { state, parseId, fromFx, fromVx, lookup, go, photoUrl, makeGif, medianCut, GifEncoder, platform: PLATFORM, SOURCES };
         }
     })();
 

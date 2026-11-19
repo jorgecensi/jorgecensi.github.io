@@ -23,7 +23,7 @@ a PWA).
 - `music-theory/` — Music theory trainer (PWA): a guided ear-first Learn path (hear it, play it, then learn why) plus free-play scales, chords, intervals and quizzes
 - `conquerors/` — Strava-powered territory game: a heatmap of conquered ~200 m map tiles, quests to unexplored streets, levels and achievements (PWA)
 - `winterfell/` — Battle of Winterfell, a first-person 3D game (three.js) in three acts: the Dothraki charge, holding the line with the Unsullied, and defending the castle courtyard until dawn (PWA)
-- `gif-grab/` — Paste an X (Twitter) post link and save its GIF (as the MP4 X stores), video or images, with save steps for the device (PWA)
+- `gif-grab/` — Paste an X (Twitter) post link and save its GIF as MP4, or convert it to a real animated .gif on the device (PWA)
 - `binary/` — Binary number trainer (PWA, also available in `pt-BR/binary/`)
 - `tennis-planner.html` — Tennis match/availability planner (PWA)
 - `squeak-the-geek.html` — Browser game (PWA)
