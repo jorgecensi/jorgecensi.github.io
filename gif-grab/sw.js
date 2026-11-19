@@ -1,4 +1,4 @@
-const CACHE_VERSION = '2611191030';
+const CACHE_VERSION = '2611190858';
 const CACHE_NAME = `gif-grab-${CACHE_VERSION}`;
 const OFFLINE_URL = '/gif-grab/';
 const PRECACHE_URLS = [
