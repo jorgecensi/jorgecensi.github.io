@@ -1,9 +1,14 @@
-// End to end: link → lookup → preview + save guide, plus the fallbacks and errors.
-const { launch, assert, fxPost, fxGif, VIDEO_URL, PHOTO_URL } = require('./_helpers');
+// End to end: link → lookup → save MP4 → convert to .gif, the save-by-hand fallback,
+// the per-device steps, and the lookup fallbacks and errors.
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { execFileSync } = require('child_process');
+const { launch, assert, fxPost, fxGif, CLIP, VIDEO_URL, PHOTO_URL } = require('./_helpers');
 
 (async () => {
   const t = await launch();
-  const { page, api, calls, ev, open, status, submit, waitStatus, shot, noHScroll } = t;
+  const { page, api, calls, referers, ev, open, status, submit, waitStatus, shot, noHScroll } = t;
   try {
     await open();
 
@@ -26,25 +31,77 @@ const { launch, assert, fxPost, fxGif, VIDEO_URL, PHOTO_URL } = require('./_help
     assert(/t\.co/.test(await status()), 't.co message: ' + await status());
     console.log('ok parse + bad links');
 
-    // ── Happy path (desktop) ──
+    // ── Happy path ──
     await submit('https://x.com/tester/status/1790000000000000001?s=20');
     await waitStatus(/Found a GIF/);
     assert(calls[0] === 'fx', 'asked FxTwitter first');
     assert(await page.isVisible('.media[data-kind="gif"] video'), 'preview video shown');
     assert(/Test Person/.test(await page.textContent('.post-meta')), 'author shown');
-    const link = await page.$eval('[data-act="open-video"]', (a) => ({ href: a.href, target: a.target }));
-    assert(link.href === VIDEO_URL && link.target === '_blank', 'open-video link ' + JSON.stringify(link));
-    assert(await ev(() => window.__gifGrab.platform) === 'desktop', 'desktop platform');
-    const guide = await page.textContent('.guide');
-    assert(/Save link as/.test(guide) && /short silent videos/.test(guide), 'desktop guide: ' + guide);
-    assert(!(await page.isVisible('.guide details ol')), 'other devices collapsed');
+    assert(!(await page.$eval('details.guide', (d) => d.open)), 'save-by-hand panel starts closed');
+    await noHScroll();
+    await shot('found');
+
+    const [mp4] = await Promise.all([page.waitForEvent('download'), page.click('[data-act="save-mp4"]')]);
+    assert(mp4.suggestedFilename() === 'tester-1790000000000000001.mp4', 'mp4 name ' + mp4.suggestedFilename());
+    const mp4Path = path.join(os.tmpdir(), `gg-${process.pid}.mp4`);
+    await mp4.saveAs(mp4Path);
+    assert(fs.statSync(mp4Path).size === fs.statSync(CLIP).size, 'mp4 bytes match the source');
+    console.log('ok save mp4');
+
+    await page.selectOption('[data-opt="size"]', '320');
+    await page.selectOption('[data-opt="fps"]', '10');
+    await page.click('[data-act="make-gif"]');
+    await page.waitForSelector('.result:not([hidden]) img', { timeout: 60000 });
+    const info = await page.textContent('[data-gif-info]');
+    assert(/320 × 180/.test(info), 'gif info ' + info);
+    assert(!/\bnull\b|undefined/.test(await page.textContent('.result')), 'stray null/undefined in the result card');
+    await noHScroll();
+    await shot('converted');
+
+    const [gif] = await Promise.all([page.waitForEvent('download'), page.click('[data-act="save-gif"]')]);
+    assert(gif.suggestedFilename() === 'tester-1790000000000000001.gif', 'gif name ' + gif.suggestedFilename());
+    const gifPath = path.join(os.tmpdir(), `gg-${process.pid}.gif`);
+    await gif.saveAs(gifPath);
+    assert(fs.readFileSync(gifPath).subarray(0, 6).toString('latin1') === 'GIF89a', 'gif header');
+    // Independent decode with Pillow, compared frame by frame with ffmpeg's decode of the clip.
+    const check = JSON.parse(execFileSync('python3', ['-I', path.join(__dirname, '..', 'check_gif.py'), gifPath, CLIP, '10', '320']).toString());
+    assert(check.frames >= 10 && Math.abs(check.ms - 2000) <= 20, 'gif frames/duration ' + JSON.stringify(check));
+    const decoded = await ev(async () => {
+      const img = document.querySelector('.result img');
+      await img.decode();
+      return [img.naturalWidth, img.naturalHeight];
+    });
+    assert(decoded[0] === 320 && decoded[1] === 180, 'chromium decode ' + decoded);
+    console.log('ok make gif', JSON.stringify(check), fs.statSync(gifPath).size, 'bytes');
+
+    // X answers 403 to any Referer but its own: nothing the page loads from it may carry one.
+    assert(referers.length === 0, 'requests to video.twimg.com sent a Referer: ' + referers.join(', '));
+    console.log('ok no referer');
+
+    // ── Cancel ──
+    await page.selectOption('[data-opt="size"]', '720');
+    await page.click('[data-act="make-gif"]');
+    await page.click('[data-act="cancel"]');
+    await page.waitForFunction(() => /Cancelled/.test(document.querySelector('.progress').textContent), null, { timeout: 10000 });
+    console.log('ok cancel');
+
+    // ── Download blocked → the save-by-hand panel opens with the reason ──
+    api.fx = (id) => ({ status: 200, body: fxPost(id, [{ type: 'gif', url: 'https://video.twimg.com/tweet_video/Blocked.mp4', width: 320, height: 180 }]) });
+    await submit('https://x.com/tester/status/1790000000000000008');
+    await waitStatus(/Found a GIF/);
+    await page.click('[data-act="save-mp4"]');
+    await page.waitForFunction(() => document.querySelector('details.guide').open, null, { timeout: 10000 });
+    const fail = await page.textContent('details.guide .fail');
+    assert(/Couldn’t download it here \(.+\)/.test(fail), 'failure reason shown: ' + fail);
+    const link = await page.$eval('[data-act="open-video"]', (a) => ({ href: a.href, target: a.target, rel: a.rel }));
+    assert(link.href === 'https://video.twimg.com/tweet_video/Blocked.mp4' && link.target === '_blank' && /noreferrer/.test(link.rel), 'open-video link ' + JSON.stringify(link));
+    assert(/Save link as/.test(await page.textContent('details.guide ol')), 'desktop steps');
     await page.click('[data-act="copy"]');
     await page.waitForFunction(() => /Copied/.test(document.querySelector('[data-act="copy"]').textContent));
-    assert(await ev(() => navigator.clipboard.readText()) === VIDEO_URL, 'copied the video link');
-    assert(!(await page.$('[data-act="make-gif"], [data-act="save-mp4"]')), 'no fetch-based buttons');
+    assert(await ev(() => navigator.clipboard.readText()) === 'https://video.twimg.com/tweet_video/Blocked.mp4', 'copied the video link');
     await noHScroll();
-    await shot('found-desktop');
-    console.log('ok gif card');
+    await shot('blocked');
+    console.log('ok blocked fallback');
 
     // ── FxTwitter down → vxTwitter ──
     calls.length = 0;
@@ -69,7 +126,8 @@ const { launch, assert, fxPost, fxGif, VIDEO_URL, PHOTO_URL } = require('./_help
     await waitStatus(/No GIF in that post/);
     const src = await page.getAttribute('.media[data-kind="photo"] img', 'src');
     assert(src === 'https://pbs.twimg.com/media/TestPic?format=jpg&name=orig', 'original-size image ' + src);
-    assert(/Save image as/.test(await page.textContent('.guide')), 'photo guide');
+    const [pic] = await Promise.all([page.waitForEvent('download'), page.click('[data-act="save-photo"]')]);
+    assert(pic.suggestedFilename() === 'tester-1790000000000000004.png', 'photo name ' + pic.suggestedFilename());
     assert(!(await page.$('[data-act="open-video"]')), 'no open-video on photos');
     console.log('ok photo post');
 
@@ -93,7 +151,7 @@ const { launch, assert, fxPost, fxGif, VIDEO_URL, PHOTO_URL } = require('./_help
     await t.browser.close();
   }
 
-  // ── Save guides per device ──
+  // ── Save-by-hand steps per device ──
   const devices = [
     ['ios', /Download Linked File/, null],
     ['iosChrome', /Download Linked File/, /open GIF Grab in Safari/],
@@ -105,13 +163,14 @@ const { launch, assert, fxPost, fxGif, VIDEO_URL, PHOTO_URL } = require('./_help
       await d.open();
       await d.submit('https://x.com/tester/status/1790000000000000001');
       await d.waitStatus(/Found a GIF/);
-      const g = await d.page.textContent('.guide ol');
-      assert(want.test(g), `${ua} guide: ${g}`);
-      const all = await d.page.textContent('.guide');
+      await d.page.click('details.guide > summary');
+      const g = await d.page.textContent('details.guide ol');
+      assert(want.test(g), `${ua} steps: ${g}`);
+      const all = await d.page.textContent('details.guide');
       assert(extra ? extra.test(all) : !/open GIF Grab in Safari/.test(all), `${ua} Safari hint`);
       await d.noHScroll();
-      await d.shot('found-' + ua);
-      console.log('ok guide', ua);
+      await d.shot('guide-' + ua);
+      console.log('ok steps', ua);
     } finally {
       await d.browser.close();
     }

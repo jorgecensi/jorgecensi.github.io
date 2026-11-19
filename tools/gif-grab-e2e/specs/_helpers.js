@@ -51,6 +51,7 @@ async function launch({ ua } = {}) {
 
   const api = { fx: (id) => ({ status: 200, body: fxGif(id) }), vx: (id) => ({ status: 200, body: vxGif(id) }) };
   const calls = [];
+  const referers = [];
   const json = (route, r) => route.fulfill({ status: r.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(r.body || {}) });
   await ctx.route('https://api.fxtwitter.com/**', (route) => {
     calls.push('fx'); json(route, api.fx(route.request().url().match(/(\d+)$/)[1]));
@@ -60,6 +61,11 @@ async function launch({ ua } = {}) {
   });
   await ctx.route('https://video.twimg.com/**', (route) => {
     calls.push('video');
+    // Like the real host: any Referer but X's own gets a 403 (that's what broke saving on iPhone).
+    const ref = route.request().headers()['referer'];
+    if (ref) { referers.push(ref); return route.fulfill({ status: 403, body: '' }); }
+    // Stands in for a blocked request (content blocker, network error).
+    if (/Blocked/.test(route.request().url())) return route.abort('failed');
     route.fulfill({ status: 200, contentType: 'video/webm', headers: { 'access-control-allow-origin': '*' }, body: fs.readFileSync(CLIP) });
   });
   await ctx.route('https://pbs.twimg.com/**', (route) => {
@@ -78,7 +84,7 @@ async function launch({ ua } = {}) {
   const shot = async (name) => { if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true }); };
   const noHScroll = async () => assert(!(await ev(() => document.documentElement.scrollWidth > innerWidth)), 'page scrolls horizontally');
 
-  return { browser, ctx, page, errors, api, calls, ev, open, status, submit, waitStatus, shot, noHScroll };
+  return { browser, ctx, page, errors, api, calls, referers, ev, open, status, submit, waitStatus, shot, noHScroll };
 }
 
 module.exports = { launch, assert, sleep, fxPost, fxGif, vxGif, CLIP, VIDEO_URL, PHOTO_URL };
