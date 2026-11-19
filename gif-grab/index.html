@@ -1,0 +1,926 @@
+---
+layout: null
+permalink: /gif-grab/
+---
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GIF Grab">
+    <meta name="theme-color" content="#0e1018">
+    <meta name="description" content="Paste a link to an X (Twitter) post with a GIF and save it, as the original MP4 or converted to a real .gif file.">
+    <title>GIF Grab — Save GIFs from X</title>
+    <link rel="manifest" href="/gif-grab/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/gif-grab-icon-192.png">
+    <link rel="apple-touch-icon" href="/img/gif-grab-icon-192.png">
+
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --bg: #0e1018;
+            --panel: #161a26;
+            --panel-2: #1d2232;
+            --line: #2a3046;
+            --text: #eceff7;
+            --muted: #9aa2b8;
+            --accent: #8b5cf6;
+            --accent-2: #ec4899;
+            --accent-ink: #ffffff;
+            --ok: #34d399;
+            --danger: #fb7185;
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
+
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        .app {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: calc(20px + var(--safe-top)) 16px calc(28px + var(--safe-bottom));
+        }
+
+        header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+        header img { width: 44px; height: 44px; border-radius: 12px; }
+        header h1 { margin: 0; font-size: 1.4rem; letter-spacing: -0.01em; }
+        header p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+
+        label.lbl { display: block; font-weight: 600; margin-bottom: 8px; }
+
+        .url-row { display: flex; gap: 8px; }
+
+        input[type="url"] {
+            flex: 1;
+            min-width: 0;
+            font: inherit;
+            color: var(--text);
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px 14px;
+            outline: none;
+        }
+        input[type="url"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25); }
+
+        button, .btn {
+            font: inherit;
+            font-weight: 600;
+            border: 0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            color: var(--text);
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 46px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button:disabled { opacity: 0.55; cursor: default; }
+        button.primary, .btn.primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border-color: transparent;
+            color: var(--accent-ink);
+        }
+        button:not(:disabled):active, .btn:active { transform: translateY(1px); }
+
+        .actions { display: flex; gap: 8px; margin-top: 10px; }
+        .actions > * { flex: 1; }
+
+        #status { min-height: 1.4em; margin: 10px 2px 0; color: var(--muted); font-size: 0.95rem; }
+        #status.error { color: var(--danger); }
+        #status.ok { color: var(--ok); }
+
+        .post-meta { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+        .post-meta .who { font-weight: 700; }
+        .post-meta .who span { color: var(--muted); font-weight: 400; }
+        .post-meta .text { color: var(--muted); font-size: 0.92rem; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+        .media { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; }
+        .media:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+
+        .preview {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-height: 60vh;
+        }
+        .preview video, .preview img { display: block; width: 100%; max-height: 60vh; object-fit: contain; }
+        .badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .info { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+
+        .opts { display: flex; gap: 8px; margin-top: 12px; }
+        .opts label { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+        select {
+            font: inherit;
+            color: var(--text);
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 9px 10px;
+            min-height: 42px;
+        }
+
+        .progress { margin-top: 12px; }
+        .bar { height: 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+        .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.15s; }
+        .progress .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.85rem; color: var(--muted); }
+        .progress button { min-height: 34px; padding: 6px 12px; font-size: 0.85rem; }
+
+        .result { margin-top: 14px; padding: 12px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); }
+        .result h3 { margin: 0 0 8px; font-size: 0.95rem; }
+        .result .preview { background: repeating-conic-gradient(#222 0 25%, #2b2b2b 0 50%) 0 0 / 16px 16px; }
+
+        .warn { margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
+        .warn a { color: var(--text); }
+
+        details.help { color: var(--muted); font-size: 0.9rem; }
+        details.help summary { cursor: pointer; color: var(--text); font-weight: 600; }
+        details.help p { margin: 8px 0 0; }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(16px + var(--safe-bottom));
+            transform: translateX(-50%) translateY(calc(100% + 40px + var(--safe-bottom)));
+            visibility: hidden;
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            max-width: calc(100% - 32px);
+            transition: transform 0.25s;
+            z-index: 10;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); visibility: visible; }
+        .toast button { min-height: 34px; padding: 6px 12px; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition: none !important; animation: none !important; }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="app">
+        <header>
+            <img src="/img/gif-grab-icon-192.png" alt="">
+            <div>
+                <h1>GIF Grab</h1>
+                <p>Save GIFs from X (Twitter) posts</p>
+            </div>
+        </header>
+
+        <form class="card" id="form" novalidate>
+            <label class="lbl" for="url">Post link</label>
+            <div class="url-row">
+                <input type="url" id="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
+                    placeholder="https://x.com/name/status/…">
+            </div>
+            <div class="actions">
+                <button type="button" id="paste" hidden>📋 Paste</button>
+                <button type="submit" id="go" class="primary">Get GIF</button>
+            </div>
+            <p id="status" role="status" aria-live="polite"></p>
+        </form>
+
+        <section id="results" aria-label="Media in the post"></section>
+
+        <section class="card">
+            <details class="help">
+                <summary>How it works</summary>
+                <p>X stores every GIF as a short silent MP4 video. <strong>Save MP4</strong> gives you that file as it is: the best quality and the smallest size, and it plays everywhere, including WhatsApp and your camera roll.</p>
+                <p><strong>Make .gif</strong> converts it into a real animated GIF on your device, for places that only take GIFs. Smaller size and fewer frames per second make a lighter file.</p>
+                <p>On Android, install this app, then use <em>Share</em> on a post in the X app and pick GIF Grab.</p>
+                <p>To find the post, the link is looked up through the public FxTwitter API (or vxTwitter if that fails); nothing else leaves your device.</p>
+            </details>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+    const SW_VERSION = 'dev';
+
+    (() => {
+        'use strict';
+
+        // ── Finding the post ─────────────────────────────────────────────
+        // Accepts any x.com / twitter.com (or fxtwitter, vxtwitter, fixupx…) status link,
+        // text that contains one (what the X app shares), or a bare post id.
+        function parseId(text) {
+            const s = String(text || '').trim();
+            if (/^\d{5,25}$/.test(s)) return s;
+            const m = s.match(/\/status(?:es)?\/(\d{5,25})/i);
+            return m ? m[1] : null;
+        }
+
+        const FETCH_TIMEOUT = 15000;
+
+        async function fetchTimeout(url, ms = FETCH_TIMEOUT) {
+            const ctl = new AbortController();
+            const t = setTimeout(() => ctl.abort(), ms);
+            try {
+                return await fetch(url, { signal: ctl.signal, mode: 'cors', credentials: 'omit' });
+            } finally {
+                clearTimeout(t);
+            }
+        }
+
+        const kindOf = (t) => (t === 'gif' ? 'gif' : t === 'video' ? 'video' : (t === 'photo' || t === 'image') ? 'photo' : null);
+
+        function fromFx(j) {
+            const t = j && j.tweet;
+            if (!t) return null;
+            const list = (m) => !m ? [] : (m.all || [...(m.photos || []), ...(m.videos || [])]);
+            const map = (m, quote) => ({
+                kind: kindOf(m.type), url: m.url, thumb: m.thumbnail_url || null,
+                width: m.width || null, height: m.height || null, quote,
+            });
+            const media = list(t.media).map((m) => map(m, false))
+                .concat(list(t.quote && t.quote.media).map((m) => map(m, true)));
+            return {
+                id: String(t.id || ''),
+                name: (t.author && t.author.name) || '',
+                handle: (t.author && t.author.screen_name) || '',
+                text: t.text || '',
+                media: media.filter((m) => m.kind && m.url),
+            };
+        }
+
+        function fromVx(j) {
+            if (!j || !(j.tweetID || j.media_extended)) return null;
+            const map = (m, quote) => ({
+                kind: kindOf(m.type), url: m.url, thumb: m.thumbnail_url || null,
+                width: (m.size && m.size.width) || null, height: (m.size && m.size.height) || null, quote,
+            });
+            const media = (j.media_extended || []).map((m) => map(m, false))
+                .concat(((j.qrt && j.qrt.media_extended) || []).map((m) => map(m, true)));
+            return {
+                id: String(j.tweetID || ''),
+                name: j.user_name || '',
+                handle: j.user_screen_name || '',
+                text: j.text || '',
+                media: media.filter((m) => m.kind && m.url),
+            };
+        }
+
+        const SOURCES = [
+            { name: 'FxTwitter', url: (id) => `https://api.fxtwitter.com/status/${id}`, parse: fromFx },
+            { name: 'vxTwitter', url: (id) => `https://api.vxtwitter.com/Twitter/status/${id}`, parse: fromVx },
+        ];
+
+        class LookupError extends Error {
+            constructor(kind) { super(kind); this.kind = kind; }
+        }
+
+        async function lookup(id) {
+            let notFound = false;
+            for (const src of SOURCES) {
+                try {
+                    const r = await fetchTimeout(src.url(id));
+                    if (r.status === 404 || r.status === 401) { notFound = true; continue; }
+                    if (!r.ok) continue;
+                    const post = src.parse(await r.json());
+                    if (post) return Object.assign(post, { id: post.id || id, source: src.name });
+                    notFound = true;
+                } catch (e) { /* network, CORS or timeout: try the next source */ }
+            }
+            throw new LookupError(notFound ? 'notfound' : 'network');
+        }
+
+        // ── GIF encoding ─────────────────────────────────────────────────
+        // A small GIF89a writer: one global palette (median cut over frames sampled
+        // across the clip), light ordered dithering, and frame differencing (pixels
+        // that didn't change become transparent, cropped to the changed box), which
+        // is what keeps converted video clips a sensible size.
+
+        class Bytes {
+            constructor() { this.buf = new Uint8Array(1 << 16); this.n = 0; }
+            grow() { const b = new Uint8Array(this.buf.length * 2); b.set(this.buf); this.buf = b; }
+            byte(v) { if (this.n >= this.buf.length) this.grow(); this.buf[this.n++] = v; }
+            u16(v) { this.byte(v & 255); this.byte((v >> 8) & 255); }
+            str(s) { for (let i = 0; i < s.length; i++) this.byte(s.charCodeAt(i)); }
+            done() { return this.buf.subarray(0, this.n); }
+        }
+
+        function medianCut(px, k) {
+            const box = (a) => {
+                let rn = 255, rx = 0, gn = 255, gx = 0, bn = 255, bx = 0;
+                for (let i = 0; i < a.length; i++) {
+                    const c = a[i], r = c >> 16, g = (c >> 8) & 255, b = c & 255;
+                    if (r < rn) rn = r; if (r > rx) rx = r;
+                    if (g < gn) gn = g; if (g > gx) gx = g;
+                    if (b < bn) bn = b; if (b > bx) bx = b;
+                }
+                const rr = rx - rn, gr = gx - gn, br = bx - bn, range = Math.max(rr, gr, br);
+                return { a, range, score: range * Math.sqrt(a.length), sh: range === gr ? 8 : range === rr ? 16 : 0 };
+            };
+            const boxes = [box(px)];
+            while (boxes.length < k) {
+                let bi = -1, best = 0;
+                for (let i = 0; i < boxes.length; i++) {
+                    const b = boxes[i];
+                    if (b.a.length > 1 && b.range > 0 && b.score > best) { best = b.score; bi = i; }
+                }
+                if (bi < 0) break;
+                const { a, sh } = boxes[bi];
+                a.sort((p, q) => ((p >> sh) & 255) - ((q >> sh) & 255));
+                const mid = a.length >> 1;
+                boxes.splice(bi, 1, box(a.subarray(0, mid)), box(a.subarray(mid)));
+            }
+            return boxes.map(({ a }) => {
+                let r = 0, g = 0, b = 0;
+                for (let i = 0; i < a.length; i++) { const c = a[i]; r += c >> 16; g += (c >> 8) & 255; b += c & 255; }
+                const n = a.length || 1;
+                return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+            });
+        }
+
+        const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v / 16 - 0.5) * 8);
+        const TRANSPARENT = 255;
+
+        class GifEncoder {
+            constructor(w, h, palette) {
+                this.w = w; this.h = h;
+                this.pal = palette.slice(0, 255);
+                this.lut = new Int16Array(32768).fill(-1);
+                this.codes = new Int32Array(1 << 20);
+                this.gens = new Int32Array(1 << 20);
+                this.gen = 0;
+                this.prev = null;
+                this.pending = null;
+                this.frames = 0;
+                const o = this.out = new Bytes();
+                o.str('GIF89a'); o.u16(w); o.u16(h);
+                o.byte(0xF7); o.byte(0); o.byte(0);                     // 256-colour global table
+                for (let i = 0; i < 256; i++) {
+                    const c = this.pal[i] || [0, 0, 0];
+                    o.byte(c[0]); o.byte(c[1]); o.byte(c[2]);
+                }
+                o.byte(0x21); o.byte(0xFF); o.byte(11); o.str('NETSCAPE2.0'); // loop forever
+                o.byte(3); o.byte(1); o.u16(0); o.byte(0);
+            }
+
+            nearest(key) {
+                const r = (((key >> 10) & 31) << 3) | 4, g = (((key >> 5) & 31) << 3) | 4, b = ((key & 31) << 3) | 4;
+                let best = 0, bd = Infinity;
+                for (let i = 0; i < this.pal.length; i++) {
+                    const c = this.pal[i], dr = c[0] - r, dg = c[1] - g, db = c[2] - b;
+                    const d = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
+                    if (d < bd) { bd = d; best = i; }
+                }
+                return best;
+            }
+
+            index(data) {
+                const { w, h, lut } = this, out = new Uint8Array(w * h);
+                for (let y = 0, p = 0; y < h; y++) {
+                    const row = (y & 3) * 4;
+                    for (let x = 0; x < w; x++, p++) {
+                        const o = p * 4, d = BAYER[row + (x & 3)];
+                        let r = data[o] + d, g = data[o + 1] + d, b = data[o + 2] + d;
+                        r = r < 0 ? 0 : r > 255 ? 255 : r | 0;
+                        g = g < 0 ? 0 : g > 255 ? 255 : g | 0;
+                        b = b < 0 ? 0 : b > 255 ? 255 : b | 0;
+                        const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+                        let c = lut[key];
+                        if (c < 0) c = lut[key] = this.nearest(key);
+                        out[p] = c;
+                    }
+                }
+                return out;
+            }
+
+            addFrame(rgba, delay) {
+                const { w, h } = this, idx = this.index(rgba), prev = this.prev;
+                if (!prev) {
+                    this.pending = { x: 0, y: 0, w, h, pix: idx, delay };
+                    this.prev = idx;
+                    return;
+                }
+                let x0 = w, y0 = h, x1 = -1, y1 = -1;
+                for (let y = 0, p = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++, p++) {
+                        if (idx[p] !== prev[p]) {
+                            if (x < x0) x0 = x; if (x > x1) x1 = x;
+                            if (y < y0) y0 = y; y1 = y;
+                        }
+                    }
+                }
+                if (x1 < 0) { this.pending.delay += delay; return; } // identical frame: hold the last one longer
+                const fw = x1 - x0 + 1, fh = y1 - y0 + 1, pix = new Uint8Array(fw * fh);
+                for (let y = 0; y < fh; y++) {
+                    for (let x = 0; x < fw; x++) {
+                        const p = (y + y0) * w + x + x0;
+                        pix[y * fw + x] = idx[p] === prev[p] ? TRANSPARENT : idx[p];
+                    }
+                }
+                this.flush();
+                this.pending = { x: x0, y: y0, w: fw, h: fh, pix, delay };
+                this.prev = idx;
+            }
+
+            flush() {
+                const f = this.pending, o = this.out;
+                if (!f) return;
+                this.pending = null;
+                this.frames++;
+                o.byte(0x21); o.byte(0xF9); o.byte(4);
+                o.byte((1 << 2) | 1);                       // disposal: keep; transparent index on
+                o.u16(Math.min(65535, Math.max(2, f.delay))); o.byte(TRANSPARENT); o.byte(0);
+                o.byte(0x2C); o.u16(f.x); o.u16(f.y); o.u16(f.w); o.u16(f.h); o.byte(0);
+                this.lzw(f.pix, 8);
+            }
+
+            lzw(pix, minCode) {
+                const o = this.out, block = new Uint8Array(255);
+                let bl = 0, cur = 0, bits = 0;
+                const put = (b) => {
+                    block[bl++] = b;
+                    if (bl === 255) { o.byte(255); for (let i = 0; i < 255; i++) o.byte(block[i]); bl = 0; }
+                };
+                const emit = (code, size) => {
+                    cur |= code << bits; bits += size;
+                    while (bits >= 8) { put(cur & 255); cur >>>= 8; bits -= 8; }
+                };
+                const clear = 1 << minCode, eoi = clear + 1, codes = this.codes, gens = this.gens;
+                let size = minCode + 1, next = eoi + 1, gen = ++this.gen;
+                o.byte(minCode);
+                emit(clear, size);
+                let prefix = pix[0];
+                for (let i = 1; i < pix.length; i++) {
+                    const k = pix[i], key = (prefix << 8) | k;
+                    if (gens[key] === gen) { prefix = codes[key]; continue; }
+                    emit(prefix, size);
+                    if (next === 4096) {
+                        emit(clear, size);
+                        gen = ++this.gen; size = minCode + 1; next = eoi + 1;
+                    } else {
+                        if (next >= (1 << size)) size++;
+                        codes[key] = next++; gens[key] = gen;
+                    }
+                    prefix = k;
+                }
+                emit(prefix, size);
+                // The decoder adds one more entry on reading that last code; match its width for EOI.
+                if (next < 4096 && next >= (1 << size)) size++;
+                emit(eoi, size);
+                if (bits > 0) put(cur & 255);
+                if (bl) { o.byte(bl); for (let i = 0; i < bl; i++) o.byte(block[i]); }
+                o.byte(0);
+            }
+
+            finish() {
+                this.flush();
+                this.out.byte(0x3B);
+                return new Blob([this.out.done()], { type: 'image/gif' });
+            }
+        }
+
+        // ── Video → frames ──────────────────────────────────────────────
+        function waitFor(el, ev, ms) {
+            return new Promise((resolve, reject) => {
+                let t;
+                const done = (fn, v) => { clearTimeout(t); el.removeEventListener(ev, ok); el.removeEventListener('error', bad); fn(v); };
+                const ok = () => done(resolve);
+                const bad = () => done(reject, new Error('video-error'));
+                el.addEventListener(ev, ok, { once: true });
+                el.addEventListener('error', bad, { once: true });
+                if (ms) t = setTimeout(() => done(ev === 'seeked' ? resolve : reject, new Error('timeout')), ms);
+            });
+        }
+
+        async function seek(v, t) {
+            const p = waitFor(v, 'seeked', 3000);
+            v.currentTime = t;
+            await p;
+        }
+
+        const abortError = () => Object.assign(new Error('aborted'), { name: 'AbortError' });
+
+        async function makeGif(src, { width = 480, fps = 15, maxSecs = 30 } = {}, onProgress = () => {}, signal) {
+            const v = document.createElement('video');
+            v.muted = true; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous';
+            v.src = src;
+            try {
+                if (v.readyState < 2) await waitFor(v, 'loadeddata', 20000);
+                let dur = v.duration;
+                if (!isFinite(dur)) {                         // some WebM files report Infinity until the end is seen
+                    await seek(v, 1e7);
+                    dur = isFinite(v.duration) ? v.duration : v.currentTime;
+                }
+                dur = Math.max(0.05, Math.min(dur || 0, maxSecs));
+                const vw = v.videoWidth, vh = v.videoHeight;
+                if (!vw || !vh) throw new Error('video-error');
+                const w = Math.max(1, Math.round(Math.min(width, vw)));
+                const h = Math.max(1, Math.round(vh * w / vw));
+                const cv = document.createElement('canvas');
+                cv.width = w; cv.height = h;
+                const ctx = cv.getContext('2d', { willReadFrequently: true });
+                const last = Math.max(0, dur - 0.02);
+                const grab = async (t) => {
+                    if (signal && signal.aborted) throw abortError();
+                    await seek(v, Math.min(t, last));
+                    ctx.drawImage(v, 0, 0, w, h);
+                    return ctx.getImageData(0, 0, w, h).data;
+                };
+
+                const n = Math.max(1, Math.round(dur * fps));
+                const samplesAt = Math.min(n, 10);
+                const perFrame = Math.max(1, Math.floor(60000 / samplesAt));
+                const step = Math.max(1, Math.floor((w * h) / perFrame));
+                const samples = [];
+                for (let k = 0; k < samplesAt; k++) {
+                    const d = await grab(((k + 0.5) * dur) / samplesAt);
+                    for (let p = 0; p < w * h; p += step) samples.push((d[p * 4] << 16) | (d[p * 4 + 1] << 8) | d[p * 4 + 2]);
+                    onProgress(0.1 * (k + 1) / samplesAt);
+                }
+                const enc = new GifEncoder(w, h, medianCut(Int32Array.from(samples), 255));
+
+                for (let i = 0; i < n; i++) {
+                    const d = await grab(i / fps);
+                    const delay = Math.round(((i + 1) * 100) / fps) - Math.round((i * 100) / fps);
+                    enc.addFrame(d, delay);
+                    onProgress(0.1 + 0.9 * (i + 1) / n);
+                }
+                const blob = enc.finish();
+                return { blob, width: w, height: h, frames: enc.frames, seconds: dur, sourceFrames: n };
+            } finally {
+                v.removeAttribute('src');
+                v.load();
+            }
+        }
+
+        // ── Files ────────────────────────────────────────────────────────
+        function saveBlob(blob, name) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+        }
+
+        function canShareFile(file) {
+            try { return !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) { return false; }
+        }
+
+        async function shareBlob(blob, name) {
+            const file = new File([blob], name, { type: blob.type });
+            try { await navigator.share({ files: [file] }); }
+            catch (e) { if (e.name !== 'AbortError') saveBlob(blob, name); }
+        }
+
+        const fmtSize = (b) => b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`;
+
+        // ── UI ───────────────────────────────────────────────────────────
+        const $ = (s) => document.querySelector(s);
+        const form = $('#form'), input = $('#url'), goBtn = $('#go'), pasteBtn = $('#paste');
+        const statusEl = $('#status'), results = $('#results');
+        const state = { post: null, busy: false, lastGif: null, lastGifInfo: null };
+
+        function el(tag, attrs = {}, ...kids) {
+            const e = document.createElement(tag);
+            for (const [k, v] of Object.entries(attrs)) {
+                if (v == null || v === false) continue;
+                if (k === 'class') e.className = v;
+                else if (k === 'text') e.textContent = v;
+                else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+                else e.setAttribute(k, v === true ? '' : v);
+            }
+            for (const k of kids) if (k != null) e.append(k);
+            return e;
+        }
+
+        function setStatus(msg, kind = '') {
+            statusEl.textContent = msg;
+            statusEl.className = kind;
+        }
+
+        async function go(raw) {
+            if (state.busy) return;
+            const text = raw != null ? raw : input.value;
+            if (/(^|\/\/|\s)t\.co\//i.test(text) && !parseId(text)) {
+                setStatus('That is a shortened t.co link. Open it, then copy the x.com address of the post.', 'error');
+                return;
+            }
+            const id = parseId(text);
+            if (!id) {
+                setStatus(text.trim()
+                    ? 'That doesn’t look like a link to a post. It should look like x.com/name/status/1234…'
+                    : 'Paste the link to a post first.', 'error');
+                return;
+            }
+            state.busy = true;
+            goBtn.disabled = true;
+            setStatus('Looking up the post…');
+            results.replaceChildren();
+            try {
+                const post = await lookup(id);
+                state.post = post;
+                render(post);
+            } catch (e) {
+                state.post = null;
+                setStatus(e.kind === 'notfound'
+                    ? 'Couldn’t find that post. It may be deleted, or from a private account.'
+                    : (navigator.onLine === false
+                        ? 'You’re offline. Connect to the internet and try again.'
+                        : 'Couldn’t reach the lookup service. Try again in a moment.'), 'error');
+            } finally {
+                state.busy = false;
+                goBtn.disabled = false;
+            }
+        }
+
+        function render(post) {
+            const moving = post.media.filter((m) => m.kind === 'gif' || m.kind === 'video');
+            const photos = post.media.filter((m) => m.kind === 'photo');
+            const shown = moving.length ? moving : photos;
+            const gifs = moving.filter((m) => m.kind === 'gif').length;
+
+            if (!post.media.length) {
+                setStatus('That post has no GIF, video or image.', 'error');
+                return;
+            }
+            setStatus(moving.length
+                ? (gifs ? `Found ${gifs === 1 ? 'a GIF' : gifs + ' GIFs'}${moving.length > gifs ? ' and a video' : ''}.` : `No GIF here, but found ${moving.length === 1 ? 'a video' : moving.length + ' videos'}.`)
+                : `No GIF in that post. It has ${photos.length === 1 ? 'an image' : photos.length + ' images'} you can save.`, moving.length ? 'ok' : '');
+
+            const card = el('article', { class: 'card', 'data-post': post.id },
+                el('div', { class: 'post-meta' },
+                    el('div', { class: 'who' }, post.name || 'Post', ' ', post.handle ? el('span', { text: '@' + post.handle }) : null),
+                    post.text ? el('div', { class: 'text', text: post.text }) : null));
+            shown.forEach((m, i) => card.append(mediaBlock(post, m, i, shown.length)));
+            results.replaceChildren(card);
+        }
+
+        function baseName(post, i, total) {
+            const who = (post.handle || 'x').replace(/[^\w-]/g, '');
+            return `${who}-${post.id}${total > 1 ? '-' + (i + 1) : ''}`;
+        }
+
+        async function fetchBlob(m) {
+            if (!m.blobP) {
+                m.blobP = (async () => {
+                    const r = await fetchTimeout(m.kind === 'photo' ? photoUrl(m.url) : m.url, 60000);
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.blob();
+                })();
+                m.blobP.catch(() => { m.blobP = null; });
+            }
+            return m.blobP;
+        }
+
+        function photoUrl(u) {
+            // Ask pbs.twimg.com for the original size.
+            if (!/pbs\.twimg\.com\/media\//.test(u)) return u;
+            const url = new URL(u);
+            const ext = (url.pathname.match(/\.(\w+)$/) || [])[1];
+            if (ext) { url.pathname = url.pathname.replace(/\.\w+$/, ''); url.searchParams.set('format', ext); }
+            url.searchParams.set('name', 'orig');
+            return url.toString();
+        }
+
+        function fallbackNote(block, m) {
+            let note = block.querySelector('.warn');
+            if (!note) { note = el('p', { class: 'warn' }); block.append(note); }
+            note.replaceChildren(
+                'Your browser couldn’t download the file directly. ',
+                el('a', { href: m.url, target: '_blank', rel: 'noopener', text: 'Open it in a new tab' }),
+                ' and save it from there (long-press on a phone).');
+        }
+
+        function mediaBlock(post, m, i, total) {
+            const name = baseName(post, i, total);
+            const label = m.kind === 'gif' ? 'GIF' : m.kind === 'video' ? 'VIDEO' : 'IMAGE';
+            const view = m.kind === 'photo'
+                ? el('img', { src: m.url, alt: 'Image from the post', loading: 'lazy' })
+                : el('video', { src: m.url, poster: m.thumb, muted: true, loop: true, autoplay: true, playsinline: true, controls: m.kind === 'video', preload: 'metadata' });
+            if (view.tagName === 'VIDEO') view.muted = true;   // the attribute alone doesn't mute for autoplay
+            const block = el('div', { class: 'media', 'data-kind': m.kind },
+                el('div', { class: 'preview' }, view, el('span', { class: 'badge', text: label + (m.quote ? ' · QUOTED' : '') })));
+            if (m.width && m.height) block.append(el('div', { class: 'info', text: `${m.width} × ${m.height}` }));
+
+            if (m.kind === 'photo') {
+                const save = el('button', { type: 'button', class: 'primary', 'data-act': 'save-photo', text: '⬇ Save image' });
+                save.addEventListener('click', async () => {
+                    save.disabled = true;
+                    try {
+                        const blob = await fetchBlob(m);
+                        const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+                        saveBlob(blob, `${name}.${ext}`);
+                    } catch (e) { fallbackNote(block, m); }
+                    finally { save.disabled = false; }
+                });
+                block.append(el('div', { class: 'actions' }, save));
+                return block;
+            }
+
+            const saveMp4 = el('button', { type: 'button', 'data-act': 'save-mp4', text: '⬇ Save MP4' });
+            const makeBtn = el('button', { type: 'button', class: 'primary', 'data-act': 'make-gif', text: '✨ Make .gif' });
+            const sizeSel = el('select', { 'data-opt': 'size' },
+                el('option', { value: '320', text: 'Small (320 px)' }),
+                el('option', { value: '480', selected: true, text: 'Medium (480 px)' }),
+                el('option', { value: '720', text: 'Large (720 px)' }));
+            const fpsSel = el('select', { 'data-opt': 'fps' },
+                el('option', { value: '10', text: '10 fps' }),
+                el('option', { value: '15', selected: true, text: '15 fps' }),
+                el('option', { value: '20', text: '20 fps' }));
+            const opts = el('div', { class: 'opts' },
+                el('label', {}, 'GIF size', sizeSel),
+                el('label', {}, 'Smoothness', fpsSel));
+            const bar = el('i');
+            const pct = el('span', { text: 'Preparing…' });
+            const cancel = el('button', { type: 'button', 'data-act': 'cancel', text: 'Cancel' });
+            const progress = el('div', { class: 'progress', hidden: true },
+                el('div', { class: 'bar' }, bar), el('div', { class: 'row' }, pct, cancel));
+            const result = el('div', { class: 'result', hidden: true });
+
+            block.append(el('div', { class: 'actions' }, saveMp4, makeBtn), opts, progress, result);
+
+            saveMp4.addEventListener('click', async () => {
+                saveMp4.disabled = true;
+                try { saveBlob(await fetchBlob(m), `${name}.mp4`); }
+                catch (e) { fallbackNote(block, m); }
+                finally { saveMp4.disabled = false; }
+            });
+
+            let ctl = null;
+            cancel.addEventListener('click', () => ctl && ctl.abort());
+
+            makeBtn.addEventListener('click', async () => {
+                if (ctl) return;
+                ctl = new AbortController();
+                makeBtn.disabled = true; sizeSel.disabled = true; fpsSel.disabled = true;
+                result.hidden = true;
+                progress.hidden = false;
+                bar.style.width = '0%';
+                pct.textContent = 'Downloading the clip…';
+                let srcUrl = null;
+                try {
+                    const blob = await fetchBlob(m);
+                    srcUrl = URL.createObjectURL(blob);
+                    const out = await makeGif(srcUrl, { width: +sizeSel.value, fps: +fpsSel.value }, (f) => {
+                        bar.style.width = `${Math.round(f * 100)}%`;
+                        pct.textContent = f < 0.1 ? 'Picking colours…' : `Converting… ${Math.round(f * 100)}%`;
+                    }, ctl.signal);
+                    state.lastGif = out.blob;
+                    state.lastGifInfo = out;
+                    showResult(result, out, name);
+                } catch (e) {
+                    if (e.name === 'AbortError') {
+                        pct.textContent = 'Cancelled.';
+                    } else if (e.message === 'video-error') {
+                        pct.textContent = 'This browser can’t read this video, so it can’t be converted here. Save the MP4 instead.';
+                    } else {
+                        fallbackNote(block, m);
+                        pct.textContent = 'Couldn’t convert it.';
+                    }
+                    setTimeout(() => { if (!ctl) progress.hidden = true; }, 2500);
+                } finally {
+                    if (srcUrl) URL.revokeObjectURL(srcUrl);
+                    if (!result.hidden) progress.hidden = true;
+                    ctl = null;
+                    makeBtn.disabled = false; sizeSel.disabled = false; fpsSel.disabled = false;
+                }
+            });
+            return block;
+        }
+
+        function showResult(box, out, name) {
+            const fileName = `${name}.gif`;
+            const url = URL.createObjectURL(out.blob);
+            if (box.dataset.url) URL.revokeObjectURL(box.dataset.url);
+            box.dataset.url = url;
+            const save = el('button', { type: 'button', class: 'primary', 'data-act': 'save-gif', text: '⬇ Save .gif', onclick: () => saveBlob(out.blob, fileName) });
+            const file = new File([out.blob], fileName, { type: 'image/gif' });
+            const share = canShareFile(file)
+                ? el('button', { type: 'button', 'data-act': 'share-gif', text: '↗ Share', onclick: () => shareBlob(out.blob, fileName) })
+                : null;
+            const big = out.blob.size > 15 * 1024 * 1024;
+            box.replaceChildren(...[
+                el('h3', { text: 'Your GIF' }),
+                el('div', { class: 'preview' }, el('img', { src: url, alt: 'The converted GIF' })),
+                el('div', { class: 'info', 'data-gif-info': true, text: `${fmtSize(out.blob.size)} · ${out.width} × ${out.height} · ${out.seconds.toFixed(1)} s` }),
+                big ? el('p', { class: 'warn', text: 'That’s a big file. A smaller size or 10 fps makes a much lighter GIF.' }) : null,
+                el('div', { class: 'actions' }, save, share),
+            ].filter(Boolean));
+            box.hidden = false;
+        }
+
+        form.addEventListener('submit', (e) => { e.preventDefault(); go(); });
+
+        // Pasting a link starts the lookup straight away.
+        input.addEventListener('paste', () => setTimeout(() => { if (parseId(input.value)) go(); }, 0));
+
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            pasteBtn.hidden = false;
+            pasteBtn.addEventListener('click', async () => {
+                try {
+                    const t = await navigator.clipboard.readText();
+                    if (!t) { setStatus('The clipboard is empty.', 'error'); return; }
+                    input.value = t.trim();
+                    go();
+                } catch (e) {
+                    setStatus('Clipboard access was blocked. Long-press the box and choose Paste.', 'error');
+                    input.focus();
+                }
+            });
+        }
+
+        // Share target (Android) and plain ?url= links.
+        const qs = new URLSearchParams(location.search);
+        const shared = [qs.get('url'), qs.get('text'), qs.get('title')].find((s) => s && parseId(s));
+        if (shared) {
+            input.value = (shared.match(/https?:\/\/\S+/) || [shared])[0];
+            history.replaceState(null, '', location.pathname + (qs.has('debug') ? '?debug=' + qs.get('debug') : ''));
+            go();
+        }
+
+        if (qs.has('debug')) {
+            window.__gifGrab = { state, parseId, fromFx, fromVx, lookup, go, makeGif, medianCut, GifEncoder, SOURCES };
+        }
+    })();
+
+    // ── Service worker ────────────────────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+        // Only reload for an *update*, not when the first install claims the page.
+        const hadController = !!navigator.serviceWorker.controller;
+        navigator.serviceWorker.register(
+            `/gif-grab/sw.js?v=${encodeURIComponent(SW_VERSION)}`,
+            { scope: '/gif-grab/' }
+        ).then((reg) => {
+            reg.addEventListener('updatefound', () => {
+                const w = reg.installing;
+                w.addEventListener('statechange', () => {
+                    if (w.state === 'installed' && navigator.serviceWorker.controller) {
+                        const t = document.getElementById('toast');
+                        t.innerHTML = 'A new version is ready. <button id="update-btn">Update</button>';
+                        t.classList.add('show');
+                        document.getElementById('update-btn').addEventListener('click', () => {
+                            if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                            else window.location.reload();
+                        });
+                    }
+                });
+            });
+        }).catch(() => {});
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (hadController) window.location.reload();
+        });
+    }
+    </script>
+</body>
+
+</html>
