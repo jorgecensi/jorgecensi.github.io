@@ -33,10 +33,17 @@ const vxGif = (id) => ({
 
 const PNG_1PX = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
-async function launch() {
+const UA = {
+  ios: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+  iosChrome: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1',
+  android: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
+};
+
+async function launch({ ua } = {}) {
   const browser = await chromium.launch();
   // Service workers are blocked: their first-install claim() can reload the page mid-spec.
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, reducedMotion: 'reduce', serviceWorkers: 'block', acceptDownloads: true });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, reducedMotion: 'reduce', serviceWorkers: 'block', userAgent: ua ? UA[ua] : undefined });
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: `http://localhost:${PORT}` });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -53,10 +60,6 @@ async function launch() {
   });
   await ctx.route('https://video.twimg.com/**', (route) => {
     calls.push('video');
-    // Stands in for a host that sends no CORS header. route.fulfill() can't simulate that
-    // (Playwright makes fulfilled responses pass CORS), but a failed fetch is the same
-    // TypeError the page gets from a CORS block.
-    if (/NoCors/.test(route.request().url())) return route.abort('failed');
     route.fulfill({ status: 200, contentType: 'video/webm', headers: { 'access-control-allow-origin': '*' }, body: fs.readFileSync(CLIP) });
   });
   await ctx.route('https://pbs.twimg.com/**', (route) => {
