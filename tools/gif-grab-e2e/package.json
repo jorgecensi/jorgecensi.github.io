@@ -1,0 +1,11 @@
+{
+  "name": "gif-grab-e2e",
+  "private": true,
+  "description": "Playwright regression specs for the GIF Grab PWA",
+  "scripts": {
+    "test": "./run.sh"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

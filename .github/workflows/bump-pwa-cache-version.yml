@@ -87,6 +87,7 @@ jobs:
           echo "cyber_quest=$(check 'cyber-quest/sw.js cyber-quest/index.html cyber-quest/manifest.json')" >> "${GITHUB_OUTPUT}"
           echo "conquerors=$(check 'conquerors/sw.js conquerors/index.html conquerors/manifest.json conquerors/js/ conquerors/css/')" >> "${GITHUB_OUTPUT}"
           echo "winterfell=$(check 'winterfell/sw.js winterfell/index.html winterfell/manifest.json winterfell/js/')" >> "${GITHUB_OUTPUT}"
+          echo "gif_grab=$(check 'gif-grab/sw.js gif-grab/index.html gif-grab/manifest.json')" >> "${GITHUB_OUTPUT}"
 
       - name: Update PWA version constants
         run: |
@@ -119,6 +120,7 @@ jobs:
               "cyber_quest":  "${{ steps.changed.outputs.cyber_quest }}" == "true",
               "conquerors":   "${{ steps.changed.outputs.conquerors }}" == "true",
               "winterfell":   "${{ steps.changed.outputs.winterfell }}" == "true",
+              "gif_grab":     "${{ steps.changed.outputs.gif_grab }}" == "true",
           }
 
           # On tag/dispatch, bump everything; on push to main, only bump changed PWAs
@@ -191,6 +193,9 @@ jobs:
           if bump_all or changed["winterfell"]:
               versioned_files["winterfell/sw.js"] = ("CACHE_VERSION", version)
               versioned_files["winterfell/index.html"] = ("SW_VERSION", version)
+          if bump_all or changed["gif_grab"]:
+              versioned_files["gif-grab/sw.js"] = ("CACHE_VERSION", version)
+              versioned_files["gif-grab/index.html"] = ("SW_VERSION", version)
 
           for relative_path, (const_name, ver) in versioned_files.items():
               path = repo / relative_path
@@ -254,6 +259,8 @@ jobs:
             conquerors/sw.js \
             conquerors/index.html \
             winterfell/sw.js \
-            winterfell/index.html
+            winterfell/index.html \
+            gif-grab/sw.js \
+            gif-grab/index.html
           git commit -m "chore: bump PWA cache version to ${{ steps.version.outputs.value }} [skip ci]"
           git push origin "HEAD:${{ github.event.repository.default_branch }}"
